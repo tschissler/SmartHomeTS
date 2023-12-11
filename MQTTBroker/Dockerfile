@@ -33,4 +33,4 @@ FROM build AS final
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app/publish .
-ENTRYPOINT exec ./${PROJECT_NAME}
+ENTRYPOINT exec bash
