@@ -36,7 +36,7 @@ jobs:
         az storage blob upload --account-name iotstoragem1 \
                                --container-name firmwareupdates \
                                --name firmware_${{ github.run_id }}.elf \
-                               --file .pio/build/esp32dev/firmware.elf
+                               --file .pio/build/esp32dev/firmware.elf \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
         env: 
           AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
