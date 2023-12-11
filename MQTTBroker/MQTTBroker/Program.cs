@@ -32,11 +32,15 @@ class Program
         await mqttServer.StartAsync();
         Console.WriteLine("MQTT Server is running.");
 
+        Thread.Sleep(Timeout.Infinite);
+
         // Keep the application running until user input
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadLine();
+        //Console.WriteLine("Press any key to exit...");
+        
+        // Keep the application running forever to allow running in none-ionteractive mode on Kubernetes
+        //Console.ReadLine();
 
         // Stop the MQTT server
-        await mqttServer.StopAsync();
+        //await mqttServer.StopAsync();
     }
 }
