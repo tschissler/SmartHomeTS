@@ -8,11 +8,12 @@ on:
       - ESP32Firmwares/LEDStripe.Firmware/**
   
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: ESP32Firmwares/LEDStripe.Firmware
+  
     steps:
     - uses: actions/checkout@v3
 
@@ -26,7 +27,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install platformio
 
-    - name: Build with PlatformIO
-      working-directory: ESP32Firmwares/LEDStripe.Firmware
+    - name: Build with PlatformIO      
       run: |
         pio run
+
+    - name: Upload Firmware to Azure Blob Storage
+      run: |
+        az storage blob upload --account-name iotstoragem1 \
+                               --container-name firmwareupdates \
+                               --name firmware_${{ github.run_id }}.elf \
+                               --file .pio/build/esp32dev/firmware.elf
+      env:
+        AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
