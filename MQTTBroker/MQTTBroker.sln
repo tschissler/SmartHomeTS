@@ -8,6 +8,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{73DDFC91-BBD5-4796-A6FE-8F3678A5A103}"
 	ProjectSection(SolutionItems) = preProject
 		Dockerfile = Dockerfile
+		kube-service.yaml = kube-service.yaml
+		kube.yaml = kube.yaml
 	EndProjectSection
 EndProject
 Global

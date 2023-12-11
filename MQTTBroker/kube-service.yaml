@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqttbroker-service
+spec:
+  selector:
+    app: mqttbroker
+  ports:
+    - protocol: TCP
+      port: 33004
+      nodePort: 32004 # Port to access the service outside the cluste
+      targetPort: 1883  # Port your application is listening on inside the pods
+  type: NodePort      # Set the Service type to NodePort
