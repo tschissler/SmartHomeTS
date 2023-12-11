@@ -22,7 +22,7 @@ jobs:
 
     - name: Test
       run: |
-        ls .
+        ls . -R
 
     - name: Build and publish Docker image
       run: |        
