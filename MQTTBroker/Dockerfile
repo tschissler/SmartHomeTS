@@ -17,7 +17,7 @@ ARG BUILD_CONFIGURATION=Release
 ARG TARGETARCH
 ARG PROJECT_NAME
 WORKDIR /src
-COPY ["NuGet.config", "."]
+# COPY ["NuGet.config", "."]
 COPY ["${PROJECT_NAME}/${PROJECT_NAME}.csproj", "${PROJECT_NAME}/"]
 RUN dotnet restore "${PROJECT_NAME}/${PROJECT_NAME}.csproj"
 COPY . .
