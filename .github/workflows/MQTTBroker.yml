@@ -1,0 +1,26 @@
+name: MQTTBroker CD
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - .github/workflows/MQTTBroker.yml
+      - MQTTBroker/**
+
+jobs:
+
+  build:
+
+    runs-on: [self-hosted, linux]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build and publish Docker image
+      run: |        
+        # Build the Docker image with the package version tag.
+        docker build -t tschissler/mqttbroker:${{ github.run_id }} -t tschissler/mqttbroker:latest -f ./MQTTBroker/Dockerfile --push .
+
+    - name: Update Kubernetes deployment
+      run: |
+        microk8s kubectl set image deployments/mqttbroker chargingservice=tschissler/mqttbroker:${{ github.run_id }}
