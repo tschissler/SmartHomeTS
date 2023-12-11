@@ -7,6 +7,8 @@ on:
       - .github/workflows/MQTTBroker.yml
       - MQTTBroker/**
 
+env:
+  PROJECT_NAME: mqttbroker
 jobs:
 
   build:
@@ -19,8 +21,8 @@ jobs:
     - name: Build and publish Docker image
       run: |        
         # Build the Docker image with the package version tag.
-        docker build -t tschissler/mqttbroker:${{ github.run_id }} -t tschissler/mqttbroker:latest -f ./MQTTBroker/Dockerfile --push .
+        docker build -t tschissler/${{ env.PROJECT_NAME }}:${{ github.run_id }} -t tschissler/${{ env.PROJECT_NAME }}:latest -f ./${{ env.PROJECT_NAME }}/Dockerfile --push .
 
     - name: Update Kubernetes deployment
       run: |
-        microk8s kubectl set image deployments/mqttbroker chargingservice=tschissler/mqttbroker:${{ github.run_id }}
+        microk8s kubectl set image deployments/${{ env.PROJECT_NAME }} ${{ env.PROJECT_NAME }}=tschissler/mqttbroker:${{ github.run_id }}
