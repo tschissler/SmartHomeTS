@@ -8,7 +8,7 @@ on:
       - MQTTBroker/**
 
 env:
-  PROJECT_NAME: mqttbroker
+  PROJECT_NAME: MQTTBroker
 jobs:
 
   build:
