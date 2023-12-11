@@ -27,5 +27,6 @@ jobs:
         pip install platformio
 
     - name: Build with PlatformIO
+      working-directory: ESP32Firmwares/LEDStripe.Firmware
       run: |
         pio run
