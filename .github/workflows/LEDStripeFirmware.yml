@@ -37,5 +37,4 @@ jobs:
                                --container-name firmwareupdates \
                                --name firmware_${{ github.run_id }}.elf \
                                --file .pio/build/esp32dev/firmware.elf
-      env:
-        AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+                               --account-key ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
