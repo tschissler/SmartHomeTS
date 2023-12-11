@@ -2,7 +2,7 @@ name: MQTTBroker CD
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths:
       - .github/workflows/MQTTBroker.yml
       - MQTTBroker/**
