@@ -20,6 +20,10 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Test
+      run: |
+        ls .
+
     - name: Build and publish Docker image
       run: |        
         # Build the Docker image with the package version tag.
