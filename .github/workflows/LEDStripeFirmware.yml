@@ -9,7 +9,9 @@ on:
   
 jobs:
   build:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
+    outputs:
+      blob_url: ${{ steps.construct_blob_url.outputs.blob_url }}
     defaults:
       run:
         working-directory: ESP32Firmwares/LEDStripe.Firmware
@@ -17,22 +19,22 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-#    - name: Set up Python
-#      uses: actions/setup-python@v2
-#      with:
-#        python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-#    - name: Install PlatformIO
-#      run: |
-#        python -m pip install --upgrade pip
-#        pip install platformio
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install platformio
 
     - name: Build with PlatformIO  
       env:
         WIFI_SSID: ${{ secrets.WIFI_SSID }}
         WIFI_PASSWORD: ${{ secrets.WIFI_PASSWORD }}
       run: |
-        ~/.local/bin/pio run
+        pio run
 
     - name: Upload Firmware to Azure Blob Storage
       run: |
@@ -43,11 +45,16 @@ jobs:
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
     - name: Construct Blob URL
-      run: echo "BLOB_URL=https://iotstoragem1.blob.core.windows.net/firmwareupdates/firmware_${{ github.run_id }}.bin" >> $GITHUB_ENV
+      id: construct_blob_url
+      run: echo "::set-output name=blob_url::https://iotstoragem1.blob.core.windows.net/firmwareupdates/firmware_${{ github.run_id }}.bin"
                            
-    - name: Install Mosquitto Clients
-      run: sudo apt-get install -y mosquitto-clients
+  triggerupdate:
+    needs: build
+    runs-on: [self-hosted, linux]
+    steps:
+#    - name: Install Mosquitto Clients
+#      run: sudo apt-get install -y mosquitto-clients
 
     - name: Trigger MQTT Update Message
       run: |
-        mosquitto_pub -h smarthomepi2 -p 32004 -t OTAUpdateLEDStripeTopic -m ${{ env.BLOB_URL }}
+        mosquitto_pub -h smarthomepi2 -p 32004 -t OTAUpdateLEDStripeTopic -m ${{ needs.build.outputs.blob_url }}
