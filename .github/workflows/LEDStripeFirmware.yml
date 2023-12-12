@@ -46,7 +46,7 @@ jobs:
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/firmware_${{ github.run_id }}.bin" >> $GITHUB_ENV
+      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/firmware_${{ github.run_id }}.bin" >> $GITHUB_OUTPUT
                            
   triggerupdate:
     needs: build
