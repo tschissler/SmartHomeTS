@@ -20,7 +20,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
 
@@ -46,7 +46,7 @@ jobs:
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "::set-output name=blob_url::https://iotstoragem1.blob.core.windows.net/firmwareupdates/firmware_${{ github.run_id }}.bin"
+      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/firmware_${{ github.run_id }}.bin" >> $GITHUB_ENV
                            
   triggerupdate:
     needs: build
