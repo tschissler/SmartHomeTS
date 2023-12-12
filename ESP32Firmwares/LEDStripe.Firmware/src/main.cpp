@@ -138,7 +138,7 @@ void setup() {
   FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(leds, NUM_LEDS);
   FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds, NUM_LEDS);
   Serial.begin(9600);
-  Serial.println("LEDStripe");
+  Serial.println("LEDStripe v0.1.0");
   initLED();
 
   clear();
