@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: smarthome.web
+  name: smarthomeweb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: smarthome.web
+      app: smarthomeweb
   template:
     metadata:
       labels:
-        app: smarthome.web
+        app: smarthomeweb
     spec:
       containers:
-        - name: smarthome.web
+        - name: smarthomeweb
           image: tschissler/smarthomeweb:latest
           ports:
             - containerPort: 80
