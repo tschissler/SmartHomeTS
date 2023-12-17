@@ -100,6 +100,8 @@ void readSensorAndPublish() {
   }
   mqttClient.loop();
 
+  delay(2000);
+
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
 
@@ -127,7 +129,7 @@ void goToDeepSleep() {
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("TemperatiureSensor v0.1.2");
+  Serial.println("TemperatiureSensor v0.1.3");
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -155,8 +157,5 @@ void setup() {
 }
 
 void loop() {
-  if (!mqttClient.connected()) {
-    connectToMQTT();
-  }
-  mqttClient.loop();
+
 }
