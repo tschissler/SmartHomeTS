@@ -21,7 +21,7 @@ WORKDIR /src
 COPY ["${PROJECT_NAME}/${PROJECT_NAME}/${PROJECT_NAME}.csproj", "${PROJECT_NAME}/"]
 RUN dotnet restore "${PROJECT_NAME}/${PROJECT_NAME}.csproj"
 COPY . .
-WORKDIR "/src/${PROJECT_NAME}"
+WORKDIR "/src/${PROJECT_NAME}/${PROJECT_NAME}"
 RUN dotnet build "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish image
