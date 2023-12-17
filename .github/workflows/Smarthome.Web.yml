@@ -29,3 +29,5 @@ jobs:
     - name: Update Kubernetes deployment
       run: |
         microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+        microk8s kubectl set env deployment/smarthome-web SyncfusionLicenseKey="${{ secrets.SYNCFUSION_LICENSEKEY }}"
+  
