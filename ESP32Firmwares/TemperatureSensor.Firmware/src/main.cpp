@@ -5,10 +5,10 @@
 #include "DHT.h"
 #include <Preferences.h>
 
-const char* version = "0.1.10";
+const char* version = "0.1.11";
 
 // Deep Sleep Configuration
-#define TIME_TO_SLEEP  30        // Time in seconds for ESP32 to sleep
+#define TIME_TO_SLEEP  60        // Time in seconds for ESP32 to sleep
 
 #define DHTPIN 12     
 #define DHTTYPE DHT22   
@@ -28,7 +28,7 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 Preferences preferences;
 
-void updateFirmwareFromUrl(const String &firmwareUrl) {
+bool updateFirmwareFromUrl(const String &firmwareUrl) {
     Serial.print("Downloading new firmware from: ");
     Serial.println(firmwareUrl);
     
@@ -37,11 +37,13 @@ void updateFirmwareFromUrl(const String &firmwareUrl) {
     switch(ret) {
         case HTTP_UPDATE_FAILED:
             Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            break;
+            Serial.println();
+            return false;
 
         case HTTP_UPDATE_NO_UPDATES:
             Serial.println("HTTP_UPDATE_NO_UPDATES");
-            break;
+            Serial.println();
+            return false;
 
         case HTTP_UPDATE_OK:
             Serial.println("HTTP_UPDATE_OK");
@@ -49,6 +51,7 @@ void updateFirmwareFromUrl(const String &firmwareUrl) {
             break;
     }
     Serial.println();
+    return true;
 }
 
 void connectToMQTT() {
@@ -79,12 +82,17 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
     Serial.println(messageTemp);
     preferences.begin("config", false);
 
-    if (String(topic) == mqtt_OTAtopic && messageTemp != preferences.getString("latestfirmwareUrl", "")) {
+    if (String(topic) == mqtt_OTAtopic) {
+      if( messageTemp != preferences.getString("firmwareUrl", "")) {
           // Trigger OTA Update
           Serial.println("OTA Update Triggered");
           String firmwareUrl = messageTemp;
-          updateFirmwareFromUrl(firmwareUrl);
-          preferences.putString("latestfirmwareUrl", firmwareUrl);
+          bool result = updateFirmwareFromUrl(firmwareUrl);
+          preferences.putString("firmwareUrl", firmwareUrl);
+      }
+      else {
+        Serial.println("Firmware is up to date");
+      }
     }
 }
 
@@ -145,7 +153,7 @@ void goToDeepSleep() {
 
 void setup() {
   Serial.begin(9600);
-  Serial.print("TemperatiureSensor ");
+  Serial.print("TemperatureSensor ");
   Serial.println(version);
 
   Serial.print("ESP32 Chip ID: ");
