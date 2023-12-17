@@ -127,7 +127,7 @@ void goToDeepSleep() {
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("TemperatiureSensor v0.1.1");
+  Serial.println("TemperatiureSensor v0.1.2");
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
