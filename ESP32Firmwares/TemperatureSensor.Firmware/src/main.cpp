@@ -2,8 +2,15 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ESP32httpUpdate.h>
+#include "DHT.h"
 
-#define DATA_PIN 12
+// Deep Sleep Configuration
+#define TIME_TO_SLEEP  30        // Time in seconds for ESP32 to sleep
+
+
+#define DHTPIN 12     
+#define DHTTYPE DHT11   
+DHT dht(DHTPIN, DHTTYPE);
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_SSID and WIFI_PASSWORD as environment variables on your dev-system
@@ -13,7 +20,7 @@ const char* password = WIFI_PASSWORD;
 // MQTT Broker settings
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
-const char* mqtt_topic = "OTAUpdateTemperatureSensor";
+const char* mqtt_OTAtopic = "OTAUpdateTemperatureSensor";
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -46,7 +53,7 @@ void connectToMQTT() {
     mqttClient.setServer(mqtt_broker, mqtt_port);
     while (!mqttClient.connected()) {
         if (mqttClient.connect("ESP32LEDStripeClient")) {
-            mqttClient.subscribe(mqtt_topic);
+            mqttClient.subscribe(mqtt_OTAtopic);
             Serial.println("Connected to MQTT Broker");
         } else {
             Serial.print("Failed to connect to MQTT Broker: ");
@@ -69,12 +76,53 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
 
     Serial.println(messageTemp);
 
-    if (String(topic) == mqtt_topic) {
+    if (String(topic) == mqtt_OTAtopic) {
           // Trigger OTA Update
           Serial.println("OTA Update Triggered");
           String firmwareUrl = messageTemp;
           updateFirmwareFromUrl(firmwareUrl);
     }
+}
+
+void reconnect() {
+  while (!mqttClient.connected()) {
+    if (mqttClient.connect("ESP32Client")) {
+      // Subscribe or publish here if needed
+    } else {
+      delay(5000);
+    }
+  }
+}
+
+void readSensorAndPublish() {
+  if (!mqttClient.connected()) {
+    reconnect();
+  }
+  mqttClient.loop();
+
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  if (isnan(humidity) || isnan(temperature)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  char tempString[8];
+  char humString[8];
+  dtostrf(temperature, 1, 2, tempString);
+  dtostrf(humidity, 1, 2, humString);
+
+  mqttClient.publish("M3/esp32/temperature", tempString);
+  mqttClient.publish("M3/esp32/humidity", humString);
+}
+
+void goToDeepSleep() {
+  Serial.println("Going to sleep now");
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * 1000000);
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  esp_deep_sleep_start();
 }
 
 void setup() {
@@ -96,6 +144,14 @@ void setup() {
   // Set up MQTT
   mqttClient.setCallback(mqttCallback);
   connectToMQTT();
+
+  //Init DHT sensor
+  dht.begin();
+  Serial.println("DHT sensor initialized");
+
+  readSensorAndPublish();
+
+  goToDeepSleep();
 }
 
 void loop() {
