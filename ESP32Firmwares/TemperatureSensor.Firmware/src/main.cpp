@@ -4,7 +4,7 @@
 #include <ESP32httpUpdate.h>
 #include "DHT.h"
 
-const char* version = "0.1.8";
+const char* version = "0.1.9";
 
 // Deep Sleep Configuration
 #define TIME_TO_SLEEP  30        // Time in seconds for ESP32 to sleep
@@ -144,6 +144,10 @@ void setup() {
   Serial.begin(9600);
   Serial.print("TemperatiureSensor ");
   Serial.println(version);
+
+  Serial.print("ESP32 Chip ID: ");
+  Serial.print((uint16_t)(ESP.getEfuseMac() >> 32), HEX); // High 2 bytes
+  Serial.println((uint32_t)ESP.getEfuseMac(), HEX); // Low 4 bytes
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
