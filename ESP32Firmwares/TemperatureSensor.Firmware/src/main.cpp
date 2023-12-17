@@ -5,7 +5,7 @@
 #include "DHT.h"
 #include <Preferences.h>
 
-const char* version = "0.1.11";
+const char* version = "0.1.12";
 
 // Deep Sleep Configuration
 #define TIME_TO_SLEEP  60        // Time in seconds for ESP32 to sleep
@@ -88,7 +88,11 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
           Serial.println("OTA Update Triggered");
           String firmwareUrl = messageTemp;
           bool result = updateFirmwareFromUrl(firmwareUrl);
-          preferences.putString("firmwareUrl", firmwareUrl);
+          if (result) {
+            Serial.println("OTA Update successful, recording new firmwareUrl in preferences");
+            preferences.putString("firmwareUrl", firmwareUrl);
+          }
+          preferences.end();
       }
       else {
         Serial.println("Firmware is up to date");
