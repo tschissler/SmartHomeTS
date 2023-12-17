@@ -1,0 +1,63 @@
+﻿@page "/"
+
+@using MQTTnet;
+@using MQTTnet.Client;
+@using MQTTnet.Packets;
+@using MQTTnet.Protocol;
+@using MQTTnet.Formatter;
+@using System.Text;
+@using System.Collections.ObjectModel;
+@using SmartHome.Web.Components.Libs;
+@using Syncfusion.Blazor.Charts
+
+@inject MqttController mqttController
+@rendermode InteractiveServer
+
+<PageTitle>Temperatur M3</PageTitle>
+
+<h1>Temperatur M3</h1>
+
+<SfChart>
+    <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime"></ChartPrimaryXAxis>
+
+    <ChartSeriesCollection>
+        <ChartSeries XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@DataRow1">
+            <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+            <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle"></ChartMarker>
+        </ChartSeries>
+    </ChartSeriesCollection>
+</SfChart>
+
+
+@code {
+    public ObservableCollection<MqttDataPoint> DataRow1;
+
+    protected override void OnInitialized()
+    {
+        // DataRow1 = mqttController.MqttData["M3/1c50f3ab6224/temperature"];
+        // DataRow1.Add(new MqttDataPoint() { Time = DateTime.Now.AddMinutes(-3), Value = 10 });
+        // DataRow1.Add(new MqttDataPoint() { Time = DateTime.Now.AddMinutes(-2), Value = 20 });
+        // DataRow1.Add(new MqttDataPoint() { Time = DateTime.Now.AddMinutes(-1), Value = 15 });
+        mqttController.OnDataUpdated += RefreshData;
+
+        if (mqttController.MqttData.ContainsKey("M3/1c50f3ab6224/temperature"))
+        {
+            RefreshData();
+        }
+    }
+
+    private void RefreshData()
+    {
+        // Update the data source
+        DataRow1 = new ObservableCollection<MqttDataPoint>(mqttController.MqttData["M3/1c50f3ab6224/temperature"]);
+
+        // Notify the component to refresh the UI
+        InvokeAsync(new Action(() => StateHasChanged()));
+    }
+
+    public void Dispose()
+    {
+        mqttController.OnDataUpdated -= RefreshData;
+    }
+
+}
