@@ -4,7 +4,7 @@
 #include <ESP32httpUpdate.h>
 #include "DHT.h"
 
-const char* version = "0.1.6";
+const char* version = "0.1.8";
 
 // Deep Sleep Configuration
 #define TIME_TO_SLEEP  30        // Time in seconds for ESP32 to sleep
@@ -122,6 +122,13 @@ void readSensorAndPublish() {
   mqttClient.publish("M3/esp32/temperature", tempString);
   mqttClient.publish("M3/esp32/humidity", humString);
   mqttClient.publish("M3/esp32/version", version);
+  Serial.println("Published new values to MQTT Broker");
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.print("°C, Humidity: ");
+  Serial.print(humidity);
+  Serial.print("%, Version: ");
+  Serial.println(version);
   delay(1000);
 }
 
