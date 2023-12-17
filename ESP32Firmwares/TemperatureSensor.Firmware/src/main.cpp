@@ -52,7 +52,7 @@ void updateFirmwareFromUrl(const String &firmwareUrl) {
 void connectToMQTT() {
     mqttClient.setServer(mqtt_broker, mqtt_port);
     while (!mqttClient.connected()) {
-        if (mqttClient.connect("ESP32LEDStripeClient")) {
+        if (mqttClient.connect("ESP32TemperatureSensorClient")) {
             mqttClient.subscribe(mqtt_OTAtopic);
             Serial.println("Connected to MQTT Broker");
         } else {
@@ -87,7 +87,7 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
 void reconnect() {
   while (!mqttClient.connected()) {
     if (mqttClient.connect("ESP32Client")) {
-      // Subscribe or publish here if needed
+      connectToMQTT();
     } else {
       delay(5000);
     }
@@ -127,7 +127,7 @@ void goToDeepSleep() {
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("TemperatiureSensor v0.1.0");
+  Serial.println("TemperatiureSensor v0.1.1");
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
