@@ -23,7 +23,7 @@ jobs:
     - name: Build and publish Docker image
       run: |        
         # Build the Docker image with the package version tag.
-        docker build -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} -t tschissler/${{ env.IMAGE_NAME }}:latest -f ./${{ env.PROJECT_NAME }}/Dockerfile --push .
+        docker build --pull --no-cache -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} -t tschissler/${{ env.IMAGE_NAME }}:latest -f ./${{ env.PROJECT_NAME }}/Dockerfile --push .
 
     - name: Update Kubernetes deployment
       run: |
