@@ -4,9 +4,10 @@
 #include <ESP32httpUpdate.h>
 #include "DHT.h"
 
+const char* version = "0.1.4";
+
 // Deep Sleep Configuration
 #define TIME_TO_SLEEP  30        // Time in seconds for ESP32 to sleep
-
 
 #define DHTPIN 12     
 #define DHTTYPE DHT11   
@@ -98,9 +99,12 @@ void readSensorAndPublish() {
   if (!mqttClient.connected()) {
     reconnect();
   }
-  mqttClient.loop();
-
-  delay(2000);
+  // Stay awake for a short period to receive messages
+  unsigned long startMillis = millis();
+  while (millis() - startMillis < 10000) {
+    mqttClient.loop();
+    delay(10);  // Small delay to prevent WDT reset
+  }
 
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
@@ -129,7 +133,8 @@ void goToDeepSleep() {
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("TemperatiureSensor v0.1.3");
+  Serial.print("TemperatiureSensor ");
+  Serial.println(version);
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
