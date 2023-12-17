@@ -8,6 +8,8 @@
 //#include <Update.h>
 #include <ESP32httpUpdate.h>
 
+const char* version = "0.0.2";
+
 #define DATA_PIN_1 13
 #define DATA_PIN_2 12
 #define NUM_LEDS 256
@@ -138,7 +140,8 @@ void setup() {
   FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(leds, NUM_LEDS);
   FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds, NUM_LEDS);
   Serial.begin(9600);
-  Serial.println("LEDStripe v0.1.0");
+  Serial.print("LEDStripe ");
+  Serial.println(version);
   initLED();
 
   clear();
