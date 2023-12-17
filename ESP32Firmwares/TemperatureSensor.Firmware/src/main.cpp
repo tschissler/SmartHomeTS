@@ -3,8 +3,9 @@
 #include <PubSubClient.h>
 #include <ESP32httpUpdate.h>
 #include "DHT.h"
+#include <Preferences.h>
 
-const char* version = "0.1.9";
+const char* version = "0.1.10";
 
 // Deep Sleep Configuration
 #define TIME_TO_SLEEP  30        // Time in seconds for ESP32 to sleep
@@ -25,7 +26,7 @@ const char* mqtt_OTAtopic = "OTAUpdateTemperatureSensor";
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
-
+Preferences preferences;
 
 void updateFirmwareFromUrl(const String &firmwareUrl) {
     Serial.print("Downloading new firmware from: ");
@@ -76,12 +77,14 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
     }
 
     Serial.println(messageTemp);
+    preferences.begin("config", false);
 
-    if (String(topic) == mqtt_OTAtopic) {
+    if (String(topic) == mqtt_OTAtopic && messageTemp != preferences.getString("latestfirmwareUrl", "")) {
           // Trigger OTA Update
           Serial.println("OTA Update Triggered");
           String firmwareUrl = messageTemp;
           updateFirmwareFromUrl(firmwareUrl);
+          preferences.putString("latestfirmwareUrl", firmwareUrl);
     }
 }
 
@@ -119,9 +122,9 @@ void readSensorAndPublish() {
   dtostrf(temperature, 1, 2, tempString);
   dtostrf(humidity, 1, 2, humString);
 
-  mqttClient.publish("M3/esp32/temperature", tempString);
-  mqttClient.publish("M3/esp32/humidity", humString);
-  mqttClient.publish("M3/esp32/version", version);
+  mqttClient.publish("M3/esp32/temperature", tempString, true);
+  mqttClient.publish("M3/esp32/humidity", humString, true);
+  mqttClient.publish("M3/esp32/version", version, true);
   Serial.println("Published new values to MQTT Broker");
   Serial.print("Temperature: ");
   Serial.print(temperature);
