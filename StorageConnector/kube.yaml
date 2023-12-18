@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storageconnector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storageconnector
+  template:
+    metadata:
+      labels:
+        app: storageconnector
+    spec:
+      containers:
+        - name: storageconnector
+          image: tschissler/storageconnector:latest
+          # ports:
+          #   - containerPort: 1883
