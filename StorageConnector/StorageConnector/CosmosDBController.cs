@@ -21,15 +21,13 @@ namespace StorageConnector
 
         public void WriteData(string partitionKey, string rowKey, decimal value, DateTime time)
         {
-           // Create new Entity and write to table
-           var entity = new TableEntity(partitionKey.Replace("/", "_"), rowKey)
-           {
+            // Create new Entity and write to table
+            var entity = new TableEntity(partitionKey.Replace("/", "_"), rowKey)
+            {
                 { "Value", value },
                 { "Time", time.ToUniversalTime() }
-              };
+            };
             tableClient.AddEntity(entity);
-           
-
         }
     }
 }

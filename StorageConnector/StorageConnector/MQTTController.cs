@@ -38,7 +38,7 @@ namespace StorageConnector
 
         private Task _client_ApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs args)
         {
-            Console.WriteLine("Received MQTT message: " + args.ApplicationMessage.Topic + " - " + args.ApplicationMessage.ConvertPayloadToString());
+            Console.WriteLine($"{DateTime.Now.ToLongTimeString()} --- Received MQTT message: {args.ApplicationMessage.Topic} - {args.ApplicationMessage.ConvertPayloadToString()}");
             decimal value = 0;
             if (decimal.TryParse(args.ApplicationMessage.ConvertPayloadToString(), new CultureInfo("en-US"), out value))
             {
