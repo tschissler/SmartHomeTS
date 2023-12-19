@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Data.Tables" Version="12.8.2" />
     <PackageReference Include="MQTTnet" Version="4.3.3.952" />
     <PackageReference Include="Syncfusion.Blazor.Charts" Version="23.2.7" />
     <PackageReference Include="Syncfusion.Blazor.Navigations" Version="23.2.7" />

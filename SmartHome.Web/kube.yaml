@@ -16,4 +16,7 @@ spec:
         - name: smarthomeweb
           image: tschissler/smarthomeweb:latest
           ports:
-            - containerPort: 80
+            - containerPort: 8080
+          env:
+            - name: SyncfusionLicenseKey
+              value: init

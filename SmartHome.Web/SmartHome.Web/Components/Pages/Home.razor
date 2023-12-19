@@ -1,14 +1,11 @@
 ﻿@page "/"
 
-@using MQTTnet;
-@using MQTTnet.Client;
-@using MQTTnet.Packets;
-@using MQTTnet.Protocol;
-@using MQTTnet.Formatter;
 @using System.Text;
 @using System.Collections.ObjectModel;
 @using SmartHome.Web.Components.Libs;
-@using Syncfusion.Blazor.Charts
+@using SmartHome.Web.DataObjects;
+@using Syncfusion.Blazor.Charts;
+@using Azure.Data.Tables;
 
 @inject MqttController mqttController
 @rendermode InteractiveServer
@@ -17,47 +14,77 @@
 
 <h1>Temperatur M3</h1>
 
+<div class="d-flex flex-row">
+    @foreach (var item in PartitionKeys)
+    {
+        <div class="me-3">
+            <input type="checkbox" checked="@item.IsChecked" @onchange="() => CheckboxChanged(item)" />
+            <label>@item.Label</label>
+        </div>
+    }
+</div>
+
 <SfChart>
     <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime"></ChartPrimaryXAxis>
 
     <ChartSeriesCollection>
-        <ChartSeries XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@DataRow1">
-            <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
-            <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle"></ChartMarker>
-        </ChartSeries>
+        @foreach (var item in PartitionKeys.Where(p => p.IsChecked))
+        {
+            <ChartSeries XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]">
+                <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+                <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle"></ChartMarker>
+            </ChartSeries>
+        }
+        @*         <ChartSeries XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@DataRow1">
+        <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+        <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle"></ChartMarker>
+        </ChartSeries> *@
     </ChartSeriesCollection>
 </SfChart>
 
 
 @code {
-    public ObservableCollection<MqttDataPoint> DataRow1;
+    public Dictionary<string, ObservableCollection<DataValueTableEntity>> ChartData = new();
+    TableClient table;
+
+    public List<CheckableItem> PartitionKeys = new()
+    {
+        new CheckableItem { Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = false },
+        new CheckableItem { Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false },
+        new CheckableItem { Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false }
+    };
 
     protected override void OnInitialized()
     {
-        // DataRow1 = mqttController.MqttData["M3/1c50f3ab6224/temperature"];
-        // DataRow1.Add(new MqttDataPoint() { Time = DateTime.Now.AddMinutes(-3), Value = 10 });
-        // DataRow1.Add(new MqttDataPoint() { Time = DateTime.Now.AddMinutes(-2), Value = 20 });
-        // DataRow1.Add(new MqttDataPoint() { Time = DateTime.Now.AddMinutes(-1), Value = 15 });
-        mqttController.OnDataUpdated += RefreshData;
+        string connectionString = "DefaultEndpointsProtocol=https;AccountName=smarthometsstorage;AccountKey=yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==;TableEndpoint=https://smarthometsstorage.table.cosmos.azure.com:443/;";
+        string tableName = "SmartHomeData";
 
-        if (mqttController.MqttData.ContainsKey("M3/1c50f3ab6224/temperature"))
+        table = new TableClient(connectionString, tableName);
+
+    }
+
+    private async Task CheckboxChanged(CheckableItem item)
+    {
+        if (!item.IsChecked)
         {
-            RefreshData();
+            item.IsChecked = true;
+            // Read data from Azure Table Storage
+            var query = table.Query<DataValueTableEntity>()
+                .Where(e => e.PartitionKey == item.PartitionKey)
+                .OrderByDescending(e => e.Timestamp)
+                .Take(100);
+            ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query));
+
+            // Notify the component to refresh the UI
+            InvokeAsync(new Action(() => StateHasChanged()));
+        }
+        else
+        {
+            item.IsChecked = false;
+            if (ChartData.ContainsKey(item.PartitionKey))
+            {
+                ChartData.Remove(item.PartitionKey);
+            }
         }
     }
-
-    private void RefreshData()
-    {
-        // Update the data source
-        DataRow1 = new ObservableCollection<MqttDataPoint>(mqttController.MqttData["M3/1c50f3ab6224/temperature"]);
-
-        // Notify the component to refresh the UI
-        InvokeAsync(new Action(() => StateHasChanged()));
-    }
-
-    public void Dispose()
-    {
-        mqttController.OnDataUpdated -= RefreshData;
-    }
-
 }
