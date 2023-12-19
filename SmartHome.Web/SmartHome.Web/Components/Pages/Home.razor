@@ -26,13 +26,16 @@
 
 <SfChart>
     <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime"></ChartPrimaryXAxis>
+    <ChartTooltipSettings Enable="true"></ChartTooltipSettings>
 
     <ChartSeriesCollection>
         @foreach (var item in PartitionKeys.Where(p => p.IsChecked))
         {
-            <ChartSeries XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]">
+            <ChartSeries Name="@item.Label" XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]">
                 <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
-                <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle"></ChartMarker>
+                <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle">
+                </ChartMarker>
+
             </ChartSeries>
         }
         @*         <ChartSeries XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@DataRow1">
@@ -40,6 +43,7 @@
         <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle"></ChartMarker>
         </ChartSeries> *@
     </ChartSeriesCollection>
+    <ChartLegendSettings Visible="true" />
 </SfChart>
 
 
