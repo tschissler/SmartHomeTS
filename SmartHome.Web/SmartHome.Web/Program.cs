@@ -17,10 +17,14 @@ catch (Exception ex)
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddLocalization();
 builder.Services.AddSyncfusionBlazor();
 builder.Services.AddSingleton<MqttController>();
 
 var app = builder.Build();
+app.UseRequestLocalization(new RequestLocalizationOptions()
+    .AddSupportedCultures(new[] { "de-DE" })
+    .AddSupportedUICultures(new[] { "de-DE" }));
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
