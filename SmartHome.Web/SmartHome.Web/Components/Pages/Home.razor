@@ -45,7 +45,7 @@
     <ChartSeriesCollection>
         @foreach (var item in PartitionKeys.Where(p => p.IsChecked))
         {
-            <ChartSeries Name="@item.Label" XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]">
+            <ChartSeries Name="@item.Label" XName="LocalTime" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]">
                 <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
                 <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle">
                 </ChartMarker>
@@ -106,7 +106,7 @@
                 .OrderByDescending(e => e.Timestamp)
                 .Take(100);
 
-            foreach(var resultItem in query)
+            foreach(var resultItem in query.ToList().OrderBy(i => i.Time))
             {
                 ChartData[item.PartitionKey].Add(resultItem);
             }
@@ -126,9 +126,9 @@
                 // Read data from Azure Table Storage
                 var query = table.Query<DataValueTableEntity>()
                     .Where(e => e.PartitionKey == item.PartitionKey)
-                    .OrderBy(e => e.Timestamp)
+                    .OrderByDescending(e => e.Timestamp)
                     .Take(100);
-                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query));
+                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query.ToList().OrderBy(i => i.Time)));
 
                 // Notify the component to refresh the UI
                 InvokeAsync(StateHasChanged);
@@ -167,7 +167,7 @@
                     .Where(e => e.PartitionKey == item.PartitionKey)
                     .OrderByDescending(e => e.Timestamp)
                     .Take(100);
-                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query));
+                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query.ToList().OrderBy(i => i.Time)));
             }
 
             // Notify the component to refresh the UI
