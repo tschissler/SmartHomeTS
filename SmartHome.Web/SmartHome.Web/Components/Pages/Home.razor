@@ -13,7 +13,12 @@
 <PageTitle>Temperatur M3</PageTitle>
 
 <h1>Temperatur M3</h1>
-
+@if (isLoading)
+{
+    <div class="spinner-container">
+        <div class="spinner"></div> 
+    </div>
+}
 <div class="d-flex flex-row">
     @foreach (var item in PartitionKeys)
     {
@@ -22,6 +27,7 @@
             <label>@item.Label</label>
         </div>
     }
+    <button @onclick="RefreshData">Reload Data</button>
 </div>
 
 <SfChart>
@@ -38,16 +44,13 @@
 
             </ChartSeries>
         }
-        @*         <ChartSeries XName="Time" YName="Value" Type="ChartSeriesType.Line" DataSource="@DataRow1">
-        <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
-        <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle"></ChartMarker>
-        </ChartSeries> *@
     </ChartSeriesCollection>
     <ChartLegendSettings Visible="true" />
 </SfChart>
 
 
 @code {
+    private bool isLoading = false;
     public Dictionary<string, ObservableCollection<DataValueTableEntity>> ChartData = new();
     TableClient table;
 
@@ -55,7 +58,8 @@
     {
         new CheckableItem { Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = false },
         new CheckableItem { Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false },
-        new CheckableItem { Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false }
+        new CheckableItem { Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false },
+        new CheckableItem { Label = "Batteriesensor", PartitionKey = "b4bdf3ab6224_temperature", IsChecked = false }
     };
 
     protected override void OnInitialized()
@@ -69,26 +73,84 @@
 
     private async Task CheckboxChanged(CheckableItem item)
     {
-        if (!item.IsChecked)
+        await LoadingSpinnerShow();
+        try
         {
-            item.IsChecked = true;
-            // Read data from Azure Table Storage
-            var query = table.Query<DataValueTableEntity>()
-                .Where(e => e.PartitionKey == item.PartitionKey)
-                .OrderByDescending(e => e.Timestamp)
-                .Take(100);
-            ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query));
-
-            // Notify the component to refresh the UI
-            InvokeAsync(new Action(() => StateHasChanged()));
-        }
-        else
-        {
-            item.IsChecked = false;
-            if (ChartData.ContainsKey(item.PartitionKey))
+            if (!item.IsChecked)
             {
-                ChartData.Remove(item.PartitionKey);
+                item.IsChecked = true;
+                // Read data from Azure Table Storage
+                var query = table.Query<DataValueTableEntity>()
+                    .Where(e => e.PartitionKey == item.PartitionKey)
+                    .OrderByDescending(e => e.Timestamp)
+                    .Take(100);
+                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query));
+
+                // Notify the component to refresh the UI
+                InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                item.IsChecked = false;
+                if (ChartData.ContainsKey(item.PartitionKey))
+                {
+                    ChartData.Remove(item.PartitionKey);
+                }
             }
         }
+        catch (Exception)
+        {
+            throw;
+        }
+        finally
+        {
+            await LoadingSpinnerHide();
+        }
+
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadingSpinnerShow();
+
+        try
+        {
+            ChartData = new();
+            foreach (var item in PartitionKeys.Where(p => p.IsChecked))
+            {
+                // Read data from Azure Table Storage
+                var query = table.Query<DataValueTableEntity>()
+                    .Where(e => e.PartitionKey == item.PartitionKey)
+                    .OrderByDescending(e => e.Timestamp)
+                    .Take(100);
+                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query));
+            }
+
+            // Notify the component to refresh the UI
+            InvokeAsync(StateHasChanged);
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
+        finally
+        {
+            await LoadingSpinnerHide();
+        }
+    }
+
+    public async Task LoadingSpinnerShow()
+    {
+        isLoading = true;
+        await Task.Delay(1);
+
+    }
+
+    public async Task LoadingSpinnerHide()
+    {
+        isLoading = false;
+        await Task.Delay(1);
+
     }
 }
