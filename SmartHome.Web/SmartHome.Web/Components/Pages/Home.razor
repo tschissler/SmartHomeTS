@@ -5,12 +5,13 @@
 @using SmartHome.Web.Components.Libs;
 @using SmartHome.Web.DataObjects;
 @using Syncfusion.Blazor.Charts;
+@using Syncfusion.Blazor.Data;
 @using Azure.Data.Tables;
 
 @inject MqttController mqttController
 @rendermode InteractiveServer
 
-<PageTitle>Temperatur M3</PageTitle>
+<PageTitle>Temperaturanzeige</PageTitle>
 
 <h1>Temperatur M3</h1>
 @if (isLoading)
@@ -27,7 +28,14 @@
             <label>@item.Label</label>
         </div>
     }
-    <button @onclick="RefreshData">Reload Data</button>
+    <div class="me-3">
+        <button @onclick="RefreshData">Reload Data</button>
+    </div>
+    <div class="me-3">
+        <input type="checkbox" checked="@autoUpdate" @onchange="() => AutoUpdateChanged()" />
+        <label>Auto-Update</label>
+    </div>
+
 </div>
 
 <SfChart>
@@ -51,8 +59,10 @@
 
 @code {
     private bool isLoading = false;
+    private bool autoUpdate = false;
     public Dictionary<string, ObservableCollection<DataValueTableEntity>> ChartData = new();
     TableClient table;
+    private System.Timers.Timer autoRefreshTimer = new System.Timers.Timer(60000);
 
     public List<CheckableItem> PartitionKeys = new()
     {
@@ -69,8 +79,42 @@
 
         table = new TableClient(connectionString, tableName);
 
+        autoRefreshTimer.Elapsed += async (sender, e) => await FetchNewData();
     }
 
+    private async Task AutoUpdateChanged()
+    {
+        autoUpdate = !autoUpdate;
+        if (autoUpdate)
+        {
+            autoRefreshTimer.Start();
+        }
+        else
+        {
+            autoRefreshTimer.Stop();
+        }
+    }
+
+    private async Task FetchNewData()
+    {
+        foreach (var item in PartitionKeys.Where(p => p.IsChecked))
+        {
+            var latestValueTimeStamp = ChartData[item.PartitionKey].Max(i => i.Timestamp);
+            // Read data from Azure Table Storage
+            var query = table.Query<DataValueTableEntity>()
+                .Where(e => e.PartitionKey == item.PartitionKey && e.Timestamp > latestValueTimeStamp)
+                .OrderByDescending(e => e.Timestamp)
+                .Take(100);
+
+            foreach(var resultItem in query)
+            {
+                ChartData[item.PartitionKey].Add(resultItem);
+            }
+        }
+
+        // Notify the component to refresh the UI
+        InvokeAsync(StateHasChanged);
+    }
     private async Task CheckboxChanged(CheckableItem item)
     {
         await LoadingSpinnerShow();
@@ -82,7 +126,7 @@
                 // Read data from Azure Table Storage
                 var query = table.Query<DataValueTableEntity>()
                     .Where(e => e.PartitionKey == item.PartitionKey)
-                    .OrderByDescending(e => e.Timestamp)
+                    .OrderBy(e => e.Timestamp)
                     .Take(100);
                 ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query));
 
