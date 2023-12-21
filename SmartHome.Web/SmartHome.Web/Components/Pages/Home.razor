@@ -28,6 +28,8 @@
             <label>@item.Label</label>
         </div>
     }
+</div>
+<div class="d-flex flex-row">
     <div class="me-3">
         <button @onclick="RefreshData">Reload Data</button>
     </div>
@@ -35,7 +37,9 @@
         <input type="checkbox" checked="@autoUpdate" @onchange="() => AutoUpdateChanged()" />
         <label>Auto-Update</label>
     </div>
-
+    <div class="me-3">
+        <button @onclick="LoadMoreData">Load More Data</button>
+    </div>
 </div>
 
 <SfChart>
@@ -150,7 +154,6 @@
         {
             await LoadingSpinnerHide();
         }
-
     }
 
     private async Task RefreshData()
@@ -196,5 +199,35 @@
         isLoading = false;
         await Task.Delay(1);
 
+    }
+    private async Task LoadMoreData(MouseEventArgs e)
+    {
+        await LoadingSpinnerShow();
+        try
+        {
+            foreach (var item in PartitionKeys.Where(p => p.IsChecked))
+            {
+                var earliestTimestamp = ChartData[item.PartitionKey].First().Timestamp;
+                // Read data from Azure Table Storage
+                var query = table.Query<DataValueTableEntity>()
+                    .Where(e => e.PartitionKey == item.PartitionKey && e.Timestamp < earliestTimestamp)
+                    .OrderByDescending(e => e.Timestamp)
+                    .Take(100);
+
+                foreach(var resultItem in query.ToList().OrderByDescending(i => i.Time))
+                {
+                    ChartData[item.PartitionKey].Insert(0,resultItem);
+                }
+            }
+            InvokeAsync(StateHasChanged);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+        finally
+        {
+            await LoadingSpinnerHide();
+        }
     }
 }
