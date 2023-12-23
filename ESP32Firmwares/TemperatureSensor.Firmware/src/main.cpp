@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <PubSubClient.h>
+#include <MQTT.h>
 #include "DHT.h"
 #include "AzureOTAUpdater.h"
 
@@ -25,7 +25,7 @@ const int mqtt_port = 32004;
 const char* mqtt_OTAtopic = "OTAUpdateTemperatureSensor";
 
 WiFiClient espClient;
-PubSubClient mqttClient(espClient);
+MQTTClient mqttClient;
 
 static bool otaInProgress = false;
 
@@ -40,8 +40,38 @@ String extractVersionFromUrl(String url) {
     return ""; // Return empty string if the pattern is not found
 }
 
+void mqttCallback(String topic, String &payload) {
+    if (otaInProgress)
+      return;
+    
+    Serial.print("Message arrived on topic: ");
+    Serial.print(topic);
+    Serial.print(". Message: ");
+    Serial.println(payload);
+
+    if (topic == mqtt_OTAtopic) {
+      String updateVersion = extractVersionFromUrl(payload);
+      Serial.println("Current firmware version is " + String(version));
+      Serial.println("New firmware version is " + updateVersion);
+      if(strcmp(version, updateVersion.c_str())) {
+          // Trigger OTA Update
+          const char *firmwareUrl = payload.c_str();
+          Serial.println("New firmware available, starting OTA Update from " + String(firmwareUrl));
+          otaInProgress = true;
+          bool result =  AzureOTAUpdater::UpdateFirmwareFromUrl(firmwareUrl);
+          if (result) {
+            Serial.println("OTA Update successful initiated, waiting to be finished");
+          }
+      }
+      else {
+        Serial.println("Firmware is up to date");
+      }
+    }
+}
+
 void connectToMQTT() {
-    mqttClient.setServer(mqtt_broker, mqtt_port);
+    mqttClient.begin(mqtt_broker, mqtt_port, espClient);
+    mqttClient.onMessage(mqttCallback);
     while (!mqttClient.connected()) {
         if (mqttClient.connect("ESP32TemperatureSensorClient")) {
             mqttClient.subscribe(mqtt_OTAtopic);
@@ -51,39 +81,6 @@ void connectToMQTT() {
             Serial.println(mqtt_broker);
             delay(5000);
         }
-    }
-}
-
-void mqttCallback(char* topic, byte* message, unsigned int length) {
-    if (otaInProgress)
-      return;
-    String messageTemp;
-
-    for (int i = 0; i < length; i++) {
-        messageTemp += (char)message[i];
-    }
-    
-    Serial.print("Message arrived on topic: ");
-    Serial.print(topic);
-    Serial.print(". Message: ");
-    Serial.println(messageTemp);
-
-    if (String(topic) == mqtt_OTAtopic) {
-      String updateVersion = extractVersionFromUrl(messageTemp);
-      Serial.println("Current firmware version is " + String(version));
-      Serial.println("New firmware version is " + updateVersion);
-      if(strcmp(version, updateVersion.c_str())) {
-          // Trigger OTA Update
-          const char *firmwareUrl = messageTemp.c_str();
-          
-          bool result =  AzureOTAUpdater::UpdateFirmwareFromUrl(firmwareUrl);
-          if (result) {
-            Serial.println("OTA Update successful initiated, waiting to be finished");
-          }
-      }
-      else {
-        Serial.println("Firmware is up to date");
-      }
     }
 }
 
@@ -98,7 +95,8 @@ void reconnect() {
     }
     Serial.println("Reconnected to WiFi");
   }
-    mqttClient.setServer(mqtt_broker, mqtt_port);
+    mqttClient.begin(mqtt_broker, mqtt_port, espClient);
+    mqttClient.onMessage(mqttCallback);
     while (!mqttClient.connected()) {
         if (mqttClient.connect("ESP32TemperatureSensorClient")) {
             mqttClient.subscribe(mqtt_OTAtopic);
@@ -113,6 +111,7 @@ void reconnect() {
 
 void readSensorAndPublish() {
   if (!mqttClient.connected()) {
+    Serial.println("MQTT Client not connected, reconnecting...");
     reconnect();
   }
   // Stay awake for a short period to receive messages
@@ -173,7 +172,6 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   // // Set up MQTT
-  mqttClient.setCallback(mqttCallback);
   connectToMQTT();
 
   //Init DHT sensor
