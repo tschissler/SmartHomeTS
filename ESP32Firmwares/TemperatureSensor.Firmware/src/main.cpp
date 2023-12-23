@@ -15,9 +15,10 @@ String chipID = "";
 DHT dht(DHTPIN, DHTTYPE);
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
-// Set WIFI_SSID and WIFI_PASSWORD as environment variables on your dev-system
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+// Set WIFI_PASSWORDS as environment variables on your dev-system following the pattern: WIFI_PASSWORDS="ssid1;password1|ssid2;password2"
+String ssid;
+String passwords = WIFI_PASSWORDS;
+String password;
 
 // MQTT Broker settings
 const char* mqtt_broker = "smarthomepi2";
@@ -140,6 +141,41 @@ void readSensorAndPublish() {
   Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
 }
 
+void findWifi() {
+  Serial.println("Scanning for WiFi networks...");
+  int numberOfNetworks = WiFi.scanNetworks();
+  Serial.print("Found ");
+  Serial.print(numberOfNetworks);
+  Serial.println(" networks.");
+  for (int i = 0; i < numberOfNetworks; i++) {
+    Serial.print(WiFi.SSID(i));
+    Serial.print(" (");
+    Serial.print(WiFi.RSSI(i));
+    Serial.print(") ");
+    Serial.println(WiFi.encryptionType(i));
+    delay(10);
+  }
+
+  // Identify the strongest WiFi signal
+  int maxRSSI = -1000;
+  int maxRSSIIndex = -1;
+  for (int i = 0; i < numberOfNetworks; i++) {
+    if (WiFi.RSSI(i) > maxRSSI) {
+      maxRSSI = WiFi.RSSI(i);
+      maxRSSIIndex = i;
+    }
+  }
+  if (maxRSSIIndex == -1) {
+    Serial.println("No WiFi network found");
+    return;
+  } else {
+    Serial.println("Strongest WiFi network is " + WiFi.SSID(maxRSSIIndex) + " with RSSI " + WiFi.RSSI(maxRSSIIndex) + " dBm");
+    ssid = WiFi.SSID(maxRSSIIndex);
+    password = passwords.substring(passwords.indexOf(ssid) + ssid.length() + 1, passwords.indexOf('|', passwords.indexOf(ssid)));
+    return;
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   Serial.print("TemperatureSensor version ");
@@ -152,6 +188,13 @@ void setup() {
   // Print the Chip ID
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
+
+  findWifi();
+  while (ssid == "") {
+    Serial.println("No WiFi network found, retrying...");
+    delay(1000);
+    findWifi();
+  }
 
   // Connect to WiFi
   Serial.print("Connecting to WiFi ");
