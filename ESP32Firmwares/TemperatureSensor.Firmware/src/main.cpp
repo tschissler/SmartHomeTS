@@ -133,9 +133,9 @@ void readSensorAndPublish() {
 
   String baseTopic = "data/" + chipID + "/"; // Base topic with the chipID
   
-  mqttClient.publish((baseTopic + "temperature").c_str(), tempString, true);
-  mqttClient.publish((baseTopic + "humidity").c_str(), humString, true);
-  mqttClient.publish(("meta/" + chipID + "/version").c_str(), version, true);
+  mqttClient.publish((baseTopic + "temperature").c_str(), String(tempString));
+  mqttClient.publish((baseTopic + "humidity").c_str(), String(humString));
+  mqttClient.publish(("meta/" + chipID + "/version").c_str(), String(version));
   Serial.println("Published new values to MQTT Broker");
   Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
 }
