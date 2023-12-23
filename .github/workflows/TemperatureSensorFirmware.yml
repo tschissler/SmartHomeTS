@@ -35,7 +35,7 @@ jobs:
       env:
         WIFI_SSID: ${{ secrets.WIFI_SSID }}
         WIFI_PASSWORD: ${{ secrets.WIFI_PASSWORD }}
-        TEMPSENSORFW_VERSION: $version
+        TEMPSENSORFW_VERSION: ${{ env.version }}
       run: |
         pio run
 
