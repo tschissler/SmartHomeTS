@@ -71,17 +71,18 @@ void mqttCallback(String topic, String &payload) {
 
 void connectToMQTT() {
     mqttClient.begin(mqtt_broker, mqtt_port, espClient);
-    mqttClient.onMessage(mqttCallback);
+    
     while (!mqttClient.connected()) {
         if (mqttClient.connect("ESP32TemperatureSensorClient")) {
             mqttClient.subscribe(mqtt_OTAtopic);
-            Serial.println("Connected to MQTT Broker");
+            Serial.println("Connected to MQTT Broker from connectToMQTT");
         } else {
             Serial.print("Failed to connect to MQTT Broker: ");
             Serial.println(mqtt_broker);
             delay(5000);
         }
     }
+    mqttClient.onMessage(mqttCallback);
 }
 
 void reconnect() {
@@ -100,7 +101,7 @@ void reconnect() {
     while (!mqttClient.connected()) {
         if (mqttClient.connect("ESP32TemperatureSensorClient")) {
             mqttClient.subscribe(mqtt_OTAtopic);
-            Serial.println("Connected to MQTT Broker");
+            Serial.println("Connected to MQTT Broker from reconnect");
         } else {
             Serial.print("Failed to connect to MQTT Broker: ");
             Serial.println(mqtt_broker);
@@ -110,10 +111,6 @@ void reconnect() {
 }
 
 void readSensorAndPublish() {
-  if (!mqttClient.connected()) {
-    Serial.println("MQTT Client not connected, reconnecting...");
-    reconnect();
-  }
   // Stay awake for a short period to receive messages
   unsigned long startMillis = millis();
   while (millis() - startMillis < 10000) {
@@ -141,7 +138,6 @@ void readSensorAndPublish() {
   mqttClient.publish(("meta/" + chipID + "/version").c_str(), version, true);
   Serial.println("Published new values to MQTT Broker");
   Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
-  delay(1000);
 }
 
 void setup() {
@@ -180,12 +176,12 @@ void setup() {
 }
 
 void loop() {
+  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
   if (!mqttClient.connected()) {
     reconnect();
   }
   readSensorAndPublish();
   mqttClient.loop();
 
-  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
   delay(TIME_TO_SLEEP * 1000);
 }
