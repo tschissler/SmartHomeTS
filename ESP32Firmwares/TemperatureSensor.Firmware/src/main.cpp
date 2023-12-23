@@ -178,6 +178,7 @@ void setup() {
 void loop() {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
   if (!mqttClient.connected()) {
+    Serial.println("MQTT Client not connected, reconnecting...");
     reconnect();
   }
   readSensorAndPublish();
