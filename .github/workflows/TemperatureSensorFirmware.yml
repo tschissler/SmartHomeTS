@@ -18,8 +18,8 @@ jobs:
   
     steps:
     - uses: actions/checkout@v3
-    - name: Getting version 
-      run: echo $(( ${{ github.run_number }} - 6 ))
+    - name: Generating version 
+      run: echo "version=0.0.$(( ${{ github.run_number }} - 18 ))" >> $GITHUB_ENV
       
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -42,13 +42,13 @@ jobs:
       run: |
         az storage blob upload --account-name iotstoragem1 \
                                --container-name firmwareupdates \
-                               --name TemperatureSensorFirmware_${{ github.run_id }}.bin \
+                               --name TemperatureSensorFirmware_$version.bin \
                                --file .pio/build/esp32dev/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/TemperatureSensorFirmware_${{ github.run_id }}.bin" >> $GITHUB_OUTPUT
+      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/TemperatureSensorFirmware_$version.bin" >> $GITHUB_OUTPUT
                            
   triggerupdate:
     needs: build
