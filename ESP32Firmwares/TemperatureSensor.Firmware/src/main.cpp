@@ -190,7 +190,7 @@ void setup() {
   Serial.println(chipID);
 
   findWifi();
-  while (ssid == "") {
+  while (ssid == "" || password == "") {
     Serial.println("No WiFi network found, retrying...");
     delay(1000);
     findWifi();
