@@ -4,6 +4,9 @@
 
 static HttpsOTAStatus_t otastatus;
 
+// Root Certificate for Azure Blob STorage
+// Downloaded from https://www.digicert.com/kb/digicert-root-certificates.htm
+
 static const char *server_certificate = "-----BEGIN CERTIFICATE-----\n" \
 "MIIDdzCCAl+gAwIBAgIEAgAAuTANBgkqhkiG9w0BAQUFADBaMQswCQYDVQQGEwJJ\n" \
 "RTESMBAGA1UEChMJQmFsdGltb3JlMRMwEQYDVQQLEwpDeWJlclRydXN0MSIwIAYD\n" \
@@ -60,6 +63,7 @@ bool AzureOTAUpdater::UpdateFirmwareFromUrl(const char* firmwareUrl) {
     Serial.println(firmwareUrl);
     
     HttpsOTA.onHttpEvent(HttpEvent);
+    Serial.println("Starting OTA Update from Azure Blob Storage " + String(firmwareUrl) + " ...");
     HttpsOTA.begin(firmwareUrl, server_certificate); 
     Serial.println("OTA Update in progress...");
     return true;

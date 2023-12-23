@@ -2,15 +2,13 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "DHT.h"
-#include <Preferences.h>
 #include "AzureOTAUpdater.h"
 
-
-const char* version = "0.1.99";
+const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
 // Deep Sleep Configuration
-#define TIME_TO_SLEEP  60        // Time in seconds for ESP32 to sleep
+#define TIME_TO_SLEEP  3        // Time in seconds for ESP32 to sleep
 
 #define DHTPIN 25     
 #define DHTTYPE DHT22   
@@ -28,10 +26,19 @@ const char* mqtt_OTAtopic = "OTAUpdateTemperatureSensor";
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
-Preferences preferences;
 
 static bool otaInProgress = false;
 
+String extractVersionFromUrl(String url) {
+    int lastUnderscoreIndex = url.lastIndexOf('_');
+    int lastDotIndex = url.lastIndexOf('.');
+
+    if (lastUnderscoreIndex != -1 && lastDotIndex != -1 && lastDotIndex > lastUnderscoreIndex) {
+        return url.substring(lastUnderscoreIndex + 1, lastDotIndex);
+    }
+
+    return ""; // Return empty string if the pattern is not found
+}
 
 void connectToMQTT() {
     mqttClient.setServer(mqtt_broker, mqtt_port);
@@ -48,35 +55,29 @@ void connectToMQTT() {
 }
 
 void mqttCallback(char* topic, byte* message, unsigned int length) {
-    return;
-    Serial.print("Message arrived on topic: ");
-    Serial.print(topic);
-    Serial.print(". Message: ");
-
     String messageTemp;
 
     for (int i = 0; i < length; i++) {
         messageTemp += (char)message[i];
     }
-
+    
+    Serial.print("Message arrived on topic: ");
+    Serial.print(topic);
+    Serial.print(". Message: ");
     Serial.println(messageTemp);
-    preferences.begin("config", false);
 
     if (String(topic) == mqtt_OTAtopic) {
-      if( messageTemp != preferences.getString("firmwareUrl", "")) {
+      String updateVersion = extractVersionFromUrl(messageTemp);
+      Serial.println("Current firmware version is " + String(version));
+      Serial.println("New firmware version is " + updateVersion);
+      if( version != updateVersion.c_str()) {
           // Trigger OTA Update
-          Serial.print("Current firmware version: ");
-          Serial.println(preferences.getString("firmwareUrl", ""));
-          Serial.print("New firmware version: ");
-          Serial.println(messageTemp);
-          Serial.println("OTA Update Triggered");
-          String firmwareUrl = messageTemp;
-          // bool result = updateFirmwareFromUrl(firmwareUrl);
-          // if (result) {
-          //   Serial.println("OTA Update successful, recording new firmwareUrl in preferences");
-          //   preferences.putString("firmwareUrl", firmwareUrl);
-          // }
-          preferences.end();
+          const char *firmwareUrl = messageTemp.c_str();
+          
+          bool result =  AzureOTAUpdater::UpdateFirmwareFromUrl(firmwareUrl);
+          if (result) {
+            Serial.println("OTA Update successful initiated, waiting to be finished");
+          }
       }
       else {
         Serial.println("Firmware is up to date");
@@ -95,13 +96,17 @@ void reconnect() {
     }
     Serial.println("Reconnected to WiFi");
   }
-  while (!mqttClient.connected()) {
-    if (mqttClient.connect("ESP32Client")) {
-      connectToMQTT();
-    } else {
-      delay(5000);
+    mqttClient.setServer(mqtt_broker, mqtt_port);
+    while (!mqttClient.connected()) {
+        if (mqttClient.connect("ESP32TemperatureSensorClient")) {
+            mqttClient.subscribe(mqtt_OTAtopic);
+            Serial.println("Connected to MQTT Broker");
+        } else {
+            Serial.print("Failed to connect to MQTT Broker: ");
+            Serial.println(mqtt_broker);
+            delay(5000);
+        }
     }
-  }
 }
 
 void readSensorAndPublish() {
@@ -134,38 +139,22 @@ void readSensorAndPublish() {
   mqttClient.publish((baseTopic + "humidity").c_str(), humString, true);
   mqttClient.publish(("meta/" + chipID + "/version").c_str(), version, true);
   Serial.println("Published new values to MQTT Broker");
-  Serial.print("Temperature: ");
-  Serial.print(temperature);
-  Serial.print("°C, Humidity: ");
-  Serial.print(humidity);
-  Serial.print("%, Version: ");
-  Serial.println(version);
+  Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
   delay(1000);
-}
-
-void goToDeepSleep() {
-  Serial.println("Going to sleep now");
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * 1000000);
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
-  esp_deep_sleep_start();
 }
 
 void setup() {
   Serial.begin(9600);
-  Serial.print("TemperatureSensor ");
+  Serial.print("TemperatureSensor version ");
   Serial.println(version);
 
   // Get the high 2 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
   chipID += String((uint16_t)(ESP.getEfuseMac() >> 32), HEX);
-
   // Get the low 4 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
   chipID += String((uint32_t)ESP.getEfuseMac(), HEX);
-
   // Print the Chip ID
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
-
 
   // Connect to WiFi
   Serial.print("Connecting to WiFi ");
@@ -182,29 +171,21 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   // // Set up MQTT
-  // mqttClient.setCallback(mqttCallback);
-  // connectToMQTT();
+  mqttClient.setCallback(mqttCallback);
+  connectToMQTT();
 
-  // //Init DHT sensor
-  // dht.begin();
-  // Serial.println("DHT sensor initialized");
-
-  //readSensorAndPublish();
-
-  //goToDeepSleep();
+  //Init DHT sensor
+  dht.begin();
+  Serial.println("DHT sensor initialized");
 }
 
 void loop() {
-  // readSensorAndPublish();
-  // mqttClient.loop();
-
-  if (!otaInProgress)
-  {
-    const char* firmwareURL = "https://iotstoragem1.blob.core.windows.net/firmwareupdates/TemperatureSensorFirmware_7239430831.bin";
-    AzureOTAUpdater::UpdateFirmwareFromUrl(firmwareURL);
-    otaInProgress = true;
+  if (!mqttClient.connected()) {
+    reconnect();
   }
+  readSensorAndPublish();
+  mqttClient.loop();
 
   AzureOTAUpdater::CheckUpdateStatus();
-  delay(1000);
+  delay(TIME_TO_SLEEP * 1000);
 }
