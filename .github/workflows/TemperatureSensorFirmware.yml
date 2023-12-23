@@ -18,7 +18,9 @@ jobs:
   
     steps:
     - uses: actions/checkout@v3
-
+    - name: Getting version 
+      run: echo ${{ github.run_number }}
+      
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
