@@ -8,7 +8,7 @@ const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
 // Deep Sleep Configuration
-#define TIME_TO_SLEEP  5        // Time in seconds for ESP32 to sleep
+#define TIME_TO_SLEEP  60        // Time in seconds for ESP32 to sleep
 
 #define DHTPIN 25     
 #define DHTTYPE DHT22   
