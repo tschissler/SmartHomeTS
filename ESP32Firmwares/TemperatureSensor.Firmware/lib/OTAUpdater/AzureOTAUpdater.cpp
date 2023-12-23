@@ -83,5 +83,6 @@ bool AzureOTAUpdater::CheckUpdateStatus()
         Serial.println("Firmware Upgrade Fail");
         return false;
     }
+    return false;
 }
 
