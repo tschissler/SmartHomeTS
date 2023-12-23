@@ -72,7 +72,7 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
       String updateVersion = extractVersionFromUrl(messageTemp);
       Serial.println("Current firmware version is " + String(version));
       Serial.println("New firmware version is " + updateVersion);
-      if( version != updateVersion.c_str()) {
+      if(strcmp(version, updateVersion.c_str())) {
           // Trigger OTA Update
           const char *firmwareUrl = messageTemp.c_str();
           
