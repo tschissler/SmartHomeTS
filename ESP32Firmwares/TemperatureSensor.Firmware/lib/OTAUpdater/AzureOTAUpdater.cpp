@@ -69,14 +69,19 @@ bool AzureOTAUpdater::UpdateFirmwareFromUrl(const char* firmwareUrl) {
     return true;
 }
 
-void AzureOTAUpdater::CheckUpdateStatus()
+bool AzureOTAUpdater::CheckUpdateStatus()
 {
     otastatus = HttpsOTA.status();
-    if(otastatus == HTTPS_OTA_SUCCESS) { 
+    if(otastatus == HTTPS_OTA_UPDATING) {
+        Serial.println("OTA Update in progress...");
+        return true;
+    } else if(otastatus == HTTPS_OTA_SUCCESS) { 
         Serial.println("Firmware written successfully. Rebooting now ...");
         ESP.restart();
+        return true;
     } else if(otastatus == HTTPS_OTA_FAIL) { 
         Serial.println("Firmware Upgrade Fail");
+        return false;
     }
 }
 

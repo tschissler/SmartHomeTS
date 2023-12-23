@@ -8,7 +8,7 @@ const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
 // Deep Sleep Configuration
-#define TIME_TO_SLEEP  3        // Time in seconds for ESP32 to sleep
+#define TIME_TO_SLEEP  5        // Time in seconds for ESP32 to sleep
 
 #define DHTPIN 25     
 #define DHTTYPE DHT22   
@@ -55,6 +55,8 @@ void connectToMQTT() {
 }
 
 void mqttCallback(char* topic, byte* message, unsigned int length) {
+    if (otaInProgress)
+      return;
     String messageTemp;
 
     for (int i = 0; i < length; i++) {
@@ -186,6 +188,6 @@ void loop() {
   readSensorAndPublish();
   mqttClient.loop();
 
-  AzureOTAUpdater::CheckUpdateStatus();
+  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
   delay(TIME_TO_SLEEP * 1000);
 }
