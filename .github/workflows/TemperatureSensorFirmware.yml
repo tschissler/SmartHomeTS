@@ -33,8 +33,7 @@ jobs:
 
     - name: Build with PlatformIO  
       env:
-        WIFI_SSID: ${{ secrets.WIFI_SSID }}
-        WIFI_PASSWORD: ${{ secrets.WIFI_PASSWORD }}
+        WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
         TEMPSENSORFW_VERSION: ${{ env.version }}
       run: |
         pio run
