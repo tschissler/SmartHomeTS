@@ -160,7 +160,7 @@ void findWifi() {
   int maxRSSI = -1000;
   int maxRSSIIndex = -1;
   for (int i = 0; i < numberOfNetworks; i++) {
-    if (WiFi.RSSI(i) > maxRSSI) {
+    if (WiFi.RSSI(i) > maxRSSI && WiFi.SSID(i) != "WLAN_M3_Keller") {
       maxRSSI = WiFi.RSSI(i);
       maxRSSIIndex = i;
     }
