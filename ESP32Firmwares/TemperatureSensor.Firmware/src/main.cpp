@@ -160,7 +160,7 @@ void findWifi() {
   int maxRSSI = -1000;
   int maxRSSIIndex = -1;
   for (int i = 0; i < numberOfNetworks; i++) {
-    if (WiFi.RSSI(i) > maxRSSI && WiFi.SSID(i) != "WLAN_M3_Keller") {
+    if (WiFi.RSSI(i) > maxRSSI && passwords.indexOf(WiFi.SSID(i)) >=0) {
       maxRSSI = WiFi.RSSI(i);
       maxRSSIIndex = i;
     }
@@ -169,7 +169,7 @@ void findWifi() {
     Serial.println("No WiFi network found");
     return;
   } else {
-    Serial.println("Strongest WiFi network is " + WiFi.SSID(maxRSSIIndex) + " with RSSI " + WiFi.RSSI(maxRSSIIndex) + " dBm");
+    Serial.println("Strongest known WiFi network is " + WiFi.SSID(maxRSSIIndex) + " with RSSI " + WiFi.RSSI(maxRSSIIndex) + " dBm");
     ssid = WiFi.SSID(maxRSSIIndex);
     password = passwords.substring(passwords.indexOf(ssid) + ssid.length() + 1, passwords.indexOf('|', passwords.indexOf(ssid)));
     return;
