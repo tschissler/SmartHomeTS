@@ -3,7 +3,7 @@ using Azure.Data.Tables;
 using Azure.Data.Tables.Models;
 using System.Runtime.InteropServices;
 
-namespace StorageConnector
+namespace StorageController
 {
     public class CosmosDBController
     {

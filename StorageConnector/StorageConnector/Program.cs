@@ -1,4 +1,6 @@
-﻿namespace StorageConnector
+﻿using StorageController;
+
+namespace StorageConnector
 {
     public class Program
     {
