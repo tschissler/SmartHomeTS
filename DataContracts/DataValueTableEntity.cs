@@ -1,7 +1,7 @@
 ﻿using Azure;
 using Azure.Data.Tables;
 
-namespace SmartHome.Web.DataObjects
+namespace DataContracts
 {
     public class DataValueTableEntity : ITableEntity
     {
