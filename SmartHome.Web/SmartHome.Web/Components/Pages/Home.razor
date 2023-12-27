@@ -41,17 +41,23 @@
     <div class="me-3">
         <button @onclick="LoadMoreData">Load More Data</button>
     </div>
+    <div class="me-3">
+        <button @onclick="HiResData">Hi-Res</button>
+    </div>
+    <div class="me-3">
+        <button @onclick="LoResData">Lo-Res</button>
+    </div>
 </div>
 
 <SfChart>
-    <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime"></ChartPrimaryXAxis>
+    <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime" LabelFormat="dd.MMM. HH.mm" LabelIntersectAction="LabelIntersectAction.Rotate90"></ChartPrimaryXAxis>
     <ChartTooltipSettings Enable="true"></ChartTooltipSettings>
 
     <ChartSeriesCollection>
         @foreach (var item in PartitionKeys.Where(p => p.IsChecked))
         {
             <ChartSeries Name="@item.Label" XName="LocalTime" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]">
-                <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+                <ChartSeriesAnimation Enable="true"></ChartSeriesAnimation>
                 <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle">
                 </ChartMarker>
 
@@ -65,8 +71,13 @@
 @code {
     private bool isLoading = false;
     private bool autoUpdate = false;
+    private int dataTimeRange = -1;
     public Dictionary<string, ObservableCollection<DataValueTableEntity>> ChartData = new();
     TableClient table;
+    string connectionString = "DefaultEndpointsProtocol=https;AccountName=smarthometsstorage;AccountKey=yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==;TableEndpoint=https://smarthometsstorage.table.cosmos.azure.com:443/;";
+    string hiResTableName = "SmartHomeData";
+    string loResTableName = "SmartHomeHourAggregationData";
+
     private System.Timers.Timer autoRefreshTimer = new System.Timers.Timer(60000);
 
     public List<CheckableItem> PartitionKeys = new()
@@ -79,14 +90,22 @@
 
     protected override void OnInitialized()
     {
-        string connectionString = "DefaultEndpointsProtocol=https;AccountName=smarthometsstorage;AccountKey=yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==;TableEndpoint=https://smarthometsstorage.table.cosmos.azure.com:443/;";
-        string tableName = "SmartHomeData";
-
-        table = new TableClient(connectionString, tableName);
+        table = new TableClient(connectionString, hiResTableName);
 
         autoRefreshTimer.Elapsed += async (sender, e) => await FetchNewData();
     }
 
+    private async Task HiResData()
+    {
+        table = new TableClient(connectionString, hiResTableName);
+        RefreshData();
+    }
+
+    private async Task LoResData()
+    {
+        table = new TableClient(connectionString, loResTableName);
+        RefreshData();
+    }
     private async Task AutoUpdateChanged()
     {
         autoUpdate = !autoUpdate;
@@ -100,6 +119,15 @@
         }
     }
 
+    private async Task LoadData(string partitionKey)
+    {
+        var queryString =
+            $"PartitionKey eq '{partitionKey}' " +
+            $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRange).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+        var query = table.Query<DataValueTableEntity>(queryString);
+        ChartData.Add(partitionKey, new ObservableCollection<DataValueTableEntity>(query.ToList().OrderBy(i => i.Time)));
+
+    }
     private async Task FetchNewData()
     {
         foreach (var item in PartitionKeys.Where(p => p.IsChecked))
@@ -128,14 +156,7 @@
             if (!item.IsChecked)
             {
                 item.IsChecked = true;
-                // Read data from Azure Table Storage
-                var query = table.Query<DataValueTableEntity>()
-                    .Where(e => e.PartitionKey == item.PartitionKey)
-                    .OrderByDescending(e => e.Timestamp)
-                    .Take(100);
-                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query.ToList().OrderBy(i => i.Time)));
-
-                // Notify the component to refresh the UI
+                LoadData(item.PartitionKey);
                 InvokeAsync(StateHasChanged);
             }
             else
@@ -166,12 +187,7 @@
             ChartData = new();
             foreach (var item in PartitionKeys.Where(p => p.IsChecked))
             {
-                // Read data from Azure Table Storage
-                var query = table.Query<DataValueTableEntity>()
-                    .Where(e => e.PartitionKey == item.PartitionKey)
-                    .OrderByDescending(e => e.Timestamp)
-                    .Take(100);
-                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(query.ToList().OrderBy(i => i.Time)));
+                LoadData(item.PartitionKey);                
             }
 
             // Notify the component to refresh the UI
@@ -191,14 +207,14 @@
     public async Task LoadingSpinnerShow()
     {
         isLoading = true;
-        await Task.Delay(1);
+        await Task.Delay(5);
 
     }
 
     public async Task LoadingSpinnerHide()
     {
         isLoading = false;
-        await Task.Delay(1);
+        await Task.Delay(5);
 
     }
     private async Task LoadMoreData(MouseEventArgs e)
@@ -206,14 +222,17 @@
         await LoadingSpinnerShow();
         try
         {
+            dataTimeRange--;
+
             foreach (var item in PartitionKeys.Where(p => p.IsChecked))
             {
-                var earliestTimestamp = ChartData[item.PartitionKey].First().Timestamp;
-                // Read data from Azure Table Storage
-                var query = table.Query<DataValueTableEntity>()
-                    .Where(e => e.PartitionKey == item.PartitionKey && e.Timestamp < earliestTimestamp)
-                    .OrderByDescending(e => e.Timestamp)
-                    .Take(100);
+                var earliestTimestamp = ChartData[item.PartitionKey].First().Time;
+
+                string queryString =
+                    $"PartitionKey eq '{item.PartitionKey}' " +
+                    $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRange).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
+                    $"and Time le datetime'{earliestTimestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+                var query = table.Query<DataValueTableEntity>(queryString);
 
                 foreach(var resultItem in query.ToList().OrderByDescending(i => i.Time))
                 {
