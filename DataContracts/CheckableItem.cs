@@ -1,4 +1,4 @@
-﻿namespace SmartHome.Web.DataObjects
+﻿namespace DataContracts
 {
     public class CheckableItem
     {
