@@ -16,7 +16,7 @@ namespace StorageConnector
 
         public event DataUpdatedHandler OnDataUpdated;
 
-        public delegate void DataUpdatedHandler(string topic, decimal value, DateTime time);
+        public delegate void DataUpdatedHandler(string topic, double value, DateTime time);
 
         public MqttController(string mqttBrokerName, int mqttBrokerPort, string clientName)
         {
@@ -39,8 +39,8 @@ namespace StorageConnector
         private Task _client_ApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs args)
         {
             Console.WriteLine($"{DateTime.Now.ToLongTimeString()} --- Received MQTT message: {args.ApplicationMessage.Topic} - {args.ApplicationMessage.ConvertPayloadToString()}");
-            decimal value = 0;
-            if (decimal.TryParse(args.ApplicationMessage.ConvertPayloadToString(), new CultureInfo("en-US"), out value))
+            double value = 0;
+            if (double.TryParse(args.ApplicationMessage.ConvertPayloadToString(), new CultureInfo("en-US"), out value))
             {
                 var topic = args.ApplicationMessage.Topic;
                 var time = DateTime.Now;

@@ -20,7 +20,7 @@ namespace StorageConnector
             Thread.Sleep(Timeout.Infinite);
         }
 
-        private static void MqttController_OnDataUpdated(string topic, decimal value, DateTime time)
+        private static void MqttController_OnDataUpdated(string topic, double value, DateTime time)
         {
             var topicParts = topic.Split('/');
             var partitionKey = topicParts[1]+"/"+topicParts[2];
