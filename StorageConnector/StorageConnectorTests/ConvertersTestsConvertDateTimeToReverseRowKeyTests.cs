@@ -3,7 +3,7 @@ using StorageConnector;
 namespace StorageConnectorTests
 {
     [TestClass]
-    public class ConvertresTestsConvertDateTimeToReverseRowKeyTests
+    public class ConvertersTestsConvertDateTimeToReverseRowKeyTests
     {
         [TestMethod]
         public void ConvertValidDate()
