@@ -10,4 +10,8 @@
     <PackageReference Include="Azure.Data.Tables" Version="12.8.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DataContracts\DataContracts.csproj" />
+  </ItemGroup>
+
 </Project>
