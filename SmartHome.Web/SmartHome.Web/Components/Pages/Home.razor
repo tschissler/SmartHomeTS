@@ -41,10 +41,10 @@
         <button @onclick="LoadMoreData">Load More Data</button>
     </div>
     <div class="me-3">
-        <button @onclick="HiResData">Hi-Res</button>
+        <button @onclick="HiResData">Minuten</button>
     </div>
     <div class="me-3">
-        <button @onclick="LoResData">Lo-Res</button>
+        <button @onclick="LoResData">Stunden</button>
     </div>
 </div>
 <div class="d-flex flex-row">
@@ -73,12 +73,13 @@
 @code {
     private bool isLoading = false;
     private bool autoUpdate = false;
-    private int dataTimeRange = -1;
+    private int dataTimeRangeHours = -1;
+    private int dataTimeIntervalHours = -1;
     public Dictionary<string, ObservableCollection<DataValueTableEntity>> ChartData = new();
     TableClient table;
     string connectionString = "DefaultEndpointsProtocol=https;AccountName=smarthometsstorage;AccountKey=yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==;TableEndpoint=https://smarthometsstorage.table.cosmos.azure.com:443/;";
-    string hiResTableName = "SmartHomeData";
-    string loResTableName = "SmartHomeHourAggregationData";
+    string hiResTableName = "SmartHomeClimateRawData";
+    string loResTableName = "SmartHomeClimateHourAggregationData";
 
     private System.Timers.Timer autoRefreshTimer = new System.Timers.Timer(60000);
 
@@ -100,12 +101,16 @@
     private async Task HiResData()
     {
         table = new TableClient(connectionString, hiResTableName);
+        dataTimeRangeHours = -1;
+        dataTimeIntervalHours = -1;
         RefreshData();
     }
 
     private async Task LoResData()
     {
         table = new TableClient(connectionString, loResTableName);
+        dataTimeRangeHours = -24;
+        dataTimeIntervalHours = -24;
         RefreshData();
     }
     private async Task AutoUpdateChanged()
@@ -125,7 +130,7 @@
     {
         var queryString =
             $"PartitionKey eq '{partitionKey}' " +
-            $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRange).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+            $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRangeHours).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
         var query = table.Query<DataValueTableEntity>(queryString);
         ChartData.Add(partitionKey, new ObservableCollection<DataValueTableEntity>(query.ToList().OrderBy(i => i.Time)));
 
@@ -210,21 +215,21 @@
     {
         isLoading = true;
         await Task.Delay(5);
-
+        InvokeAsync(StateHasChanged);
     }
 
     public async Task LoadingSpinnerHide()
     {
         isLoading = false;
         await Task.Delay(5);
-
+        InvokeAsync(StateHasChanged);
     }
     private async Task LoadMoreData(MouseEventArgs e)
     {
         await LoadingSpinnerShow();
         try
         {
-            dataTimeRange--;
+            dataTimeRangeHours += dataTimeIntervalHours;
 
             foreach (var item in PartitionKeys.Where(p => p.IsChecked))
             {
@@ -232,7 +237,7 @@
 
                 string queryString =
                     $"PartitionKey eq '{item.PartitionKey}' " +
-                    $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRange).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
+                    $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRangeHours).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
                     $"and Time le datetime'{earliestTimestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
                 var query = table.Query<DataValueTableEntity>(queryString);
 
