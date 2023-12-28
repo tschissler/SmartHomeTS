@@ -10,6 +10,7 @@ String chipID = "";
 // Deep Sleep Configuration
 #define TIME_TO_SLEEP  60        // Time in seconds for ESP32 to sleep
 
+#define INTERAL_LED_PIN 2        // Internal LED pin
 #define DHTPIN 25     
 #define DHTTYPE DHT22   
 DHT dht(DHTPIN, DHTTYPE);
@@ -216,6 +217,9 @@ void setup() {
   //Init DHT sensor
   dht.begin();
   Serial.println("DHT sensor initialized");
+
+  pinMode(INTERAL_LED_PIN, OUTPUT);
+  digitalWrite(INTERAL_LED_PIN, LOW);
 }
 
 void loop() {
