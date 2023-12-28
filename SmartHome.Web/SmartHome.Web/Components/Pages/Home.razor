@@ -13,44 +13,46 @@
 
 <PageTitle>Temperaturanzeige</PageTitle>
 
-<h1>Temperaturen</h1>
-@if (isLoading)
-{
-    <div class="spinner-container">
-        <div class="spinner"></div> 
-    </div>
-}
-<div class="d-flex flex-row">
-    @foreach (var item in PartitionKeys)
+<div class="container mt-4">
+    <!-- Title Section -->
+    <h1 class="mb-4">Temperaturen</h1>
+
+    <!-- Loading Spinner -->
+    @if (isLoading)
     {
-        <div class="me-3">
-            <input type="checkbox" checked="@item.IsChecked" @onchange="() => CheckboxChanged(item)" />
-            <label>@item.Label</label>
+        <div class="spinner-container">
+            <div class="spinner"></div> 
         </div>
     }
-</div>
-<div class="d-flex flex-row">
-    <div class="me-3">
-        <button @onclick="RefreshData">Reload Data</button>
-    </div>
-    <div class="me-3">
-        <input type="checkbox" checked="@autoUpdate" @onchange="() => AutoUpdateChanged()" />
-        <label>Auto-Update</label>
-    </div>
-    <div class="me-3">
-        <button @onclick="LoadMoreData">Load More Data</button>
-    </div>
-    <div class="me-3">
-        <button @onclick="HiResData">Minuten</button>
-    </div>
-    <div class="me-3">
-        <button @onclick="LoResData">Stunden</button>
-    </div>
-</div>
-<div class="d-flex flex-row">
-    &nbsp;
-</div>
 
+    <!-- Checkbox Filters -->
+    <div class="row mb-3">
+        <div class="col">
+            @foreach (var item in PartitionKeys)
+            {
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="@item.Id" checked="@item.IsChecked" @onchange="() => CheckboxChanged(item)" />
+                    <label class="form-check-label" for="@item.Id">@item.Label</label>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mb-3">
+        <div class="btn-group" role="group">
+            <button class="btn btn-primary" @onclick="RefreshData">Reload Data</button>
+            <button class="btn btn-secondary" @onclick="LoadMoreData">Load More Data</button>
+        </div>
+        <div class="btn-group ms-2" role="group">
+            <button class="btn btn-info" @onclick="HiResData">Minuten</button>
+            <button class="btn btn-warning" @onclick="LoResData">Stunden</button>
+        </div>
+        <div class="form-check form-switch d-inline-block ms-3">
+            <input class="form-check-input" type="checkbox" id="autoUpdate" checked="@autoUpdate" @onchange="() => AutoUpdateChanged()" />
+            <label class="form-check-label" for="autoUpdate">Auto-Update</label>
+        </div>
+    </div>
 <SfChart>
     <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime" LabelFormat="dd.MMM. HH.mm" LabelRotation="45"></ChartPrimaryXAxis>
     <ChartTooltipSettings Enable="true"></ChartTooltipSettings>
@@ -68,7 +70,7 @@
     </ChartSeriesCollection>
     <ChartLegendSettings Visible="true" />
 </SfChart>
-
+</div>
 
 @code {
     private bool isLoading = false;
@@ -85,10 +87,10 @@
 
     public List<CheckableItem> PartitionKeys = new()
     {
-        new CheckableItem { Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = false, Color = "blue" },
-        new CheckableItem { Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false, Color = "grey" },
-        new CheckableItem { Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false, Color = "magenta" }, 
-        new CheckableItem { Label = "Batteriesensor", PartitionKey = "1420381fb608_temperature", IsChecked = false, Color = "green" }
+        new CheckableItem { Id="1", Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = false, Color = "blue" },
+        new CheckableItem { Id="2", Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false, Color = "grey" },
+        new CheckableItem { Id="3", Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false, Color = "magenta" }, 
+        new CheckableItem { Id="4", Label = "Batteriesensor", PartitionKey = "1420381fb608_temperature", IsChecked = false, Color = "green" }
     };
 
     protected override void OnInitialized()
