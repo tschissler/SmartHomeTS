@@ -25,6 +25,7 @@ namespace StorageConnector
             var topicParts = topic.Split('/');
             var partitionKey = topicParts[1]+"/"+topicParts[2];
             cosmosDBController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
+            Console.WriteLine($"Wrote data to storage table, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
         }
     }
 }
