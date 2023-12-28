@@ -59,5 +59,22 @@ namespace StorageController
             serviceClient.CreateTable(tableName);
             tableClient = serviceClient.GetTableClient(tableName); 
         }
+
+        public DataValueTableEntity GetNewestItem(string partitionKey)
+        {
+            if (ReadTop1Data($"PartitionKey eq '{partitionKey}'") == null)
+            {
+                return null;
+            }
+            var startTime = DateTime.Now.AddHours(-1);
+            var items = tableClient.Query<DataValueTableEntity>($"PartitionKey eq '{partitionKey}' and Time ge datetime'{startTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'");
+            while (items.Count() == 0)
+            {
+                startTime = startTime.AddHours(-1);
+                items = tableClient.Query<DataValueTableEntity>($"PartitionKey eq '{partitionKey}' and Time ge datetime'{startTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'");
+            }
+
+            return items.OrderByDescending(i => i.Time).FirstOrDefault();
+        }
     }
 }

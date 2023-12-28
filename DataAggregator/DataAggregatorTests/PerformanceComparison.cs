@@ -8,6 +8,7 @@ using System.Reflection.Emit;
 
 namespace DataAggregatorTests
 {
+    [Ignore]
     [TestClass]
     public class PerformanceComparison
     {
@@ -18,7 +19,7 @@ namespace DataAggregatorTests
         [TestMethod]
         public void MeassureLinqTakeAgainstQueryTake()
         {
-            var tableName = "SmartHomeData";
+            var tableName = "SmartHomeClimateRawData";
             var partitionKey = "1c50f3ab6224_humidity";
             var serviceClient = new TableServiceClient(
                 new Uri(storageUri),

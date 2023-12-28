@@ -12,32 +12,33 @@ namespace DataAggregator
         private static string storageAccountName = "smarthometsstorage";
         private static string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
 
-        public static async Task<List<DataValueTableEntity>> GetValueAtTopOfEveryHour(string tableName, string partitionKey, DateTime startTime)
+        public static async Task<List<DataValueTableEntity>> GetValueAtTopOfEveryHour(string tableName, string partitionKey, DateTime startTime, DateTime maxTime = new DateTime())
         {
             var result = new List<DataValueTableEntity>();
             DateTime topOfHour = CalculateTopOfTheHour(startTime);
-
-            while (true)
+            if (maxTime == DateTime.MinValue )
             {
-                string filter = $"PartitionKey eq '{partitionKey}' and Time ge {topOfHour.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}";
+                maxTime = DateTime.Now;
+            }
+            while (topOfHour < maxTime.AddHours(1))
+            {
+                string filter = $"PartitionKey eq '{partitionKey}' " +
+                    $"and Time ge datetime'{topOfHour.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
+                    $"and Time lt datetime'{topOfHour.AddHours(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
                 var data = new CosmosDBController(storageUri, tableName, storageAccountName, storageAccountKey).ReadTop1Data(filter);
 
                 if (data != null)
                 {
                     result.Add(data);
-                    topOfHour = CalculateTopOfTheHour(data.Time.ToLocalTime());
                 }
-                else
-                {
-                    break;
-                }
+                topOfHour = topOfHour.AddHours(1);
             }
             return result;
         }
 
-        private static DateTime CalculateTopOfTheHour(DateTime startTime)
+        public static DateTime CalculateTopOfTheHour(DateTime startTime)
         {
-            return new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, 0, 0).AddHours(1);
+            return new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, 0, 0, startTime.Kind).AddHours(1);
         }
     }
 }

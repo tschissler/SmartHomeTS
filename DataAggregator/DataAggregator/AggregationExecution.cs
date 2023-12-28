@@ -13,18 +13,18 @@ namespace DataAggregator
         private static string storageAccountName = "smarthometsstorage";
         private static string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
 
-        public static void AggregateTemperatureHourly(string partitionKey, string minuteTableName, string hourTableName)
+        public static void AggregateTemperatureHourly(string partitionKey, string minuteTableName, string hourTableName, DateTime maxTime = new DateTime())
         {
-            var minuteCosmosDBConnection = new CosmosDBController(storageUri, minuteTableName, storageAccountName, storageAccountKey);
             var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
 
-            DateTime lastHour = DateTime.MinValue;
-            var lastitem = hourCosmosDBConnection.ReadTop1Data($"PartitionKey eq '{partitionKey}'");
+            DateTime lastHour = new DateTime(2023, 12, 28, 0, 0, 0);
+            //var lastitem = hourCosmosDBConnection.ReadTop1Data($"PartitionKey eq '{partitionKey}'");
+            var lastitem = hourCosmosDBConnection.GetNewestItem(partitionKey);
             if (lastitem != null)
             {
-                lastHour = lastitem.LocalTime;
+                lastHour = lastitem.Time;
             }
-            var data = AggregationCalculation.GetValueAtTopOfEveryHour(minuteTableName, partitionKey, lastHour).Result;
+            var data = AggregationCalculation.GetValueAtTopOfEveryHour(minuteTableName, partitionKey, lastHour, maxTime).Result;
 
             foreach ( var item in data )
             {
