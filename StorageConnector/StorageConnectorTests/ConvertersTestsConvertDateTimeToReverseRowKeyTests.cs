@@ -1,4 +1,5 @@
 using StorageConnector;
+using StorageController;
 
 namespace StorageConnectorTests
 {
