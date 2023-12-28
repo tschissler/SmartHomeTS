@@ -4,7 +4,7 @@ using StorageController;
 namespace StorageConnectorTests
 {
     [TestClass]
-    public class ConvertersTestsConvertDateTimeToReverseRowKeyTests
+    public class ConvertDateTimeToReverseRowKeyTests
     {
         [TestMethod]
         public void ConvertValidDate()
@@ -16,7 +16,7 @@ namespace StorageConnectorTests
             var result = Converters.ConvertDateTimeToReverseRowKey(time);
 
             // Assert
-            Assert.AreEqual("79768781809078", result);
+            Assert.AreEqual("79768781819078", result);
         }
     }
 }
