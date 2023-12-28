@@ -10,7 +10,7 @@ namespace StorageConnector
         {
             cosmosDBController = new CosmosDBController(
                    "https://smarthometsstorage.table.cosmos.azure.com:443/",
-                   "SmartHomeData",
+                   "SmartHomeClimateRawData",
                    "smarthometsstorage",
                    "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==");
 
