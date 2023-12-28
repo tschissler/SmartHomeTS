@@ -11,7 +11,7 @@ namespace StorageConnectorTests
         private string storageUri = "https://smarthometsstorage.table.cosmos.azure.com:443/";
         private string storageAccountName = "smarthometsstorage";
         private string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
-        private string tableName = "SmartHomeData";
+        private string tableName = "SmartHomeClimateRawData";
 
         [Ignore]
         [TestMethod]
