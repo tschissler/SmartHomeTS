@@ -13,7 +13,7 @@
 
 <PageTitle>Temperaturanzeige</PageTitle>
 
-<h1>Temperatur M3</h1>
+<h1>Temperaturen</h1>
 @if (isLoading)
 {
     <div class="spinner-container">
@@ -58,7 +58,7 @@
     <ChartSeriesCollection>
         @foreach (var item in PartitionKeys.Where(p => p.IsChecked))
         {
-            <ChartSeries Name="@item.Label" XName="LocalTime" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]">
+            <ChartSeries Name="@item.Label" XName="LocalTime" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]" Fill="@item.Color">
                 <ChartSeriesAnimation Enable="true"></ChartSeriesAnimation>
                 <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle">
                 </ChartMarker>
@@ -85,16 +85,15 @@
 
     public List<CheckableItem> PartitionKeys = new()
     {
-        new CheckableItem { Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = false },
-        new CheckableItem { Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false },
-        new CheckableItem { Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false },
-        new CheckableItem { Label = "Batteriesensor", PartitionKey = "1420381fb608_temperature", IsChecked = false }
+        new CheckableItem { Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = false, Color = "blue" },
+        new CheckableItem { Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false, Color = "grey" },
+        new CheckableItem { Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false, Color = "magenta" }, 
+        new CheckableItem { Label = "Batteriesensor", PartitionKey = "1420381fb608_temperature", IsChecked = false, Color = "green" }
     };
 
     protected override void OnInitialized()
     {
         table = new TableClient(connectionString, hiResTableName);
-
         autoRefreshTimer.Elapsed += async (sender, e) => await FetchNewData();
     }
 
@@ -113,6 +112,7 @@
         dataTimeIntervalHours = -24;
         RefreshData();
     }
+
     private async Task AutoUpdateChanged()
     {
         autoUpdate = !autoUpdate;
@@ -126,27 +126,27 @@
         }
     }
 
-    private async Task LoadData(string partitionKey)
+    private async Task<List<DataValueTableEntity>> LoadData(string partitionKey, DateTime startTime, DateTime endTime = new DateTime())
     {
         var queryString =
             $"PartitionKey eq '{partitionKey}' " +
-            $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRangeHours).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+            $"and Time ge datetime'{startTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+        if (endTime != new DateTime())
+        {
+            queryString += $" and Time le datetime'{endTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+        }
         var query = table.Query<DataValueTableEntity>(queryString);
-        ChartData.Add(partitionKey, new ObservableCollection<DataValueTableEntity>(query.ToList().OrderBy(i => i.Time)));
-
+        return query.ToList();
     }
+    
     private async Task FetchNewData()
     {
         foreach (var item in PartitionKeys.Where(p => p.IsChecked))
         {
-            var latestValueTimeStamp = ChartData[item.PartitionKey].Max(i => i.Timestamp);
-            // Read data from Azure Table Storage
-            var query = table.Query<DataValueTableEntity>()
-                .Where(e => e.PartitionKey == item.PartitionKey && e.Timestamp > latestValueTimeStamp)
-                .OrderByDescending(e => e.Timestamp)
-                .Take(100);
+            var latestValueTime = ChartData[item.PartitionKey].Max(i => i.Time);
+            var data = LoadData(item.PartitionKey, latestValueTime).Result;
 
-            foreach(var resultItem in query.ToList().OrderBy(i => i.Time))
+            foreach(var resultItem in data.OrderBy(i => i.Time))
             {
                 ChartData[item.PartitionKey].Add(resultItem);
             }
@@ -155,6 +155,7 @@
         // Notify the component to refresh the UI
         InvokeAsync(StateHasChanged);
     }
+    
     private async Task CheckboxChanged(CheckableItem item)
     {
         await LoadingSpinnerShow();
@@ -163,8 +164,8 @@
             if (!item.IsChecked)
             {
                 item.IsChecked = true;
-                LoadData(item.PartitionKey);
-                InvokeAsync(StateHasChanged);
+                var data = LoadData(item.PartitionKey, DateTime.UtcNow.AddHours(dataTimeRangeHours)).Result;
+                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(data.OrderBy(i => i.Time)));
             }
             else
             {
@@ -194,7 +195,8 @@
             ChartData = new();
             foreach (var item in PartitionKeys.Where(p => p.IsChecked))
             {
-                LoadData(item.PartitionKey);                
+                var data = LoadData(item.PartitionKey, DateTime.UtcNow.AddHours(dataTimeRangeHours)).Result;
+                ChartData.Add(item.PartitionKey, new ObservableCollection<DataValueTableEntity>(data.OrderBy(i => i.Time)));
             }
 
             // Notify the component to refresh the UI
@@ -202,7 +204,6 @@
         }
         catch (Exception)
         {
-
             throw;
         }
         finally
@@ -224,6 +225,7 @@
         await Task.Delay(5);
         InvokeAsync(StateHasChanged);
     }
+    
     private async Task LoadMoreData(MouseEventArgs e)
     {
         await LoadingSpinnerShow();
@@ -235,13 +237,9 @@
             {
                 var earliestTimestamp = ChartData[item.PartitionKey].First().Time;
 
-                string queryString =
-                    $"PartitionKey eq '{item.PartitionKey}' " +
-                    $"and Time ge datetime'{DateTime.UtcNow.AddHours(dataTimeRangeHours).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
-                    $"and Time le datetime'{earliestTimestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
-                var query = table.Query<DataValueTableEntity>(queryString);
+                var data = LoadData(item.PartitionKey, DateTime.UtcNow.AddHours(dataTimeRangeHours), earliestTimestamp).Result;
 
-                foreach(var resultItem in query.ToList().OrderByDescending(i => i.Time))
+                foreach(var resultItem in data.OrderByDescending(i => i.Time))
                 {
                     ChartData[item.PartitionKey].Insert(0,resultItem);
                 }
