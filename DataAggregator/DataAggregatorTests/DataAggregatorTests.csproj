@@ -20,7 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\DataContracts\DataContracts.csproj" />
     <ProjectReference Include="..\..\StorageController\StorageController.csproj" />
-    <ProjectReference Include="..\DataAggregator\DataAggregator.csproj" />
+    <ProjectReference Include="..\DataAggregatorFunctions\DataAggregatorFunctions.csproj" />
   </ItemGroup>
 
 </Project>

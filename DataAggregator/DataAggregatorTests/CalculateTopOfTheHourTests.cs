@@ -1,4 +1,4 @@
-﻿using DataAggregator;
+﻿using DataAggregatorFunctions;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;

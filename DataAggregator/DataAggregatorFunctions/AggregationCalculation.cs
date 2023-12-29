@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using DataContracts;
 using StorageController;
 
-namespace DataAggregator
+namespace DataAggregatorFunctions
 {
     public class AggregationCalculation
     {

@@ -1,11 +1,12 @@
-﻿using StorageController;
+﻿using Microsoft.Extensions.Logging;
+using StorageController;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DataAggregator
+namespace DataAggregatorFunctions
 {
     public class AggregationExecution
     {
@@ -13,7 +14,7 @@ namespace DataAggregator
         private static string storageAccountName = "smarthometsstorage";
         private static string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
 
-        public static void AggregateClimateHourlyData(string partitionKey, string minuteTableName, string hourTableName, DateTime maxTime = new DateTime())
+        public static int AggregateClimateHourlyData(string partitionKey, string minuteTableName, string hourTableName, DateTime maxTime = new DateTime())
         {
             var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
 
@@ -29,9 +30,11 @@ namespace DataAggregator
             {
                 hourCosmosDBConnection.WriteData(partitionKey, item.RowKey, item.Value, item.Time);
             }
+
+            return data.Count;
         }
 
-        public static void AggregateClimateData()
+        public static void AggregateClimateData(ILogger logger)
         {
             List<string> partitionKeys = new()
             {
@@ -47,7 +50,8 @@ namespace DataAggregator
 
             foreach (var partitionKey in partitionKeys)
             {
-                AggregationExecution.AggregateClimateHourlyData(partitionKey, "SmartHomeClimateRawData", "SmartHomeClimateHourAggregationData");
+                var count = AggregationExecution.AggregateClimateHourlyData(partitionKey, "SmartHomeClimateRawData", "SmartHomeClimateHourAggregationData");
+                logger.LogInformation($"Aggregated {count} items for {partitionKey}");
             }
         }
     }
