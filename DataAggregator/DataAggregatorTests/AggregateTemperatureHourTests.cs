@@ -22,33 +22,12 @@ namespace DataAggregatorTests
             var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
 
             hourCosmosDBConnection.ClearTable();
-            AggregationExecution.AggregateTemperatureHourly("sensor1", minuteTableName, hourTableName);
+            AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName);
             var result = hourCosmosDBConnection.ReadData("PartitionKey eq 'sensor1'");
             result.Should().HaveCount(3);
             result[0].Value.Should().Be(1.1);
             result[1].Value.Should().Be(3.3);
             result[2].Value.Should().Be(14.14);
-        }
-
-        [TestMethod]
-        public void AggregateProductionData()
-        {
-            List<string> partitionKeys = new()
-            {
-                "1c50f3ab6224_temperature",
-                "44dbf3ab6224_temperature",
-                "a86d2b286f24_temperature",
-                "1420381fb608_temperature",
-                "1c50f3ab6224_humidity",
-                "44dbf3ab6224_humidity",
-                "a86d2b286f24_humidity",
-                "1420381fb608_humidity"
-            };
-
-            foreach (var partitionKey in partitionKeys)
-            {
-                AggregationExecution.AggregateTemperatureHourly(partitionKey, "SmartHomeClimateRawData", "SmartHomeClimateHourAggregationData");
-            }
         }
 
         [TestMethod]
@@ -59,7 +38,7 @@ namespace DataAggregatorTests
             hourCosmosDBConnection.ClearTable();
             var lastDataDate = new DateTime(2023, 12, 28, 11, 00, 45, DateTimeKind.Utc);
             hourCosmosDBConnection.WriteData("sensor1", Converters.ConvertDateTimeToReverseRowKey(lastDataDate), 3.3, lastDataDate);
-            AggregationExecution.AggregateTemperatureHourly("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 12, 30, 0, DateTimeKind.Utc));
+            AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 12, 30, 0, DateTimeKind.Utc));
 
             var result = hourCosmosDBConnection.ReadData("PartitionKey eq 'sensor1'");
             result.Should().HaveCount(2);
@@ -67,7 +46,7 @@ namespace DataAggregatorTests
             result[1].Value.Should().Be(14.14);
 
             // Ensure that the data is not aggregated twice
-            AggregationExecution.AggregateTemperatureHourly("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 12, 30, 0, DateTimeKind.Utc));
+            AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 12, 30, 0, DateTimeKind.Utc));
             result = hourCosmosDBConnection.ReadData("PartitionKey eq 'sensor1'");
             result.Should().HaveCount(2);
             result[0].Value.Should().Be(3.3);

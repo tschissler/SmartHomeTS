@@ -5,12 +5,13 @@ using Microsoft.Extensions.Logging;
 
 namespace DataAggregator
 {
-    public class AggregateTemperatureData
+    public class AggregateClimateData
     {
-        [FunctionName("AggregateTemperatureHourly")]
+        [FunctionName("AggregateClimateHourly")]
         public void Run([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log)
         {
-            log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
+            AggregationExecution.AggregateClimateData();
+            log.LogInformation($"AggregateClimateHourly executed at: {DateTime.Now}");
         }
     }
 }

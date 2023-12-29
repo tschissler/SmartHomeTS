@@ -13,12 +13,11 @@ namespace DataAggregator
         private static string storageAccountName = "smarthometsstorage";
         private static string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
 
-        public static void AggregateTemperatureHourly(string partitionKey, string minuteTableName, string hourTableName, DateTime maxTime = new DateTime())
+        public static void AggregateClimateHourlyData(string partitionKey, string minuteTableName, string hourTableName, DateTime maxTime = new DateTime())
         {
             var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
 
             DateTime lastHour = new DateTime(2023, 12, 28, 0, 0, 0);
-            //var lastitem = hourCosmosDBConnection.ReadTop1Data($"PartitionKey eq '{partitionKey}'");
             var lastitem = hourCosmosDBConnection.GetNewestItem(partitionKey);
             if (lastitem != null)
             {
@@ -29,6 +28,26 @@ namespace DataAggregator
             foreach ( var item in data )
             {
                 hourCosmosDBConnection.WriteData(partitionKey, item.RowKey, item.Value, item.Time);
+            }
+        }
+
+        public static void AggregateClimateData()
+        {
+            List<string> partitionKeys = new()
+            {
+                "1c50f3ab6224_temperature",
+                "44dbf3ab6224_temperature",
+                "a86d2b286f24_temperature",
+                "1420381fb608_temperature",
+                "1c50f3ab6224_humidity",
+                "44dbf3ab6224_humidity",
+                "a86d2b286f24_humidity",
+                "1420381fb608_humidity"
+            };
+
+            foreach (var partitionKey in partitionKeys)
+            {
+                AggregationExecution.AggregateClimateHourlyData(partitionKey, "SmartHomeClimateRawData", "SmartHomeClimateHourAggregationData");
             }
         }
     }
