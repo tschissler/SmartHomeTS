@@ -12,7 +12,7 @@ env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: DataAggregatorFunctions\published
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
-  WORKING_DIRECTORY: DataAggregatorFunctions
+  WORKING_DIRECTORY: DataAggregator\DataAggregatorFunctions
   DOTNET_CORE_VERSION_INPROC: 6.0.x
   
 jobs:
