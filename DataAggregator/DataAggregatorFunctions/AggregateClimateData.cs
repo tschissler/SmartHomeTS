@@ -16,7 +16,7 @@ namespace DataAggregatorFunctions
         [Function("AggregateClimateHourly")]
         public void Run([TimerTrigger("0 0 * * * *")] MyInfo myTimer)
         {
-            _logger.LogInformation($"AggregateClimateHourly trigger at: {DateTime.Now}");
+            _logger.LogInformation($"AggregateClimateHourly was trigger at: {DateTime.Now}");
             try
             {
                 AggregationExecution.AggregateClimateData(_logger);
@@ -24,7 +24,7 @@ namespace DataAggregatorFunctions
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
-                throw ex;
+                throw;
             }
             _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
         }
