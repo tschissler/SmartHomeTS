@@ -2,9 +2,9 @@
 {
     public class Storage
     {
-        public static string SmartHomeStorageKey { get ;  }
+        public static string SmartHomeStorageKey { get; private set; }
 
-        public static string SmartHomeStorageUri { get; }
+        public static string SmartHomeStorageUri { get; private set; }
 
         static Storage()
         {

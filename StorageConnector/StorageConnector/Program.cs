@@ -11,7 +11,7 @@ namespace StorageConnector
             cosmosDBController = new CosmosDBController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                 "SmartHomeClimateRawData",
-                "smarthometsstorage",
+                "smarthomestorageprod",
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey);
 
             var mqttController = new MqttController("smarthomepi2", 32004, "Smarthome.StorageConnector");
