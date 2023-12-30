@@ -21,7 +21,7 @@ public class StorageController : ControllerBase
         {
             var queryString = $"PartitionKey eq '{key}'";
             var query = table.Query<DataValueTableEntity>(queryString, 1);
-            result.AddRange(query);
+            result.AddRange(query.ToList());
         }
         return result;
     }
