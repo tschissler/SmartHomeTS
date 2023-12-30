@@ -20,7 +20,7 @@ public class StorageController : ControllerBase
         foreach (var key in PartitionKeys)
         {
             var queryString = $"PartitionKey eq '{key}'";
-            var queryResult = table.Query<DataValueTableEntity>(queryString, 1).ToList().FirstOrDefault();
+            var queryResult = table.Query<DataValueTableEntity>(queryString, 1).FirstOrDefault();
             if (queryResult != null)
                 result.Add(queryResult);
         }
