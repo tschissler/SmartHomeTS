@@ -8,9 +8,7 @@ namespace DataAggregatorFunctions
 {
     public class AggregationCalculation
     {
-        private static string storageUri = "https://smarthometsstorage.table.cosmos.azure.com:443/";
-        private static string storageAccountName = "smarthometsstorage";
-        private static string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
+        private static string storageAccountName = "smarthomestorageprod";
 
         public static async Task<List<DataValueTableEntity>> GetValueAtTopOfEveryHour(string tableName, string partitionKey, DateTime startTime, DateTime maxTime = new DateTime())
         {
@@ -18,20 +16,29 @@ namespace DataAggregatorFunctions
             DateTime topOfHour = CalculateTopOfTheHour(startTime);
             if (maxTime == DateTime.MinValue )
             {
-                maxTime = DateTime.Now;
+                maxTime = DateTime.UtcNow;
             }
-            while (topOfHour < maxTime.AddHours(1))
+            while (topOfHour < maxTime)
             {
                 string filter = $"PartitionKey eq '{partitionKey}' " +
-                    $"and Time ge datetime'{topOfHour.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
-                    $"and Time lt datetime'{topOfHour.AddHours(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
-                var data = new CosmosDBController(storageUri, tableName, storageAccountName, storageAccountKey).ReadTop1Data(filter);
+                    $"and Time gt datetime'{startTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
+                    $"and Time le datetime'{topOfHour.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+                var data = new CosmosDBController(
+                    SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
+                    tableName, 
+                    storageAccountName, 
+                    SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey).ReadTop1Data(filter);
 
                 if (data != null)
                 {
                     result.Add(data);
+                    topOfHour = CalculateTopOfTheHour(data.Time);
+                    startTime = data.Time;
                 }
-                topOfHour = topOfHour.AddHours(1);
+                else
+                {
+                    topOfHour = topOfHour.AddHours(1);
+                }
             }
             return result;
         }

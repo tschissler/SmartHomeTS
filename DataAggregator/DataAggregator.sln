@@ -10,6 +10,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageController", "..\Sto
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataAggregatorFunctions", "DataAggregatorFunctions\DataAggregatorFunctions.csproj", "{C4DCF7A7-AD6B-4382-8A9E-848BFC1CB1CD}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartHomeHelpers", "..\SmartHomeHelpers\SmartHomeHelpers.csproj", "{F61FC1ED-43AD-4DD2-B7D5-CA0ED462637B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{C4DCF7A7-AD6B-4382-8A9E-848BFC1CB1CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C4DCF7A7-AD6B-4382-8A9E-848BFC1CB1CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C4DCF7A7-AD6B-4382-8A9E-848BFC1CB1CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F61FC1ED-43AD-4DD2-B7D5-CA0ED462637B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F61FC1ED-43AD-4DD2-B7D5-CA0ED462637B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F61FC1ED-43AD-4DD2-B7D5-CA0ED462637B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F61FC1ED-43AD-4DD2-B7D5-CA0ED462637B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -9,9 +9,9 @@ namespace DataAggregatorTests
     [TestClass]
     public class AggregateTemperatureHourTests
     {
-        private const string storageUri = "https://smarthometsstorage.table.cosmos.azure.com:443/";
-        private const string storageAccountName = "smarthometsstorage";
-        private const string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
+        private string storageUri = SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri; 
+        private string storageAccountKey = SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey;
+        private const string storageAccountName = "smarthomestorageprod";
         private const string minuteTableName = "UnitTestMinuteData";
         private const string hourTableName = "UnitTestHourData";
 
@@ -24,10 +24,12 @@ namespace DataAggregatorTests
             hourCosmosDBConnection.ClearTable();
             AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName);
             var result = hourCosmosDBConnection.ReadData("PartitionKey eq 'sensor1'");
-            result.Should().HaveCount(3);
-            result[0].Value.Should().Be(1.1);
-            result[1].Value.Should().Be(3.3);
-            result[2].Value.Should().Be(14.14);
+            result.Should().HaveCount(5);
+            result[0].Value.Should().Be(117.17);
+            result[1].Value.Should().Be(115.15);
+            result[2].Value.Should().Be(17.17);
+            result[3].Value.Should().Be(13.13);
+            result[4].Value.Should().Be(2.2);
         }
 
         [TestMethod]
@@ -36,21 +38,27 @@ namespace DataAggregatorTests
             var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
 
             hourCosmosDBConnection.ClearTable();
-            var lastDataDate = new DateTime(2023, 12, 28, 11, 00, 45, DateTimeKind.Utc);
+            var lastDataDate = new DateTime(2023, 12, 28, 11, 10, 45, DateTimeKind.Utc);
             hourCosmosDBConnection.WriteData("sensor1", Converters.ConvertDateTimeToReverseRowKey(lastDataDate), 3.3, lastDataDate);
-            AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 12, 30, 0, DateTimeKind.Utc));
+            AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 19, 30, 0, DateTimeKind.Utc));
 
             var result = hourCosmosDBConnection.ReadData("PartitionKey eq 'sensor1'");
-            result.Should().HaveCount(2);
-            result[0].Value.Should().Be(3.3);
-            result[1].Value.Should().Be(14.14);
+            result.Should().HaveCount(4);
+            result[0].Value.Should().Be(115.15);
+            result[1].Value.Should().Be(17.17);
+            result[2].Value.Should().Be(13.13);
+            //Data from initialization
+            result[3].Value.Should().Be(3.3);
 
             // Ensure that the data is not aggregated twice
-            AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 12, 30, 0, DateTimeKind.Utc));
+            AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName, new DateTime(2023, 12, 28, 19, 30, 0, DateTimeKind.Utc));
             result = hourCosmosDBConnection.ReadData("PartitionKey eq 'sensor1'");
-            result.Should().HaveCount(2);
-            result[0].Value.Should().Be(3.3);
-            result[1].Value.Should().Be(14.14);
+            result.Should().HaveCount(4);
+            result[0].Value.Should().Be(115.15);
+            result[1].Value.Should().Be(17.17);
+            result[2].Value.Should().Be(13.13);
+            //Data from initialization
+            result[3].Value.Should().Be(3.3);
         }
     }
 }

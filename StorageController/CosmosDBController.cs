@@ -54,9 +54,19 @@ namespace StorageController
 
         public void ClearTable()
         {
-            tableClient.DeleteAsync();
-            Thread.Sleep(1000);
-            serviceClient.CreateTable(tableName);
+            tableClient.Delete();
+            while (true)
+            {
+                try
+                { 
+                    Thread.Sleep(5000);
+                    serviceClient.CreateTable(tableName);
+                    break;
+                }
+                catch (Exception)
+                {
+                }
+            }
             tableClient = serviceClient.GetTableClient(tableName); 
         }
 

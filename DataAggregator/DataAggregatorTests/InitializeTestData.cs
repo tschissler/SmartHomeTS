@@ -11,14 +11,11 @@ namespace DataAggregatorTests
         [TestCategory("ManualOnly")]
         public void InitializeMinuteTestData()
         {
-
-            //TODO: Make keys and connection strings secure
             var cosmosDBController = new CosmosDBController(
-                   "https://smarthometsstorage.table.cosmos.azure.com:443/",
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                    "UnitTestMinuteData",
-                   "smarthometsstorage",
-                   "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==");
-
+                   "smarthomestorageprod",
+                   SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey);
 
             cosmosDBController.ClearTable();
 
@@ -40,7 +37,11 @@ namespace DataAggregatorTests
                 { new DateTime(2023, 12, 28, 12,  0, 40, DateTimeKind.Utc), 14.14 },
                 { new DateTime(2023, 12, 28, 12,  1, 40, DateTimeKind.Utc), 15.15 },
                 { new DateTime(2023, 12, 28, 12,  2, 40, DateTimeKind.Utc), 16.16 },
-                { new DateTime(2023, 12, 28, 12,  3, 40, DateTimeKind.Utc), 17.17 }
+                { new DateTime(2023, 12, 28, 12,  3, 40, DateTimeKind.Utc), 17.17 },
+                { new DateTime(2023, 12, 28, 18, 58, 40, DateTimeKind.Utc), 114.14 },
+                { new DateTime(2023, 12, 28, 18, 59, 40, DateTimeKind.Utc), 115.15 },
+                { new DateTime(2023, 12, 28, 19,  0, 40, DateTimeKind.Utc), 116.16 },
+                { new DateTime(2023, 12, 28, 19,  1, 40, DateTimeKind.Utc), 117.17 }
             };
             
             foreach (var item in testdata)

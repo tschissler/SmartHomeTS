@@ -12,9 +12,9 @@ namespace DataAggregatorTests
     [TestClass]
     public class PerformanceComparison
     {
-        private string storageUri = "https://smarthometsstorage.table.cosmos.azure.com:443/";
-        private string storageAccountName = "smarthometsstorage";
-        private string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
+        private string storageUri = SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri;
+        private string storageAccountName = "SmartHomeStorageUri";
+        private string storageAccountKey = SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey;
 
         [TestMethod]
         public void MeassureLinqTakeAgainstQueryTake()

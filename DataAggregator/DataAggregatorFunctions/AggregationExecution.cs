@@ -10,13 +10,15 @@ namespace DataAggregatorFunctions
 {
     public class AggregationExecution
     {
-        private static string storageUri = "https://smarthometsstorage.table.cosmos.azure.com:443/";
-        private static string storageAccountName = "smarthometsstorage";
-        private static string storageAccountKey = "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==";
+        private static string storageAccountName = "smarthomestorageprod";
 
         public static int AggregateClimateHourlyData(string partitionKey, string minuteTableName, string hourTableName, DateTime maxTime = new DateTime())
         {
-            var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
+            var hourCosmosDBConnection = new CosmosDBController(
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
+                hourTableName, 
+                storageAccountName, 
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey);
 
             DateTime lastHour = new DateTime(2023, 12, 28, 0, 0, 0);
             var lastitem = hourCosmosDBConnection.GetNewestItem(partitionKey);
