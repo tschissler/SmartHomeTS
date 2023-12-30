@@ -31,6 +31,11 @@ RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 # Final image
 FROM build AS final
 WORKDIR /app
+ARG SmartHomeStorageUri
+ARG SyncfusionLicenseKey
+
+ENV SmartHomeStorageUri=${SmartHomeStorageUri}
+ENV SyncfusionLicenseKey=${SyncfusionLicenseKey}
 EXPOSE 8080
 COPY --from=publish /app/publish .
 ENTRYPOINT ["./StorageConnector"]

@@ -17,17 +17,23 @@ jobs:
 
     runs-on: [self-hosted, linux]
 
+    env:
+        SMARTHOMESTORAGEURI: ${{ secrets.SMARTHOMESTORAGEURI }}
+        SMARTHOMESTORAGEKEY: ${{ secrets.SMARTHOMESTORAGEKEY }}
+
     steps:
     - uses: actions/checkout@v3
-
-    - name: Test
-      run: |
-        ls . -R
 
     - name: Build and publish Docker image
       run: |        
         # Build the Docker image with the package version tag.
-        docker build -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} -t tschissler/${{ env.IMAGE_NAME }}:latest -f ./${{ env.PROJECT_NAME }}/Dockerfile --push .
+        docker build \
+            --build-arg SmartHomeStorageUri=${{ env.SMARTHOMESTORAGEURI }} \
+            --build-arg SyncfusionLicenseKey=${{ env.SMARTHOMESTORAGEKEY }} \
+            -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
+            -t tschissler/${{ env.IMAGE_NAME }}:latest \
+            -f ./${{ env.PROJECT_NAME }}/Dockerfile \
+            --push .
 
     - name: Update Kubernetes deployment
       run: |

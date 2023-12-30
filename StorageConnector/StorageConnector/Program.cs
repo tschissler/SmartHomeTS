@@ -9,10 +9,10 @@ namespace StorageConnector
         static async Task Main(string[] args)
         {
             cosmosDBController = new CosmosDBController(
-                   "https://smarthometsstorage.table.cosmos.azure.com:443/",
-                   "SmartHomeClimateRawData",
-                   "smarthometsstorage",
-                   "yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==");
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
+                "SmartHomeClimateRawData",
+                "smarthometsstorage",
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey);
 
             var mqttController = new MqttController("smarthomepi2", 32004, "Smarthome.StorageConnector");
             mqttController.OnDataUpdated += MqttController_OnDataUpdated;
