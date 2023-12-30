@@ -53,7 +53,10 @@ namespace DataAggregatorFunctions
             foreach (var partitionKey in partitionKeys)
             {
                 var count = AggregationExecution.AggregateClimateHourlyData(partitionKey, "SmartHomeClimateRawData", "SmartHomeClimateHourAggregationData");
-                logger.LogInformation($"Aggregated {count} items for {partitionKey}");
+                if (logger != null)
+                {
+                    logger.LogInformation($"Aggregated {count} items for {partitionKey}");
+                }
             }
         }
     }
