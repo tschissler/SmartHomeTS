@@ -20,6 +20,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddLocalization();
 builder.Services.AddSyncfusionBlazor();
 builder.Services.AddSingleton<MqttController>();
+builder.Services.AddControllers();
 
 var app = builder.Build();
 app.UseRequestLocalization(new RequestLocalizationOptions()
@@ -41,5 +42,7 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapControllers();
 
 app.Run();
