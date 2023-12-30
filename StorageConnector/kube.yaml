@@ -15,5 +15,8 @@ spec:
       containers:
         - name: storageconnector
           image: tschissler/storageconnector:latest
-          # ports:
-          #   - containerPort: 1883
+          env:
+          - name: SmartHomeStorageKey
+            value: "tempvalue"
+          - name: SmartHomeStorageUri
+            value: "tempvalue"

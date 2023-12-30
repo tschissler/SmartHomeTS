@@ -17,10 +17,6 @@ jobs:
 
     runs-on: [self-hosted, linux]
 
-    env:
-        SMARTHOMESTORAGEURI: ${{ secrets.SMARTHOMESTORAGEURI }}
-        SMARTHOMESTORAGEKEY: ${{ secrets.SMARTHOMESTORAGEKEY }}
-
     steps:
     - uses: actions/checkout@v3
 
@@ -28,8 +24,6 @@ jobs:
       run: |        
         # Build the Docker image with the package version tag.
         docker build \
-            --build-arg SmartHomeStorageUri=${{ env.SMARTHOMESTORAGEURI }} \
-            --build-arg SyncfusionLicenseKey=${{ env.SMARTHOMESTORAGEKEY }} \
             -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
             -t tschissler/${{ env.IMAGE_NAME }}:latest \
             -f ./${{ env.PROJECT_NAME }}/Dockerfile \
@@ -38,3 +32,5 @@ jobs:
     - name: Update Kubernetes deployment
       run: |
         microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+        microk8s kubectl set env deployment/storageconnector SmartHomeStorageUri="${{ secrets.SMARTHOMESTORAGEURI }}"
+        microk8s kubectl set env deployment/storageconnector SmartHomeStorageKey="${{ secrets.SMARTHOMESTORAGEKEY }}"
