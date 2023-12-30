@@ -79,7 +79,7 @@
     private int dataTimeIntervalHours = -1;
     public Dictionary<string, ObservableCollection<DataValueTableEntity>> ChartData = new();
     TableClient table;
-    string connectionString = "DefaultEndpointsProtocol=https;AccountName=smarthometsstorage;AccountKey=yRZ84NCODris5jSJpP1tbZO1zxVkTTRSEsn4Yiu5TNyKFIToLOaMDe6whunduEzFT3tFwm95X4lcACDbRQDdPQ==;TableEndpoint=https://smarthometsstorage.table.cosmos.azure.com:443/;";
+    string storageAccountName = "smarthomestorageprod";
     string hiResTableName = "SmartHomeClimateRawData";
     string loResTableName = "SmartHomeClimateHourAggregationData";
 
@@ -95,13 +95,21 @@
 
     protected override void OnInitialized()
     {
-        table = new TableClient(connectionString, hiResTableName);
+        table = new TableClient(
+            new Uri(SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri),
+            hiResTableName,
+            new TableSharedKeyCredential(storageAccountName, SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey)
+        );
         autoRefreshTimer.Elapsed += async (sender, e) => await FetchNewData();
     }
 
     private async Task HiResData()
     {
-        table = new TableClient(connectionString, hiResTableName);
+        table = new TableClient(
+            new Uri(SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri),
+            hiResTableName,
+            new TableSharedKeyCredential(storageAccountName, SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey)
+        );
         dataTimeRangeHours = -1;
         dataTimeIntervalHours = -1;
         RefreshData();
@@ -109,7 +117,11 @@
 
     private async Task LoResData()
     {
-        table = new TableClient(connectionString, loResTableName);
+        table = new TableClient(
+            new Uri(SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri),
+            loResTableName,
+            new TableSharedKeyCredential(storageAccountName, SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey)
+        );
         dataTimeRangeHours = -24;
         dataTimeIntervalHours = -24;
         RefreshData();
