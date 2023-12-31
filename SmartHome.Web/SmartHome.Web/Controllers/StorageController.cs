@@ -26,4 +26,22 @@ public class StorageController : ControllerBase
         }
         return result;
     }
+
+    // GET api/storage/{partitionKey}/lasthourvalues
+    [HttpGet("{partitionKey}/lasthourvalues")]
+    public ActionResult<List<DataValueTableEntity>> GetLastHourValues(string PartitionKey)
+    {
+        var result = new List<DataValueTableEntity>();
+        var table = new TableClient(
+            new Uri(SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri),
+            "SmartHomeClimateRawData",
+            new TableSharedKeyCredential("smarthomestorageprod", SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey)
+        );
+
+        var queryString = $"PartitionKey eq '{PartitionKey}' and Time gt datetime'{DateTime.UtcNow.AddHours(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")}'";
+            var queryResult = table.Query<DataValueTableEntity>(queryString).ToList();
+            if (queryResult != null)
+                result.AddRange(queryResult);
+        return result;
+    }
 }
