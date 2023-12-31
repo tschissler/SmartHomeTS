@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "SmartHomeApp",
-    "slug": "smarthomeapp",
-    "version": "1.0.0",
-    "orientation": "portrait",
+    "name": "SmartHomeTSApp",
+    "slug": "smarthometsapp",
+    "version": "1.0.2",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tschissler.SmartHomeApp"
+      "bundleIdentifier": "com.tschissler.SmartHomeTSApp"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +29,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "380fe20f-9d46-4aa8-a243-e6ad1c9e7e1f"
+        "projectId": "d50fe7fc-fbc0-437a-b8c4-315e19cf9bc1"
       }
     },
     "owner": "tschissler"
