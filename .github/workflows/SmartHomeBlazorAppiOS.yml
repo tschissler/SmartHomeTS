@@ -16,7 +16,8 @@ env:
   
 jobs:
   build-and-deploy:
-    runs-on: [self-hosted, macOS] 
+    #runs-on: [self-hosted, macOS] 
+    runs-on: macos-13
 
     steps:
     - name: Checkout Repository
