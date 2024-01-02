@@ -1,10 +1,10 @@
-name: SmartHomaBlazorApp iOS CD
+name: SmartHomeBlazorApp iOS CD
 
 on:
   push:
     branches: ["main"]
     paths:
-      - .github/workflows/SmartHomaBlazorAppiOS.yml
+      - .github/workflows/SmartHomeBlazorAppiOS.yml
       - SmartHome.Web/SmartHomeBlazorApp/**
 
 env:
@@ -26,6 +26,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    - name: Install MAUI workload
+      run: dotnet workload install maui
+      
     - name: Restore NuGet Packages
       run: dotnet restore  "${{ env.WORKING_DIRECTORY }}"
 
