@@ -1,0 +1,52 @@
+name: SmartHomaBlazorApp iOS CD
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - .github/workflows/SmartHomaBlazorAppiOS.yml
+      - SmartHome.Web/SmartHomeBlazorApp/**
+
+jobs:
+  build-and-deploy:
+    runs-on: macos-latest  # Use the latest macOS runner
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2  # Check out the repository code
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.0.x'  # Specify the .NET version
+
+    - name: Restore NuGet Packages
+      run: dotnet restore  # Restore any NuGet packages
+
+    - name: Build .NET MAUI iOS Project
+      run: dotnet build SmartHome.Web/SmartHomeBlazorApp/SmartHomeBlazorApp.csproj -c Release -f net8.0-ios  # Build your .NET MAUI iOS project
+
+    #- name: Install Fastlane
+    #  run: |  # Install Fastlane for app signing and uploading
+    #    sudo gem install fastlane
+
+    #- name: Import Certificates
+    #  uses: apple-actions/import-codesign-certs@v1
+    #  with:
+    #    p12-file-base64: ${{ secrets.P12_FILE_BASE64 }}  # Encoded .p12 file
+    #    p12-password: ${{ secrets.P12_PASSWORD }}  # Password for the .p12 file
+
+    #- name: Build and Sign IPA
+    #  run: fastlane gym --scheme "YourScheme" --export_method "app-store"  # Replace "YourScheme" with your project's scheme
+
+    #- name: Upload to App Store Connect
+    #  uses: apple-actions/upload-app-store@v1
+    #  with:
+    #    app-path: ./path/to/your/app.ipa  # Path to your IPA file
+    #    issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+    #    key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+    #    private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+    #    app-id: "com.example.app"  # Replace with your app's bundle identifier
+
+    #- name: Complete Deployment
+    #  run: echo "Deployment to App Store Connect complete"
