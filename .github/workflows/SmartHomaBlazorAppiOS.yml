@@ -7,24 +7,31 @@ on:
       - .github/workflows/SmartHomaBlazorAppiOS.yml
       - SmartHome.Web/SmartHomeBlazorApp/**
 
+env:
+  PROJECT_NAME: SmartHomeBlazorApp
+  CONFIGURATION: Release
+  DOTNET_VERSION: 8.0.x
+  WORKING_DIRECTORY: SmartHome.Web/SmartHomeBlazorApp
+  
 jobs:
   build-and-deploy:
-    runs-on: macos-latest  # Use the latest macOS runner
+    runs-on: macos-latest 
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v2  # Check out the repository code
+      uses: actions/checkout@v2 
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '8.0.x'  # Specify the .NET version
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Restore NuGet Packages
-      run: dotnet restore  # Restore any NuGet packages
+      run: dotnet restore  "${{ env.WORKING_DIRECTORY }}"
 
     - name: Build .NET MAUI iOS Project
-      run: dotnet build SmartHome.Web/SmartHomeBlazorApp/SmartHomeBlazorApp.csproj -c Release -f net8.0-ios  # Build your .NET MAUI iOS project
+      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      #run: dotnet build SmartHome.Web/SmartHomeBlazorApp/SmartHomeBlazorApp.csproj -c Release -f net8.0-ios  # Build your .NET MAUI iOS project
 
     #- name: Install Fastlane
     #  run: |  # Install Fastlane for app signing and uploading
