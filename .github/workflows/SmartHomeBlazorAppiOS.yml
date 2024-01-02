@@ -13,6 +13,7 @@ env:
   DOTNET_VERSION: 8.0.x
   XCODE_VERSION: 15.1
   WORKING_DIRECTORY: SmartHome.Web/SmartHomeBlazorApp
+  APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
   
 jobs:
   build-and-deploy:
@@ -52,9 +53,9 @@ jobs:
         # Keychain password for the specified keychain (can leave blank).  Example, "build".
         #keychain-password: # optional
         # Apple certificate to import into the keychain.  This should be either the filename of the .p12/.pfx certificate itself, or the name of an environment variable containing a Base64 encoded string representation of the binary .p12/.pfx certificate file. Example, "path/to/dist.p12" or "APPLE_DIST_CERT".
-        #certificate: # optional
+        certificate: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/Distribution.p12"
         # Passphrase for the specified certificate file if required.
-        #certificate-passphrase: # optional
+        certificate-passphrase: ${{ secrets.IOS_CERTIFICATE_PASSPHRASE }}
         # Comma separated list of one or more app bundle-identifiers to filter provisioning profiles for.  Example, "com.mycompany.myapp" or "com.mycompany.myapp1,com.mycompany.myapp2".
         bundle-identifiers: com.agilemax.App.SmartHome.Blazor
         # Comma separated list of one or more types of provisioning profiles to download and install for the matching bundle-identifier(s).  Example, "IOS_APP_ADHOC" OR "IOS_APP_ADHOC,IOS_APP_STORE".
@@ -64,7 +65,7 @@ jobs:
         # The App Store Connect API issuer ID or name of an environment variable containing the value.  Example, "aaaa-1111-22222-bbbb-cccc". This value can also be set using the "APP_STORE_CONNECT_ISSUER_ID" environment variable.
         app-store-connect-issuer-id: ${{ secrets.IOSAPPSTORE_ISSUER_ID }}
         # The App Store Connect API private key.  This should be either the filename of the .p8 private key itself, or the name of an environment variable containing the string contents of the .p8 private key file. Example, "path/to/key.p8" or "APP_STORE_CONNECT_PRIVATE_KEY". This value can also be set using the "APP_STORE_CONNECT_PRIVATE_KEY" environment variable.
-        app-store-connect-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
+        app-store-connect-private-key: APP_STORE_CONNECT_PRIVATE_KEY
           
     #- name: Download Apple Provisioning Profiles
     #  uses: Apple-Actions/download-provisioning-profiles@v1
