@@ -41,11 +41,10 @@ jobs:
     - name: Build .NET MAUI iOS Project
       run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
 
-
     - name: .NET MAUI - Apple Provisioning
       # You may pin to the exact commit or the version.
-      # uses: maui-actions/apple-provisioning@2d313f3be61a3c001d0550951fd049811e351d70
-      uses: maui-actions/apple-provisioning@2
+      uses: maui-actions/apple-provisioning@2d313f3be61a3c001d0550951fd049811e351d70
+      #uses: maui-actions/apple-provisioning@2
       with:
         # Keychain file to import certificates to (can leave blank, will default to build.keychain-db). Example, "build.keychain-db".
         #keychain: # optional
