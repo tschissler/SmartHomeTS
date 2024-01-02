@@ -11,6 +11,7 @@ env:
   PROJECT_NAME: SmartHomeBlazorApp
   CONFIGURATION: Release
   DOTNET_VERSION: 8.0.x
+  XCODE_VERSION: 15.1
   WORKING_DIRECTORY: SmartHome.Web/SmartHomeBlazorApp
   
 jobs:
@@ -21,6 +22,11 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v2 
 
+    - name: Ensure using the right XCode version
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: ${{ env.XCODE_VERSION }}
+        
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
