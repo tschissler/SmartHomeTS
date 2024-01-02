@@ -6,7 +6,7 @@ on:
     paths:
       - .github/workflows/Smarthome.Web.yml
       - SmartHome.Web/**
-      - !SmartHome.Web/SmartHomeBlazorApp/**
+      - '!SmartHome.Web/SmartHomeBlazorApp/**'
 
 env:
   PROJECT_NAME: SmartHome.Web
