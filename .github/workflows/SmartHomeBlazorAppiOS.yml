@@ -42,7 +42,7 @@ jobs:
         # The password to use with the keychain. Gets auto-generated if keychain is "signing_temp".
         #keychain-password: # optional
         # The path to the PKCS12 file to import.
-        p12-filepath: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/Certificate_Distribution.p12"
+        p12-filepath: ${{ env.WORKING_DIRECTORY }}/Platforms/iOS/Certificate_Distribution.p12
         # The certificates in a PKCS12 file encoded as a base64 string.
         # p12-file-base64: # optional
         # The password used to import the PKCS12 file.
