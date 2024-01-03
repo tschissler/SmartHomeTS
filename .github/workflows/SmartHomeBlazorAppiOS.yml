@@ -86,7 +86,7 @@ jobs:
       run: dotnet restore  "${{ env.WORKING_DIRECTORY }}"
 
     - name: Build .NET MAUI iOS Project
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore -f:net8.0-ios /p:ArchiveOnBuild=true
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
       
     #- name: Download Apple Provisioning Profiles
     #  uses: Apple-Actions/download-provisioning-profiles@v1
@@ -109,14 +109,14 @@ jobs:
     #- name: Build and Sign IPA
     #  run: fastlane gym --scheme "YourScheme" --export_method "app-store"  # Replace "YourScheme" with your project's scheme
 
-    #- name: Upload to App Store Connect
-    #  uses: apple-actions/upload-app-store@v1
-    #  with:
-    #    app-path: ./path/to/your/app.ipa  # Path to your IPA file
-    #    issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+    - name: Upload to App Store Connect
+      uses: apple-actions/upload-app-store@v1
+      with:
+        app-path: ./path/to/your/app.ipa  # Path to your IPA file
+        issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
     #    key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
     #    private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
     #    app-id: "com.example.app"  # Replace with your app's bundle identifier
 
-    #- name: Complete Deployment
-    #  run: echo "Deployment to App Store Connect complete"
+    - name: Complete Deployment
+      run: echo "Deployment to App Store Connect complete"
