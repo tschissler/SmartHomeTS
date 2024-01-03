@@ -23,9 +23,7 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v2 
-    - name: Debugging step
-      run: |
-        echo "GITHUB_WORKSPACE: ${{ env.GITHUB_WORKSPACE}}"
+
     - name: Ensure using the right XCode version
       uses: maxim-lobanov/setup-xcode@v1
       with:
