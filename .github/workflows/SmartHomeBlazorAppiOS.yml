@@ -60,9 +60,9 @@ jobs:
         # The Key ID for AppStore Connect API
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
         # The PKCS8 format Private Key for AppStore Connect API
-        api-private-key: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
+        #api-private-key: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
         # The PKCS8 format Private Key file for AppStore Connect API
-        #api-private-key-file: # optional
+        api-private-key-file: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
         # Number of seconds for the token duration for AppStore Connect API. Maximum: 1200. default: 500
         #token-duration: # optional
           
