@@ -12,7 +12,7 @@ env:
   CONFIGURATION: Release
   DOTNET_VERSION: 8.0.x
   XCODE_VERSION: 15.1
-  WORKING_DIRECTORY: $GITHUB_WORKSPACE/SmartHome.Web/SmartHomeBlazorApp
+  WORKING_DIRECTORY: SmartHome.Web/SmartHomeBlazorApp
   APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
   
 jobs:
@@ -62,7 +62,7 @@ jobs:
         # The PKCS8 format Private Key for AppStore Connect API
         #api-private-key: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
         # The PKCS8 format Private Key file for AppStore Connect API
-        api-private-key-file: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
+        api-private-key-file: "$GITHUB_WORKSPACE/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
         # Number of seconds for the token duration for AppStore Connect API. Maximum: 1200. default: 500
         #token-duration: # optional
           
