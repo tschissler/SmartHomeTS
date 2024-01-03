@@ -109,11 +109,13 @@ jobs:
     #- name: Build and Sign IPA
     #  run: fastlane gym --scheme "YourScheme" --export_method "app-store"  # Replace "YourScheme" with your project's scheme
 
-    - name: Upload to App Store Connect
-      uses: apple-actions/upload-app-store@v1
+    - name: Upload to TestFlight
+      uses: Apple-Actions/upload-testflight-build@v1
       with:
         app-path: ./path/to/your/app.ipa  # Path to your IPA file
+        app-type: ios
         issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
     #    key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
     #    private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
     #    app-id: "com.example.app"  # Replace with your app's bundle identifier
