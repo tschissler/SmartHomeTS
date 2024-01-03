@@ -86,7 +86,7 @@ jobs:
       run: dotnet restore  "${{ env.WORKING_DIRECTORY }}"
 
     - name: Build .NET MAUI iOS Project
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore -f net8.0-ios
       
     #- name: Download Apple Provisioning Profiles
     #  uses: Apple-Actions/download-provisioning-profiles@v1
