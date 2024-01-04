@@ -39,7 +39,7 @@ jobs:
         
     - name: save private key to file
       run: | 
-        echo $IOSAPPSTORE_PRIVATE_KEY > private-key.p8
+        echo $PRIVATE_KEY > private-key.p8
       env:
         PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
