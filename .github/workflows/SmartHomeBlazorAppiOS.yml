@@ -97,7 +97,7 @@ jobs:
         app-type: ios
         issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
-        api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
+        #api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
     - name: Complete Deployment
       run: echo "Deployment to App Store Connect complete"
