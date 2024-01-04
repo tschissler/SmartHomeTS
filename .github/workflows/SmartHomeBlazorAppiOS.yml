@@ -66,7 +66,7 @@ jobs:
       uses: managedcode/MAUIAppVersion@v1
       with:
         # Path to csproj file
-        csproj: ${{ env.WORKING_DIRECTORY }}/${{ env.SmartHomeBlazorApp }}.csproj
+        csproj: ${{ env.WORKING_DIRECTORY }}/${{ env.PROJECT_NAME }}.csproj
         # Value for ApplicationVersion property
         version: ${{ github.run_number }}
         # Value for ApplicationVersion property
