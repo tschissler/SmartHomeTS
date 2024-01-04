@@ -24,11 +24,11 @@
         <ApplicationTitle>SmartHomeBlazorApp</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+        <ApplicationId>com.agilemax.App.SmartHome.Blazor</ApplicationId>
 
         <!-- Versions -->
-        <ApplicationDisplayVersion>1.2</ApplicationDisplayVersion>
-        <ApplicationVersion>1</ApplicationVersion>
+        <ApplicationDisplayVersion>1.1</ApplicationDisplayVersion>
+        <ApplicationVersion>2</ApplicationVersion>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">14.0</SupportedOSPlatformVersion>
@@ -39,50 +39,50 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-android|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+      <ApplicationId>com.agilemax.App.SmartHome.Blazor</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-ios|AnyCPU'">
       <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>1</ApplicationVersion>
+      <ApplicationVersion>3</ApplicationVersion>
       <BuildIpa>False</BuildIpa>
       <ApplicationDisplayVersion>1.2</ApplicationDisplayVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-maccatalyst|AnyCPU'">
       <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>1</ApplicationVersion>
+      <ApplicationVersion>3</ApplicationVersion>
       <ApplicationDisplayVersion>1.2</ApplicationDisplayVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-windows10.0.19041.0|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+      <ApplicationId>com.agilemax.App.SmartHome.Blazor</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-android|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+      <ApplicationId>com.agilemax.App.SmartHome.Blazor</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-ios|AnyCPU'">
       <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>1</ApplicationVersion>
+      <ApplicationVersion>3</ApplicationVersion>
       <BuildIpa>False</BuildIpa>
       <ApplicationDisplayVersion>1.2</ApplicationDisplayVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-maccatalyst|AnyCPU'">
       <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>1</ApplicationVersion>
+      <ApplicationVersion>3</ApplicationVersion>
       <ApplicationDisplayVersion>1.2</ApplicationDisplayVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-windows10.0.19041.0|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+      <ApplicationId>com.agilemax.App.SmartHome.Blazor</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(TargetFramework)'=='net8.0-ios'">
-      <CodesignKey>iPhone Distribution</CodesignKey>
-      <CodesignProvision>SmarthomeBlazorIosProfile</CodesignProvision>
+      <CodesignKey>Apple Distribution: Thomas Schissler (BZ8G3RZCS7)</CodesignKey>
+      <CodesignProvision>NewSmartHomeBlazorAppProfile</CodesignProvision>
       <ProvisioningType>manual</ProvisioningType>
     </PropertyGroup>
 
@@ -91,13 +91,13 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-windows10.0.22621.0|AnyCPU'">
-      <ApplicationVersion>1</ApplicationVersion>
+      <ApplicationVersion>3</ApplicationVersion>
       <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
       <ApplicationDisplayVersion>1.2</ApplicationDisplayVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-windows10.0.22621.0|AnyCPU'">
-      <ApplicationVersion>1</ApplicationVersion>
+      <ApplicationVersion>3</ApplicationVersion>
       <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
       <ApplicationDisplayVersion>1.2</ApplicationDisplayVersion>
     </PropertyGroup>
