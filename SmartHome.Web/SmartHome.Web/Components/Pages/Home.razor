@@ -17,8 +17,6 @@
     <!-- Title Section -->
     <h1 class="mb-4">Temperaturen</h1>
 
-    
-
     <!-- Loading Spinner -->
     @if (isLoading)
     {
@@ -26,6 +24,17 @@
             <div class="spinner"></div> 
         </div>
     }
+
+    <div class="container">
+    <div class="row">
+        <div class="col-sm-6 col-12">
+            <DataValueTextControl Value="15.4m" Unit="°C" LastUpdated="@DateTime.Now" title="Außen"></DataValueTextControl>
+        </div>
+        <div class="col-sm-6 col-12">
+            <DataValueTextControl Value="21.5m" Unit="°C" LastUpdated="@DateTime.Now" title="Wohnzimmer"></DataValueTextControl>
+        </div>
+    </div>
+</div>
 
     <!-- Checkbox Filters -->
     <div class="row mb-3">
