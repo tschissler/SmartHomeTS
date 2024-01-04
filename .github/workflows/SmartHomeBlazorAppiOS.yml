@@ -13,7 +13,7 @@ env:
   DOTNET_VERSION: 8.0.x
   XCODE_VERSION: 15.1
   WORKING_DIRECTORY: SmartHome.Web/SmartHomeBlazorApp
-  APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
+  #APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
   
 jobs:
   build-and-deploy:
@@ -36,12 +36,12 @@ jobs:
         p12-filepath: ${{ env.WORKING_DIRECTORY }}/Platforms/iOS/DistributionCertificates.p12
         # The password used to import the PKCS12 file.
         p12-password: ${{ secrets.IOS_CERTIFICATE_PASSPHRASE }}
-
+      
     - name: Apple Provisioning Profiles Downloader
-      uses: poad/apple-provisioning-profiles-downloader@v1.0.8
+      uses: Apple-Actions/download-provisioning-profiles@v1
       with:
         # The bundle identifier of the application
-        bundle-id: 'de.agilemax.smarthome.app.blazor'
+        bundle-id: 'de.agilemax.smarthome.blazor.ios'
         # The type of profile to download. One of IOS_APP_DEVELOPMENT, IOS_APP_STORE, IOS_APP_ADHOC, IOS_APP_INHOUSE, MAC_APP_DEVELOPMENT, MAC_APP_STORE, MAC_APP_DIRECT, TVOS_APP_DEVELOPMENT, TVOS_APP_STORE, TVOS_APP_ADHOC, TVOS_APP_INHOUSE
         profile-type: IOS_APP_STORE
         # The AppStore Connect API Key Issuer Identifier
@@ -49,9 +49,9 @@ jobs:
         # The Key ID for AppStore Connect API
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
         # The PKCS8 format Private Key for AppStore Connect API
-        #api-private-key: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
+        api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
         # The PKCS8 format Private Key file for AppStore Connect API
-        api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
+        #api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
           
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
@@ -68,7 +68,11 @@ jobs:
       run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} 
 
     - name: Publish .NET MAUI iOS Project
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore -f net8.0-ios
+      #run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore -f net8.0-ios
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" -f net8.0-ios -p:ArchiveOnBuild=true 
+
+    - name: Debug
+      run: ls "${{ env.WORKING_DIRECTORY }}/bin/Release/net8.0-ios/ios-arm64/publish/"
       
     #- name: Download Apple Provisioning Profiles
     #  uses: Apple-Actions/download-provisioning-profiles@v1
@@ -87,15 +91,14 @@ jobs:
     #  run: fastlane gym --scheme "YourScheme" --export_method "app-store"  # Replace "YourScheme" with your project's scheme
 
     - name: Upload to TestFlight
-      uses: Apple-Actions/upload-testflight-build@v1
-      with:
-        app-path: ./bin/Release/net8.0-ios/ios-arm64/publish/SmartHomeBlazorApp.ipa  # Path to your IPA file
-        app-type: ios
-        issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-        api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
-    #    key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-    #    private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-    #    app-id: "com.example.app"  # Replace with your app's bundle identifier
+      run: xcrun altool --upload-app --file ${{ env.WORKING_DIRECTORY }}/bin/Release/net8.0-ios/ios-arm64/publish/SmartHomeBlazorApp.ipa --type ios --username ${{ secrets.IOSAPPSTORE_USERNAME }} --password ${{ secrets.IOSAPPSTORE_USER_PASSWORD }}
+      #uses: Apple-Actions/upload-testflight-build@v1
+      #with:
+      #  app-path: ${{ env.WORKING_DIRECTORY }}/bin/Release/net8.0-ios/ios-arm64/publish/SmartHomeBlazorApp.ipa  # Path to your IPA file
+      #  app-type: ios
+      #  issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      #  api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
+      #  #api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
     - name: Complete Deployment
       run: echo "Deployment to App Store Connect complete"
