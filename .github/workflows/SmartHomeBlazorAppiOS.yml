@@ -49,7 +49,7 @@ jobs:
         # The Key ID for AppStore Connect API
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
         # The PKCS8 format Private Key for AppStore Connect API
-        api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
+        api-private-key: '${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}'
         # The PKCS8 format Private Key file for AppStore Connect API
         #api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
           
