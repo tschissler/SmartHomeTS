@@ -2,7 +2,8 @@
 
     <PropertyGroup>
         <TargetFrameworks>net8.0-maccatalyst;net8.0-ios</TargetFrameworks>
-        <!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
+		    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.22621.0</TargetFrameworks>
+		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
         <!-- <TargetFrameworks>$(TargetFrameworks);net8.0-tizen</TargetFrameworks> -->
 
         <!-- Note for MacCatalyst:
@@ -39,74 +40,42 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-android|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-ios|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>4</ApplicationVersion>
-      <BuildIpa>True</BuildIpa>
-      <ApplicationDisplayVersion>1.3</ApplicationDisplayVersion>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-maccatalyst|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>4</ApplicationVersion>
-      <ApplicationDisplayVersion>1.3</ApplicationDisplayVersion>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-windows10.0.19041.0|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-android|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-ios|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>4</ApplicationVersion>
-      <BuildIpa>True</BuildIpa>
-      <ApplicationDisplayVersion>1.3</ApplicationDisplayVersion>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-maccatalyst|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationVersion>4</ApplicationVersion>
-      <ApplicationDisplayVersion>1.3</ApplicationDisplayVersion>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-windows10.0.19041.0|AnyCPU'">
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(TargetFramework)'=='net8.0-ios'">
-      <CodesignKey>iPhone Distribution</CodesignKey>
-      <CodesignProvision>SmarthomeBlazorIosProfile</CodesignProvision>
-      <ProvisioningType>manual</ProvisioningType>
-    </PropertyGroup>
-
-    <PropertyGroup>
-      <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.22621.0</TargetFrameworks>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-windows10.0.22621.0|AnyCPU'">
-      <ApplicationVersion>4</ApplicationVersion>
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationDisplayVersion>1.3</ApplicationDisplayVersion>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-windows10.0.22621.0|AnyCPU'">
-      <ApplicationVersion>4</ApplicationVersion>
-      <ApplicationId>de.agilemax.smarthome.blazor.ios</ApplicationId>
-      <ApplicationDisplayVersion>1.3</ApplicationDisplayVersion>
+      <ApplicationId>com.agilemax.test</ApplicationId>
     </PropertyGroup>
 
     <ItemGroup>
         <!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
 
-		<!-- Splash Screen -->
+        <!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
 
         <!-- Images -->
@@ -125,6 +94,10 @@
         <PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\UIComponentsLib\UIComponentsLib.csproj" />
     </ItemGroup>
 
 </Project>
