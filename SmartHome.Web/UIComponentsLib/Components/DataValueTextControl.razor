@@ -1,0 +1,38 @@
+﻿@using System.Globalization
+
+<div class="value-display">
+    <div class="title-text">@Title</div>
+    <hr />
+    <div class="value-text">@Value @Unit</div>
+    <div class="date-text">@LastUpdated.ToString("g", CultureInfo.CurrentCulture)</div>
+</div>
+
+<style>
+    .title-text {
+        font-size: 1.2em; /* Large text for the value */
+        font-weight: bold;
+        text-align: center;
+    }
+    .value-display {
+        text-align: center;
+        margin: 10px;
+    }
+
+    .value-text {
+        font-size: 2em; /* Large text for the value */
+        font-weight: bold;
+    }
+
+    .date-text {
+        font-size: 0.8em; /* Smaller text for the date */
+        color: gray;
+    }
+
+</style>
+@code {
+    [Parameter] public decimal Value { get; set; }
+    [Parameter] public string Unit { get; set; }
+    [Parameter] public DateTime LastUpdated { get; set; }
+    [Parameter] public string Title { get; set; }
+
+}
