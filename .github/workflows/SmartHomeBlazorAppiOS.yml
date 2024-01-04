@@ -36,15 +36,6 @@ jobs:
         p12-filepath: ${{ env.WORKING_DIRECTORY }}/Platforms/iOS/DistributionCertificates.p12
         # The password used to import the PKCS12 file.
         p12-password: ${{ secrets.IOS_CERTIFICATE_PASSPHRASE }}
-        
-    - name: save private key to file
-      run: | 
-        echo $PRIVATE_KEY > ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/private-key.p8
-      env:
-        PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
-
-    - name: Debug key file
-      run: cat ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/private-key.p8
       
     - name: Apple Provisioning Profiles Downloader
       uses: Apple-Actions/download-provisioning-profiles@v1
@@ -58,7 +49,7 @@ jobs:
         # The Key ID for AppStore Connect API
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
         # The PKCS8 format Private Key for AppStore Connect API
-        api-private-key: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/private-key.p8
+        api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
         # The PKCS8 format Private Key file for AppStore Connect API
         #api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
           
@@ -106,7 +97,7 @@ jobs:
         app-type: ios
         issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
-        private-key: private-key.p8
+        private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
     - name: Complete Deployment
       run: echo "Deployment to App Store Connect complete"
