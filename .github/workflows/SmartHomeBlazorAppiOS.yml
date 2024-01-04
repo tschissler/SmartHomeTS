@@ -36,9 +36,16 @@ jobs:
         p12-filepath: ${{ env.WORKING_DIRECTORY }}/Platforms/iOS/DistributionCertificates.p12
         # The password used to import the PKCS12 file.
         p12-password: ${{ secrets.IOS_CERTIFICATE_PASSPHRASE }}
+        
+    - name: save private key to file
+      run: | 
+        echo $IOSAPPSTORE_PRIVATE_KEY > private-key.p8
+      env:
+        PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
+    
     - name: Apple Provisioning Profiles Downloader
-      uses: poad/apple-provisioning-profiles-downloader@v1.0.8
+      uses: Apple-Actions/download-provisioning-profiles@v1
       with:
         # The bundle identifier of the application
         bundle-id: 'de.agilemax.smarthome.blazor.ios'
@@ -49,7 +56,7 @@ jobs:
         # The Key ID for AppStore Connect API
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
         # The PKCS8 format Private Key for AppStore Connect API
-        api-private-key: '${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}'
+        api-private-key: private-key.p8
         # The PKCS8 format Private Key file for AppStore Connect API
         #api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
           
@@ -97,7 +104,7 @@ jobs:
         app-type: ios
         issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
-        private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
+        private-key: private-key.p8
 
     - name: Complete Deployment
       run: echo "Deployment to App Store Connect complete"
