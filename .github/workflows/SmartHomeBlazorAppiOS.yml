@@ -43,7 +43,9 @@ jobs:
       env:
         PRIVATE_KEY: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
-    
+    - name: Debug key file
+      run: cat private-key.p8
+      
     - name: Apple Provisioning Profiles Downloader
       uses: Apple-Actions/download-provisioning-profiles@v1
       with:
