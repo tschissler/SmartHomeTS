@@ -49,9 +49,9 @@ jobs:
         # The Key ID for AppStore Connect API
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
         # The PKCS8 format Private Key for AppStore Connect API
-        #api-private-key: "${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_G3XADS6382.p8"
+        api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
         # The PKCS8 format Private Key file for AppStore Connect API
-        api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
+        #api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
           
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
@@ -97,9 +97,7 @@ jobs:
         app-type: ios
         issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
-    #    key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-    #    private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-    #    app-id: "com.example.app"  # Replace with your app's bundle identifier
+        private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
     - name: Complete Deployment
       run: echo "Deployment to App Store Connect complete"
