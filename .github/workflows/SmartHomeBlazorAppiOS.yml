@@ -41,7 +41,7 @@ jobs:
       uses: poad/apple-provisioning-profiles-downloader@v1.0.8
       with:
         # The bundle identifier of the application
-        bundle-id: 'de.agilemax.smarthome.app.blazor'
+        bundle-id: 'de.agilemax.smarthome.blazor.ios'
         # The type of profile to download. One of IOS_APP_DEVELOPMENT, IOS_APP_STORE, IOS_APP_ADHOC, IOS_APP_INHOUSE, MAC_APP_DEVELOPMENT, MAC_APP_STORE, MAC_APP_DIRECT, TVOS_APP_DEVELOPMENT, TVOS_APP_STORE, TVOS_APP_ADHOC, TVOS_APP_INHOUSE
         profile-type: IOS_APP_STORE
         # The AppStore Connect API Key Issuer Identifier
