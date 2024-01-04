@@ -9,6 +9,7 @@ on:
 
 env:
   PROJECT_NAME: SmartHomeBlazorApp
+  APP_DISPLAYVERSION: 1.4
   CONFIGURATION: Release
   DOTNET_VERSION: 8.0.x
   XCODE_VERSION: 15.1
@@ -60,7 +61,17 @@ jobs:
 
     - name: Install MAUI workload
       run: dotnet workload install maui
-      
+
+    - name: MAUIAppVersion
+      uses: managedcode/MAUIAppVersion@v1
+      with:
+        # Path to csproj file
+        csproj: ${{ env.WORKING_DIRECTORY }}/${{ env.SmartHomeBlazorApp }}.csproj
+        # Value for ApplicationVersion property
+        version: ${{ github.run_number }}
+        # Value for ApplicationVersion property
+        displayVersion: ${{ env. APP_DISPLAYVERSION }}
+          
     - name: Restore NuGet Packages
       run: dotnet restore  "${{ env.WORKING_DIRECTORY }}"
 
