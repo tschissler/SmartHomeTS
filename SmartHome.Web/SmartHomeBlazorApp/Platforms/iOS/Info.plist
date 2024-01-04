@@ -10,6 +10,7 @@
 		<integer>2</integer>
 	</array>
 	<key>UIRequiredDeviceCapabilities</key>
+	<key>ITSAppUsesNonExemptEncryption</key>
 	<array>
 		<string>arm64</string>
 	</array>
