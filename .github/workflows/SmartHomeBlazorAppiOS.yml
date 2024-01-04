@@ -91,13 +91,14 @@ jobs:
     #  run: fastlane gym --scheme "YourScheme" --export_method "app-store"  # Replace "YourScheme" with your project's scheme
 
     - name: Upload to TestFlight
-      uses: Apple-Actions/upload-testflight-build@v1
-      with:
-        app-path: ${{ env.WORKING_DIRECTORY }}/bin/Release/net8.0-ios/ios-arm64/publish/SmartHomeBlazorApp.ipa  # Path to your IPA file
-        app-type: ios
-        issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-        api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
-        #api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
+      run: xcrun altool --upload-app --file ${{ env.WORKING_DIRECTORY }}/bin/Release/net8.0-ios/ios-arm64/publish/SmartHomeBlazorApp.ipa --type ios --username ${{ secrets.IOSAPPSTORE_USERNAME }} --password ${{ secrets.IOSAPPSTORE_USER_PASSWORD }}
+      #uses: Apple-Actions/upload-testflight-build@v1
+      #with:
+      #  app-path: ${{ env.WORKING_DIRECTORY }}/bin/Release/net8.0-ios/ios-arm64/publish/SmartHomeBlazorApp.ipa  # Path to your IPA file
+      #  app-type: ios
+      #  issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      #  api-key-id: ${{ secrets.IOSAPPSTORE_KEY_ID }}
+      #  #api-private-key: ${{ secrets.IOSAPPSTORE_PRIVATE_KEY }}
 
     - name: Complete Deployment
       run: echo "Deployment to App Store Connect complete"
