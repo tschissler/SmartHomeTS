@@ -1,5 +1,4 @@
 using SmartHome.Web.Components;
-using SmartHome.Web.Components.Libs;
 using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +18,6 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddLocalization();
 builder.Services.AddSyncfusionBlazor();
-builder.Services.AddSingleton<MqttController>();
 builder.Services.AddControllers();
 
 var app = builder.Build();
