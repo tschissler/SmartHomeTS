@@ -57,7 +57,7 @@ jobs:
         #api-private-key-file: ${{ github.workspace}}/${{ env.WORKING_DIRECTORY }}/Platforms/iOS/AuthKey_X9N93NF8L3.p8
 
     - name: Generate Secrets File
-      run: ${{ env.WORKING_DIRECTORY }}/Secrets/SecretsReplacer.ps1
+      run: ./SecretsReplacer.ps1
       working-directory: ${{ env.WORKING_DIRECTORY }}/Secrets/
       shell: pwsh
 
