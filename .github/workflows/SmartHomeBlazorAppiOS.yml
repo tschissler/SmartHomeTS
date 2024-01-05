@@ -82,7 +82,7 @@ jobs:
 
     - name: Publish .NET MAUI iOS Project
       #run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore -f net8.0-ios
-      run: dotnet publish  -f net8.0-ios -p:ArchiveOnBuild=true 
+      run: dotnet publish  -f net8.0-ios -p:ArchiveOnBuild=true -c Release -p:CodesignKey="iPhone Distribution" -p:CodesignProvision=SmarthomeBlazorIosProfile
       working-directory: "${{ env.WORKING_DIRECTORY }}" 
       
     #- name: Download Apple Provisioning Profiles
