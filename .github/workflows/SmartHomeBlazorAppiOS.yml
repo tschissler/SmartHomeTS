@@ -58,6 +58,7 @@ jobs:
 
     - name: Generate Secrets File
       run: ${{ env.WORKING_DIRECTORY }}/Secrets/SecretsReplacer.ps1
+      working-directory: ${{ env.WORKING_DIRECTORY }}/Secrets/
       shell: pwsh
 
     - name: Setup .NET
