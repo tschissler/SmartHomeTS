@@ -3,7 +3,7 @@
 @using DataContracts;
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Temperaturanzeige</h1>
+    <h1>Raumklima</h1>
     <button class="btn btn-primary" @onclick="LoadData">Refresh Data</button>
 </div>
 
@@ -11,9 +11,15 @@
     <div class="row">
         @foreach (var partitionKey in PartitionKeys.Keys)
         {
-            <div class="col-sm-3 col-6">
+            if (!partitionKey.Contains("temperature"))
+            {
+				continue;
+			}
+            <div class="col-md-3 col-6">
                 <DataValueTextControl Value="@Data[partitionKey].Value"
                                       Unit="°C"
+                                      Value2="@Data[partitionKey.Replace("_temperature", "_humidity")].Value"
+                                      Unit2="%"
                                       LastUpdated="@Data[partitionKey].LocalTime"
                                       title="@PartitionKeys[partitionKey]">
                 </DataValueTextControl>
@@ -31,8 +37,10 @@
 
     private Dictionary<string, string> PartitionKeys = new()
     {
-        { "1c50f3ab6224_temperature", "Außentemperatur" },
-        { "1420381fb608_temperature", "Wohnzimmer" }
+        { "1c50f3ab6224_temperature", "Außen" },
+        { "1420381fb608_temperature", "Wohnzimmer" },
+        { "1c50f3ab6224_humidity", "Außen Luftfeuchte" },
+        { "1420381fb608_humidity", "Wohnzimmer Luftfeuchte" },
     };
 
     protected override void OnInitialized()

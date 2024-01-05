@@ -4,6 +4,7 @@
     <div class="title-text">@Title</div>
     <hr />
     <div class="value-text">@Value @Unit</div>
+    @if(Value2 > Double.MinValue) {<div class="value-text">@Value2 @Unit2</div>}
     <div class="date-text">@LastUpdated.ToString("g", CultureInfo.CurrentCulture)</div>
 </div>
 
@@ -19,7 +20,7 @@
     }
 
     .value-text {
-        font-size: 2em; /* Large text for the value */
+        font-size: 1.6em; /* Large text for the value */
         font-weight: bold;
     }
 
@@ -32,6 +33,8 @@
 @code {
     [Parameter] public double Value { get; set; }
     [Parameter] public string Unit { get; set; }
+    [Parameter] public double Value2 { get; set; } = Double.MinValue;
+    [Parameter] public string Unit2 { get; set; }
     [Parameter] public DateTime LastUpdated { get; set; }
     [Parameter] public string Title { get; set; }
 
