@@ -73,17 +73,17 @@ jobs:
         displayVersion: ${{ env. APP_DISPLAYVERSION }}
           
     - name: Restore NuGet Packages
-      run: dotnet restore  "${{ env.WORKING_DIRECTORY }}"
+      run: dotnet restore  
+      working-directory: "${{ env.WORKING_DIRECTORY }}"
 
     - name: Build .NET MAUI iOS Project
-      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} 
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} 
+      working-directory: "${{ env.WORKING_DIRECTORY }}" 
 
     - name: Publish .NET MAUI iOS Project
       #run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore -f net8.0-ios
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" -f net8.0-ios -p:ArchiveOnBuild=true 
-
-    - name: Debug
-      run: ls "${{ env.WORKING_DIRECTORY }}/bin/Release/net8.0-ios/ios-arm64/publish/"
+      run: dotnet publish  -f net8.0-ios -p:ArchiveOnBuild=true 
+      working-directory: "${{ env.WORKING_DIRECTORY }}" 
       
     #- name: Download Apple Provisioning Profiles
     #  uses: Apple-Actions/download-provisioning-profiles@v1
