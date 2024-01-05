@@ -27,13 +27,17 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
     - name: Restore
-      run: dotnet restore "${{ env.PROJECT_NAME }}.csproj"
+      run: dotnet restore 
+      working-directory: "${{ env.WORKING_DIRECTORY }}"
     - name: Build
-      run: dotnet build "${{ env.PROJECT_NAME }}.csproj" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+      working-directory: "${{ env.WORKING_DIRECTORY }}"
     - name: Test
       run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+      working-directory: "${{ env.WORKING_DIRECTORY }}/.."
     - name: Publish
-      run: dotnet publish "${{ env.PROJECT_NAME }}.csproj" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      working-directory: "${{ env.WORKING_DIRECTORY }}"
     - name: Publish Artifacts
       uses: actions/upload-artifact@v3
       with:
