@@ -1,17 +1,55 @@
 ﻿@page "/"
+@using Azure.Data.Tables;
+@using DataContracts;
 
 <h1>Temperaturanzeige</h1>
 
 <div class="container">
     <div class="row">
-        <div class="col-sm-6 col-12">
-            <DataValueTextControl Value="15.4m" Unit="°C" LastUpdated="@DateTime.Now" title="Außen"></DataValueTextControl>
-        </div>
-        <div class="col-sm-6 col-12">
-            <DataValueTextControl Value="21.5m" Unit="°C" LastUpdated="@DateTime.Now" title="Wohnzimmer"></DataValueTextControl>
-        </div>
+        @foreach (var partitionKey in PartitionKeys.Keys)
+        {
+            <div class="col-sm-3 col-6">
+                <DataValueTextControl 
+                    Value="@Data[partitionKey].Value" 
+                    Unit="°C" 
+                    LastUpdated="@Data[partitionKey].Time" 
+                    title="@PartitionKeys[partitionKey]">
+                </DataValueTextControl>
+            </div>
+        }
     </div>
 </div>
 @code {
-    
+    private TableClient tableClient;
+    private Dictionary<string, DataValueTableEntity> Data = new ();
+
+    string storageAccountName = "smarthomestorageprod";
+    string hiResTableName = "SmartHomeClimateRawData";
+    string loResTableName = "SmartHomeClimateHourAggregationData";
+
+    private Dictionary<string, string> PartitionKeys = new()
+    {
+        { "1c50f3ab6224_temperature", "Außentemperatur" },
+        { "1420381fb608_temperature", "Wohnzimmer" }
+    };
+
+    protected override void OnInitialized()
+    {
+        tableClient = new TableClient(
+            new Uri(Secrets.StorageSecrets.StorageUri),
+            hiResTableName,
+            new TableSharedKeyCredential(storageAccountName, Secrets.StorageSecrets.StorageKey)
+        );
+
+        foreach (var partitionKey in PartitionKeys.Keys)
+        {
+            var queryString =
+                $"PartitionKey eq '{partitionKey}' ";
+            var query = tableClient.Query<DataValueTableEntity>(queryString, 1);
+            if (query.Any())
+            {
+                Data.Add(partitionKey, query.First());
+            }
+        };
+    }
 }

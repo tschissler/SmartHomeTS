@@ -58,6 +58,15 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Remove="Secrets\SecretsTemplate.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="Secrets\SecretsTemplate.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Azure.Data.Tables" Version="12.8.2" />
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
@@ -65,6 +74,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\DataContracts\DataContracts.csproj" />
       <ProjectReference Include="..\UIComponentsLib\UIComponentsLib.csproj" />
     </ItemGroup>
 
