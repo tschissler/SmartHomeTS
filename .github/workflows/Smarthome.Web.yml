@@ -15,7 +15,7 @@ env:
   AZURE_WEBAPP_PACKAGE_PATH: SmartHome.Web\published
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
-  WORKING_DIRECTORY: SmartHome.Web
+  WORKING_DIRECTORY: SmartHome.Web\SmartHome.Web
   
 jobs:
   build:
@@ -27,13 +27,17 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
     - name: Restore
-      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+      run: dotnet restore 
+      working-directory: "${{ env.WORKING_DIRECTORY }}"
     - name: Build
-      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+      working-directory: "${{ env.WORKING_DIRECTORY }}"
     - name: Test
-      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+      run: dotnet test --no-build
+      working-directory: "${{ env.WORKING_DIRECTORY }}/.."
     - name: Publish
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      working-directory: "${{ env.WORKING_DIRECTORY }}"
     - name: Publish Artifacts
       uses: actions/upload-artifact@v3
       with:
