@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Syncfusion.Blazor;
 
 namespace SmartHomeBlazorApp
 {
@@ -6,6 +7,15 @@ namespace SmartHomeBlazorApp
     {
         public static MauiApp CreateMauiApp()
         {
+            try
+            {
+                Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(Secrets.LicenseKeys.SyncfusionLicenseKey);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
@@ -15,6 +25,7 @@ namespace SmartHomeBlazorApp
                 });
 
             builder.Services.AddMauiBlazorWebView();
+            builder.Services.AddSyncfusionBlazor();
 
 #if DEBUG
     		builder.Services.AddBlazorWebViewDeveloperTools();

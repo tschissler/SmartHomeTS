@@ -7,4 +7,9 @@ namespace SmartHomeBlazorApp.Secrets
         internal const string StorageUri = "<The Uri to the Azure Table Storage>"; 
         internal const string StorageKey = "<The key to access the Azure Table Storage>";
     }
+
+    internal class LicenseKeys
+    {
+        internal const string SyncfusionLicenseKey = "<The License Key for Syncfusion Controls>";
+    }
 }

@@ -26,6 +26,14 @@
             </div>
         }
     </div>
+    <div class="row mb-3">
+        <DataChart HiResTableName="@hiResTableName"
+                   LoResTableName="@loResTableName"
+                   StorageAccountName="@storageAccountName"
+                   StorageAccountKey="@Secrets.StorageSecrets.StorageKey"
+                   StorageUri="@Secrets.StorageSecrets.StorageUri"
+                   dataSeriesMetaData="@ChartPartitionKeys"></DataChart>
+    </div>
 </div>
 @code {
     private TableClient tableClient;
@@ -41,6 +49,14 @@
         { "1420381fb608_temperature", "Wohnzimmer" },
         { "1c50f3ab6224_humidity", "Außen Luftfeuchte" },
         { "1420381fb608_humidity", "Wohnzimmer Luftfeuchte" },
+    };
+
+    public List<DataSeriesMetaData> ChartPartitionKeys = new()
+    {
+        new DataSeriesMetaData { Id="1", Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = true, Color = "blue" },
+        new DataSeriesMetaData { Id="2", Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false, Color = "grey" },
+        new DataSeriesMetaData { Id="3", Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false, Color = "magenta" }, 
+        new DataSeriesMetaData { Id="4", Label = "Batteriesensor", PartitionKey = "1420381fb608_temperature", IsChecked = true, Color = "green" }
     };
 
     protected override void OnInitialized()
