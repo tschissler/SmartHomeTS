@@ -13,6 +13,13 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.0" />
+		<PackageReference Include="Syncfusion.Blazor.Charts" Version="24.1.41" />
+		<PackageReference Include="Syncfusion.Blazor.Navigations" Version="24.1.41" />
+		<PackageReference Include="Syncfusion.Blazor.Themes" Version="24.1.41" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\DataContracts\DataContracts.csproj" />
 	</ItemGroup>
 
 </Project>

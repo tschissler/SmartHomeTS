@@ -2,7 +2,7 @@
 
 namespace DataContracts
 {
-    public class CheckableItem
+    public class DataSeriesMetaData
     {
         public string Id { get; set; }
         public string PartitionKey { get; set; }

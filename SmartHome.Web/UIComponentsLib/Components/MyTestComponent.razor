@@ -1,5 +1,12 @@
 ﻿<h3>Here goes my test component</h3>
+@count
+<button @onclick="Count">Count</button>
 
 @code {
+    private int count = 0;
 
+    private void Count()
+    {
+        count++;
+    }
 }

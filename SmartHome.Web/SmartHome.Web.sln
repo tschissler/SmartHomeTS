@@ -23,7 +23,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartHome.WebAssembly.Clien
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartHomeBlazorApp", "SmartHomeBlazorApp\SmartHomeBlazorApp.csproj", "{D10C1D80-7D53-4010-AECA-808035A04101}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UIComponentsLib", "UIComponentsLib\UIComponentsLib.csproj", "{E4AD260C-4561-49F7-9428-549CD61159EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UIComponentsLib", "UIComponentsLib\UIComponentsLib.csproj", "{E4AD260C-4561-49F7-9428-549CD61159EA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
