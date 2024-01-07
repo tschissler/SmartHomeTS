@@ -11,6 +11,7 @@ namespace StorageController
         private TableClient tableClient;
         private TableServiceClient serviceClient;
         private string tableName;
+        public string TableName { get { return tableName; } }
 
         public CosmosDBController(string storageUri, string tableName, string accountName, string storageAccountKey)
         {

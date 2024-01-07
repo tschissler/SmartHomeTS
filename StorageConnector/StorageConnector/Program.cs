@@ -33,14 +33,14 @@ namespace StorageConnector
             var topicParts = topic.Split('/');
             var partitionKey = topicParts[1]+"/"+topicParts[2];
             cosmosDBController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
-            Console.WriteLine($"Wrote data to storage table, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
+            Console.WriteLine($"Wrote data to storage table {cosmosDBController.TableName}, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
         }
         private static void MqttController_OnStringDataUpdated(string topic, string value, DateTime time)
         {
             var topicParts = topic.Split('/');
             var partitionKey = topicParts[1] + "/" + topicParts[2];
             cosmosDBStringController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
-            Console.WriteLine($"Wrote data to storage table, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
+            Console.WriteLine($"Wrote data to storage table {cosmosDBStringController.TableName}, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
         }
     }
 }
