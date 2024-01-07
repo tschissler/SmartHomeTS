@@ -7,7 +7,7 @@
     <button class="btn btn-primary" @onclick="LoadData">Refresh Data</button>
 </div>
 
-<div class="container">
+<div class="container w-100">
     <div class="row">
         @foreach (var partitionKey in PartitionKeys.Keys)
         {
@@ -25,23 +25,35 @@
                 </DataValueTextControl>
             </div>
         }
+        <div class="col-md-3 col-6">
+            <div class="text-info title-text">
+                Fenster Schlafzimmer: <br /> @(StatusWindowBedroomTop.ToLower() == "closed" && StatusWindowBedroomBottom.ToLower() == "closed" ? "Geschlossen" : (StatusWindowBedroomBottom.ToLower() == "open" ? "Offen" : "Gekippt"))
+            </div>
+        </div>
     </div>
     <div class="row mb-3">
-        <DataChart HiResTableName="@hiResTableName"
-                   LoResTableName="@loResTableName"
-                   StorageAccountName="@storageAccountName"
-                   StorageAccountKey="@Secrets.StorageSecrets.StorageKey"
-                   StorageUri="@Secrets.StorageSecrets.StorageUri"
-                   dataSeriesMetaData="@ChartPartitionKeys"></DataChart>
+        <div class="col">
+            <DataChart HiResTableName="@hiResTableName"
+                       LoResTableName="@loResTableName"
+                       StorageAccountName="@storageAccountName"
+                       StorageAccountKey="@Secrets.StorageSecrets.StorageKey"
+                       StorageUri="@Secrets.StorageSecrets.StorageUri"
+                       dataSeriesMetaData="@ChartPartitionKeys"></DataChart>
+        </div>
     </div>
 </div>
 @code {
     private TableClient tableClient;
+    private TableClient tableClient2;
     private Dictionary<string, DataValueTableEntity> Data = new();
 
     string storageAccountName = "smarthomestorageprod";
     string hiResTableName = "SmartHomeClimateRawData";
     string loResTableName = "SmartHomeClimateHourAggregationData";
+    string statusTableName = "SmartHomeStatusRawData";
+
+    string StatusWindowBedroomTop = "closed";
+    string StatusWindowBedroomBottom = "closed";
 
     private Dictionary<string, string> PartitionKeys = new()
     {
@@ -49,14 +61,15 @@
         { "1420381fb608_temperature", "Wohnzimmer" },
         { "1c50f3ab6224_humidity", "Außen Luftfeuchte" },
         { "1420381fb608_humidity", "Wohnzimmer Luftfeuchte" },
+        { "88ff1305613c_temperature", "Schlafzimmer" },
+        { "88ff1305613c_humidity", "Schlafzimmer Luftfeuchte"},
     };
 
     public List<DataSeriesMetaData> ChartPartitionKeys = new()
     {
-        new DataSeriesMetaData { Id="1", Label = "Außentemperatur", PartitionKey = "1c50f3ab6224_temperature", IsChecked = true, Color = "blue" },
-        new DataSeriesMetaData { Id="2", Label = "M3 Gästezimmer", PartitionKey = "44dbf3ab6224_temperature", IsChecked = false, Color = "grey" },
-        new DataSeriesMetaData { Id="3", Label = "M3 Esszimmer", PartitionKey = "a86d2b286f24_temperature", IsChecked = false, Color = "magenta" }, 
-        new DataSeriesMetaData { Id="4", Label = "Batteriesensor", PartitionKey = "1420381fb608_temperature", IsChecked = true, Color = "green" }
+        new DataSeriesMetaData { Id="1", Label = "Außen", PartitionKey = "1c50f3ab6224_temperature", IsChecked = true, Color = "blue" },
+        new DataSeriesMetaData { Id="2", Label = "Wohnzimmer", PartitionKey = "1420381fb608_temperature", IsChecked = true, Color = "green" },
+        new DataSeriesMetaData { Id="3", Label = "Schlafzimmer", PartitionKey = "88ff1305613c_temperature", IsChecked = true, Color = "magenta" }
     };
 
     protected override void OnInitialized()
@@ -83,6 +96,31 @@
                 Data.Add(partitionKey, query.First());
             }
         };
+
+        tableClient2 = new TableClient(
+            new Uri(Secrets.StorageSecrets.StorageUri),
+            statusTableName,
+            new TableSharedKeyCredential(storageAccountName, Secrets.StorageSecrets.StorageKey)
+            );
+
+        var queryString2 =
+             $"PartitionKey eq '88ff1305613c_window_top' or PartitionKey eq '88ff1305613c_window_bottom' ";
+        var query2 = tableClient2.Query<StringDataValueTableEntity>(queryString2, 1);
+        if (query2.Any())
+        {
+            var top = query2.FirstOrDefault(i => i.PartitionKey == "88ff1305613c_window_top");
+            var bottom = query2.FirstOrDefault(i => i.PartitionKey == "88ff1305613c_window_bottom");
+
+            if (top != null)
+            {
+                StatusWindowBedroomTop = top.Value;
+            }
+
+            if (bottom != null)
+            {
+                StatusWindowBedroomBottom = bottom.Value;
+            }
+        }
 
         InvokeAsync(StateHasChanged);
     }
