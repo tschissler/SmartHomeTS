@@ -34,6 +34,17 @@ namespace StorageController
             tableClient.AddEntity(entity);
         }
 
+        public void WriteData(string partitionKey, string rowKey, string value, DateTime time)
+        {
+            // Create new Entity and write to table
+            var entity = new TableEntity(partitionKey.Replace("/", "_"), rowKey)
+            {
+                { "Value", value },
+                { "Time", time.ToUniversalTime() }
+            };
+            tableClient.AddEntity(entity);
+        }
+
         public void DeleteData(string partitionKey, string rowKey)
         {
             // Delete entity from table

@@ -15,8 +15,10 @@ namespace StorageConnector
         private MqttClientOptions _options;
 
         public event DataUpdatedHandler OnDataUpdated;
+        public event StringDataUpdatedHandler OnStringDataUpdated;
 
         public delegate void DataUpdatedHandler(string topic, double value, DateTime time);
+        public delegate void StringDataUpdatedHandler(string topic, string value, DateTime time);
 
         public MqttController(string mqttBrokerName, int mqttBrokerPort, string clientName)
         {
@@ -38,18 +40,19 @@ namespace StorageConnector
 
         private Task _client_ApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs args)
         {
-            Console.WriteLine($"{DateTime.Now.ToLongTimeString()} --- Received MQTT message: {args.ApplicationMessage.Topic} - {args.ApplicationMessage.ConvertPayloadToString()}");
-            double value = 0;
-            if (double.TryParse(args.ApplicationMessage.ConvertPayloadToString(), new CultureInfo("en-US"), out value))
-            {
-                var topic = args.ApplicationMessage.Topic;
-                var time = DateTime.Now;
+            string payload = args.ApplicationMessage.ConvertPayloadToString();
+            Console.WriteLine($"{DateTime.Now.ToLongTimeString()} --- Received MQTT message: {args.ApplicationMessage.Topic} - {payload}");
+            var topic = args.ApplicationMessage.Topic;
+            var time = DateTime.Now;
 
+            double value = 0;
+            if (double.TryParse(payload, new CultureInfo("en-US"), out value))
+            {
                 OnDataUpdated?.Invoke(topic, value, time);
             }
             else
             {
-                Console.WriteLine("Could not parse value to decimal, ignoring message.");
+                OnStringDataUpdated?.Invoke(topic, payload, time);
             }
 
             return Task.CompletedTask;
