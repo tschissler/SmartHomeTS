@@ -16,23 +16,22 @@
 #define TFT_DC     2
 #define TFT_MOSI   23
 #define TFT_SCLK   18
+#define LED_RED_PIN 32
+#define LED_GREEN_PIN 26
+#define LED_BLUE_PIN 33
+#define LED_INTERNAL_PIN 2
+#define DHTPIN 25    
+
 
 // Initialize Adafruit ST7735
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
-
 
 const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
 // Deep Sleep Configuration
-#define BLINK_DURATION 100       // Blink duration in milliseconds, blinking will happen every second
-#define MQTT_MESSAGE_FREQUENCY  60        // Number of seconds before sending MQTT message
-static int MQTT_MESSAGE_FREQUENCY_COUNTER = 1000;
-
-#define LED_RED_PIN 32
-#define LED_GREEN_PIN 26
-#define LED_BLUE_PIN 33
-#define DHTPIN 25     
+#define BLINK_DURATION 300       // Blink duration in milliseconds, blinking will happen every second
+ 
 #define DHTTYPE DHT22   
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -56,6 +55,7 @@ static bool otaInProgress = false;
 static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
+static int lastMQTTSentMinute = 0;
 
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
@@ -315,8 +315,12 @@ void setup() {
 void loop() {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
-  if (MQTT_MESSAGE_FREQUENCY_COUNTER >= MQTT_MESSAGE_FREQUENCY) {
-    MQTT_MESSAGE_FREQUENCY_COUNTER = 0;
+  // TRansmit data every minute
+  int currentMinute = timeClient.getMinutes();
+  if(currentMinute != lastMQTTSentMinute) {
+    lastMQTTSentMinute = currentMinute;
+   
+  //if (MQTT_MESSAGE_FREQUENCY_COUNTER >= MQTT_MESSAGE_FREQUENCY) {
     if (!mqttClient.connected()) {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       reconnect();
@@ -324,30 +328,31 @@ void loop() {
 
     readSensorAndPublish();
     mqttClient.loop();
-  } else {
-    MQTT_MESSAGE_FREQUENCY_COUNTER++;
+  } 
+
+  bool pingSuccess = Ping.ping("smarthomepi2");
+
+  digitalWrite(LED_INTERNAL_PIN, HIGH);
+  delay(BLINK_DURATION);
+  digitalWrite(LED_INTERNAL_PIN, LOW);
+  if (!pingSuccess) {
+    Serial.println("Ping failed");
+    delay(BLINK_DURATION);
+    digitalWrite(LED_INTERNAL_PIN, HIGH);
+    delay(BLINK_DURATION);
+    digitalWrite(LED_INTERNAL_PIN, LOW);
+  }
+  if (!mqttSuccess) {
+    Serial.println("MQTT failed");
+    delay(BLINK_DURATION);
+    digitalWrite(LED_INTERNAL_PIN, HIGH);
+    delay(BLINK_DURATION);
+    digitalWrite(LED_INTERNAL_PIN, LOW);
+    delay(BLINK_DURATION);
+    digitalWrite(LED_INTERNAL_PIN, HIGH);
+    delay(BLINK_DURATION);
+    digitalWrite(LED_INTERNAL_PIN, LOW);
   }
 
-  // if(Ping.ping("smarthomepi2")) {
-  //   digitalWrite(LED_BLUE_PIN, HIGH);
-  //   delay(BLINK_DURATION);
-  //   digitalWrite(LED_BLUE_PIN, LOW);
-  //   delay(BLINK_DURATION);
-  // } else {
-  //   digitalWrite(LED_RED_PIN, HIGH);
-  //   delay(BLINK_DURATION);
-  //   digitalWrite(LED_RED_PIN, LOW);
-  //   delay(BLINK_DURATION);
-  // }
-
-  // if (mqttSuccess) {
-  //   digitalWrite(LED_GREEN_PIN, HIGH);
-  //   delay(BLINK_DURATION);
-  //   digitalWrite(LED_GREEN_PIN, LOW);
-  // } else {
-  //   digitalWrite(LED_RED_PIN, HIGH);
-  //   delay(BLINK_DURATION);
-  //   digitalWrite(LED_RED_PIN, LOW);
-  // }
-  delay(1000-3*BLINK_DURATION);
+  delay(1000);
 }
