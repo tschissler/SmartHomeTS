@@ -10,18 +10,19 @@
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
 
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+
 // Pin configuration
 #define TFT_CS     15
 #define TFT_RST    4  
 #define TFT_DC     2
 #define TFT_MOSI   23
 #define TFT_SCLK   18
-#define LED_RED_PIN 32
-#define LED_GREEN_PIN 26
-#define LED_BLUE_PIN 33
 #define LED_INTERNAL_PIN 2
 #define DHTPIN 25    
-
+#define SWITCH_TOP_PIN 33
+#define SWITCH_BOTTOM_PIN 32
 
 // Initialize Adafruit ST7735
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
@@ -56,6 +57,10 @@ static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
+static int switchTopStatus = false;
+static int switchBottomStatus = false;
+
+static String baseTopic = "";
 
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
@@ -196,8 +201,6 @@ void readSensorAndPublish() {
 
   if (sendMQTTMessages)
   {
-    String baseTopic = "data/" + chipID + "/"; // Base topic with the chipID
-
     if (!mqttClient.connected()) {
       Serial.println("MQTT Client not connected, reconnecting before publish...");
       reconnect();
@@ -211,6 +214,16 @@ void readSensorAndPublish() {
   }
   Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
   printInformationOnTFT(String(temperature), String(humidity), true);
+}
+
+void sendMQTTMessage(String subtopic, String message)
+{
+  if (!mqttClient.connected()) {
+      Serial.println("MQTT Client not connected, reconnecting before publish...");
+      reconnect();
+    }
+    
+    mqttClient.publish(baseTopic + (subtopic).c_str(), String(message), true, 2);
 }
 
 void findWifi() {
@@ -249,6 +262,8 @@ void findWifi() {
 }
 
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+
   Serial.begin(9600);
   Serial.print("TemperatureSensor version ");
   Serial.println(version);
@@ -260,6 +275,8 @@ void setup() {
   // Print the Chip ID
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
+
+  baseTopic = "data/" + chipID + "/"; // Base topic with the chipID
 
   findWifi();
   while (ssid == "" || password == "") {
@@ -298,9 +315,9 @@ void setup() {
   dht.begin();
   Serial.println("DHT sensor initialized");
 
-  pinMode(LED_RED_PIN, OUTPUT);
-  pinMode(LED_GREEN_PIN, OUTPUT);
-  pinMode(LED_BLUE_PIN, OUTPUT);
+  // Init switch pins
+  pinMode(SWITCH_TOP_PIN, INPUT_PULLUP);
+  pinMode(SWITCH_BOTTOM_PIN, INPUT_PULLUP);
   
   // Initialize NTPClient
   timeClient.begin();
@@ -329,6 +346,18 @@ void loop() {
     readSensorAndPublish();
     mqttClient.loop();
   } 
+
+  if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
+    switchTopStatus = digitalRead(SWITCH_TOP_PIN);
+    sendMQTTMessage("window_top", switchTopStatus?"open":"closed");
+    Serial.println("Switch Top Status changed to " + String(switchTopStatus));
+  }
+
+  if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
+    switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
+    sendMQTTMessage("window_bottom", switchBottomStatus?"open":"closed");
+    Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
+  }
 
   bool pingSuccess = Ping.ping("smarthomepi2");
 
