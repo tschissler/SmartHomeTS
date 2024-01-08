@@ -41,13 +41,11 @@ namespace DataAggregatorFunctions
             List<string> partitionKeys = new()
             {
                 "1c50f3ab6224_temperature",
-                "44dbf3ab6224_temperature",
-                "a86d2b286f24_temperature",
                 "1420381fb608_temperature",
+                "88ff1305613c_temperature",
                 "1c50f3ab6224_humidity",
-                "44dbf3ab6224_humidity",
-                "a86d2b286f24_humidity",
-                "1420381fb608_humidity"
+                "1420381fb608_humidity",
+                "88ff1305613c_humidity"
             };
 
             foreach (var partitionKey in partitionKeys)
