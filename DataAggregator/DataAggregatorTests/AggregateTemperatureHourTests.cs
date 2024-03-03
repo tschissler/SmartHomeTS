@@ -80,6 +80,19 @@ namespace DataAggregatorTests
             result[1].MinValue.Should().Be(2.2);
             result[1].MaxValue.Should().Be(117.17);
             result[1].Time.Should().Be(new DateTime(2023, 12, 28, 0, 0, 0, DateTimeKind.Utc));
+
+            // Ensure that the data is not aggregated twice
+            AggregationExecution.AggregateClimateDailyData("sensor1", hourTableName, dayTableName, DateTime.Now.AddDays(2));
+            result = dayDBConnection.ReadData("PartitionKey eq 'sensor1'");
+            result.Should().HaveCount(2);
+            result[0].Value.Should().Be(222.22);
+            result[0].MinValue.Should().Be(222.22);
+            result[0].MaxValue.Should().Be(222.22);
+            result[0].Time.Should().Be(new DateTime(2024, 3, 3, 0, 0, 0, DateTimeKind.Utc));
+            result[1].Value.Should().Be(52.964);
+            result[1].MinValue.Should().Be(2.2);
+            result[1].MaxValue.Should().Be(117.17);
+            result[1].Time.Should().Be(new DateTime(2023, 12, 28, 0, 0, 0, DateTimeKind.Utc));
         }
     }
 }
