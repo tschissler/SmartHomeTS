@@ -73,11 +73,11 @@ namespace DataAggregatorFunctions
                 storageAccountName,
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey);
 
-            DateTime lastDay = new DateTime(2023, 12, 28, 0, 0, 0);
+            var lastDay = new DateOnly(2023, 12, 28);
             var lastitem = dayDBConnection.GetNewestItem(partitionKey);
             if (lastitem != null)
             {
-                lastDay = lastitem.Time;
+                lastDay = DateOnly.FromDateTime(lastitem.Time).AddDays(1);
             }
             var data = AggregationCalculation.GetValuesPerDay(hourTableName, partitionKey, lastDay, maxTime).Result;
 

@@ -42,7 +42,8 @@ namespace DataAggregatorTests
                 { new DateTime(2023, 12, 28, 18, 59, 40, DateTimeKind.Utc), 115.15 },
                 { new DateTime(2023, 12, 28, 19,  0, 40, DateTimeKind.Utc), 116.16 },
                 { new DateTime(2023, 12, 28, 19,  1, 40, DateTimeKind.Utc), 117.17 },
-                { new DateTime(2024, 3, 3, 8,  1, 40, DateTimeKind.Utc), 222.22 }
+                { new DateTime(2024, 3, 2, 8,  1, 40, DateTimeKind.Utc), 222.22 },
+                { new DateTime(2024, 3, 3, 8,  1, 40, DateTimeKind.Utc), 333.33 }
             };
             
             foreach (var item in testdata)

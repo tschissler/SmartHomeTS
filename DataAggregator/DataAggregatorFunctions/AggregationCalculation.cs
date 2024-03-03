@@ -67,7 +67,7 @@ namespace DataAggregatorFunctions
             return data;
         }
 
-        private static IEnumerable<DataValueTableEntity> GetValuesAtDay(string tableName, string partitionKey, DateOnly day, DateTime maxTime)
+        private static IEnumerable<DataValueTableEntity> GetValuesAtDay(string tableName, string partitionKey, DateOnly day)
         {
             string filter = $"PartitionKey eq '{partitionKey}' " +
                 $"and Time ge datetime'{day.ToString("yyyy-MM-dd")}' " +
@@ -85,17 +85,17 @@ namespace DataAggregatorFunctions
             return new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, 0, 0, startTime.Kind).AddHours(1);
         }
 
-        public static async Task<List<DataValueTableEntity>> GetValuesPerDay(string hourTableName, string partitionKey, DateTime lastDay, DateTime maxDate)
+        public static async Task<List<DataValueTableEntity>> GetValuesPerDay(string hourTableName, string partitionKey, DateOnly lastDay, DateTime maxDate)
         {
             var result = new List<DataValueTableEntity>();
-            DateOnly day = DateOnly.FromDateTime(lastDay);
+            DateOnly day = lastDay;
             if (maxDate == DateTime.MinValue)
             {
                 maxDate = DateTime.UtcNow;
             }
             while (day < DateOnly.FromDateTime(maxDate))
             {
-                var data = GetValuesAtDay(hourTableName, partitionKey, day, maxDate);
+                var data = GetValuesAtDay(hourTableName, partitionKey, day);
 
                 if (data != null && data.Count() > 0)
                 {
