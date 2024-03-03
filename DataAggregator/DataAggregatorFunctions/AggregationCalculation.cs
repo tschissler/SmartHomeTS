@@ -67,9 +67,64 @@ namespace DataAggregatorFunctions
             return data;
         }
 
+        private static IEnumerable<DataValueTableEntity> GetValuesAtDay(string tableName, string partitionKey, DateOnly day, DateTime maxTime)
+        {
+            string filter = $"PartitionKey eq '{partitionKey}' " +
+                $"and Time ge datetime'{day.ToString("yyyy-MM-dd")}' " +
+                $"and Time lt datetime'{day.AddDays(1).ToString("yyyy-MM-dd")}'";
+            var data = new TableStorageController(
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
+                tableName,
+                storageAccountName,
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey).ReadData(filter);
+            return data;
+        }
+
         public static DateTime CalculateTopOfTheHour(DateTime startTime)
         {
             return new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, 0, 0, startTime.Kind).AddHours(1);
+        }
+
+        public static async Task<List<DataValueTableEntity>> GetValuesPerDay(string hourTableName, string partitionKey, DateTime lastDay, DateTime maxDate)
+        {
+            var result = new List<DataValueTableEntity>();
+            DateOnly day = DateOnly.FromDateTime(lastDay);
+            if (maxDate == DateTime.MinValue)
+            {
+                maxDate = DateTime.UtcNow;
+            }
+            while (day < DateOnly.FromDateTime(maxDate))
+            {
+                var data = GetValuesAtDay(hourTableName, partitionKey, day, maxDate);
+
+                if (data != null && data.Count() > 0)
+                {
+                    result.Add(new DataValueTableEntity
+                    {
+                        PartitionKey = partitionKey,
+                        RowKey = data.Min(d => d.RowKey),
+                        MaxValue = data.Max(d => d.Value),
+                        MinValue = data.Min(d => d.Value),
+                        Value = data.Average(d => d.Value),
+                        Time = data.First().Time.Date,
+                    });
+                    day = day.AddDays(1);
+                }
+                else
+                {
+                    // Try to find data within the next 30 days
+                    var nextData = GetDataWithinTimeFrame(hourTableName, partitionKey, day.ToDateTime(TimeOnly.MinValue), day.AddDays(30).ToDateTime(TimeOnly.MinValue));
+                    if (nextData != null)
+                    {
+                        day = day.AddDays(1);
+                    }
+                    else
+                    {
+                        day = day.AddDays(30);
+                    }
+                }
+            }
+            return result;
         }
     }
 }

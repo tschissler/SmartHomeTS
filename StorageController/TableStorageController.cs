@@ -46,6 +46,11 @@ namespace StorageController
             tableClient.AddEntity(entity);
         }
 
+        public void WriteData(DataValueTableEntity item)
+        {
+            tableClient.AddEntity(item);
+        }
+
         public void DeleteData(string partitionKey, string rowKey)
         {
             // Delete entity from table

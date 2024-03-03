@@ -19,7 +19,10 @@ namespace DataAggregatorFunctions
             _logger.LogInformation($"AggregateClimateHourly was trigger at: {DateTime.Now}");
             try
             {
-                AggregationExecution.AggregateClimateData(_logger);
+                AggregationExecution.AggregateClimateData(_logger, 
+                    "SmartHomeClimateRawData", 
+                    "SmartHomeClimateHourAggregationData", 
+                    "SmartHomeClimateDailyAggregationData");
             }
             catch (Exception ex)
             {

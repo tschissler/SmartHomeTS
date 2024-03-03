@@ -347,6 +347,9 @@ void loop() {
     mqttClient.loop();
   } 
 
+  Serial.print("Top Sensor   : " + String(digitalRead(SWITCH_TOP_PIN)));
+  Serial.println("  --  Bottom Sensor: " + String(digitalRead(SWITCH_BOTTOM_PIN)));
+
   if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
     switchTopStatus = digitalRead(SWITCH_TOP_PIN);
     sendMQTTMessage("window_top", switchTopStatus?"open":"closed");

@@ -22,7 +22,10 @@ namespace DataAggregatorFunctions.Tests
                     {
                         builder.AddConsole();
                     })
-                .CreateLogger("AggregationExecutionTests")
+                .CreateLogger("AggregationExecutionTests"),
+                    "UnitTestRawData",
+                    "UnitTestHourAggregationData",
+                    "UnitTestDailyAggregationData"
                 );
         }
     }
