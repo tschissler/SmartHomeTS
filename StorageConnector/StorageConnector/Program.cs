@@ -4,18 +4,18 @@ namespace StorageConnector
 {
     public class Program
     {
-        private static CosmosDBController cosmosDBController;
-        private static CosmosDBController cosmosDBStringController;
+        private static TableStorageController cosmosDBController;
+        private static TableStorageController cosmosDBStringController;
 
         static async Task Main(string[] args)
         {
-            cosmosDBController = new CosmosDBController(
+            cosmosDBController = new TableStorageController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                 "SmartHomeClimateRawData",
                 "smarthomestorageprod",
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey);
 
-            cosmosDBStringController = new CosmosDBController(
+            cosmosDBStringController = new TableStorageController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                 "SmartHomeStatusRawData",
                 "smarthomestorageprod",
