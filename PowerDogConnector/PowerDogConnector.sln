@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34526.213
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerDog.Tests", "PowerDog.Tests\PowerDog.Tests.csproj", "{6C390B0F-3ABD-449A-8942-654ED4167678}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerDogConnector", "PowerDogConnector\PowerDogConnector.csproj", "{6C9FFCC0-8BE0-40AF-BEF4-0FCA5FBF0790}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartHomeHelpers", "..\SmartHomeHelpers\SmartHomeHelpers.csproj", "{B6490D5B-818D-4304-8B51-B3C15D8F87E7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerDogLib", "PowerDogLib\PowerDogLib.csproj", "{3F265A4C-8A42-46B3-A544-B2A5CCBFA056}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6C390B0F-3ABD-449A-8942-654ED4167678}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C390B0F-3ABD-449A-8942-654ED4167678}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C390B0F-3ABD-449A-8942-654ED4167678}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C390B0F-3ABD-449A-8942-654ED4167678}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C9FFCC0-8BE0-40AF-BEF4-0FCA5FBF0790}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C9FFCC0-8BE0-40AF-BEF4-0FCA5FBF0790}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C9FFCC0-8BE0-40AF-BEF4-0FCA5FBF0790}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C9FFCC0-8BE0-40AF-BEF4-0FCA5FBF0790}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6490D5B-818D-4304-8B51-B3C15D8F87E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6490D5B-818D-4304-8B51-B3C15D8F87E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6490D5B-818D-4304-8B51-B3C15D8F87E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6490D5B-818D-4304-8B51-B3C15D8F87E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F265A4C-8A42-46B3-A544-B2A5CCBFA056}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F265A4C-8A42-46B3-A544-B2A5CCBFA056}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F265A4C-8A42-46B3-A544-B2A5CCBFA056}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F265A4C-8A42-46B3-A544-B2A5CCBFA056}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F8F6A579-B596-4E4A-820A-48FA8A49FD57}
+	EndGlobalSection
+EndGlobal

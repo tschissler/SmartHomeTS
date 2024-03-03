@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\PowerDogLib\PowerDogLib.csproj" />
     <ProjectReference Include="..\PowerDog\PowerDogLib.csproj" />
   </ItemGroup>
 
