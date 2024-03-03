@@ -32,16 +32,14 @@
         </div>
     </div>
     <div class="row mb-3">
-        <div class="col">
-            <div class="col">
-                <DataChart MinutesTableName="@MinutesTableName"
-                           HoursTableName="@HoursTableName"
-                           DaysTableName="@DaysTableName"
-                           StorageAccountName="@storageAccountName"
-                           StorageAccountKey="@Secrets.StorageSecrets.StorageKey"
-                           StorageUri="@Secrets.StorageSecrets.StorageUri"
-                           dataSeriesMetaData="@ChartPartitionKeys"></DataChart>
-            </div>
+        <div class="col-12">
+            <DataChart MinutesTableName="@MinutesTableName"
+                        HoursTableName="@HoursTableName"
+                        DaysTableName="@DaysTableName"
+                        StorageAccountName="@storageAccountName"
+                        StorageAccountKey="@Secrets.StorageSecrets.StorageKey"
+                        StorageUri="@Secrets.StorageSecrets.StorageUri"
+                        dataSeriesMetaData="@ChartPartitionKeys"></DataChart>
         </div>
     </div>
 </div>

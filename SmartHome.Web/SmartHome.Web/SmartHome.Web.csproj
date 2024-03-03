@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Data.Tables" Version="12.8.2" />
+    <PackageReference Include="Azure.Data.Tables" Version="12.8.3" />
     <PackageReference Include="MQTTnet" Version="4.3.3.952" />
-    <PackageReference Include="Syncfusion.Blazor.Charts" Version="24.1.41" />
-    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="24.1.41" />
-    <PackageReference Include="Syncfusion.Blazor.Themes" Version="24.1.41" />
+    <PackageReference Include="Syncfusion.Blazor.Charts" Version="24.2.8" />
+    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="24.2.8" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="24.2.8" />
   </ItemGroup>
 
   <ItemGroup>
