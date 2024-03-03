@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Kveer.XmlRPC" Version="1.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\SmartHomeHelpers\SmartHomeHelpers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="XmlRpcProxy.cs" />
+  </ItemGroup>
+
+</Project>
