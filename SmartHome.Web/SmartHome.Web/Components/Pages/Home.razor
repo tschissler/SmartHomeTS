@@ -49,22 +49,26 @@
         </div>
     </div>
     <div class="row mb-3">
+        <div class="col">
         <DataChart 
-            HiResTableName="@hiResTableName" 
-            LoResTableName="@loResTableName"
+            MinutesTableName="@MinutesTableName"
+            HoursTableName="@HoursTableName"
+            DaysTableName="@DaysTableName"
             StorageAccountName="@storageAccountName"
             StorageAccountKey="@SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey"
             StorageUri="@SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri"
             dataSeriesMetaData="@ChartPartitionKeys"
         ></DataChart>
+        </div>
     </div>
 </div>
 
 @code {
     private bool isLoading = false;
     string storageAccountName = "smarthomestorageprod";
-    string hiResTableName = "SmartHomeClimateRawData";
-    string loResTableName = "SmartHomeClimateHourAggregationData";
+    string MinutesTableName = "SmartHomeClimateRawData";
+    string HoursTableName = "SmartHomeClimateHourAggregationData";
+    string DaysTableName = "SmartHomeClimateDailyAggregationData";
     string statusTableName = "SmartHomeStatusRawData";
 
     string StatusWindowBedroomTop = "closed";
@@ -101,7 +105,7 @@
         Data = new Dictionary<string, DataValueTableEntity>();
         tableClient = new TableClient(
             new Uri(SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri),
-            hiResTableName,
+            MinutesTableName,
             new TableSharedKeyCredential(storageAccountName, SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey)
             );
 

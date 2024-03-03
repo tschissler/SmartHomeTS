@@ -11,8 +11,9 @@
         <button class="btn btn-secondary" @onclick="LoadMoreData">Frühere Daten laden</button>
     </div>
     <div class="btn-group ms-2" role="group">
-        <button class="btn btn-info" @onclick="HiResData">Minuten</button>
-        <button class="btn btn-warning" @onclick="LoResData">Stunden</button>
+        <button class="btn btn-info" @onclick="ShowMinuteData">Minuten</button>
+        <button class="btn btn-warning" @onclick="ShowHourData">Stunden</button>
+        <button class="btn btn-warning" @onclick="ShowDayData">Tage</button>
     </div>
 @*         <div class="form-check form-switch d-inline-block ms-3">
         <input class="form-check-input" type="checkbox" id="autoUpdate" checked="@autoUpdate" @onchange="() => AutoUpdateChanged()" />
@@ -29,11 +30,16 @@
             {
                 if (ChartData.ContainsKey(item.PartitionKey))
                 {
-                <ChartSeries Name="@item.Label" XName="LocalTime" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]" Fill="@item.Color">
-                    <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
-                    <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle">
-                    </ChartMarker>
-                </ChartSeries>
+                    <ChartSeries Name="@item.Label" XName="LocalTime" YName="Value" Type="ChartSeriesType.Line" DataSource="@ChartData[item.PartitionKey]" Fill="@item.Color">
+                        <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+                        <ChartMarker Visible="true" Width="3" Height="3" Shape="ChartShape.Circle">
+                        </ChartMarker>
+                    </ChartSeries>
+                    if (ChartData[item.PartitionKey].Any(i => i.MaxValue != null))
+                    {
+                        <ChartSeries DataSource="@ChartData[item.PartitionKey]" Name="@item.Label" XName="LocalTime" High="MaxValue" Low="MinValue" Type="ChartSeriesType.Hilo" Fill="@item.Color">
+                        </ChartSeries>
+                    }
                 }
             }
         </ChartSeriesCollection>
@@ -43,9 +49,11 @@
 
 @code {
     [Parameter]
-    public string HiResTableName { get; set; } = "SmartHomeClimateRawData";
+    public string MinutesTableName { get; set; } = "SmartHomeClimateRawData";
     [Parameter]
-    public string LoResTableName { get; set; } = "SmartHomeClimateHourAggregationData";
+    public string HoursTableName { get; set; } = "SmartHomeClimateHourAggregationData";
+    [Parameter]
+    public string DaysTableName { get; set; } = "SmartHomeClimateDayAggregationData";
     [Parameter]
     public string StorageAccountName { get; set; } = "smarthomestorageprod";
     [Parameter]
@@ -68,7 +76,7 @@
     {
         table = new TableClient(
             new Uri(StorageUri),
-            HiResTableName,
+            MinutesTableName,
             new TableSharedKeyCredential(StorageAccountName, StorageAccountKey)
         );
 
@@ -149,11 +157,11 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task HiResData()
+    private async Task ShowMinuteData()
     {
         table = new TableClient(
             new Uri(StorageUri),
-            HiResTableName,
+            MinutesTableName,
             new TableSharedKeyCredential(StorageAccountName, StorageAccountKey)
         );
         dataTimeRangeHours = -1;
@@ -161,15 +169,27 @@
         RefreshData();
     }
 
-    private async Task LoResData()
+    private async Task ShowHourData()
     {
         table = new TableClient(
             new Uri(StorageUri),
-            LoResTableName,
+            HoursTableName,
             new TableSharedKeyCredential(StorageAccountName, StorageAccountKey)
         );
         dataTimeRangeHours = -24;
         dataTimeIntervalHours = -24;
+        RefreshData();
+    }
+
+    private async Task ShowDayData()
+    {
+        table = new TableClient(
+            new Uri(StorageUri),
+            DaysTableName,
+            new TableSharedKeyCredential(StorageAccountName, StorageAccountKey)
+        );
+        dataTimeRangeHours = -24*30;
+        dataTimeIntervalHours = -24*30;
         RefreshData();
     }
 }

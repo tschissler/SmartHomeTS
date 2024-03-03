@@ -33,12 +33,15 @@
     </div>
     <div class="row mb-3">
         <div class="col">
-            <DataChart HiResTableName="@hiResTableName"
-                       LoResTableName="@loResTableName"
-                       StorageAccountName="@storageAccountName"
-                       StorageAccountKey="@Secrets.StorageSecrets.StorageKey"
-                       StorageUri="@Secrets.StorageSecrets.StorageUri"
-                       dataSeriesMetaData="@ChartPartitionKeys"></DataChart>
+            <div class="col">
+                <DataChart MinutesTableName="@MinutesTableName"
+                           HoursTableName="@HoursTableName"
+                           DaysTableName="@DaysTableName"
+                           StorageAccountName="@storageAccountName"
+                           StorageAccountKey="@Secrets.StorageSecrets.StorageKey"
+                           StorageUri="@Secrets.StorageSecrets.StorageUri"
+                           dataSeriesMetaData="@ChartPartitionKeys"></DataChart>
+            </div>
         </div>
     </div>
 </div>
@@ -48,8 +51,9 @@
     private Dictionary<string, DataValueTableEntity> Data = new();
 
     string storageAccountName = "smarthomestorageprod";
-    string hiResTableName = "SmartHomeClimateRawData";
-    string loResTableName = "SmartHomeClimateHourAggregationData";
+    string MinutesTableName = "SmartHomeClimateRawData";
+    string HoursTableName = "SmartHomeClimateHourAggregationData";
+    string DaysTableName = "SmartHomeClimateDailyAggregationData";
     string statusTableName = "SmartHomeStatusRawData";
 
     string StatusWindowBedroomTop = "closed";
@@ -82,7 +86,7 @@
         Data = new Dictionary<string, DataValueTableEntity>();
         tableClient = new TableClient(
             new Uri(Secrets.StorageSecrets.StorageUri),
-            hiResTableName,
+            MinutesTableName,
             new TableSharedKeyCredential(storageAccountName, Secrets.StorageSecrets.StorageKey)
             );
 
