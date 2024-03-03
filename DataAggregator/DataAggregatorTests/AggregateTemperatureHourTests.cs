@@ -14,28 +14,30 @@ namespace DataAggregatorTests
         private const string storageAccountName = "smarthomestorageprod";
         private const string minuteTableName = "UnitTestMinuteData";
         private const string hourTableName = "UnitTestHourData";
+        private const string dayTableName = "UnitTestDayData";
 
         [TestMethod]
         public void AggregateAll()
         {
-            var minuteCosmosDBConnection = new CosmosDBController(storageUri, minuteTableName, storageAccountName, storageAccountKey);
-            var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
+            var minuteCosmosDBConnection = new TableStorageController(storageUri, minuteTableName, storageAccountName, storageAccountKey);
+            var hourCosmosDBConnection = new TableStorageController(storageUri, hourTableName, storageAccountName, storageAccountKey);
 
             hourCosmosDBConnection.ClearTable();
             AggregationExecution.AggregateClimateHourlyData("sensor1", minuteTableName, hourTableName);
             var result = hourCosmosDBConnection.ReadData("PartitionKey eq 'sensor1'");
-            result.Should().HaveCount(5);
-            result[0].Value.Should().Be(117.17);
-            result[1].Value.Should().Be(115.15);
-            result[2].Value.Should().Be(17.17);
-            result[3].Value.Should().Be(13.13);
-            result[4].Value.Should().Be(2.2);
+            result.Should().HaveCount(6);
+            result[0].Value.Should().Be(222.22);
+            result[1].Value.Should().Be(117.17);
+            result[2].Value.Should().Be(115.15);
+            result[3].Value.Should().Be(17.17);
+            result[4].Value.Should().Be(13.13);
+            result[5].Value.Should().Be(2.2);
         }
 
         [TestMethod]
         public void AggregateValuesAfter11UTCTime()
         {
-            var hourCosmosDBConnection = new CosmosDBController(storageUri, hourTableName, storageAccountName, storageAccountKey);
+            var hourCosmosDBConnection = new TableStorageController(storageUri, hourTableName, storageAccountName, storageAccountKey);
 
             hourCosmosDBConnection.ClearTable();
             var lastDataDate = new DateTime(2023, 12, 28, 11, 10, 45, DateTimeKind.Utc);
@@ -60,5 +62,25 @@ namespace DataAggregatorTests
             //Data from initialization
             result[3].Value.Should().Be(3.3);
         }
+
+        //[TestMethod]
+        //public void AggregateDailyData()
+        //{
+        //    var minuteDBConnection = new TableStorageController(storageUri, minuteTableName, storageAccountName, storageAccountKey);
+        //    var dayDBConnection = new TableStorageController(storageUri, hourTableName, storageAccountName, storageAccountKey);
+
+        //    dayDBConnection.ClearTable();
+        //    AggregationExecution.AggregateClimateDailyData("sensor1", hourTableName, dayTableName);
+        //    var result = dayDBConnection.ReadData("PartitionKey eq 'sensor1'");
+        //    result.Should().HaveCount(2);
+        //    result[0].Value.Should().Be(222.22);
+        //    result[0].MinValue.Should().Be(222.22);
+        //    result[0].MaxValue.Should().Be(222.22);
+        //    result[1].Value.Should().Be(117.17);
+        //    result[2].Value.Should().Be(115.15);
+        //    result[3].Value.Should().Be(17.17);
+        //    result[4].Value.Should().Be(13.13);
+        //    result[5].Value.Should().Be(2.2);
+        //}
     }
 }

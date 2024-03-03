@@ -20,14 +20,7 @@ namespace DataAggregatorFunctions
             }
             while (topOfHour < maxTime)
             {
-                string filter = $"PartitionKey eq '{partitionKey}' " +
-                    $"and Time gt datetime'{startTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
-                    $"and Time le datetime'{topOfHour.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
-                var data = new CosmosDBController(
-                    SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
-                    tableName, 
-                    storageAccountName, 
-                    SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey).ReadTop1Data(filter);
+                DataValueTableEntity data = GetDataWithinTimeFrame(tableName, partitionKey, startTime, topOfHour);
 
                 if (data != null)
                 {
@@ -37,10 +30,41 @@ namespace DataAggregatorFunctions
                 }
                 else
                 {
-                    topOfHour = topOfHour.AddHours(1);
+                    // Try to find data within the next day
+                    data = GetDataWithinTimeFrame(tableName, partitionKey, startTime, topOfHour.AddDays(1));
+                    if (data != null)
+                    {
+                        topOfHour = topOfHour.AddHours(1);
+                    }
+                    else
+                    {
+                        // Try to find data within the next 30 days 
+                        data = GetDataWithinTimeFrame(tableName, partitionKey, startTime, topOfHour.AddDays(30));
+                        if (data != null)
+                        {
+                            topOfHour = topOfHour.AddDays(1);
+                        }
+                        else
+                        {
+                            topOfHour = topOfHour.AddDays(30);
+                        }
+                    }
                 }
             }
             return result;
+        }
+
+        private static DataValueTableEntity GetDataWithinTimeFrame(string tableName, string partitionKey, DateTime startTime, DateTime endTime)
+        {
+            string filter = $"PartitionKey eq '{partitionKey}' " +
+                $"and Time gt datetime'{startTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}' " +
+                $"and Time le datetime'{endTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")}'";
+            var data = new TableStorageController(
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
+                tableName,
+                storageAccountName,
+                SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey).ReadTop1Data(filter);
+            return data;
         }
 
         public static DateTime CalculateTopOfTheHour(DateTime startTime)

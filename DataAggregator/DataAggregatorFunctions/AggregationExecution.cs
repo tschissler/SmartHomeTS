@@ -14,7 +14,7 @@ namespace DataAggregatorFunctions
 
         public static int AggregateClimateHourlyData(string partitionKey, string minuteTableName, string hourTableName, DateTime maxTime = new DateTime())
         {
-            var hourCosmosDBConnection = new CosmosDBController(
+            var hourCosmosDBConnection = new TableStorageController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                 hourTableName, 
                 storageAccountName, 

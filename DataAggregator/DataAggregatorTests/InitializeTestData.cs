@@ -11,7 +11,7 @@ namespace DataAggregatorTests
         [TestCategory("ManualOnly")]
         public void InitializeMinuteTestData()
         {
-            var cosmosDBController = new CosmosDBController(
+            var cosmosDBController = new TableStorageController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                    "UnitTestMinuteData",
                    "smarthomestorageprod",
@@ -41,7 +41,8 @@ namespace DataAggregatorTests
                 { new DateTime(2023, 12, 28, 18, 58, 40, DateTimeKind.Utc), 114.14 },
                 { new DateTime(2023, 12, 28, 18, 59, 40, DateTimeKind.Utc), 115.15 },
                 { new DateTime(2023, 12, 28, 19,  0, 40, DateTimeKind.Utc), 116.16 },
-                { new DateTime(2023, 12, 28, 19,  1, 40, DateTimeKind.Utc), 117.17 }
+                { new DateTime(2023, 12, 28, 19,  1, 40, DateTimeKind.Utc), 117.17 },
+                { new DateTime(2024, 3, 3, 8,  1, 40, DateTimeKind.Utc), 222.22 }
             };
             
             foreach (var item in testdata)

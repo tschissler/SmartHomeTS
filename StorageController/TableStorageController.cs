@@ -6,14 +6,14 @@ using System.Runtime.InteropServices;
 
 namespace StorageController
 {
-    public class CosmosDBController
+    public class TableStorageController
     {
         private TableClient tableClient;
         private TableServiceClient serviceClient;
         private string tableName;
         public string TableName { get { return tableName; } }
 
-        public CosmosDBController(string storageUri, string tableName, string accountName, string storageAccountKey)
+        public TableStorageController(string storageUri, string tableName, string accountName, string storageAccountKey)
         {
             serviceClient = new TableServiceClient(
                 new Uri(storageUri),
