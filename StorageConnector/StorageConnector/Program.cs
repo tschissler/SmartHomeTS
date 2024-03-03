@@ -4,18 +4,18 @@ namespace StorageConnector
 {
     public class Program
     {
-        private static TableStorageController cosmosDBController;
-        private static TableStorageController cosmosDBStringController;
+        private static TableStorageController dBController;
+        private static TableStorageController dBStringController;
 
         static async Task Main(string[] args)
         {
-            cosmosDBController = new TableStorageController(
+            dBController = new TableStorageController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                 "SmartHomeClimateRawData",
                 "smarthomestorageprod",
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey);
 
-            cosmosDBStringController = new TableStorageController(
+            dBStringController = new TableStorageController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                 "SmartHomeStatusRawData",
                 "smarthomestorageprod",
@@ -32,15 +32,15 @@ namespace StorageConnector
         {
             var topicParts = topic.Split('/');
             var partitionKey = topicParts[1]+"/"+topicParts[2];
-            cosmosDBController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
-            Console.WriteLine($"Wrote data to storage table {cosmosDBController.TableName}, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
+            dBController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
+            Console.WriteLine($"Wrote data to storage table {dBController.TableName}, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
         }
         private static void MqttController_OnStringDataUpdated(string topic, string value, DateTime time)
         {
             var topicParts = topic.Split('/');
             var partitionKey = topicParts[1] + "/" + topicParts[2];
-            cosmosDBStringController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
-            Console.WriteLine($"Wrote data to storage table {cosmosDBStringController.TableName}, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
+            dBStringController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
+            Console.WriteLine($"Wrote data to storage table {dBStringController.TableName}, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
         }
     }
 }

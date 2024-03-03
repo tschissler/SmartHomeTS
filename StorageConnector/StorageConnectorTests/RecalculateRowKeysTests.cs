@@ -17,7 +17,7 @@ namespace StorageConnectorTests
         [TestMethod]
         public void RecalculateRowKeys()
         {
-            var controller = new CosmosDBController(storageUri, tableName, storageAccountName, storageAccountKey);
+            var controller = new TableStorageController(storageUri, tableName, storageAccountName, storageAccountKey);
             var data = controller.ReadData("RowKey lt '50000000000000'");
 
             foreach (var item in data)
