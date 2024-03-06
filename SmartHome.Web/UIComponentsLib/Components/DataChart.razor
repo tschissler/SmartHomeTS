@@ -37,7 +37,8 @@
                     </ChartSeries>
                     if (ChartData[item.PartitionKey].Any(i => i.MaxValue != null))
                     {
-                        <ChartSeries DataSource="@ChartData[item.PartitionKey]" Name="@item.Label" XName="LocalTime" High="MaxValue" Low="MinValue" Type="ChartSeriesType.Hilo" Fill="@item.Color">
+                        <ChartSeries DataSource="@ChartData[item.PartitionKey]" 
+                            XName="LocalTime" High="MaxValue" Low="MinValue" Type="ChartSeriesType.Hilo" Fill="@item.Color">
                         </ChartSeries>
                     }
                 }
