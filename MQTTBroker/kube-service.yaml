@@ -10,4 +10,4 @@ spec:
       port: 33004
       nodePort: 32004 # Port to access the service outside the cluste
       targetPort: 1883  # Port your application is listening on inside the pods
-  type: NodePort      # Set the Service type to NodePort
+  type: LoadBalancer      # Set the Service type to NodePort
