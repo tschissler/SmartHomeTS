@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/SmartHomeBlazorAppiOS.yml
       - SmartHome.Web/SmartHomeBlazorApp/**
+      - SmartHome.Web/UIComponentsLib/**
 
 env:
   PROJECT_NAME: SmartHomeBlazorApp
