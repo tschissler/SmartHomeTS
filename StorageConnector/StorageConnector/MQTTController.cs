@@ -22,7 +22,7 @@ namespace StorageConnector
 
         public MqttController(string mqttBrokerName, int mqttBrokerPort, string clientName)
         {
-            // Initialize MQTT Client
+            // Initialize the  MQTT Client
             var factory = new MqttFactory();
             _client = factory.CreateMqttClient();
 
