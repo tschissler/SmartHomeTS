@@ -17,6 +17,6 @@ spec:
           image: tschissler/storageconnector:latest
           env:
           - name: SmartHomeStorageKey
-            value: "tempvalue"
+            value: "env:SMARTHOMESTORAGEKEY"
           - name: SmartHomeStorageUri
-            value: "tempvalue"
+            value: "env:SMARTHOMESTORAGEURI"
