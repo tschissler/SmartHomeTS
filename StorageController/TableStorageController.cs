@@ -15,13 +15,24 @@ namespace StorageController
 
         public TableStorageController(string storageUri, string tableName, string accountName, string storageAccountKey)
         {
-            serviceClient = new TableServiceClient(
-                new Uri(storageUri),
-                new TableSharedKeyCredential(accountName, storageAccountKey));
-            serviceClient.CreateTableIfNotExists(tableName);
+            while (true)
+            {
+                try
+                {
+                    serviceClient = new TableServiceClient(
+                        new Uri(storageUri),
+                        new TableSharedKeyCredential(accountName, storageAccountKey));
+                    serviceClient.CreateTableIfNotExists(tableName);
 
-            tableClient = serviceClient.GetTableClient(tableName);
-            this.tableName = tableName;
+                    tableClient = serviceClient.GetTableClient(tableName);
+                    this.tableName = tableName;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to communicate with Azure Table Service", ex);
+                }
+            }
         }
 
         public void WriteData(string partitionKey, string rowKey, double value, DateTime time)

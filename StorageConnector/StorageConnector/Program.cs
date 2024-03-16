@@ -9,7 +9,7 @@ namespace StorageConnector
 
         static async Task Main(string[] args)
         {
-            Console.Write("Starting Storage Controller ...");
+            Console.WriteLine("Starting Storage Controller ...");
             dBController = new TableStorageController(
                 SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri,
                 "SmartHomeClimateRawData",

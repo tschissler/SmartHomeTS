@@ -33,9 +33,25 @@ namespace StorageConnector
 
             // Handle received messages
             _client.ApplicationMessageReceivedAsync += _client_ApplicationMessageReceivedAsync;
+            _client.ConnectedAsync += _client_ConnectedAsync;
+            _client.DisconnectedAsync += _client_DisconnectedAsync;
+            ConnectAsync().Wait();
+        }
 
-            // Connect to the broker
-            ConnectAsync();
+        private Task _client_DisconnectedAsync(MqttClientDisconnectedEventArgs arg)
+        {
+            Console.WriteLine(" --- Has been disconnected from the MQTT Broker. Reason: " + arg.ReasonString);
+            Console.WriteLine(" --- Trying to reconnect ...");
+
+            ConnectAsync().Wait();
+
+            return Task.CompletedTask;
+        }
+
+        private Task _client_ConnectedAsync(MqttClientConnectedEventArgs arg)
+        {
+            Console.WriteLine(" --- Connected to MQTT Broker");
+            return Task.CompletedTask;
         }
 
         private Task _client_ApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs args)
@@ -60,19 +76,26 @@ namespace StorageConnector
 
         public async Task ConnectAsync()
         {
-            try
+            while (true)
             {
-                await _client.ConnectAsync(_options);
                 if (_client.IsConnected)
+                    break;
+                try
                 {
-                    Console.WriteLine("Connected to MQTT Broker.");
-                    // Subscribe to topics here
-                    await _client.SubscribeAsync("data/#");
+                    await _client.ConnectAsync(_options);
+                    if (_client.IsConnected)
+                    {
+                        Console.WriteLine("Connected to MQTT Broker.");
+                        // Subscribe to topics here
+                        await _client.SubscribeAsync("data/#");
+                        break;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error connecting to MQTT Broker: {ex.Message}");
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error connecting to MQTT Broker: {ex.Message}");
+                    Thread.Sleep(5000);
+                }
             }
         }
 
