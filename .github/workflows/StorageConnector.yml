@@ -12,9 +12,7 @@ env:
   IMAGE_NAME: storageconnector
   
 jobs:
-
   build:
-
     runs-on: [self-hosted, linux]
 
     steps:
