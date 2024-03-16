@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tcp-services
+  namespace: default
+data:
+  1883: "default/mqttbroker-service:33004"

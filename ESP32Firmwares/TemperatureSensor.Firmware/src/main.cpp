@@ -107,7 +107,7 @@ void printInformationOnTFT(String temperature, String humidity, bool mqttMessage
     }
   }
 
-  tft.println(Ping.ping("smarthomepi2")?"Ping successful":"Ping failed");
+  tft.println(Ping.ping(mqtt_broker)?"Ping successful":"Ping failed");
 }
 void mqttCallback(String topic, String &payload) {
     if (otaInProgress || !otaEnable)
@@ -139,6 +139,11 @@ void mqttCallback(String topic, String &payload) {
 }
 
 void connectToMQTT() {
+    while(!Ping.ping(mqtt_broker))
+    {
+      Serial.println("Ping failed, retrying...");
+      delay(1000);
+    }
     mqttClient.begin(mqtt_broker, mqtt_port, espClient);
     mqttClient.setKeepAlive(5);
     
@@ -148,6 +153,7 @@ void connectToMQTT() {
         } else {
             Serial.print("Failed to connect to MQTT Broker: ");
             Serial.println(mqtt_broker);
+            Serial.println(mqttClient.lastError());
             delay(5000);
         }
     }
@@ -173,6 +179,7 @@ void reconnect() {
         } else {
             Serial.print("Failed to connect to MQTT Broker: ");
             Serial.println(mqtt_broker);
+            Serial.println(mqttClient.lastError());
             delay(5000);
         }
     }
@@ -347,9 +354,6 @@ void loop() {
     mqttClient.loop();
   } 
 
-  Serial.print("Top Sensor   : " + String(digitalRead(SWITCH_TOP_PIN)));
-  Serial.println("  --  Bottom Sensor: " + String(digitalRead(SWITCH_BOTTOM_PIN)));
-
   if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
     switchTopStatus = digitalRead(SWITCH_TOP_PIN);
     sendMQTTMessage("window_top", switchTopStatus?"open":"closed");
@@ -362,7 +366,7 @@ void loop() {
     Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
   }
 
-  bool pingSuccess = Ping.ping("smarthomepi2");
+  bool pingSuccess = Ping.ping(mqtt_broker);
 
   digitalWrite(LED_INTERNAL_PIN, HIGH);
   delay(BLINK_DURATION);

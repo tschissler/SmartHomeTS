@@ -17,3 +17,5 @@ spec:
           image: tschissler/mqttbroker:latest
           ports:
             - containerPort: 1883
+      nodeSelector:
+        nodename: smarthomepi2
