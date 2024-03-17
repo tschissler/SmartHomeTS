@@ -1,8 +1,26 @@
 # Install cluster
+
+## Prepare raspberry
+``` bash
+sudo nano /boot/firmware/cmdline.txt
+```
+
+and add
+``` bash
+cgroup_enable=memory cgroup_memory=1
+```
+
 ## Install microk8s
 
 ``` bash
+sudo apt install snapd
+
 sudo snap install microk8s --classic
+sudo reboot 
+
+sudo usermod -a -G microk8s thomasschissler
+newgrp microk8s
+
 microk8s status --wait-ready
 ```
 
@@ -99,4 +117,22 @@ kubectl apply -f .\mosquitto-service.yaml
      $_ -replace 'env:SMARTHOMESTORAGEKEY', $env:SMARTHOMESTORAGEKEY `
         -replace 'env:SMARTHOMESTORAGEURI', $env:SMARTHOMESTORAGEURI
  } | kubectl apply -f -
+```
+
+## MongoDB
+``` bash
+TMPFILE=$(mktemp)
+/usr/bin/openssl rand -base64 741 > $TMPFILE
+kubectl create secret generic shared-bootstrap-data --from-file=internal-auth-mongodb-keyfile=$TMPFILE
+rm $TMPFILE
+
+kubectl apply -f .\mongodb-volume.yaml
+kubectl apply -f .\mongodb-service.yaml
+kubectl apply -f .\mongodb-statefulset.yaml
+```
+
+Delete StatefulSet before re-deploying it
+``` bash
+kubectl delete -n default persistentvolumeclaim mongodb-persistent-storage-claim-mongod-0
+kubectl delete -n default statefulset mongod
 ```
