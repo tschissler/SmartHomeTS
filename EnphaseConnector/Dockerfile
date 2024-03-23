@@ -23,7 +23,8 @@ COPY . .
 RUN dotnet restore "/src/${PROJECT_NAME}/${PROJECT_NAME}.sln"
 WORKDIR "/src/${PROJECT_NAME}/${PROJECT_NAME}"
 RUN dotnet build "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/build
-RUN dotnet test "../${PROJECT_NAME}.sln" -c $BUILD_CONFIGURATION
+#We need to set environment variables before being able to run tests in the docker container
+#RUN dotnet test "../${PROJECT_NAME}.sln" -c $BUILD_CONFIGURATION
 # Publish image
 FROM build AS publish
 RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
