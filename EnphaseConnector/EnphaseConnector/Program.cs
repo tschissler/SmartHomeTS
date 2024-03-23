@@ -52,7 +52,7 @@ static async Task ReadDataAndSendToMQTT(EnphaseLocalToken token, IMqttClient mqt
     if (data != null)
     {
         var applicationMessage = new MqttApplicationMessageBuilder()
-        .WithTopic($"data/{deviceName}/consumption")
+        .WithTopic($"data/electricity/{deviceName}")
         .WithPayload(JsonSerializer.Serialize(data))
         .Build();
 
