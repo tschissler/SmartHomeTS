@@ -22,13 +22,13 @@ public class FetchDataTests
         sw.Stop();
         System.Console.WriteLine($"FetchDataAsync took {sw.ElapsedMilliseconds}ms");
 
-        actual.LeistungInsHausnetz.Should().BeGreaterThan(0);
+        actual.PowerToHouse.Should().BeGreaterThan(0);
 
         sw.Start();
         actual = target.FetchDataAsync(token, "envoym1").Result;
         sw.Stop();
         System.Console.WriteLine($"FetchDataAsync took {sw.ElapsedMilliseconds}ms");
 
-        actual.LeistungInsHausnetz.Should().BeGreaterThan(0);
+        actual.PowerToHouse.Should().BeGreaterThan(0);
     }
 }
