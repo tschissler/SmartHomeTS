@@ -19,9 +19,11 @@ namespace EnphaseLib.Tests
             var enphaseAuth = new EnphaseLocalAuth();
             string userName = Enphase.EnphaseUserName;
             string password = Enphase.EnphasePassword;
-            string envoySerial = Enphase.EnvoyM1Serial;
-            var token = enphaseAuth.GetTokenAsync(userName, password, envoySerial).Result;
+            var token = enphaseAuth.GetTokenAsync(userName, password, Enphase.EnvoyM1Serial).Result;
             token.Token.Should().NotBeNullOrEmpty(); 
+            Thread.Sleep(1000);
+            var token2 = enphaseAuth.GetTokenAsync(userName, password, Enphase.EnvoyM3Serial).Result;
+            token2.Token.Should().NotBeNullOrEmpty();
         }
     }
 }
