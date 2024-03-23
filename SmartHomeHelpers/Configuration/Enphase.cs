@@ -9,8 +9,6 @@ namespace SmartHomeHelpers.Configuration
 {
     public class Enphase
     {
-        public static string EnphaseClientId { get; private set; }
-        public static string EnphaseClientSecret { get; private set; }
         public static string EnphaseUserName { get; private set; }
         public static string EnphasePassword { get; private set; }
         public static string EnvoyM1Serial { get; private set; }
