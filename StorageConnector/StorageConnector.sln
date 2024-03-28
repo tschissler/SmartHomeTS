@@ -15,7 +15,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageController", "..\Sto
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageConnectorTests", "StorageConnectorTests\StorageConnectorTests.csproj", "{CA05F2AF-DF88-4936-AE57-544C98120333}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHomeHelpers", "..\SmartHomeHelpers\SmartHomeHelpers.csproj", "{EDEE336C-188A-46CB-AC8C-241F9F79F6D6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartHomeHelpers", "..\SmartHomeHelpers\SmartHomeHelpers.csproj", "{EDEE336C-188A-46CB-AC8C-241F9F79F6D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MQTTControllerLib", "..\Libs\MQTTControllerLib\MQTTControllerLib.csproj", "{C320F778-1210-4494-BA34-984A9B9754B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{EDEE336C-188A-46CB-AC8C-241F9F79F6D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EDEE336C-188A-46CB-AC8C-241F9F79F6D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EDEE336C-188A-46CB-AC8C-241F9F79F6D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C320F778-1210-4494-BA34-984A9B9754B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C320F778-1210-4494-BA34-984A9B9754B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C320F778-1210-4494-BA34-984A9B9754B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C320F778-1210-4494-BA34-984A9B9754B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Libs\MQTTControllerLib\MQTTControllerLib.csproj" />
     <ProjectReference Include="..\..\SmartHomeHelpers\SmartHomeHelpers.csproj" />
     <ProjectReference Include="..\..\StorageController\StorageController.csproj" />
   </ItemGroup>

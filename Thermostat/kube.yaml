@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thermostat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thermostat
+  template:
+    metadata:
+      labels:
+        app: thermostat
+    spec:
+      containers:
+        - name: thermostat
+          image: tschissler/thermostat:latest
+          # env:
+          # - name: EnvoyM1Serial
+          #   value: "env:EnvoyM1Serial"
+          # - name: EnvoyM3Serial
+          #   value: "env:EnvoyM3Serial"
+          # - name: EnphaseUserName
+          #   value: "env:EnphaseUserName"
+          # - name: EnphasePassword
+          #   value: "env:EnphasePassword"

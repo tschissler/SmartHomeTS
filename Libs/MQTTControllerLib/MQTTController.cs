@@ -1,13 +1,9 @@
-﻿using MQTTnet.Client;
-using MQTTnet;
-using System;
-using System.Collections.Generic;
+﻿using MQTTnet;
+using MQTTnet.Client;
+using MQTTnet.Server;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace StorageConnector
+namespace MQTTControllerLib
 {
     public class MqttController
     {
@@ -27,7 +23,7 @@ namespace StorageConnector
             _client = factory.CreateMqttClient();
 
             _options = new MqttClientOptionsBuilder()
-                .WithTcpServer(mqttBrokerName, mqttBrokerPort) 
+                .WithTcpServer(mqttBrokerName, mqttBrokerPort)
                 .WithClientId(clientName)
                 .Build();
 
@@ -35,7 +31,29 @@ namespace StorageConnector
             _client.ApplicationMessageReceivedAsync += _client_ApplicationMessageReceivedAsync;
             _client.ConnectedAsync += _client_ConnectedAsync;
             _client.DisconnectedAsync += _client_DisconnectedAsync;
+            
             ConnectAsync().Wait();
+        }
+
+        public MqttController(string mqttBrokerName, int mqttBrokerPort, string clientName, string topic)
+        {
+            // Initialize the  MQTT Client
+            var factory = new MqttFactory();
+            _client = factory.CreateMqttClient();
+
+            _options = new MqttClientOptionsBuilder()
+                .WithTcpServer(mqttBrokerName, mqttBrokerPort)
+                .WithClientId(clientName)
+            .Build();
+
+
+            _client.ConnectAsync(_options).Wait();
+            // Handle received messages
+            _client.ApplicationMessageReceivedAsync += _client_ApplicationMessageReceivedAsync;
+            _client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(topic).Build());
+            //_client.ConnectedAsync += _client_ConnectedAsync;
+            //_client.DisconnectedAsync += _client_DisconnectedAsync;
+
         }
 
         private Task _client_DisconnectedAsync(MqttClientDisconnectedEventArgs arg)
