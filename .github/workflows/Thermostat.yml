@@ -1,0 +1,37 @@
+name: Thermostat CD
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - .github/workflows/Thermostat.yml
+      - Thermostat/**
+
+env:
+  PROJECT_NAME: Thermostat
+  IMAGE_NAME: thermostat
+  
+jobs:
+  build:
+    runs-on: [self-hosted, linux]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build and publish Docker image
+      run: |        
+        # Build the Docker image with the package version tag.
+        docker build \
+            -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
+            -t tschissler/${{ env.IMAGE_NAME }}:latest \
+            -f ./${{ env.PROJECT_NAME }}/Dockerfile \
+            --push .
+
+    - name: Deploy to Kubernetes if depoyment does not exist yet
+      run: |
+        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
+          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
+        fi
+    - name: Update Kubernetes deployment
+      run: |        
+        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
