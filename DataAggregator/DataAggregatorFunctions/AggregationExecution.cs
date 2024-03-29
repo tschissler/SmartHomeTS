@@ -20,6 +20,7 @@ namespace DataAggregatorFunctions
                 "1c50f3ab6224_temperature",
                 "1420381fb608_temperature",
                 "88ff1305613c_temperature",
+                "a86d2b286f24_temperature",
                 "1c50f3ab6224_humidity",
                 "1420381fb608_humidity",
                 "88ff1305613c_humidity"
