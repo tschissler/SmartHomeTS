@@ -73,7 +73,7 @@
     private int dataTimeRangeHours = -1;
     private int dataTimeIntervalHours = -1;
 
-    protected override void OnInitialized()
+    protected override Task OnInitializedAsync()
     {
         table = new TableClient(
             new Uri(StorageUri),
@@ -83,6 +83,7 @@
 
         autoRefreshTimer.Elapsed += async (sender, e) => await FetchNewData();
         RefreshData();
+        return base.OnInitializedAsync();
     }
 
     private async Task AutoUpdateChanged()
@@ -143,6 +144,7 @@
                 ChartData[item.PartitionKey].Insert(0,resultItem);
             }
         }
+        Task.Delay(100);
         InvokeAsync(StateHasChanged);
     }
 

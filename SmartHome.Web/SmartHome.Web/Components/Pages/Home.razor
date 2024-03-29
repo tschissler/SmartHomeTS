@@ -26,9 +26,9 @@
     }
 
     <div class="row">
-        @foreach (var partitionKey in PartitionKeys.Keys)
+        @foreach (string partitionKey in PartitionKeys.Keys)
         {
-            if (!partitionKey.Contains("temperature"))
+            if (!partitionKey.Contains("temperature") || !Data.ContainsKey(partitionKey))
             {
                 continue;
             }
@@ -98,13 +98,18 @@
         { "a86d2b286f24_humidity", "Sauerteig Luftfeuchte"},
     };
 
-    protected override void OnInitialized()
+    protected override void OnAfterRender(bool firstRender)
     {
-        LoadData();
+        if (firstRender)
+        {
+            LoadData();
+        }
+        base.OnAfterRender(firstRender);
     }
 
-    private void LoadData()
+    private async Task LoadData()
     {
+        await LoadingSpinnerShow();
         Data = new Dictionary<string, DataValueTableEntity>();
         tableClient = new TableClient(
             new Uri(SmartHomeHelpers.Configuration.Storage.SmartHomeStorageUri),
@@ -129,18 +134,23 @@
             new TableSharedKeyCredential(storageAccountName, SmartHomeHelpers.Configuration.Storage.SmartHomeStorageKey)
             );
 
-        var queryString2 =
-             $"PartitionKey eq '88ff1305613c_window_top' or PartitionKey eq '88ff1305613c_window_bottom' ";
+        var queryString2 = $"PartitionKey eq '88ff1305613c_window_top'";
         var query2 = tableClient2.Query<StringDataValueTableEntity>(queryString2, 1);
         if (query2.Any())
         {
-            var top = query2.FirstOrDefault(i => i.PartitionKey == "88ff1305613c_window_top");
-            var bottom = query2.FirstOrDefault(i => i.PartitionKey == "88ff1305613c_window_bottom");
+            var top = query2.FirstOrDefault();
 
             if (top != null)
             {
                 StatusWindowBedroomTop = top.Value;
             }
+        }
+        
+        queryString2 = $"PartitionKey eq '88ff1305613c_window_bottom' ";
+        query2 = tableClient2.Query<StringDataValueTableEntity>(queryString2, 1);
+        if (query2.Any())
+        {
+            var bottom = query2.FirstOrDefault();
 
             if (bottom != null)
             {
@@ -149,6 +159,7 @@
         }
 
         InvokeAsync(StateHasChanged);
+        await LoadingSpinnerHide();
     }
    
     private async Task CheckboxChanged(DataSeriesMetaData item)
