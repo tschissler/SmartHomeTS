@@ -82,7 +82,8 @@
     {
         new DataSeriesMetaData { Id="1", Label = "Außen", PartitionKey = "1c50f3ab6224_temperature", IsChecked = true, Color = "blue" },
         new DataSeriesMetaData { Id="2", Label = "Wohnzimmer", PartitionKey = "1420381fb608_temperature", IsChecked = true, Color = "green" },
-        new DataSeriesMetaData { Id="3", Label = "Schlafzimmer", PartitionKey = "88ff1305613c_temperature", IsChecked = true, Color = "magenta" }
+        new DataSeriesMetaData { Id="3", Label = "Schlafzimmer", PartitionKey = "88ff1305613c_temperature", IsChecked = true, Color = "magenta" },
+        new DataSeriesMetaData { Id="4", Label = "Sauerteig", PartitionKey = "a86d2b286f24_temperature", IsChecked = true, Color = "brown" }
     };
 
     private Dictionary<string, string> PartitionKeys = new()
@@ -93,6 +94,8 @@
         { "1420381fb608_humidity", "Wohnzimmer Luftfeuchte" },
         { "88ff1305613c_temperature", "Schlafzimmer" },
         { "88ff1305613c_humidity", "Schlafzimmer Luftfeuchte"},
+        { "a86d2b286f24_temperature", "Sauerteig" },
+        { "a86d2b286f24_humidity", "Sauerteig Luftfeuchte"},
     };
 
     protected override void OnInitialized()
