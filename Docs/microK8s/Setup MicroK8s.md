@@ -98,7 +98,7 @@ microk8s config > kube.config
 Then copy the created config file to your Windows machine and configure kubectl
 ``` bash
 scp thomasschissler@smarthomepi2:~/kube.config .
-copy kube.config ~/.kube/config
+copy kube.config ~/.kube/kube.config
 kubectl get nodes
 ```
 

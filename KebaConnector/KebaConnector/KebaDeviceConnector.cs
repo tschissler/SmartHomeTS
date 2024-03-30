@@ -39,7 +39,7 @@ namespace KebaConnector
             return;
         }
 
-        public async Task<KebaData> ReadDeviceData()
+        public KebaData ReadDeviceData()
         {
             KebaDeviceStatusData data;
             try

@@ -73,7 +73,7 @@ void Update(object? state)
         //    }
         //}));
 
-        var data = kebaGarage.ReadDeviceData().Result;
+        var data = kebaGarage.ReadDeviceData();
           
         Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
         SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
