@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kebaconnector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kebaconnector
+  template:
+    metadata:
+      labels:
+        app: kebaconnector
+    spec:
+      containers:
+        - name: kebaconnector
+          image: tschissler/kebaconnector:latest
+          env:
+            - name: KEBA_WRITE_TO_DEVICE
+              value: "true"
+          # - name: EnvoyM3Serial
+          #   value: "env:EnvoyM3Serial"
+          # - name: EnphaseUserName
+          #   value: "env:EnphaseUserName"
+          # - name: EnphasePassword
+          #   value: "env:EnphasePassword"

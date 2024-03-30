@@ -16,11 +16,6 @@ namespace KebaConnector
         {
             ipAddress = IpAddress;
             uDPPort = UDPPort;
-
-            if (Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE") == null || Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE").ToLower() != "true")
-            {
-                Console.WriteLine("Environment variable KEBA_WRITE_TO_DEVICE is not set to 'true', so we will not write to the device");
-            }
         }
 
         /// <summary>
@@ -32,7 +27,18 @@ namespace KebaConnector
         /// The method writes new data to the device only if the new data is different from the previous one.
         /// </remarks>
         /// <param name="state"></param>
-        /// UpdateDevice(int current)
+        public async Task UpdateDeviceDesiredCurrent(int newCurrent)
+        {
+            if (Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE") == null || Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE").ToLower() != "true")
+            {
+                Console.WriteLine("Environment variable KEBA_WRITE_TO_DEVICE is not set to 'true', so we will not write to the device");
+                Console.WriteLine($"Would have written {newCurrent} mA as charging current to device otherwise");
+                return;
+            }
+            WriteChargingCurrentToDevice(newCurrent);
+            return;
+        }
+
         public async Task<KebaData> ReadDeviceData()
         {
             KebaDeviceStatusData data;
@@ -115,7 +121,7 @@ namespace KebaConnector
             return ExecuteUDPCommand("report 2");
         }
 
-        internal void WriteChargingCurrentToDevice(int current)
+        private void WriteChargingCurrentToDevice(int current)
         {
             Console.WriteLine("Updating charging currency to " + current);
             var success = ExecuteUDPCommand($"currtime {current} 1");
@@ -129,7 +135,6 @@ namespace KebaConnector
             {
                 Console.WriteLine("Updated charging currency to " + current);
             }
-            Thread.Sleep(2000);
         }
 
         internal KebaDeviceStatusData GetDeviceStatus()

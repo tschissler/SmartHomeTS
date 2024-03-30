@@ -3,7 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.34707.107
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KebaConnector", "KebaConnector\KebaConnector.csproj", "{2DEE2B23-FCE4-4EB3-9813-2577957AF213}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KebaConnector", "KebaConnector\KebaConnector.csproj", "{2DEE2B23-FCE4-4EB3-9813-2577957AF213}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedContracts", "..\SharedContracts\SharedContracts.csproj", "{11CF1401-3B9A-4239-93E4-AE3D0778A164}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FE91F6DE-9EE8-41A6-9806-8D102135D9D8}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile = Dockerfile
+		kube.yaml = kube.yaml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +23,10 @@ Global
 		{2DEE2B23-FCE4-4EB3-9813-2577957AF213}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2DEE2B23-FCE4-4EB3-9813-2577957AF213}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2DEE2B23-FCE4-4EB3-9813-2577957AF213}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11CF1401-3B9A-4239-93E4-AE3D0778A164}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11CF1401-3B9A-4239-93E4-AE3D0778A164}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11CF1401-3B9A-4239-93E4-AE3D0778A164}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11CF1401-3B9A-4239-93E4-AE3D0778A164}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
