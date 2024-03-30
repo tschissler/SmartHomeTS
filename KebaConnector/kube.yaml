@@ -12,6 +12,8 @@ spec:
       labels:
         app: kebaconnector
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet 
       containers:
         - name: kebaconnector
           image: tschissler/kebaconnector:latest
@@ -30,11 +32,10 @@ kind: Service
 metadata:
   name: kebaconnector-service
 spec:
-  type: NodePort    
+  type: ClusterIP    
   ports:  
   - name: udp-port
     port: 7090
     protocol: UDP
-    nodePort: 32090
   selector:
     app: kebaconnector

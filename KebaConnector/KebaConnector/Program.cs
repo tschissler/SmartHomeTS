@@ -40,7 +40,7 @@ var factory = new MqttFactory();
 mqttClient = factory.CreateMqttClient();
 await MQTTConnectAsync();
 mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
-await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("commands/Charging/#").Build());
+await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("commands/charging/#").Build());
 
 Console.WriteLine("    ...Done");
 
@@ -51,7 +51,6 @@ Thread.Sleep(Timeout.Infinite);
 
 void Update(object? state)
 {
-    Console.WriteLine("Update");
     try
     {
         kebaOutside.ReadDeviceData().ContinueWith((task) =>
