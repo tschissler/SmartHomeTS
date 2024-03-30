@@ -50,25 +50,33 @@ Thread.Sleep(Timeout.Infinite);
 
 void Update(object? state)
 {
-    kebaOutside.ReadDeviceData().ContinueWith((task) =>
+    try
     {
-        if (task.IsCompletedSuccessfully)
+        kebaOutside.ReadDeviceData().ContinueWith((task) =>
         {
-            var data = task.Result;
-            Console.WriteLine($"Keba Outside: {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
-            SendDataAsMQTTMessage(mqttClient, data, "KebaOutside");
-        }
-    });
+            if (task.IsCompletedSuccessfully)
+            {
+                var data = task.Result;
+                Console.WriteLine($"Keba Outside: {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
+                SendDataAsMQTTMessage(mqttClient, data, "KebaOutside");
+            }
+        });
 
-    kebaGarage.ReadDeviceData().ContinueWith((Action<Task<KebaData>>)((task) =>
-    {
-        if (task.IsCompletedSuccessfully)
+        kebaGarage.ReadDeviceData().ContinueWith((Action<Task<KebaData>>)((task) =>
         {
-            var data = task.Result;
-            Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
-            SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
-        }
-    }));
+            if (task.IsCompletedSuccessfully)
+            {
+                var data = task.Result;
+                Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
+                SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
+            }
+        }));
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error reading device data", ex.ToString());
+        throw;
+    }
 }
 
 async Task MQTTConnectAsync()
