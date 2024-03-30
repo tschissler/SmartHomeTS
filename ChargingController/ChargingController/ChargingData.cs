@@ -2,18 +2,43 @@
 {
     public record ChargingResult (
             int InsideChargingPowerWatts,
-            int OutsideChargingPowerWatts
+            int OutsideChargingPowerWatts,
+            int InsideChargingCurrentmA,
+            int OutsideChargingCurrentmA
         );
 
-    public record ChargingInput (
-            bool InsideConnected,
-            bool OutsideConnected,
-            int InsideCurrentChargingPower,
-            int OutsideCurrentChargingPower,
-            int GridPower,
-            ChargingStation PreferedChargingStation,
-            int MaximumGridChargingPercent
-        );
+    public class ChargingInput()
+    {
+        /// <summary>
+        /// Is a car connected to the inside charging station and ready for charging
+        /// </summary>
+        public bool InsideConnected { get; set; }
+        /// <summary>
+        /// Is a car connected to the outside charging station and ready for charging
+        /// </summary>
+        public bool OutsideConnected { get; set; }
+        /// <summary>
+        /// Current power consumption of the inside charging station in Watts
+        /// </summary>
+        public int InsideCurrentChargingPower { get; set; }
+        /// <summary>
+        /// Current power consumption of the outside charging station in Watts
+        /// </summary>
+        public int OutsideCurrentChargingPower { get; set; }
+        /// <summary>
+        /// Current power used from the grid in Watts
+        /// </summary>
+        public int GridPower { get; set; }
+        /// <summary>
+        /// The charging station that should be used first if both are available
+        /// None-prefered station is used if the available power exceeds the minimum charging power of the first station (6A)
+        /// </summary>
+        public ChargingStation PreferedChargingStation { get; set; }
+        /// <summary>
+        /// The maximum percentage of the grid power that can be used for charging
+        /// </summary>
+        public int MaximumGridChargingPercent { get; set; }
+    }
 
     public enum ChargingStation
     {

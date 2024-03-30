@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EnphaseConnector
+namespace SharedContracts
 {
     public record EnphaseData(
         DateTimeOffset LastDataUpdate,

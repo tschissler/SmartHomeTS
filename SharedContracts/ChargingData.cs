@@ -15,7 +15,7 @@
         /// </summary>
         public bool CarIsPlugedIn { get; set; }
         /// <summary>
-        /// The current charging power in W 
+        /// The current charging power in mW 
         /// </summary>
         public int CurrentChargingPower { get; set; }
         /// <summary>

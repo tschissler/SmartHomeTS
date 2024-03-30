@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: keba-udp-services
-  namespace: default
-data:
-  7090: "default/kebaconnector-service:7090"

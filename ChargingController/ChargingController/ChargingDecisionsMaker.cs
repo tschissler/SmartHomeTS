@@ -8,7 +8,7 @@ namespace ChargingController
 {
     public class ChargingDecisionsMaker
     {
-        private const int MinimumChargingPower = 230 * 6 * 3;
+        private const int MinimumChargingPower = 230 * 6 * 3 * 1000;
 
         public static async Task<ChargingResult> CalculateChargingData(ChargingInput input)
         {
@@ -55,7 +55,10 @@ namespace ChargingController
                 }
             }
 
-            return new ChargingResult(calculatedIsideChargingPower, calculatedOutsideChargingPower);
+            var insideChargingCurrent = (int)Math.Round((double)calculatedIsideChargingPower / 230 / 3, 0);
+            var outsideChargingCurrent = (int)Math.Round((double)calculatedOutsideChargingPower / 230 / 3, 0);
+
+            return new ChargingResult(calculatedIsideChargingPower, calculatedOutsideChargingPower, insideChargingCurrent, outsideChargingCurrent);
         }
 
         private static int CalculateAvailableChargingPower(ChargingInput input)

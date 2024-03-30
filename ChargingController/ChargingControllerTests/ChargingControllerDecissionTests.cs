@@ -21,23 +21,28 @@ namespace ChargingControllerTests
             int outsideCurrentChargingPower, 
             string Priority,
             int MaximumGridChargingPercent,
-            int powerInsideShould, 
-            int powerOutsideShould)
+            int powerInsideExpected, 
+            int powerOutsideExpected,
+            int currentInsideExpected,
+            int currentOutsideExpected)
         {
-            var input = new ChargingInput(
-                insideConnected == 1,
-                outsideConnected == 1,
-                insideCurrentChargingPower,
-                outsideCurrentChargingPower,
-                gridPower,
-                Priority == "Inside" ? ChargingStation.Inside : ChargingStation.Outside,
-                MaximumGridChargingPercent
-                );
+            var input = new ChargingInput()
+            {
+                InsideConnected =  insideConnected == 1,
+                OutsideConnected = outsideConnected == 1,
+                InsideCurrentChargingPower = insideCurrentChargingPower,
+                OutsideCurrentChargingPower = outsideCurrentChargingPower,
+                GridPower = gridPower,
+                PreferedChargingStation = Priority == "Inside" ? ChargingStation.Inside : ChargingStation.Outside,
+                MaximumGridChargingPercent = MaximumGridChargingPercent
+                };
 
             var actual = await ChargingDecisionsMaker.CalculateChargingData(input);
 
-            actual.InsideChargingPowerWatts.Should().Be(powerInsideShould);
-            actual.OutsideChargingPowerWatts.Should().Be(powerOutsideShould);
+            actual.InsideChargingPowerWatts.Should().Be(powerInsideExpected);
+            actual.OutsideChargingPowerWatts.Should().Be(powerOutsideExpected);
+            actual.InsideChargingCurrentmA.Should().Be(currentInsideExpected);
+            actual.OutsideChargingCurrentmA.Should().Be(currentOutsideExpected);
         }
     }
 }

@@ -1,9 +1,6 @@
 ﻿using EnphaseConnector.EnphaseRawData;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using RestSharp;
-using System.Net.Http;
-using static System.Net.WebRequestMethods;
+using SharedContracts;
 
 namespace EnphaseConnector
 {

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chargingcontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chargingcontroller
+  template:
+    metadata:
+      labels:
+        app: chargingcontroller
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet 
+      containers:
+        - name: chargingcontroller
+          image: tschissler/chargingcontroller:latest
+          env:
+          #  - name: KEBA_WRITE_TO_DEVICE
+          #    value: "true"
+          # - name: EnvoyM3Serial
+          #   value: "env:EnvoyM3Serial"
+          # - name: EnphaseUserName
+          #   value: "env:EnphaseUserName"
+          # - name: EnphasePassword
+          #   value: "env:EnphasePassword"
