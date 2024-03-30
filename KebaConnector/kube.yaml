@@ -24,3 +24,16 @@ spec:
           #   value: "env:EnphaseUserName"
           # - name: EnphasePassword
           #   value: "env:EnphasePassword"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kebaconnector-service
+spec:
+  ports:
+  - name: udp-port
+    port: 7090
+    protocol: UDP
+    targetPort: 7090
+  selector:
+    app: kebaconnector
