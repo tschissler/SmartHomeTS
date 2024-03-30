@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using HelpersLib;
 using KebaConnector;
 using MQTTnet;
 using MQTTnet.Client;
@@ -53,35 +54,29 @@ void Update(object? state)
     Console.WriteLine("Update");
     try
     {
-        //kebaOutside.ReadDeviceData().ContinueWith((task) =>
-        //{
-        //    if (task.IsCompletedSuccessfully)
-        //    {
-        //        var data = task.Result;
-        //        Console.WriteLine($"Keba Outside: {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
-        //        SendDataAsMQTTMessage(mqttClient, data, "KebaOutside");
-        //    }
-        //});
+        kebaOutside.ReadDeviceData().ContinueWith((task) =>
+        {
+            if (task.IsCompletedSuccessfully)
+            {
+                var data = task.Result;
+                Console.WriteLine($"Keba Outside: {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
+                SendDataAsMQTTMessage(mqttClient, data, "KebaOutside");
+            }
+        });
 
-        //kebaGarage.ReadDeviceData().ContinueWith((Action<Task<KebaData>>)((task) =>
-        //{
-        //    if (task.IsCompletedSuccessfully)
-        //    {
-        //        var data = task.Result;
-        //        Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
-        //        SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
-        //    }
-        //}));
-
-        var data = kebaGarage.ReadDeviceData();
-          
-        Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
-        SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
+        kebaGarage.ReadDeviceData().ContinueWith((Action<Task<KebaData>>)((task) =>
+        {
+            if (task.IsCompletedSuccessfully)
+            {
+                var data = task.Result;
+                Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
+                SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
+            }
+        }));
     }
     catch (Exception ex)
     {
-        Console.WriteLine("Error reading device data", ex.ToString());
-        throw;
+        Console.WriteLine("Error reading device data -" + ex.ToDetailedString());
     }
 }
 

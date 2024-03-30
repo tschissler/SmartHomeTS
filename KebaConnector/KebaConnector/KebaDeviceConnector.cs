@@ -11,6 +11,7 @@ namespace KebaConnector
         private IPAddress ipAddress;
         private int uDPPort;
         private int previousChargingCurrencyWrittenToDevice = 0;
+        private bool udpExceptionInProgress = false;
 
         public KebaDeviceConnector(IPAddress IpAddress, int UDPPort, object lockObject = null)
         {
@@ -39,12 +40,18 @@ namespace KebaConnector
             return;
         }
 
-        public KebaData ReadDeviceData()
+        public async Task<KebaData> ReadDeviceData()
         {
+            if (udpExceptionInProgress)
+            {
+                throw new Exception("Other UDP Operation is still in progress, skipping read from device. This might be du to failing UDP communication with device.");
+            }
+            udpExceptionInProgress = true;
             KebaDeviceStatusData data;
             try
             {
                 data = GetDeviceStatus();
+                udpExceptionInProgress = false;
                 return new KebaData(
                     (PlugStatus)data.PlugStatus,
                     data.ChargingEnabled == 1,
@@ -69,6 +76,7 @@ namespace KebaConnector
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to read data from Keba device, Error: {ex.Message}");
+                udpExceptionInProgress = false;
             }
 
             return null;
@@ -139,6 +147,7 @@ namespace KebaConnector
 
         internal KebaDeviceStatusData GetDeviceStatus()
         {
+            
             var dataString = "";
             var data = new KebaDeviceStatusData();
             try
