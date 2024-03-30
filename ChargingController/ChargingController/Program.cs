@@ -1,2 +1,5 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿// Listen to Envoy MQTT messages and new configuration setting
+
+// Calculate new charging data
+
+// Send charging data as MQTT message
