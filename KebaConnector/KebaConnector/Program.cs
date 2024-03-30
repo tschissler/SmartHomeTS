@@ -43,13 +43,17 @@ await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("commands
 
 Console.WriteLine("    ...Done");
 
+Console.WriteLine("Setting timer");
+
 var timer = new Timer(Update, null, 0, 5000);
 
+Console.WriteLine("Done Timer");
 Thread.Sleep(Timeout.Infinite);
 
 
 void Update(object? state)
 {
+    Console.WriteLine("Update");
     try
     {
         kebaOutside.ReadDeviceData().ContinueWith((task) =>
