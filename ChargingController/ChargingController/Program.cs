@@ -10,6 +10,9 @@ IMqttClient mqttClient;
 ChargingInput currentChargingSituation = new ChargingInput();
 int previousOutsideChargingCurrent = -1;
 int previousInsideChargingCurrent = -1;
+DateTime lastOutsideSetTime = DateTime.MinValue;
+DateTime lastInsideSetTime = DateTime.MinValue;
+const int minimumSetIntervalSeconds = 10;
 
 Console.WriteLine("ChargingController started");
 
@@ -44,11 +47,13 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
     {
         currentChargingSituation.PreferedChargingStation = ChargingStation.Outside;
         currentChargingSituation.MaximumGridChargingPercent = 0;
+        currentChargingSituation.BatteryMinLevel = 25;
 
         if (topic == "data/electricity/envoym3")
         {
             var pvData = JsonSerializer.Deserialize<EnphaseData>(payload);
             currentChargingSituation.GridPower = (int)(pvData.PowerFromGrid / 1000);
+            currentChargingSituation.BatteryLevel = pvData.BatteryLevel;
         }
 
         else if (topic == "data/charging/KebaGarage")
@@ -68,23 +73,37 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation);
         if (chargingResult.InsideChargingCurrentmA != previousInsideChargingCurrent)
         {
-            var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingResult.InsideChargingCurrentmA });
-            await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
-                .WithTopic("commands/charging/KebaGarage")
-                .WithPayload(payloadOut)
-                .Build());
-            Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
-            previousInsideChargingCurrent = chargingResult.InsideChargingCurrentmA;
+            if (DateTime.Now.Subtract(lastInsideSetTime).Seconds > minimumSetIntervalSeconds)
+            {
+                var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingResult.InsideChargingCurrentmA });
+                await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+                    .WithTopic("commands/charging/KebaGarage")
+                    .WithPayload(payloadOut)
+                    .Build());
+                Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
+                previousInsideChargingCurrent = chargingResult.InsideChargingCurrentmA;
+            }
+            else 
+            {
+                Console.WriteLine($"Inside charging current was set too recently. Skipping.");
+            }
         }
         if (chargingResult.OutsideChargingCurrentmA != previousOutsideChargingCurrent)
         {
-            var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingResult.OutsideChargingCurrentmA });
-            await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
-                .WithTopic("commands/charging/KebaOutside")
-                .WithPayload(payloadOut)
-                .Build());
-            Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
-            previousOutsideChargingCurrent = chargingResult.OutsideChargingCurrentmA;
+            if (DateTime.Now.Subtract(lastOutsideSetTime).Seconds > minimumSetIntervalSeconds)
+            {
+                var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingResult.OutsideChargingCurrentmA });
+                await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+                    .WithTopic("commands/charging/KebaOutside")
+                    .WithPayload(payloadOut)
+                    .Build());
+                Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
+                previousOutsideChargingCurrent = chargingResult.OutsideChargingCurrentmA;
+            }
+            else
+            {
+                Console.WriteLine($"Outside charging current was set too recently. Skipping.");
+            }
         }
     } 
     catch (Exception ex) 

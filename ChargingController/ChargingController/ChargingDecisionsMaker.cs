@@ -68,6 +68,10 @@ namespace ChargingController
             {
                 availableChargingPower = 0;
             }
+            if (availableChargingPower < MinimumChargingPower && input.BatteryLevel >= input.BatteryMinLevel)
+            {
+                availableChargingPower = MinimumChargingPower;
+            }
             return availableChargingPower;
         }
     }

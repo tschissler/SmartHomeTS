@@ -38,6 +38,15 @@
         /// The maximum percentage of the grid power that can be used for charging
         /// </summary>
         public int MaximumGridChargingPercent { get; set; }
+        /// <summary>
+        /// The current charge level of the battery in percent  
+        /// </summary>
+        public int BatteryLevel { get; set; }
+        /// <summary>
+        /// The minimum charge level of the battery in percent where the car should be charged
+        /// Below this level, charging will be started only if there is enough energy provided by PV
+        /// </summary>
+        public int BatteryMinLevel { get; set; }
     }
 
     public enum ChargingStation
