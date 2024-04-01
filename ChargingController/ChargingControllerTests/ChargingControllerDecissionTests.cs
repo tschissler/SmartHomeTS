@@ -44,7 +44,8 @@ namespace ChargingControllerTests
                 MaximumGridChargingPercent = MaximumGridChargingPercent,
                 BatteryLevel = BatteryLevel,
                 BatteryMinLevel = BatteryMinLevel,
-                PreferedChargingBatteryLevel = PrefereBatteryLevel
+                PreferedChargingBatteryLevel = PrefereBatteryLevel,
+                ManualCurrent = ManualCurrent
                 };
 
             var actual = await ChargingDecisionsMaker.CalculateChargingData(input);

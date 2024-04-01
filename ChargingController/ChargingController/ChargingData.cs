@@ -55,6 +55,11 @@
         /// The level of battery charge in percent below which the battery should be charged before putting energy in the car
         /// </summary>
         public int PreferedChargingBatteryLevel { get; set; }
+        /// <summary>
+        /// This setting ovverides all calculated values and sets the charging current to the given value in mA
+        /// If the value is lower than 0, the calculated value is used
+        /// </summary>
+        public int ManualCurrent { get; set; }
     }
 
     public enum ChargingStation

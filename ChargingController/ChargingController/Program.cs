@@ -73,6 +73,11 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.PreferedChargingStation = payload == "Inside" ? ChargingStation.Inside : ChargingStation.Outside;
             Console.WriteLine($"########## Set PreferedChargingStation to {payload}");
         }
+        else if (topic == "config/charging/ManualCurrentManualCurrent" && int.TryParse(payload, out value))
+        {
+            currentChargingSituation.ManualCurrent = value;
+            Console.WriteLine($"########## Set ManualCurrent to {value}");
+        }
 
         else if (topic == "data/electricity/envoym3")
         {
