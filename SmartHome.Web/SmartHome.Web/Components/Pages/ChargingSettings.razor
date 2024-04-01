@@ -63,7 +63,7 @@ Manueller Ladestrom (A):
         await mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
         applicationMessage = new MqttApplicationMessageBuilder()
             .WithTopic($"config/charging/ManualCurrent")
-            .WithPayload(UseManualCharging ? ManualCurrent.ToString() : "-1")
+            .WithPayload(UseManualCharging ? (ManualCurrent*1000).ToString() : "-1")
             .Build();
         await mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
     }
