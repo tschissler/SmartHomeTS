@@ -64,9 +64,9 @@ namespace ChargingController
 
         private static int CalculateAvailableChargingPower(ChargingInput input)
         {
-            var availableChargingPower = input.GridPower * -1 + input.OutsideCurrentChargingPower + input.InsideCurrentChargingPower;
+            var availableChargingPower = input.GridPower * -1 + input.OutsideCurrentChargingPower + input.InsideCurrentChargingPower - input.PowerFromBattery;
 
-            if (input.BatteryLevel <= input.PrefereChargingBatteryLevel)
+            if (input.BatteryLevel <= input.PreferedChargingBatteryLevel)
             {
                 if (availableChargingPower > BatteryChargingMaxPower)
                 {

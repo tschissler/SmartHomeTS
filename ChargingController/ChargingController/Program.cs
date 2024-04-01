@@ -22,16 +22,19 @@ Console.WriteLine("  - Connecting to MQTT Broker");
 var factory = new MqttFactory();
 mqttClient = factory.CreateMqttClient();
 await MQTTConnectAsync();
-mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
-
-await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/#").Build());
-await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/electricity/envoym3").Build());
-await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/config/charging/#").Build());
 
 Console.WriteLine("    ...Done");
 Console.WriteLine("Waiting for first data to start calculation");
-Thread.Sleep(Timeout.Infinite);
 
+while (true)
+{
+    if (!mqttClient.IsConnected)
+    {
+        Console.WriteLine("MQTT connection lost. Reconnecting...");
+        await MQTTConnectAsync();
+    }
+    await Task.Delay(1000);
+}
 
 
 async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
@@ -47,28 +50,28 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         currentChargingSituation.PreferedChargingStation = ChargingStation.Outside;
         currentChargingSituation.MaximumGridChargingPercent = 0;
         currentChargingSituation.BatteryMinLevel = 25;
-        currentChargingSituation.PrefereChargingBatteryLevel = 25;
+        currentChargingSituation.PreferedChargingBatteryLevel = 25;
 
         int value;
-        if (topic == "data/config/charging/MaximumGridChargingPercent" && int.TryParse(payload, out value))
+        if (topic == "config/charging/MaximumGridChargingPercent" && int.TryParse(payload, out value))
         {
             currentChargingSituation.MaximumGridChargingPercent = value;
-            Console.WriteLine($"Set MaximumGridChargingPercent to {value}");
+            Console.WriteLine($"########## Set MaximumGridChargingPercent to {value}");
         }
-        else if (topic == "data/config/charging/BatteryMinLevel" && int.TryParse(payload, out value))
+        else if (topic == "config/charging/BatteryMinLevel" && int.TryParse(payload, out value))
         {
             currentChargingSituation.BatteryMinLevel = value;
-            Console.WriteLine($"Set BatteryMinLevel to {value}");
+            Console.WriteLine($"########## Set BatteryMinLevel to {value}");
         }
-        else if (topic == "data/config/charging/PrefereChargingBatteryLevel" && int.TryParse(payload, out value))
+        else if (topic == "config/charging/PrefereChargingBatteryLevel" && int.TryParse(payload, out value))
         {
-            currentChargingSituation.PrefereChargingBatteryLevel = value;
-            Console.WriteLine($"Set PrefereChargingBatteryLevel to {value}");
+            currentChargingSituation.PreferedChargingBatteryLevel = value;
+            Console.WriteLine($"########## Set PrefereChargingBatteryLevel to {value}");
         }
-        else if (topic == "data/config/charging/PreferedChargingStation")
+        else if (topic == "config/charging/PreferedChargingStation")
         {
             currentChargingSituation.PreferedChargingStation = payload == "Inside" ? ChargingStation.Inside : ChargingStation.Outside;
-            Console.WriteLine($"Set PreferedChargingStation to {payload}");
+            Console.WriteLine($"########## Set PreferedChargingStation to {payload}");
         }
 
         else if (topic == "data/electricity/envoym3")
@@ -76,6 +79,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             var pvData = JsonSerializer.Deserialize<EnphaseData>(payload);
             currentChargingSituation.GridPower = (int)(pvData.PowerFromGrid / 1000);
             currentChargingSituation.BatteryLevel = pvData.BatteryLevel;
+            currentChargingSituation.PowerFromBattery = (int)pvData.PowerFromBattery;
         }
 
         else if (topic == "data/charging/KebaGarage")
@@ -151,6 +155,12 @@ async Task MQTTConnectAsync()
             if (mqttClient.IsConnected)
             {
                 Console.WriteLine("Connected to MQTT Broker.");
+
+                mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
+
+                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/#").Build());
+                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/electricity/envoym3").Build());
+                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("config/charging/#").Build());
                 break;
             }
         }

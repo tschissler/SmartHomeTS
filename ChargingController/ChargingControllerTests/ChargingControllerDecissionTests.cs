@@ -18,6 +18,7 @@ namespace ChargingControllerTests
             int outsideConnected, 
             int gridPower, 
             int pvPower,
+            int powerFromBattery,
             int insideCurrentChargingPower, 
             int outsideCurrentChargingPower, 
             string Priority,
@@ -37,11 +38,12 @@ namespace ChargingControllerTests
                 InsideCurrentChargingPower = insideCurrentChargingPower,
                 OutsideCurrentChargingPower = outsideCurrentChargingPower,
                 GridPower = gridPower,
+                PowerFromBattery = powerFromBattery,
                 PreferedChargingStation = Priority == "Inside" ? ChargingStation.Inside : ChargingStation.Outside,
                 MaximumGridChargingPercent = MaximumGridChargingPercent,
                 BatteryLevel = BatteryLevel,
                 BatteryMinLevel = BatteryMinLevel,
-                PrefereChargingBatteryLevel = PrefereBatteryLevel
+                PreferedChargingBatteryLevel = PrefereBatteryLevel
                 };
 
             var actual = await ChargingDecisionsMaker.CalculateChargingData(input);

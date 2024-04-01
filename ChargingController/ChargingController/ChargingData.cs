@@ -22,13 +22,17 @@
         /// </summary>
         public int InsideCurrentChargingPower { get; set; }
         /// <summary>
-        /// Current power consumption of the outside charging station in Watts
+        /// Current power consumption of the outside charging station in mW
         /// </summary>
         public int OutsideCurrentChargingPower { get; set; }
         /// <summary>
-        /// Current power used from the grid in Watts
+        /// Current power used from the grid in mW
         /// </summary>
         public int GridPower { get; set; }
+        /// <summary>
+        /// The power consumed from the battery in mW, is negative if the battery is charged
+        /// </summary>
+        public int PowerFromBattery { get; set; }
         /// <summary>
         /// The charging station that should be used first if both are available
         /// None-prefered station is used if the available power exceeds the minimum charging power of the first station (6A)
@@ -50,7 +54,7 @@
         /// <summary>
         /// The level of battery charge in percent below which the battery should be charged before putting energy in the car
         /// </summary>
-        public int PrefereChargingBatteryLevel { get; set; }
+        public int PreferedChargingBatteryLevel { get; set; }
     }
 
     public enum ChargingStation
