@@ -24,10 +24,9 @@ mqttClient = factory.CreateMqttClient();
 await MQTTConnectAsync();
 mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
 
-var topics = new List<string> { "your/topic/1", "your/topic/2", "your/topic/#" }; 
-
 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/#").Build());
 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/electricity/envoym3").Build());
+await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/config/charging/#").Build());
 
 Console.WriteLine("    ...Done");
 Console.WriteLine("Waiting for first data to start calculation");
@@ -50,7 +49,29 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         currentChargingSituation.BatteryMinLevel = 25;
         currentChargingSituation.PrefereChargingBatteryLevel = 25;
 
-        if (topic == "data/electricity/envoym3")
+        int value;
+        if (topic == "data/config/charging/MaximumGridChargingPercent" && int.TryParse(payload, out value))
+        {
+            currentChargingSituation.MaximumGridChargingPercent = value;
+            Console.WriteLine($"Set MaximumGridChargingPercent to {value}");
+        }
+        else if (topic == "data/config/charging/BatteryMinLevel" && int.TryParse(payload, out value))
+        {
+            currentChargingSituation.BatteryMinLevel = value;
+            Console.WriteLine($"Set BatteryMinLevel to {value}");
+        }
+        else if (topic == "data/config/charging/PrefereChargingBatteryLevel" && int.TryParse(payload, out value))
+        {
+            currentChargingSituation.PrefereChargingBatteryLevel = value;
+            Console.WriteLine($"Set PrefereChargingBatteryLevel to {value}");
+        }
+        else if (topic == "data/config/charging/PreferedChargingStation")
+        {
+            currentChargingSituation.PreferedChargingStation = payload == "Inside" ? ChargingStation.Inside : ChargingStation.Outside;
+            Console.WriteLine($"Set PreferedChargingStation to {payload}");
+        }
+
+        else if (topic == "data/electricity/envoym3")
         {
             var pvData = JsonSerializer.Deserialize<EnphaseData>(payload);
             currentChargingSituation.GridPower = (int)(pvData.PowerFromGrid / 1000);
