@@ -1,0 +1,98 @@
+﻿@using MQTTnet
+@using MQTTnet.Client
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Inputs
+@using System.Text.Json
+
+@page "/chargingsettings"
+@rendermode InteractiveServer
+
+<h3>Lade-Einstellungen</h3>
+
+Bis zu welchem Ladestand der Batterie kann das Auto auch mit Batteriestrom geladen werden?
+<SfSlider @bind-Value="@BatteryMinLevel" Min=0 Max=100 TValue="int">
+    <SliderTicks Placement="@Placement.After" SmallStep="5" LargeStep="20" ShowSmallTicks="true"></SliderTicks>
+    <SliderEvents TValue="int">
+    </SliderEvents>
+</SfSlider>
+<br />
+<br />
+<SfCheckBox @bind-Checked="@UseManualCharging" Label="Manuelles Laden aktivieren"></SfCheckBox>
+<br />
+<br />
+Manueller Ladestrom (A):
+<SfSlider @bind-Value="@ManualCurrent" Min=6 Max=16 TValue="int" Enabled="@UseManualCharging">
+    <SliderTicks Placement="@Placement.After" SmallStep="5" LargeStep="10" ShowSmallTicks="true"></SliderTicks>
+    <SliderEvents TValue="int">
+    </SliderEvents>
+</SfSlider>
+<br />
+<br />
+
+<SfButton IsPrimary="true" @onclick="CommunicateSettings">Übernehmen</SfButton>
+
+@code {
+    private int BatteryMinLevel = 30;
+    private int ManualCurrent = 6;
+    private bool UseManualCharging = false;
+
+    IMqttClient mqttClient;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+             var factory = new MqttFactory();
+             mqttClient = factory.CreateMqttClient();
+        }
+        base.OnAfterRender(firstRender);
+    }
+
+    private void ManualChargingChanged(bool value)
+    {
+        UseManualCharging = value;
+    }
+
+    private async void CommunicateSettings(MouseEventArgs e)
+    {
+        await MQTTConnectAsync();
+        var applicationMessage = new MqttApplicationMessageBuilder()
+            .WithTopic($"config/charging/BatteryMinLevel")
+            .WithPayload(BatteryMinLevel.ToString())
+            .Build();
+        await mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        applicationMessage = new MqttApplicationMessageBuilder()
+            .WithTopic($"config/charging/ManualCurrent")
+            .WithPayload(UseManualCharging ? ManualCurrent.ToString() : "-1")
+            .Build();
+        await mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+    }
+
+    async Task MQTTConnectAsync()
+    {
+        var mqttOptions = new MqttClientOptionsBuilder()
+            .WithTcpServer("smarthomepi2", 32004)
+            .WithClientId("Smarthome.Web")
+            .Build();
+
+        while (true)
+        {
+            if (mqttClient.IsConnected)
+                break;
+            try
+            {
+                await mqttClient.ConnectAsync(mqttOptions);
+                if (mqttClient.IsConnected)
+                {
+                    Console.WriteLine("Connected to MQTT Broker.");
+                    break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error connecting to MQTT Broker: {ex.Message}");
+                Thread.Sleep(5000);
+            }
+        }
+    }
+}
