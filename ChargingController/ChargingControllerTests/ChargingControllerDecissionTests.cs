@@ -26,6 +26,7 @@ namespace ChargingControllerTests
             int BatteryLevel,
             int BatteryMinLevel,
             int PrefereBatteryLevel,
+            int ManualCurrent,
             int powerInsideExpected, 
             int powerOutsideExpected,
             int currentInsideExpected,

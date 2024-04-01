@@ -47,10 +47,10 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
 
     try
     {
-        currentChargingSituation.PreferedChargingStation = ChargingStation.Outside;
-        currentChargingSituation.MaximumGridChargingPercent = 0;
-        currentChargingSituation.BatteryMinLevel = 25;
-        currentChargingSituation.PreferedChargingBatteryLevel = 25;
+        //currentChargingSituation.PreferedChargingStation = ChargingStation.Outside;
+        //currentChargingSituation.MaximumGridChargingPercent = 0;
+        //currentChargingSituation.BatteryMinLevel = 25;
+        //currentChargingSituation.PreferedChargingBatteryLevel = 25;
 
         int value;
         if (topic == "config/charging/MaximumGridChargingPercent" && int.TryParse(payload, out value))
