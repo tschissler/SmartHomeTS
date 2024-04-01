@@ -9,6 +9,7 @@ namespace ChargingController
     public class ChargingDecisionsMaker
     {
         private const int MinimumChargingPower = 230 * 6 * 3 * 1000;
+        private const int BatteryChargingMaxPower = 3800 * 1000;
 
         public static async Task<ChargingResult> CalculateChargingData(ChargingInput input)
         {
@@ -64,6 +65,15 @@ namespace ChargingController
         private static int CalculateAvailableChargingPower(ChargingInput input)
         {
             var availableChargingPower = input.GridPower * -1 + input.OutsideCurrentChargingPower + input.InsideCurrentChargingPower;
+
+            if (input.BatteryLevel <= input.PrefereChargingBatteryLevel)
+            {
+                if (availableChargingPower > BatteryChargingMaxPower)
+                {
+                    return MinimumChargingPower;
+                }
+                return 0;
+            }
             if (availableChargingPower < 0)
             {
                 availableChargingPower = 0;

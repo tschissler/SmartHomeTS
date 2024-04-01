@@ -47,6 +47,10 @@
         /// Below this level, charging will be started only if there is enough energy provided by PV
         /// </summary>
         public int BatteryMinLevel { get; set; }
+        /// <summary>
+        /// The level of battery charge in percent below which the battery should be charged before putting energy in the car
+        /// </summary>
+        public int PrefereChargingBatteryLevel { get; set; }
     }
 
     public enum ChargingStation

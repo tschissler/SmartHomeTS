@@ -48,6 +48,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         currentChargingSituation.PreferedChargingStation = ChargingStation.Outside;
         currentChargingSituation.MaximumGridChargingPercent = 0;
         currentChargingSituation.BatteryMinLevel = 25;
+        currentChargingSituation.PrefereChargingBatteryLevel = 25;
 
         if (topic == "data/electricity/envoym3")
         {
