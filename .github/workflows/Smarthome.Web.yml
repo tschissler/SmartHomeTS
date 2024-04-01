@@ -7,54 +7,82 @@ on:
       - .github/workflows/Smarthome.Web.yml
       - SmartHome.Web/**
       - '!SmartHome.Web/SmartHomeBlazorApp/**'
-
 env:
   PROJECT_NAME: SmartHome.Web
   IMAGE_NAME: smarthomeweb
-  AZURE_WEBAPP_NAME: SmartHomeWeb
-  AZURE_WEBAPP_PACKAGE_PATH: published
-  CONFIGURATION: Release
-  DOTNET_CORE_VERSION: 8.0.x
-  WORKING_DIRECTORY: SmartHome.Web\SmartHome.Web
   
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: [self-hosted, linux]
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
-    - name: Restore
-      run: dotnet restore 
-      working-directory: "${{ env.WORKING_DIRECTORY }}"
-    - name: Build
-      run: dotnet build ${{ env.PROJECT_NAME }}.csproj --configuration ${{ env.CONFIGURATION }} --no-restore
-      working-directory: "${{ env.WORKING_DIRECTORY }}"
-    - name: Test
-      run: dotnet test ${{ env.PROJECT_NAME }}.sln --no-build
-      working-directory: "${{ env.WORKING_DIRECTORY }}/.."
-    - name: Publish
-      run: dotnet publish ${{ env.PROJECT_NAME }}.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
-      working-directory: "${{ env.WORKING_DIRECTORY }}"
-    - name: Publish Artifacts
-      uses: actions/upload-artifact@v3      
-      with:
-        name: webapp
-        path: "${{ env.WORKING_DIRECTORY }}\\${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    steps:
-    - name: Download artifact from build job
-      uses: actions/download-artifact@v3
-      with:
-        name: webapp
-        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-    - name: Deploy to Azure WebApp
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.SMARTHOMEWEB_7FD4 }}
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+    - uses: actions/checkout@v3
+
+    - name: Build and publish Docker image
+      run: |        
+        # Build the Docker image with the package version tag.
+        docker build \
+            -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
+            -t tschissler/${{ env.IMAGE_NAME }}:latest \
+            -f ./${{ env.PROJECT_NAME }}/Dockerfile \
+            --push .
+
+    - name: Deploy to Kubernetes if depoyment does not exist yet
+      run: |
+        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
+          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
+        fi
+    - name: Update Kubernetes deployment
+      run: |        
+        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} 
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SyncfusionLicenseKey="${{ secrets.SYNCFUSION_LICENSEKEY }}"
+#env:   
+#  PROJECT_NAME: SmartHome.Web
+#  IMAGE_NAME: smarthomeweb
+#  AZURE_WEBAPP_NAME: SmartHomeWeb
+#  AZURE_WEBAPP_PACKAGE_PATH: published
+#  CONFIGURATION: Release
+#  DOTNET_CORE_VERSION: 8.0.x
+#  WORKING_DIRECTORY: SmartHome.Web\SmartHome.Web
+  
+#jobs:
+#  build:
+#    runs-on: windows-latest
+#    steps:
+#    - uses: actions/checkout@v4
+#    - name: Setup .NET SDK
+#      uses: actions/setup-dotnet@v3
+#      with:
+#        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+#    - name: Restore
+#      run: dotnet restore 
+#      working-directory: "${{ env.WORKING_DIRECTORY }}"
+#    - name: Build
+#      run: dotnet build ${{ env.PROJECT_NAME }}.csproj --configuration ${{ env.CONFIGURATION }} --no-restore
+#      working-directory: "${{ env.WORKING_DIRECTORY }}"
+#    - name: Test
+#      run: dotnet test ${{ env.PROJECT_NAME }}.sln --no-build
+#      working-directory: "${{ env.WORKING_DIRECTORY }}/.."
+#    - name: Publish
+#      run: dotnet publish ${{ env.PROJECT_NAME }}.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+#      working-directory: "${{ env.WORKING_DIRECTORY }}"
+#    - name: Publish Artifacts
+#      uses: actions/upload-artifact@v3      
+#      with:
+#        name: webapp
+#        path: "${{ env.WORKING_DIRECTORY }}\\${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+#  deploy:
+#    runs-on: windows-latest
+#    needs: build
+#    steps:
+#    - name: Download artifact from build job
+#      uses: actions/download-artifact@v3
+#      with:
+#        name: webapp
+#        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+#    - name: Deploy to Azure WebApp
+#      uses: azure/webapps-deploy@v2
+#      with:
+#        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+#        publish-profile: ${{ secrets.SMARTHOMEWEB_7FD4 }}
+#        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
