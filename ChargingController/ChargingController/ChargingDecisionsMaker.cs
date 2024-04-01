@@ -16,43 +16,57 @@ namespace ChargingController
             var calculatedIsideChargingPower = 0;
             var calculatedOutsideChargingPower = 0;
 
+            if (input.ManualCurrent >= 0)
+            {
+                calculatedIsideChargingPower = input.ManualCurrent * 230 * 3;
+                calculatedOutsideChargingPower = input.ManualCurrent * 230 * 3;
+            }
+
             var availableChargingPower = CalculateAvailableChargingPower(input);
 
-            if (availableChargingPower < MinimumChargingPower)
+            if (input.ManualCurrent >= 0)
             {
-                if (availableChargingPower < MinimumChargingPower * (100 - input.MaximumGridChargingPercent) / 100)
-                {
-                    availableChargingPower = 0;
-                }
-                else
-                {
-                    availableChargingPower = MinimumChargingPower;
-                }
+                calculatedIsideChargingPower = input.ManualCurrent * 230 * 3;
+                calculatedOutsideChargingPower = input.ManualCurrent * 230 * 3;
             }
+            else
+            {
+                if (availableChargingPower < MinimumChargingPower)
+                {
+                    if (availableChargingPower < MinimumChargingPower * (100 - input.MaximumGridChargingPercent) / 100)
+                    {
+                        availableChargingPower = 0;
+                    }
+                    else
+                    {
+                        availableChargingPower = MinimumChargingPower;
+                    }
+                }
 
-            if (input.InsideConnected && !input.OutsideConnected)
-            {
-                calculatedIsideChargingPower = availableChargingPower;
-            }
-            else if (input.OutsideConnected && !input.InsideConnected)
-            {
-                calculatedOutsideChargingPower = availableChargingPower;
-            }
-            else if (input.InsideConnected && input.OutsideConnected)
-            {
-                if (availableChargingPower >= 2 * MinimumChargingPower)
+                if (input.InsideConnected && !input.OutsideConnected)
                 {
-                    calculatedIsideChargingPower = availableChargingPower / 2;
-                    calculatedOutsideChargingPower = availableChargingPower / 2;
+                    calculatedIsideChargingPower = availableChargingPower;
                 }
-                else
-                if (input.PreferedChargingStation == ChargingStation.Outside)
+                else if (input.OutsideConnected && !input.InsideConnected)
                 {
                     calculatedOutsideChargingPower = availableChargingPower;
                 }
-                else
+                else if (input.InsideConnected && input.OutsideConnected)
                 {
-                    calculatedIsideChargingPower = availableChargingPower;
+                    if (availableChargingPower >= 2 * MinimumChargingPower)
+                    {
+                        calculatedIsideChargingPower = availableChargingPower / 2;
+                        calculatedOutsideChargingPower = availableChargingPower / 2;
+                    }
+                    else
+                    if (input.PreferedChargingStation == ChargingStation.Outside)
+                    {
+                        calculatedOutsideChargingPower = availableChargingPower;
+                    }
+                    else
+                    {
+                        calculatedIsideChargingPower = availableChargingPower;
+                    }
                 }
             }
 
@@ -64,10 +78,6 @@ namespace ChargingController
 
         private static int CalculateAvailableChargingPower(ChargingInput input)
         {
-            if (input.ManualCurrent >=0)
-            {
-                return input.ManualCurrent * 230 * 3;
-            }
             var availableChargingPower = input.GridPower * -1 + input.OutsideCurrentChargingPower + input.InsideCurrentChargingPower - input.PowerFromBattery;
 
             if (input.BatteryLevel <= input.PreferedChargingBatteryLevel)
