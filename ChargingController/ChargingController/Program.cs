@@ -5,11 +5,8 @@ using MQTTnet.Packets;
 using SharedContracts;
 using System.Text.Json;
 
-
 IMqttClient mqttClient;
 ChargingInput currentChargingSituation = new ChargingInput();
-int previousOutsideChargingCurrent = -1;
-int previousInsideChargingCurrent = -1;
 DateTime lastOutsideSetTime = DateTime.MinValue;
 DateTime lastInsideSetTime = DateTime.MinValue;
 const int minimumSetIntervalSeconds = 10;
@@ -102,7 +99,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         }
 
         var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation);
-        if (chargingResult.InsideChargingCurrentmA != previousInsideChargingCurrent)
+        if (chargingResult.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
         {
             if (DateTime.Now.Subtract(lastInsideSetTime).Seconds > minimumSetIntervalSeconds)
             {
@@ -112,14 +109,14 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                     .WithPayload(payloadOut)
                     .Build());
                 Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
-                previousInsideChargingCurrent = chargingResult.InsideChargingCurrentmA;
+                currentChargingSituation.InsideChargingLatestmA = chargingResult.InsideChargingCurrentmA;
             }
             else 
             {
                 Console.WriteLine($"Inside charging current was set too recently. Skipping.");
             }
         }
-        if (chargingResult.OutsideChargingCurrentmA != previousOutsideChargingCurrent)
+        if (chargingResult.OutsideChargingCurrentmA != currentChargingSituation.OutsideChargingLatestmA)
         {
             if (DateTime.Now.Subtract(lastOutsideSetTime).Seconds > minimumSetIntervalSeconds)
             {
@@ -129,13 +126,19 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                     .WithPayload(payloadOut)
                     .Build());
                 Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
-                previousOutsideChargingCurrent = chargingResult.OutsideChargingCurrentmA;
+                currentChargingSituation.OutsideChargingLatestmA = chargingResult.OutsideChargingCurrentmA;
             }
             else
             {
                 Console.WriteLine($"Outside charging current was set too recently. Skipping.");
             }
         }
+        
+        var payloadChargingSituation = JsonSerializer.Serialize(currentChargingSituation);
+        await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+            .WithTopic("data/charging/situation")
+            .WithPayload(payloadChargingSituation)
+            .Build());
     } 
     catch (Exception ex) 
     {
@@ -148,6 +151,7 @@ async Task MQTTConnectAsync()
     var mqttOptions = new MqttClientOptionsBuilder()
         .WithTcpServer("smarthomepi2", 32004)
         .WithClientId("Smarthome.ChargingController")
+        .WithKeepAlivePeriod(new TimeSpan(0, 1, 0,0))
         .Build();
 
     while (true)
@@ -161,9 +165,11 @@ async Task MQTTConnectAsync()
             {
                 Console.WriteLine("Connected to MQTT Broker.");
 
+                mqttClient.ApplicationMessageReceivedAsync -= MqttMessageReceived;
                 mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
 
-                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/#").Build());
+                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaGarage").Build());
+                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaOutside").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/electricity/envoym3").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("config/charging/#").Build());
                 break;
