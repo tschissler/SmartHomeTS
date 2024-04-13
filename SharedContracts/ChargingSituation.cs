@@ -96,6 +96,7 @@
         {
             InsideChargingLatestmA = -1;
             OutsideChargingLatestmA = -1;
+            ManualCurrent = -1;
         }
     }
 

@@ -9,8 +9,8 @@ namespace ChargingController
 {
     public class ChargingDecisionsMaker
     {
-        private const int MinimumChargingPower = 230 * 6 * 3 * 1000;
-        private const int BatteryChargingMaxPower = 3800 * 1000;
+        private const int MinimumChargingPower = 230 * 6 * 3;
+        private const int BatteryChargingMaxPower = 3800;
 
         public static async Task<ChargingResult> CalculateChargingData(ChargingSituation situation)
         {
