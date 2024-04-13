@@ -23,6 +23,7 @@
         "dotnetRunMessages": true,
         "launchBrowser": true,
         "applicationUrl": "https://localhost:7158;http://localhost:5106",
+        "launchUrl": "https://localhost:7158/chargingsettings",
         "environmentVariables": {
           "ASPNETCORE_ENVIRONMENT": "Development"
         }

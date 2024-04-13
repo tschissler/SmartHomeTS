@@ -1,27 +1,71 @@
-﻿@using MQTTnet
+﻿@using DataContracts
+@using MQTTnet
 @using MQTTnet.Client
+@using SmartHomeWebManagers
 @using Syncfusion.Blazor.Buttons
 @using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.LinearGauge
 @using System.Text.Json
+@using SharedContracts
+@using MouseEventArgs = Microsoft.AspNetCore.Components.Web.MouseEventArgs
+@using Placement = Syncfusion.Blazor.Inputs.Placement
+@using Orientation = Syncfusion.Blazor.LinearGauge.Orientation
 
 @page "/chargingsettings"
 @rendermode InteractiveServer
 
 <h3>Lade-Einstellungen</h3>
 
+<div class="BatteryComponent">
+    <div class="BatteryLabel">Batterie Ladestand: @_chargingSituation.BatteryLevel%</div>
+    <div class="BatteryContainer">
+        <div class="BatteryLevel" style="width: @_chargingSituation.BatteryLevel%"></div>
+    </div>
+</div>
+
+<h4>Quellen und Verbräuche</h4>
+<div class="LegendContainer">
+    <div class="LegendColorIndicator" style="background-color: #0dcaf0"></div>
+    <div class="LegendText">PV: @_chargingSituation.PowerFromPV.ToString("#,##0 W")</div>
+    <div class="LegendColorIndicator" style="background-color: greenyellow"></div>
+    <div class="LegendText">Batterie: @FormatPower(_chargingSituation.PowerFromBattery)</div>
+    <div class="LegendColorIndicator" style="background-color: #f72585"></div>
+    <div class="LegendText">Netz: @FormatPower(_chargingSituation.PowerFromGrid)</div>
+    <div class="LegendColorIndicator" style="background-color: goldenrod"></div>
+    <div class="LegendText">Haus Verbrauch: @FormatPower(_chargingSituation.HouseConsumptionPower)</div>
+    <div class="LegendColorIndicator" style="background-color: #614680"></div>
+    <div class="LegendText">Laden BMW: @FormatPower(_chargingSituation.InsideCurrentChargingPower)</div>
+    <div class="LegendColorIndicator" style="background-color: #be8ce5"></div>
+    <div class="LegendText">Laden ID4: @FormatPower(_chargingSituation.OutsideCurrentChargingPower)</div>
+</div>
+
+<div class="AvailabilityComponent">
+    <div class="AvailabilityLevel" style="width: @(availabilityData.PVPowerPercent)%; background-color: #0dcaf0"></div>
+    <div class="AvailabilityLevel" style="width: @(availabilityData.BatteryPowerPercent)%; background-color: greenyellow"></div>
+    <div class="AvailabilityLevel" style="width: @(availabilityData.GridPowerPercent)%; background-color: #f72585"></div>
+</div>
+
+<div class="AvailabilityComponent">
+    <div class="AvailabilityLevel" style="width: @(consumptionData.HouseConsumption)%; background-color: goldenrod"></div>
+    <div class="AvailabilityLevel" style="width: @(consumptionData.BatteryCharging)%; background-color: greenyellow"></div>
+    <div class="AvailabilityLevel" style="width: @(consumptionData.GridFeed)%; background-color: #f72585"></div>
+    <div class="AvailabilityLevel" style="width: @(consumptionData.GarageCharging)%; background-color: #614680^^"></div>
+    <div class="AvailabilityLevel" style="width: @(consumptionData.OutsideCharging)%; background-color: #be8ce5"></div>
+</div>
+
 Bis zu welchem Ladestand der Batterie kann das Auto auch mit Batteriestrom geladen werden?
-<SfSlider @bind-Value="@BatteryMinLevel" Min=0 Max=100 TValue="int">
+<SfSlider @bind-Value="@_batteryMinLevel" Min=0 Max=100 TValue="int">
     <SliderTicks Placement="@Placement.After" SmallStep="5" LargeStep="20" ShowSmallTicks="true"></SliderTicks>
     <SliderEvents TValue="int">
     </SliderEvents>
 </SfSlider>
 <br />
 <br />
-<SfCheckBox @bind-Checked="@UseManualCharging" Label="Manuelles Laden aktivieren"></SfCheckBox>
+<SfCheckBox @bind-Checked="@_useManualCharging" Label="Manuelles Laden aktivieren"></SfCheckBox>
 <br />
 <br />
 Manueller Ladestrom (A):
-<SfSlider @bind-Value="@ManualCurrent" Min=6 Max=16 TValue="int" Enabled="@UseManualCharging">
+<SfSlider @bind-Value="@_manualCurrent" Min=6 Max=16 TValue="int" Enabled="@_useManualCharging">
     <SliderTicks Placement="@Placement.After" SmallStep="5" LargeStep="10" ShowSmallTicks="true"></SliderTicks>
     <SliderEvents TValue="int">
     </SliderEvents>
@@ -32,25 +76,35 @@ Manueller Ladestrom (A):
 <SfButton IsPrimary="true" @onclick="CommunicateSettings">Übernehmen</SfButton>
 
 @code {
-    private int BatteryMinLevel = 30;
-    private int ManualCurrent = 6;
-    private bool UseManualCharging = false;
+    private int _batteryMinLevel = 30;
+    private int _manualCurrent = 6;
+    private bool _useManualCharging = false;
+    ChargingSituation _chargingSituation = new ChargingSituation();
+    private AvailabilityData availabilityData = new AvailabilityData(); 
+    private ConsumptionData consumptionData = new ConsumptionData();
 
-    IMqttClient mqttClient;
+    IMqttClient? _mqttClient;
 
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-             var factory = new MqttFactory();
-             mqttClient = factory.CreateMqttClient();
+            var factory = new MqttFactory();
+            _mqttClient = factory.CreateMqttClient();
+            MQTTConnectAsync();
         }
+
         base.OnAfterRender(firstRender);
     }
 
     private void ManualChargingChanged(bool value)
     {
-        UseManualCharging = value;
+        _useManualCharging = value;
+    }
+
+    private string FormatPower(int value)
+    {
+        return value.ToString("#,##0 W");
     }
 
     private async void CommunicateSettings(MouseEventArgs e)
@@ -58,14 +112,14 @@ Manueller Ladestrom (A):
         await MQTTConnectAsync();
         var applicationMessage = new MqttApplicationMessageBuilder()
             .WithTopic($"config/charging/BatteryMinLevel")
-            .WithPayload(BatteryMinLevel.ToString())
+            .WithPayload(_batteryMinLevel.ToString())
             .Build();
-        await mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        await _mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
         applicationMessage = new MqttApplicationMessageBuilder()
             .WithTopic($"config/charging/ManualCurrent")
-            .WithPayload(UseManualCharging ? (ManualCurrent*1000).ToString() : "-1")
+            .WithPayload(_useManualCharging ? (_manualCurrent * 1000).ToString() : "-1")
             .Build();
-        await mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        await _mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
     }
 
     async Task MQTTConnectAsync()
@@ -73,20 +127,26 @@ Manueller Ladestrom (A):
         var mqttOptions = new MqttClientOptionsBuilder()
             .WithTcpServer("smarthomepi2", 32004)
             .WithClientId("Smarthome.Web")
+            .WithKeepAlivePeriod(new TimeSpan(0, 1, 0, 0))
             .Build();
 
         while (true)
         {
-            if (mqttClient.IsConnected)
+            if (_mqttClient.IsConnected)
+            {
+                Console.WriteLine("Connected to MQTT Broker.");
+
+                _mqttClient.ApplicationMessageReceivedAsync -= MqttMessageReceived;
+                _mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
+
+                await _mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/situation").Build());
                 break;
+            }
+
             try
             {
-                await mqttClient.ConnectAsync(mqttOptions);
-                if (mqttClient.IsConnected)
-                {
-                    Console.WriteLine("Connected to MQTT Broker.");
-                    break;
-                }
+                await _mqttClient.ConnectAsync(mqttOptions);
+                Task.Delay(1000).Wait();
             }
             catch (Exception ex)
             {
@@ -95,4 +155,34 @@ Manueller Ladestrom (A):
             }
         }
     }
+
+    private async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
+    {
+        string payload = args.ApplicationMessage.ConvertPayloadToString();
+        var topic = args.ApplicationMessage.Topic;
+        var time = DateTime.Now;
+
+        Console.WriteLine($"Received message from {topic} at {time}: {payload}");
+
+        try
+        {
+            _chargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);
+            availabilityData = ChargingSituationManager.CalculateAvailabilityData(
+                _chargingSituation.PowerFromPV,
+                _chargingSituation.PowerFromBattery,
+                _chargingSituation.PowerFromGrid);
+            consumptionData = ChargingSituationManager.CalculateConsumptionData(
+                _chargingSituation.HouseConsumptionPower - _chargingSituation.InsideCurrentChargingPower - _chargingSituation.OutsideCurrentChargingPower,
+                _chargingSituation.PowerFromBattery, 
+                _chargingSituation.PowerFromGrid,
+                _chargingSituation.InsideCurrentChargingPower,
+                _chargingSituation.OutsideCurrentChargingPower);
+            InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing message: {ex.Message}");
+        }
+    }
+
 }
