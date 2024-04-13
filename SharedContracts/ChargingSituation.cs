@@ -1,4 +1,4 @@
-﻿namespace ChargingController
+﻿namespace SharedContracts
 {
     public record ChargingResult (
             int InsideChargingPowerWatts,
@@ -7,7 +7,7 @@
             int OutsideChargingCurrentmA
         );
 
-    public class ChargingInput
+    public class ChargingSituation
     {
         /// <summary>
         /// Is a car connected to the inside charging station and ready for charging
@@ -82,7 +82,7 @@
         /// </summary>
         public int OutsideChargingLatestmA { get; set; }
 
-        public ChargingInput()
+        public ChargingSituation()
         {
             InsideChargingLatestmA = -1;
             OutsideChargingLatestmA = -1;

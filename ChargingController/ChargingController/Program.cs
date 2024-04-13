@@ -6,7 +6,7 @@ using SharedContracts;
 using System.Text.Json;
 
 IMqttClient mqttClient;
-ChargingInput currentChargingSituation = new ChargingInput();
+ChargingSituation currentChargingSituation = new ChargingSituation();
 DateTime lastOutsideSetTime = DateTime.MinValue;
 DateTime lastInsideSetTime = DateTime.MinValue;
 const int minimumSetIntervalSeconds = 10;
@@ -79,9 +79,10 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         else if (topic == "data/electricity/envoym3")
         {
             var pvData = JsonSerializer.Deserialize<EnphaseData>(payload);
-            currentChargingSituation.GridPower = (int)(pvData.PowerFromGrid / 1000);
+            currentChargingSituation.PowerFromGrid = (int)(pvData.PowerFromGrid / 1000);
             currentChargingSituation.BatteryLevel = pvData.BatteryLevel;
             currentChargingSituation.PowerFromBattery = (int)pvData.PowerFromBattery;
+            currentChargingSituation.PowerFromPV = (int)(pvData.PowerFromPV / 1000);
         }
 
         else if (topic == "data/charging/KebaGarage")

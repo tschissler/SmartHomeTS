@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SharedContracts;
 
 namespace ChargingControllerTests
 {
@@ -32,13 +33,13 @@ namespace ChargingControllerTests
             int currentInsideExpected,
             int currentOutsideExpected)
         {
-            var input = new ChargingInput()
+            var input = new ChargingSituation()
             {
                 InsideConnected =  insideConnected == 1,
                 OutsideConnected = outsideConnected == 1,
                 InsideCurrentChargingPower = insideCurrentChargingPower,
                 OutsideCurrentChargingPower = outsideCurrentChargingPower,
-                GridPower = gridPower,
+                PowerFromGrid = gridPower,
                 PowerFromBattery = powerFromBattery,
                 PreferedChargingStation = Priority == "Inside" ? ChargingStation.Inside : ChargingStation.Outside,
                 MaximumGridChargingPercent = MaximumGridChargingPercent,

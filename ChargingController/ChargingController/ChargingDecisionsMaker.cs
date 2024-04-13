@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SharedContracts;
 
 namespace ChargingController
 {
@@ -11,29 +12,29 @@ namespace ChargingController
         private const int MinimumChargingPower = 230 * 6 * 3 * 1000;
         private const int BatteryChargingMaxPower = 3800 * 1000;
 
-        public static async Task<ChargingResult> CalculateChargingData(ChargingInput input)
+        public static async Task<ChargingResult> CalculateChargingData(ChargingSituation situation)
         {
             var calculatedIsideChargingPower = 0;
             var calculatedOutsideChargingPower = 0;
 
-            if (input.ManualCurrent >= 0)
+            if (situation.ManualCurrent >= 0)
             {
-                calculatedIsideChargingPower = input.ManualCurrent * 230 * 3;
-                calculatedOutsideChargingPower = input.ManualCurrent * 230 * 3;
+                calculatedIsideChargingPower = situation.ManualCurrent * 230 * 3;
+                calculatedOutsideChargingPower = situation.ManualCurrent * 230 * 3;
             }
 
-            var availableChargingPower = CalculateAvailableChargingPower(input);
+            var availableChargingPower = CalculateAvailableChargingPower(situation);
 
-            if (input.ManualCurrent >= 0)
+            if (situation.ManualCurrent >= 0)
             {
-                calculatedIsideChargingPower = input.ManualCurrent * 230 * 3;
-                calculatedOutsideChargingPower = input.ManualCurrent * 230 * 3;
+                calculatedIsideChargingPower = situation.ManualCurrent * 230 * 3;
+                calculatedOutsideChargingPower = situation.ManualCurrent * 230 * 3;
             }
             else
             {
                 if (availableChargingPower < MinimumChargingPower)
                 {
-                    if (availableChargingPower < MinimumChargingPower * (100 - input.MaximumGridChargingPercent) / 100)
+                    if (availableChargingPower < MinimumChargingPower * (100 - situation.MaximumGridChargingPercent) / 100)
                     {
                         availableChargingPower = 0;
                     }
@@ -43,15 +44,15 @@ namespace ChargingController
                     }
                 }
 
-                if (input.InsideConnected && !input.OutsideConnected)
+                if (situation.InsideConnected && !situation.OutsideConnected)
                 {
                     calculatedIsideChargingPower = availableChargingPower;
                 }
-                else if (input.OutsideConnected && !input.InsideConnected)
+                else if (situation.OutsideConnected && !situation.InsideConnected)
                 {
                     calculatedOutsideChargingPower = availableChargingPower;
                 }
-                else if (input.InsideConnected && input.OutsideConnected)
+                else if (situation.InsideConnected && situation.OutsideConnected)
                 {
                     if (availableChargingPower >= 2 * MinimumChargingPower)
                     {
@@ -59,7 +60,7 @@ namespace ChargingController
                         calculatedOutsideChargingPower = availableChargingPower / 2;
                     }
                     else
-                    if (input.PreferedChargingStation == ChargingStation.Outside)
+                    if (situation.PreferedChargingStation == ChargingStation.Outside)
                     {
                         calculatedOutsideChargingPower = availableChargingPower;
                     }
@@ -76,11 +77,11 @@ namespace ChargingController
             return new ChargingResult(calculatedIsideChargingPower, calculatedOutsideChargingPower, insideChargingCurrent, outsideChargingCurrent);
         }
 
-        private static int CalculateAvailableChargingPower(ChargingInput input)
+        private static int CalculateAvailableChargingPower(ChargingSituation situation)
         {
-            var availableChargingPower = input.GridPower * -1 + input.OutsideCurrentChargingPower + input.InsideCurrentChargingPower - input.PowerFromBattery;
+            var availableChargingPower = situation.PowerFromGrid * -1 + situation.OutsideCurrentChargingPower + situation.InsideCurrentChargingPower - situation.PowerFromBattery;
 
-            if (input.BatteryLevel <= input.PreferedChargingBatteryLevel)
+            if (situation.BatteryLevel <= situation.PreferedChargingBatteryLevel)
             {
                 if (availableChargingPower > BatteryChargingMaxPower)
                 {
@@ -92,7 +93,7 @@ namespace ChargingController
             {
                 availableChargingPower = 0;
             }
-            if (availableChargingPower < MinimumChargingPower && input.BatteryLevel >= input.BatteryMinLevel)
+            if (availableChargingPower < MinimumChargingPower && situation.BatteryLevel >= situation.BatteryMinLevel)
             {
                 availableChargingPower = MinimumChargingPower;
             }
