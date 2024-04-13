@@ -80,38 +80,6 @@ namespace KebaConnector
             }
 
             return null;
-
-            //if (data != null)
-            //{
-            //    DataPoints.CurrentChargingPower.SetCorrectedValue(data.CurrentChargingPower);
-            //    DataPoints.EffectiveMaximumChargingCurrency.SetCorrectedValue(data.MaxCurrency);
-            //    DataPoints.CurrentVoltage.SetCorrectedValue((data.VoltagePhase1 + data.VoltagePhase2 + data.VoltagePhase3) / 3);
-            //    DataPoints.ConsumptionActiveSession.SetCorrectedValue(data.EnergyCurrentChargingSession);
-            //    DataPoints.CharingOverallTotal.SetCorrectedValue(data.EnergyTotal);
-            //    DataPoints.KebaStatus.CurrentValue = data.State;
-
-            //    //Console.WriteLine($"Active Session: {DataPoints.ConsumptionActiveSession.AssembleValueString()}, " +
-            //    //    $"Total: {DataPoints.CharingOverallTotal.AssembleValueString()}, "+
-            //    //    $"Power: {DataPoints.CurrentChargingPower.AssembleValueString()}, " +
-            //    //    $"Max: {DataPoints.EffectiveMaximumChargingCurrency.AssembleValueString()}, " +
-            //    //    $"State: {DataPoints.KebaStatus.CurrentValue}");
-            //}
-
-            //if (previousChargingCurrencyWrittenToDevice != DataPoints.AdjustedCharingCurrency.CurrentValue &&
-            //    (Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE") == null ||
-            //    Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE").ToLower() != "false"))
-            //{
-            //    try
-            //    {
-            //        previousChargingCurrencyWrittenToDevice = DataPoints.AdjustedCharingCurrency.CurrentValue;
-            //        WriteChargingCurrentToDevice((int)(DataPoints.AdjustedCharingCurrency.CurrentValue * 1000));
-            //        Console.WriteLine($"Wrote {DataPoints.AdjustedCharingCurrency.CurrentValue} to device as new target charging currency (currtime)");
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        Console.Writeline($"Failed to write {DataPoints.AdjustedCharingCurrency.CurrentValue} to device as new target charging currency (currtime). {ex.Message}");
-            //    }
-            //}
         }
 
         internal string GetDeviceInformation()
