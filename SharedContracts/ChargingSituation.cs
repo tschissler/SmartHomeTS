@@ -30,7 +30,7 @@
         public int InsideCurrentChargingPower { get; set; }
 
         /// <summary>
-        /// Current power consumption of the outside charging station in mW
+        /// Current power consumption of the outside charging station in Watts
         /// </summary>
         public int OutsideCurrentChargingPower { get; set; }
 
