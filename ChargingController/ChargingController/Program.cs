@@ -78,6 +78,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.BatteryLevel = pvData.BatteryLevel;
             currentChargingSituation.PowerFromBattery = (int)pvData.PowerFromBattery;
             currentChargingSituation.PowerFromPV = (int)(pvData.PowerFromPV / 1000);
+            currentChargingSituation.HouseConsumptionPower = (int)(pvData.PowerToHouse / 1000);
         }
 
         else if (topic == "data/charging/KebaGarage")

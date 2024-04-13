@@ -20,6 +20,11 @@
         public bool OutsideConnected { get; set; }
 
         /// <summary>
+        /// The current power consumption of the house in Watts
+        /// </summary>
+        public int HouseConsumptionPower { get; set; }
+
+        /// <summary>
         /// Current power consumption of the inside charging station in Watts
         /// </summary>
         public int InsideCurrentChargingPower { get; set; }
