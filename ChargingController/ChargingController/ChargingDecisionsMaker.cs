@@ -17,18 +17,18 @@ namespace ChargingController
             var calculatedIsideChargingPower = 0;
             var calculatedOutsideChargingPower = 0;
 
-            if (situation.ManualCurrent >= 0)
-            {
-                calculatedIsideChargingPower = situation.ManualCurrent * 230 * 3;
-                calculatedOutsideChargingPower = situation.ManualCurrent * 230 * 3;
-            }
+            //if (situation.ManualCurrent >= 0)
+            //{
+            //    calculatedIsideChargingPower = situation.ManualCurrent * 230 * 3/1000;
+            //    calculatedOutsideChargingPower = situation.ManualCurrent * 230 * 3/1000;
+            //}
 
             var availableChargingPower = CalculateAvailableChargingPower(situation);
 
             if (situation.ManualCurrent >= 0)
             {
-                calculatedIsideChargingPower = situation.ManualCurrent * 230 * 3;
-                calculatedOutsideChargingPower = situation.ManualCurrent * 230 * 3;
+                calculatedIsideChargingPower = situation.ManualCurrent * 230 * 3/1000;
+                calculatedOutsideChargingPower = situation.ManualCurrent * 230 * 3/1000;
             }
             else
             {
@@ -71,8 +71,8 @@ namespace ChargingController
                 }
             }
 
-            var insideChargingCurrent = (int)Math.Round((double)calculatedIsideChargingPower / 230 / 3, 0);
-            var outsideChargingCurrent = (int)Math.Round((double)calculatedOutsideChargingPower / 230 / 3, 0);
+            var insideChargingCurrent = (int)Math.Round((double)calculatedIsideChargingPower * 1000 / 230 / 3, 0);
+            var outsideChargingCurrent = (int)Math.Round((double)calculatedOutsideChargingPower * 1000 / 230 / 3, 0);
 
             return new ChargingResult(calculatedIsideChargingPower, calculatedOutsideChargingPower, insideChargingCurrent, outsideChargingCurrent);
         }
