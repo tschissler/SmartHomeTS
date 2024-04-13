@@ -16,6 +16,8 @@
 
 <h3>Lade-Einstellungen</h3>
 
+<h4>Quellen und Verbräuche</h4>
+
 <div class="BatteryComponent">
     <div class="BatteryLabel">Batterie Ladestand: @_chargingSituation.BatteryLevel%</div>
     <div class="BatteryContainer">
@@ -23,7 +25,6 @@
     </div>
 </div>
 
-<h4>Quellen und Verbräuche</h4>
 <div class="LegendContainer">
     <div class="LegendColorIndicator" style="background-color: #0dcaf0"></div>
     <div class="LegendText">PV: @_chargingSituation.PowerFromPV.ToString("#,##0 W")</div>
@@ -32,7 +33,7 @@
     <div class="LegendColorIndicator" style="background-color: #f72585"></div>
     <div class="LegendText">Netz: @FormatPower(_chargingSituation.PowerFromGrid)</div>
     <div class="LegendColorIndicator" style="background-color: goldenrod"></div>
-    <div class="LegendText">Haus Verbrauch: @FormatPower(_chargingSituation.HouseConsumptionPower)</div>
+    <div class="LegendText">Haus Verbrauch: @FormatPower(_chargingSituation.HouseConsumptionPower-_chargingSituation.OutsideCurrentChargingPower-_chargingSituation.InsideCurrentChargingPower)</div>
     <div class="LegendColorIndicator" style="background-color: #614680"></div>
     <div class="LegendText">Laden BMW: @FormatPower(_chargingSituation.InsideCurrentChargingPower)</div>
     <div class="LegendColorIndicator" style="background-color: #be8ce5"></div>
@@ -52,6 +53,10 @@
     <div class="AvailabilityLevel" style="width: @(consumptionData.GarageCharging)%; background-color: #614680"></div>
     <div class="AvailabilityLevel" style="width: @(consumptionData.OutsideCharging)%; background-color: #be8ce5"></div>
 </div>
+
+<h4>Lade-Einstellungen</h4>
+
+
 
 Bis zu welchem Ladestand der Batterie kann das Auto auch mit Batteriestrom geladen werden?
 <SfSlider @bind-Value="@_batteryMinLevel" Min=0 Max=100 TValue="int">

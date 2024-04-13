@@ -1,4 +1,7 @@
-﻿
+﻿h4 {
+    margin-top: 20px;
+}
+
 .BatteryComponent {
     width: auto;
     height: 50px;
