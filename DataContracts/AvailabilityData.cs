@@ -8,8 +8,8 @@ namespace DataContracts
 {
     public class AvailabilityData
     {
-        public int PVPowerPercent { get; set; }
-        public int BatteryPowerPercent { get; set; }
-        public int GridPowerPercent { get; set; }
+        public decimal PVPowerPercent { get; set; }
+        public decimal BatteryPowerPercent { get; set; }
+        public decimal GridPowerPercent { get; set; }
     }
 }

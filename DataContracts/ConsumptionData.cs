@@ -8,10 +8,10 @@ namespace DataContracts
 {
     public class ConsumptionData
     {
-        public int HouseConsumption { get; set; }
-        public int BatteryCharging { get; set; }
-        public int GridFeed { get; set; }
-        public int GarageCharging { get; set; }
-        public int OutsideCharging { get; set; }
+        public decimal HouseConsumption { get; set; }
+        public decimal BatteryCharging { get; set; }
+        public decimal GridFeed { get; set; }
+        public decimal GarageCharging { get; set; }
+        public decimal OutsideCharging { get; set; }
     }
 }

@@ -32,7 +32,7 @@ namespace SmartHomeWebManagers
             return consumptionData;
         }
 
-        private static int CalculatePowerPercent(int power)
+        private static decimal CalculatePowerPercent(int power)
         {
             if (power < 0)
                 return 0;
