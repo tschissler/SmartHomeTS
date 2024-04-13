@@ -76,7 +76,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             var pvData = JsonSerializer.Deserialize<EnphaseData>(payload);
             currentChargingSituation.PowerFromGrid = (int)(pvData.PowerFromGrid / 1000);
             currentChargingSituation.BatteryLevel = pvData.BatteryLevel;
-            currentChargingSituation.PowerFromBattery = (int)pvData.PowerFromBattery;
+            currentChargingSituation.PowerFromBattery = (int)(pvData.PowerFromBattery / 1000);
             currentChargingSituation.PowerFromPV = (int)(pvData.PowerFromPV / 1000);
             currentChargingSituation.HouseConsumptionPower = (int)(pvData.PowerToHouse / 1000);
         }
