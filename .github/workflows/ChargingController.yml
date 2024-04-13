@@ -6,7 +6,8 @@ on:
     paths:
       - .github/workflows/ChargingController.yml
       - ChargingController/**
-
+  workflow_dispatch:
+  
 env:
   PROJECT_NAME: ChargingController
   IMAGE_NAME: chargingcontroller
