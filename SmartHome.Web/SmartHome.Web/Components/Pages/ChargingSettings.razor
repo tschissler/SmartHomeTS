@@ -10,9 +10,11 @@
 @using MouseEventArgs = Microsoft.AspNetCore.Components.Web.MouseEventArgs
 @using Placement = Syncfusion.Blazor.Inputs.Placement
 @using Orientation = Syncfusion.Blazor.LinearGauge.Orientation
+@using Syncfusion.Blazor.Popups
 
 @page "/chargingsettings"
 @rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
 
 <h3>Lade-Einstellungen</h3>
 
@@ -26,18 +28,30 @@
 </div>
 
 <div class="LegendContainer">
-    <div class="LegendColorIndicator" style="background-color: #0dcaf0"></div>
-    <div class="LegendText">PV: @_chargingSituation.PowerFromPV.ToString("#,##0 W")</div>
-    <div class="LegendColorIndicator" style="background-color: greenyellow"></div>
-    <div class="LegendText">Batterie: @FormatPower(_chargingSituation.PowerFromBattery)</div>
-    <div class="LegendColorIndicator" style="background-color: #f72585"></div>
-    <div class="LegendText">Netz: @FormatPower(_chargingSituation.PowerFromGrid)</div>
-    <div class="LegendColorIndicator" style="background-color: goldenrod"></div>
-    <div class="LegendText">Haus Verbrauch: @FormatPower(_chargingSituation.HouseConsumptionPower-_chargingSituation.OutsideCurrentChargingPower-_chargingSituation.InsideCurrentChargingPower)</div>
-    <div class="LegendColorIndicator" style="background-color: #614680"></div>
-    <div class="LegendText">Laden BMW: @FormatPower(_chargingSituation.InsideCurrentChargingPower)</div>
-    <div class="LegendColorIndicator" style="background-color: #be8ce5"></div>
-    <div class="LegendText">Laden ID4: @FormatPower(_chargingSituation.OutsideCurrentChargingPower)</div>
+    <div>
+        <div class="LegendColorIndicator" style="background-color: #0dcaf0"></div>
+        <div class="LegendText">PV: @_chargingSituation.PowerFromPV.ToString("#,##0 W")</div>
+    </div>
+    <div>
+        <div class="LegendColorIndicator" style="background-color: greenyellow"></div>
+        <div class="LegendText">Batterie: @FormatPower(_chargingSituation.PowerFromBattery)</div>
+    </div>
+    <div>
+        <div class="LegendColorIndicator" style="background-color: #f72585"></div>
+        <div class="LegendText">Netz: @FormatPower(_chargingSituation.PowerFromGrid)</div>
+    </div>
+    <div>
+        <div class="LegendColorIndicator" style="background-color: goldenrod"></div>
+        <div class="LegendText">Haus Verbrauch: @FormatPower(_chargingSituation.HouseConsumptionPower-_chargingSituation.OutsideCurrentChargingPower-_chargingSituation.InsideCurrentChargingPower)</div>
+    </div>
+    <div>
+        <div class="LegendColorIndicator" style="background-color: #614680"></div>
+        <div class="LegendText">Laden BMW: @FormatPower(_chargingSituation.InsideCurrentChargingPower)</div>
+    </div>
+    <div>
+        <div class="LegendColorIndicator" style="background-color: #be8ce5"></div>
+        <div class="LegendText">Laden ID4: @FormatPower(_chargingSituation.OutsideCurrentChargingPower)</div>
+    </div>
 </div>
 
 <div class="AvailabilityComponent">
@@ -57,7 +71,37 @@
 <h4>Lade-Einstellungen</h4>
 
 
+<div class="stepsGrid">
+    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Laden ist deaktiviert">
+        <div class="stepsBox stepsBox-active" @onclick="ChargingOff">0</div>
+    </SfTooltip>
+    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto nur mit PV-Überschuss der 3,8 KW übersteigt">
+        <div class="stepsBox @(chargingLevel >= 1 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel1">1</div>
+    </SfTooltip>
+    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto wenn der PV-Überschuss die Mindestladeleistung übersteigt">
+        <div class="stepsBox @(chargingLevel >= 2 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel2">2</div>
+    </SfTooltip>
+    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto wenn der PV-Überschuss plus Batteriekapazität die Mindestladeleistung übersteigt und die Batterie zu mehr als 50% geladen ist">
+        <div class="stepsBox @(chargingLevel >= 3 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel3">3</div>
+    </SfTooltip>
+    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto mit mindestens der Mindestladeleistung">
+        <div class="stepsBox @(chargingLevel >= 4 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel4">4</div>
+    </SfTooltip>
+    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto mit 8 Kw">
+        <div class="stepsBox @(chargingLevel >= 5 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel5">5</div>
+    </SfTooltip>
 
+    <div>Aus</div>
+    <div>Übersch. mit Batterie-Prio</div>
+    <div>Übersch. mit Auto-Prio</div>
+    <div>PV + Batterie-Laden</div
+    <div>Sofort-Laden</div>
+    <div>Schnell-Laden</div>
+</div>
+
+
+
+<div style="margin-top:40px"></div>
 Bis zu welchem Ladestand der Batterie kann das Auto auch mit Batteriestrom geladen werden?
 <SfSlider @bind-Value="@_batteryMinLevel" Min=0 Max=100 TValue="int">
     <SliderTicks Placement="@Placement.After" SmallStep="5" LargeStep="20" ShowSmallTicks="true"></SliderTicks>
@@ -87,6 +131,7 @@ Manueller Ladestrom (A):
     ChargingSituation _chargingSituation = new ChargingSituation();
     private AvailabilityData availabilityData = new AvailabilityData(); 
     private ConsumptionData consumptionData = new ConsumptionData();
+    private int chargingLevel = 0;
 
     IMqttClient? _mqttClient;
 
@@ -97,6 +142,7 @@ Manueller Ladestrom (A):
             var factory = new MqttFactory();
             _mqttClient = factory.CreateMqttClient();
             MQTTConnectAsync();
+            ChargingOff(null);
         }
 
         base.OnAfterRender(firstRender);
@@ -110,6 +156,51 @@ Manueller Ladestrom (A):
     private string FormatPower(int value)
     {
         return value.ToString("#,##0 W");
+    }
+
+    private async void ChargingOff(MouseEventArgs e)
+    {
+        chargingLevel = 0;
+        await MQTTConnectAsync();
+        var applicationMessage = new MqttApplicationMessageBuilder()
+            .WithTopic($"config/charging/BatteryMinLevel")
+            .WithPayload("0")
+            .Build();
+        await _mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        StateHasChanged();
+    }
+
+    private async void ChargingLevel1(MouseEventArgs e)
+    {
+        chargingLevel = 1;
+        await MQTTConnectAsync();
+        var applicationMessage = new MqttApplicationMessageBuilder()
+            .WithTopic($"config/charging/BatteryMinLevel")
+            .WithPayload("6000")
+            .Build();
+        await _mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        StateHasChanged();
+    }
+
+    private async void ChargingLevel2(MouseEventArgs e)
+    {
+        chargingLevel = 2;
+        StateHasChanged();
+    }
+    private async void ChargingLevel3(MouseEventArgs e)
+    {
+        chargingLevel = 3;
+        StateHasChanged();
+    }
+    private async void ChargingLevel4(MouseEventArgs e)
+    {
+        chargingLevel = 4;
+        StateHasChanged();
+    }
+    private async void ChargingLevel5(MouseEventArgs e)
+    {
+        chargingLevel = 5;
+        StateHasChanged();
     }
 
     private async void CommunicateSettings(MouseEventArgs e)

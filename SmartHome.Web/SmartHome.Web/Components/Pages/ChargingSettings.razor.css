@@ -44,7 +44,8 @@
 }
 
 .LegendContainer {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
     margin-left: 40px;
     margin-right: 40px;
     margin-top: 15px;
@@ -58,4 +59,37 @@
 
 .LegendText {
     margin-right: 40px;
+}
+
+.stepsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    grid-column-gap: 30px;
+    margin-left: 40px;
+    margin-right: 40px;
+    margin-top: 20px;
+    text-align: center;
+    background: linear-gradient(to bottom, transparent 15px, /* Transparent for the top 45% */
+    cornflowerblue 15px, cornflowerblue 25px, /* Black line from 45% to 55% */
+    transparent 25px); /* Transparent from 55% onwards */
+}
+
+.stepsBox {
+    box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.75);
+    cursor: pointer;
+    margin: 0 auto;
+    display: flex;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+}
+
+.stepsBox-active {
+    background-color: cornflowerblue;
+}
+
+.stepsBox-inactive {
+    background-color: #D6D6D6;
 }
