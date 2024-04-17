@@ -51,6 +51,10 @@
     margin-top: 15px;
 }
 
+.LegendGroup {
+	display: flex;
+}
+
 .LegendColorIndicator {
     margin-right: 10px;
     width: 20px;

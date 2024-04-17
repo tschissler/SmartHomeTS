@@ -1,4 +1,5 @@
 using SmartHome.Web.Components;
+using SmartHome.Web.Services;
 using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +20,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddLocalization();
 builder.Services.AddSyncfusionBlazor();
 builder.Services.AddControllers();
+builder.Services.AddSingleton<MQTTService>();
 
 var app = builder.Build();
 app.UseRequestLocalization(new RequestLocalizationOptions()
