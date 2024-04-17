@@ -50,37 +50,9 @@
         public int PowerFromBattery { get; set; }
 
         /// <summary>
-        /// The charging station that should be used first if both are available
-        /// None-prefered station is used if the available power exceeds the minimum charging power of the first station (6A)
-        /// </summary>
-        public ChargingStation PreferedChargingStation { get; set; }
-
-        /// <summary>
-        /// The maximum percentage of the grid power that can be used for charging
-        /// </summary>
-        public int MaximumGridChargingPercent { get; set; }
-
-        /// <summary>
         /// The current charge level of the battery in percent  
         /// </summary>
         public int BatteryLevel { get; set; }
-
-        /// <summary>
-        /// The minimum charge level of the battery in percent where the car should be charged
-        /// Below this level, charging will be started only if there is enough energy provided by PV
-        /// </summary>
-        public int BatteryMinLevel { get; set; }
-
-        /// <summary>
-        /// The level of battery charge in percent below which the battery should be charged before putting energy in the car
-        /// </summary>
-        public int PreferedChargingBatteryLevel { get; set; }
-
-        /// <summary>
-        /// This setting ovverides all calculated values and sets the charging current to the given value in mA
-        /// If the value is lower than 0, the calculated value is used
-        /// </summary>
-        public int ManualCurrent { get; set; }
 
         /// <summary>
         /// The power that should be used for charging the car inside in Watts
@@ -96,14 +68,6 @@
         {
             InsideChargingLatestmA = -1;
             OutsideChargingLatestmA = -1;
-            ManualCurrent = -1;
         }
-    }
-
-    public enum ChargingStation
-    {
-        None = 0,
-        Inside,
-        Outside
     }
 }

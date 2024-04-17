@@ -7,6 +7,7 @@ using System.Text.Json;
 
 IMqttClient mqttClient;
 ChargingSituation currentChargingSituation = new ChargingSituation();
+ChargingSettings currentChargingSettings = new ChargingSettings();
 DateTime lastOutsideSetTime = DateTime.MinValue;
 DateTime lastInsideSetTime = DateTime.MinValue;
 const int minimumSetIntervalSeconds = 10;
@@ -45,30 +46,9 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
     try
     {
         int value;
-        if (topic == "config/charging/MaximumGridChargingPercent" && int.TryParse(payload, out value))
+        if (topic == "config/charging/settings")
         {
-            currentChargingSituation.MaximumGridChargingPercent = value;
-            Console.WriteLine($"########## Set MaximumGridChargingPercent to {value}");
-        }
-        else if (topic == "config/charging/BatteryMinLevel" && int.TryParse(payload, out value))
-        {
-            currentChargingSituation.BatteryMinLevel = value;
-            Console.WriteLine($"########## Set BatteryMinLevel to {value}");
-        }
-        else if (topic == "config/charging/PrefereChargingBatteryLevel" && int.TryParse(payload, out value))
-        {
-            currentChargingSituation.PreferedChargingBatteryLevel = value;
-            Console.WriteLine($"########## Set PrefereChargingBatteryLevel to {value}");
-        }
-        else if (topic == "config/charging/PreferedChargingStation")
-        {
-            currentChargingSituation.PreferedChargingStation = payload == "Inside" ? ChargingStation.Inside : ChargingStation.Outside;
-            Console.WriteLine($"########## Set PreferedChargingStation to {payload}");
-        }
-        else if (topic == "config/charging/ManualCurrent" && int.TryParse(payload, out value))
-        {
-            currentChargingSituation.ManualCurrent = value;
-            Console.WriteLine($"########## Set ManualCurrent to {value}");
+            currentChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
         }
 
         else if (topic == "data/electricity/envoym3")
@@ -95,7 +75,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.OutsideConnected = kebaOutsideData.CarIsPlugedIn;
         }
 
-        var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation);
+        var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation, currentChargingSettings);
         if (chargingResult.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
         {
             if (DateTime.Now.Subtract(lastInsideSetTime).Seconds > minimumSetIntervalSeconds)
