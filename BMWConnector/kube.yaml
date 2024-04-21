@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bmwconnector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bmwconnector
+  template:
+    metadata:
+      labels:
+        app: bmwconnector
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet 
+      containers:
+        - name: bmwconnector
+          image: tschissler/bmwconnector:latest
+          env:
+          - name: BMW_USERNAME
+            value: "env:BMW_USERNAME"
+          - name: BMW_PASSWORD
+            value: "env:BMW_PASSWORD"
+          - name: BMW_VIN
+            value: "env:BMW_VIN"
