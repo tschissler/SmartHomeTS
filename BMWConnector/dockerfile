@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:slim
+FROM python:3.12
 
 # Install OS packages for Pillow dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     libfribidi-dev \
     libxcb1-dev \
     && rm -rf /var/lib/apt/lists/*
-    
+
 # Set the working directory in the container
 WORKDIR /app
 
