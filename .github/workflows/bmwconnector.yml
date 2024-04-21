@@ -26,6 +26,7 @@ jobs:
             -t tschissler/${{ env.IMAGE_NAME }}:latest \
             -f ./${{ env.PROJECT_NAME }}/Dockerfile \
             --push .
+      working-directory: ${{PROJECT_NAME}}
 
     - name: Deploy to Kubernetes if depoyment does not exist yet
       run: |
