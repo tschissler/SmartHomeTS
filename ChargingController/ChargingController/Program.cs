@@ -163,6 +163,7 @@ async Task MQTTConnectAsync()
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaGarage").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaOutside").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/BMW").Build());
+                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/VW").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/electricity/envoym3").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("config/charging/#").Build());
                 break;
