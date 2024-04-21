@@ -128,7 +128,7 @@ async Task MQTTConnectAsync()
 {
     var mqttOptions = new MqttClientOptionsBuilder()
         .WithTcpServer("smarthomepi2", 32004)
-        .WithClientId("Smarthome.ChargingControllerDebug2")
+        .WithClientId("Smarthome.ChargingController")
         .WithKeepAlivePeriod(new TimeSpan(0, 1, 0,0))
         .Build();
 

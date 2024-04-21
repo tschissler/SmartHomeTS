@@ -20,20 +20,6 @@ namespace ChargingController
 
             var availableChargingPower = CalculateAvailableChargingPower(situation, settings);
 
-            //if (availableChargingPower < MinimumChargingPower)
-            //{
-            //    if (availableChargingPower < MinimumChargingPower * (100 - situation.MaximumGridChargingPercent) / 100)
-            //    {
-            //        availableChargingPower = 0;
-            //    }
-            //    else
-            //    {
-            //        availableChargingPower = MinimumChargingPower;
-            //    }
-            //}
-
-
-
             if (situation.InsideConnected && settings.InsideChargingEnabled && 
                 (!situation.OutsideConnected || !settings.OutsideChargingEnabled))
             {
@@ -99,11 +85,6 @@ namespace ChargingController
                     }
                     else if (situation.BatteryLevel < 90)
                     {
-                        //if (availableChargingPower > MinimumChargingPower + BatteryChargingMaxPower)
-                        //{
-                        //    //availableChargingPower -= BatteryChargingMaxPower;
-                        //}
-                        //else 
                         if (availableChargingPower + BatteryDischargingMaxPower >= MinimumChargingPower
                             && availableChargingPower < MinimumChargingPower)
                         {
