@@ -19,12 +19,13 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Build and publish Docker image
+      working-directory: ${{env.PROJECT_NAME}}
       run: |        
         # Build the Docker image with the package version tag.
         docker build \
             -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
             -t tschissler/${{ env.IMAGE_NAME }}:latest \
-            -f ./${{ env.PROJECT_NAME }}/Dockerfile \
+            -f ./dockerfile \
             --push .
 
     - name: Deploy to Kubernetes if depoyment does not exist yet
