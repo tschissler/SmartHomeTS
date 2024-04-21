@@ -6,7 +6,7 @@ from bimmer_connected.account import MyBMWAccount
 from bimmer_connected.api.regions import Regions
 
 # MQTT Broker settings
-MQTT_BROKER = 'smarthomepi2'
+MQTT_BROKER = 'smarthomepi2.fritz.box'
 MQTT_PORT = 32004
 MQTT_TOPIC = 'data/charging/BMW'
 
