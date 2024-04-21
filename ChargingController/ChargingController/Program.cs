@@ -41,13 +41,14 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
     var topic = args.ApplicationMessage.Topic;
     var time = DateTime.Now;
 
-    Console.WriteLine($"Received message from {topic} at {time}: {payload}");
+    //Console.WriteLine($"Received message from {topic} at {time}: {payload}");
 
     try
     {
         int value;
         if (topic == "config/charging/settings")
         {
+            Console.WriteLine($"Received message from {topic} at {time}: {payload}");
             currentChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
         }
 
@@ -127,7 +128,7 @@ async Task MQTTConnectAsync()
 {
     var mqttOptions = new MqttClientOptionsBuilder()
         .WithTcpServer("smarthomepi2", 32004)
-        .WithClientId("Smarthome.ChargingController")
+        .WithClientId("Smarthome.ChargingControllerDebug")
         .WithKeepAlivePeriod(new TimeSpan(0, 1, 0,0))
         .Build();
 
