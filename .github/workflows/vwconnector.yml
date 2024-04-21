@@ -1,0 +1,41 @@
+name: VWConnector CD
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - .github/workflows/vwconnector.yml
+      - VWConnector/**
+
+env:
+  PROJECT_NAME: VWConnector
+  IMAGE_NAME: vwconnector
+  
+jobs:
+  build:
+    runs-on: [self-hosted, linux]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build and publish Docker image
+      working-directory: ${{env.PROJECT_NAME}}
+      run: |        
+        # Build the Docker image with the package version tag.
+        docker build \
+            -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
+            -t tschissler/${{ env.IMAGE_NAME }}:latest \
+            -f ./dockerfile \
+            --push .
+
+    - name: Deploy to Kubernetes if depoyment does not exist yet
+      run: |
+        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
+          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
+        fi
+    - name: Update Kubernetes deployment
+      run: |        
+        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} VW_USERNAME="${{ secrets.VW_USERNAME }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} VW_PASSWORD="${{ secrets.VW_PASSWORD }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} VW_VIN="${{ secrets.VW_VIN }}"
