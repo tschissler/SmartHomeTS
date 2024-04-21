@@ -149,6 +149,14 @@
                         chargingSettings.PreferedChargingStation = ChargingStation.Outside;
                         CommunicateSettings();
                     }"/>
+                    <div class="batteryInformationContainer">
+                        <div class="batteryBorder">
+                            <div class="batteryLevel" style="height: @_chargingSituation.VWBatteryLevel%"></div>
+                        </div>
+                        <div class="batteryLabel">
+                        @_chargingSituation.VWBatteryLevel %
+                        </div>
+                    </div> 
             </div>
         </div>
     </div>
