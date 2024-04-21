@@ -36,6 +36,6 @@ jobs:
     - name: Update Kubernetes deployment
       run: |        
         microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        microk8s kubectl set env deployment/${{ env.BMW_USERNAME }} SmartHomeStorageKey="${{ secrets.BMW_USERNAME }}"
-        microk8s kubectl set env deployment/${{ env.BMW_PASSWORD }} SmartHomeStorageKey="${{ secrets.BMW_PASSWORD }}"
-        microk8s kubectl set env deployment/${{ env.BMW_VIN }} SmartHomeStorageKey="${{ secrets.BMW_VIN }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_USERNAME="${{ secrets.BMW_USERNAME }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_PASSWORD="${{ secrets.BMW_PASSWORD }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_VIN="${{ secrets.BMW_VIN }}"
