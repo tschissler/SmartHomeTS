@@ -2,6 +2,10 @@
     margin-top: 20px;
 }
 
+.nowrap {
+	white-space: nowrap;
+}
+
 .BatteryComponent {
     width: auto;
     height: 50px;

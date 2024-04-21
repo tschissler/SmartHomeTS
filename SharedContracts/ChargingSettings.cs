@@ -25,6 +25,16 @@ namespace SharedContracts
         /// </summary>
         public ChargingStation PreferedChargingStation { get; set; }
 
+        /// <summary>
+        /// Enable charging for the inside charging station
+        /// </summary>
+        public bool InsideChargingEnabled { get; set; }
+
+        /// <summary>
+        /// Enable charging for the outside charging station
+        /// </summary>
+        public bool OutsideChargingEnabled { get; set; }
+
     };
 
     public enum ChargingStation

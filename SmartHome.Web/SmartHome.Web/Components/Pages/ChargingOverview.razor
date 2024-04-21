@@ -33,27 +33,27 @@
 <div class="LegendContainer">
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: #0dcaf0"></div>
-        <div class="LegendText">PV: @_chargingSituation.PowerFromPV.ToString("#,##0 W")</div>
+        <div class="LegendText">PV: <span class="nowrap">@_chargingSituation.PowerFromPV.ToString("#,##0 W")</span></div>
     </div>
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: greenyellow"></div>
-        <div class="LegendText">Batterie: @FormatPower(_chargingSituation.PowerFromBattery)</div>
+        <div class="LegendText">Batterie: <span class="nowrap">@FormatPower(_chargingSituation.PowerFromBattery)</span></div>
     </div>
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: #f72585"></div>
-        <div class="LegendText">Netz: @FormatPower(_chargingSituation.PowerFromGrid)</div>
+        <div class="LegendText">Netz: <span class="nowrap">@FormatPower(_chargingSituation.PowerFromGrid)</span></div>
     </div>
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: goldenrod"></div>
-        <div class="LegendText">Haus: @FormatPower(_chargingSituation.HouseConsumptionPower-_chargingSituation.OutsideCurrentChargingPower-_chargingSituation.InsideCurrentChargingPower)</div>
+        <div class="LegendText">Haus: <span class="nowrap">@FormatPower(_chargingSituation.HouseConsumptionPower-_chargingSituation.OutsideCurrentChargingPower-_chargingSituation.InsideCurrentChargingPower)</span></div>
     </div>
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: #614680"></div>
-        <div class="LegendText">BMW: @FormatPower(_chargingSituation.InsideCurrentChargingPower)</div>
+        <div class="LegendText">BMW: <span class="nowrap">@FormatPower(_chargingSituation.InsideCurrentChargingPower)</span></div>
     </div>
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: #be8ce5"></div>
-        <div class="LegendText">ID4: @FormatPower(_chargingSituation.OutsideCurrentChargingPower)</div>
+        <div class="LegendText">ID4: <span class="nowrap">@FormatPower(_chargingSituation.OutsideCurrentChargingPower)</span></div>
     </div>
 </div>
 
@@ -108,14 +108,21 @@
             <img class="carImage" src="/images/BMW.webp" />
             <div class="carControls">
                 <img class="carConnectedIcon" src="/images/@(_chargingSituation.InsideConnected ? "connected.svg" : "disconnected.svg")" />
-                <img src="/images/unchecked.svg" />
+                <img src="/images/@(chargingSettings.InsideChargingEnabled ? (
+                    chargingSettings.PreferedChargingStation == ChargingStation.Inside ? "dblchecked.svg" : "checked.svg" ) : "unchecked.svg")" 
+                    @onclick="() => chargingSettings.InsideChargingEnabled = !chargingSettings.InsideChargingEnabled"
+                    @ondblclick="() => {chargingSettings.InsideChargingEnabled = true; chargingSettings.PreferedChargingStation = ChargingStation.Inside;}"/>
             </div>
         </div>
         <div class="carBox">
             <img class="carImage" src="/images/ID4.png" />
             <div class="carControls">
-                <img class="carConnectedIcon" src="/images/@(_chargingSituation.OutsideConnected ? "connected.svg" : "disconnected.svg")" />
-                <img src="images/dblchecked.svg" />
+                <img class="carConnectedIcon" 
+                    src="/images/@(_chargingSituation.OutsideConnected ? "connected.svg" : "disconnected.svg")" />
+                <img src="images/@(chargingSettings.OutsideChargingEnabled ? (
+                    chargingSettings.PreferedChargingStation == ChargingStation.Outside ? "dblchecked.svg" : "checked.svg") : "unchecked.svg" )"
+                    @onclick="() => chargingSettings.OutsideChargingEnabled = !chargingSettings.OutsideChargingEnabled"
+                    @ondblclick="() => {chargingSettings.OutsideChargingEnabled = true; chargingSettings.PreferedChargingStation = ChargingStation.Outside;}"/>
             </div>
         </div>
     </div>
@@ -332,5 +339,26 @@
     //         }
     //     }
     // }
-
+    private void ChangeBMWPriority(MouseEventArgs e)
+    {
+        if (chargingSettings.InsideChargingEnabled)
+        {
+            chargingSettings.InsideChargingEnabled = false;
+        }
+        else
+        {
+            chargingSettings.InsideChargingEnabled = true;
+        }
+    }
+    private void ChangeVWPriority(MouseEventArgs e)
+    {
+        if (chargingSettings.OutsideChargingEnabled)
+        {
+            chargingSettings.OutsideChargingEnabled = false;
+        }
+        else
+        {
+            chargingSettings.OutsideChargingEnabled = true;
+        }
+    }
 }

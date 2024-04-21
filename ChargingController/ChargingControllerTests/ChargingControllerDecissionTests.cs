@@ -18,6 +18,8 @@ namespace ChargingControllerTests
             int level,
             int insideConnected, 
             int outsideConnected, 
+            int insideEnabled,
+            int outsideEnabled,
             int gridPower, 
             int pvPower,
             int powerFromBattery,
@@ -42,7 +44,9 @@ namespace ChargingControllerTests
             var inputSettings = new ChargingSettings()
             {
                 ChargingLevel = level,
-                PreferedChargingStation = Priority == "Inside" ? ChargingStation.Inside : ChargingStation.Outside
+                PreferedChargingStation = Priority == "Inside" ? ChargingStation.Inside : ChargingStation.Outside,
+                InsideChargingEnabled = insideEnabled == 1,
+                OutsideChargingEnabled = outsideEnabled == 1,
             };
 
             var actual = await ChargingDecisionsMaker.CalculateChargingData(inputSituation, inputSettings);
