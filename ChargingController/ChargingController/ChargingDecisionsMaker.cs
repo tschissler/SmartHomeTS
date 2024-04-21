@@ -39,7 +39,7 @@ namespace ChargingController
             {
                 calculatedIsideChargingPower = availableChargingPower;
             }
-            else if (situation.OutsideConnected && settings.InsideChargingEnabled &&
+            else if (situation.OutsideConnected && settings.OutsideChargingEnabled &&
                 (!situation.InsideConnected || !settings.InsideChargingEnabled))
             {
                 calculatedOutsideChargingPower = availableChargingPower;
