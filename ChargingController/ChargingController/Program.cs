@@ -80,6 +80,11 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             var bmwData = JsonSerializer.Deserialize<BMWData>(payload);
             currentChargingSituation.BMWBatteryLevel = bmwData.battery;
         }
+        else if (topic == "data/charging/VW")
+        {
+            var vwData = JsonSerializer.Deserialize<VWData>(payload);
+            currentChargingSituation.VWBatteryLevel = vwData.battery;
+        }
         else
         {
             Console.WriteLine($"Unknown topic: {topic}");
