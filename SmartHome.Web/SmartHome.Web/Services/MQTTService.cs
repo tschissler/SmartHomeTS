@@ -58,6 +58,10 @@ namespace SmartHome.Web.Services
 
         public async Task PublishAsync(string topic, string payload, MqttQualityOfServiceLevel qos, bool retain)
         {
+            if (!_client.IsConnected)
+            {
+                await ConnectAsync();
+            }
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
                 .WithPayload(payload)
