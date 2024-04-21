@@ -2,17 +2,17 @@
 FROM python:3.12
 
 # Install OS packages for Pillow dependencies
-RUN apt-get update && apt-get install -y \
-    zlib1g-dev \
-    libjpeg-dev \
-    libtiff-dev \
-    libfreetype6-dev \
-    liblcms2-dev \
-    libwebp-dev \
-    libharfbuzz-dev \
-    libfribidi-dev \
-    libxcb1-dev \
-    && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install -y \
+#     zlib1g-dev \
+#     libjpeg-dev \
+#     libtiff-dev \
+#     libfreetype6-dev \
+#     liblcms2-dev \
+#     libwebp-dev \
+#     libharfbuzz-dev \
+#     libfribidi-dev \
+#     libxcb1-dev \
+#     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /app
