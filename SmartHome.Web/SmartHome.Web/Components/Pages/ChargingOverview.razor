@@ -102,31 +102,24 @@
     <div>Schnell-Laden</div>
 </div>
 
-Level: @chargingSettings.ChargingLevel
-
-<div style="margin-top:40px"></div>
-Bis zu welchem Ladestand der Batterie kann das Auto auch mit Batteriestrom geladen werden?
-<SfSlider @bind-Value="@_batteryMinLevel" Min=0 Max=100 TValue="int">
-    <SliderTicks Placement="@Placement.After" SmallStep="5" LargeStep="20" ShowSmallTicks="true"></SliderTicks>
-    <SliderEvents TValue="int">
-    </SliderEvents>
-</SfSlider>
-<br />
-<br />
-<SfCheckBox @bind-Checked="@_useManualCharging" Label="Manuelles Laden aktivieren"></SfCheckBox>
-<br />
-<br />
-Manueller Ladestrom (A):
-<SfSlider @bind-Value="@_manualCurrent" Min=6 Max=16 TValue="int" Enabled="@_useManualCharging">
-    <SliderTicks Placement="@Placement.After" SmallStep="5" LargeStep="10" ShowSmallTicks="true"></SliderTicks>
-    <SliderEvents TValue="int">
-    </SliderEvents>
-</SfSlider>
-<br />
-<br />
-
-<SfButton IsPrimary="true" @onclick="CommunicateSettings">Übernehmen</SfButton>
-
+<div>
+    <div class="carsGrid">
+        <div class="carBox">
+            <img class="carImage" src="images/bmw.webp" />
+            <div class="carControls">
+                <img class="carConnectedIcon" src="images/@(_chargingSituation.InsideConnected ? "connected.svg" : "disconnected.svg")" />
+                <img src="images/unchecked.svg" />
+            </div>
+        </div>
+        <div class="carBox">
+            <img class="carImage" src="images/id4.png" />
+            <div class="carControls">
+                <img class="carConnectedIcon" src="images/@(_chargingSituation.OutsideConnected ? "connected.svg" : "disconnected.svg")" />
+                <img src="images/dblchecked.svg" />
+            </div>
+        </div>
+    </div>
+</div>
 @code {
     private int _batteryMinLevel = 30;
     private int _manualCurrent = 6;
@@ -179,15 +172,6 @@ Manueller Ladestrom (A):
         chargingSettings = MqttService.ChargingSettings;
         InvokeAsync(StateHasChanged);
     }
-    // protected override async void OnAfterRender(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         //await MQTTConnectAsync();
-    //     }
-
-    //     base.OnAfterRender(firstRender);
-    // }
 
     private void ManualChargingChanged(bool value)
     {

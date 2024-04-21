@@ -52,7 +52,7 @@
 }
 
 .LegendGroup {
-	display: flex;
+    display: flex;
 }
 
 .LegendColorIndicator {
@@ -96,4 +96,29 @@
 
 .stepsBox-inactive {
     background-color: #D6D6D6;
+}
+
+.carsGrid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-column-gap: 30px;
+	margin-left: 40px;
+	margin-right: 40px;
+	margin-top: 20px;
+	text-align: center;
+}
+.carBox{
+    align-content: center;
+    display:flex;
+}
+.carImage{
+    width: 50%
+}
+.carControls{
+    width:50%;
+    text-align: left;
+}
+.carConnectedIcon{
+    height: 60px;
+    width: 60px;
 }
