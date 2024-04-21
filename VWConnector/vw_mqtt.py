@@ -5,7 +5,7 @@ import paho.mqtt.client as mqtt
 from weconnect import weconnect
 from weconnect.domain import Domain
 
-# MQTT Broker settings
+#MQTT Broker settings
 MQTT_BROKER = 'smarthomepi2'
 MQTT_PORT = 32004
 MQTT_TOPIC = 'data/charging/VW'
@@ -16,25 +16,19 @@ def on_connect(client, userdata, flags, rc, properties):
 async def fetch_vehicle_info():
     username = os.getenv('VW_USERNAME')
     password = os.getenv('VW_PASSWORD')
-    vin = os.getenv('VW_VIN')
+    carvin = os.getenv('VW_VIN')
 
     print('#  Initialize WeConnect')
     weConnect = weconnect.WeConnect(username=username, password=password, updateAfterLogin=False, loginOnInit=False)
-    print('#  Login')
     weConnect.login()
-    print('#  update')
     weConnect.update()
 
-    for vehicle in weConnect.vehicles.items():
-        print(vehicle)
-
-            # return {
-            #     "model": vehicle.model,
-            #     vehicle.domains[Domain.LV_BATTERY]
-            #     "brand": vehicle.brand,
-            #     "name": vehicle.name,
-            #     "battery": vehicle.fuel_and_battery.remaining_battery_percent
-            # }
+    vehicle = weConnect.vehicles[carvin]
+        
+    return {
+        "model": vehicle.model.value,
+        "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value)
+    }
 
 async def main():
 

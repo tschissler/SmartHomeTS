@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vwconnector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vwconnector
+  template:
+    metadata:
+      labels:
+        app: vwconnector
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet 
+      containers:
+        - name: vwconnector
+          image: tschissler/vwconnector:latest
+          env:
+          - name: VW_USERNAME
+            value: "env:VW_USERNAME"
+          - name: VW_PASSWORD
+            value: "env:VW_PASSWORD"
+          - name: VW_VIN
+            value: "env:VW_VIN"
