@@ -64,6 +64,16 @@
         /// </summary>
         public int OutsideChargingLatestmA { get; set; }
 
+        /// <summary>
+        /// The current battery level of the BMW in percent
+        /// </summary>
+        public int BMWBatteryLevel { get; set; }
+
+        /// <summary>
+        /// The current battery level of the VW in percent
+        /// </summary>
+        public int VWBatteryLevel { get; set; }
+
         public ChargingSituation()
         {
             InsideChargingLatestmA = -1;

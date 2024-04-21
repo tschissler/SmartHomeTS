@@ -75,6 +75,15 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.OutsideCurrentChargingPower = kebaOutsideData.CurrentChargingPower / 1000;
             currentChargingSituation.OutsideConnected = kebaOutsideData.CarIsPlugedIn;
         }
+        else if (topic == "data/charging/BMW")
+        {
+            var bmwData = JsonSerializer.Deserialize<BMWData>(payload);
+            currentChargingSituation.BMWBatteryLevel = bmwData.battery;
+        }
+        else
+        {
+            Console.WriteLine($"Unknown topic: {topic}");
+        }
 
         var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation, currentChargingSettings);
         if (chargingResult.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
@@ -148,6 +157,7 @@ async Task MQTTConnectAsync()
 
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaGarage").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaOutside").Build());
+                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/BMW").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/electricity/envoym3").Build());
                 await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("config/charging/#").Build());
                 break;
