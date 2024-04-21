@@ -25,7 +25,7 @@ jobs:
         docker build \
             -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
             -t tschissler/${{ env.IMAGE_NAME }}:latest \
-            -f ./${{ env.PROJECT_NAME }}/Dockerfile \
+            -f ./dockerfile \
             --push .
 
     - name: Deploy to Kubernetes if depoyment does not exist yet
