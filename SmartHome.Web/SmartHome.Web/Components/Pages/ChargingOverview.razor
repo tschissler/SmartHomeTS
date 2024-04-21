@@ -121,6 +121,14 @@
                         chargingSettings.PreferedChargingStation = ChargingStation.Inside;
                         CommunicateSettings();
                     }"/>
+                    <div class="batteryInformationContainer">
+                        <div class="batteryBorder">
+                            <div class="batteryLevel" style="height: @_chargingSituation.BMWBatteryLevel%"></div>
+                        </div>
+                        <div class="batteryLabel">
+                        @_chargingSituation.BMWBatteryLevel %
+                        </div>
+                    </div> 
             </div>
         </div>
         <div class="carBox">
