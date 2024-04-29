@@ -135,7 +135,7 @@
             <img class="carImage" src="/images/ID4.png" />
             <div class="carControls">
                 <img class="carConnectedIcon" 
-                    src="/images/@(_chargingSituation.OutsideConnected ? "connected.svg" : "disconnected.svg")" />
+                    src="/images/@(_chargingSituation.OutsideConnected ? (_chargingSituation.VWReadyForCharging ? "connected.svg" : "connectednotready.svg") : "disconnected.svg")" />
                 <img src="images/@(chargingSettings.OutsideChargingEnabled ? (
                     chargingSettings.PreferedChargingStation == ChargingStation.Outside ? "dblchecked.svg" : "checked.svg") : "unchecked.svg" )"
                     @onclick="() => 
@@ -154,7 +154,8 @@
                             <div class="batteryLevel" style="height: @_chargingSituation.VWBatteryLevel%"></div>
                         </div>
                         <div class="batteryLabel">
-                        @_chargingSituation.VWBatteryLevel %
+                        @_chargingSituation.VWBatteryLevel %<br/
+                        <span style="font-size: 0.7rem">@_chargingSituation.VWLastUpdateFromServer.ToString("dd.MM.yy hh:mm:ss")</span>
                         </div>
                     </div> 
             </div>
