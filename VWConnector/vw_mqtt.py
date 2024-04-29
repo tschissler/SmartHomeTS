@@ -27,7 +27,9 @@ async def fetch_vehicle_info():
         
     return {
         "model": vehicle.model.value,
-        "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value)
+        "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value),
+        "batteryupdate": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
+        "chargingstate": vehicle.domains['charging']["chargingStatus"].chargingState.value.value
     }
 
 async def main():
