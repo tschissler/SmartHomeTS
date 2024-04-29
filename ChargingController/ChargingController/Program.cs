@@ -84,6 +84,8 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         {
             var vwData = JsonSerializer.Deserialize<VWData>(payload);
             currentChargingSituation.VWBatteryLevel = vwData.battery;
+            currentChargingSituation.VWReadyForCharging = vwData.chargingstate != "'notReadyForCharging'";
+            currentChargingSituation.VWLastUpdateFromServer = vwData.batteryupdate;
         }
         else
         {

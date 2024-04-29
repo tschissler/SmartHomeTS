@@ -57,7 +57,10 @@ namespace ChargingController
 
         private static int CalculateAvailableChargingPower(ChargingSituation situation, ChargingSettings settings)
         {
-            var availableChargingPower = situation.PowerFromGrid * -1 + situation.OutsideCurrentChargingPower + situation.InsideCurrentChargingPower - situation.PowerFromBattery;
+            var availableChargingPower = situation.PowerFromGrid * -1 
+                + situation.OutsideCurrentChargingPower 
+                + situation.InsideCurrentChargingPower 
+                - situation.PowerFromBattery;
 
             switch (settings.ChargingLevel)
             {

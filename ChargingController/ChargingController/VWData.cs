@@ -8,5 +8,7 @@ namespace ChargingController
 {
     public record VWData (
         string model,
-        int battery);
+        int battery,
+        DateTimeOffset batteryupdate,
+        string chargingstate);
 }
