@@ -155,7 +155,7 @@
                         </div>
                         <div class="batteryLabel">
                         @_chargingSituation.VWBatteryLevel %<br/
-                        <span style="font-size: 0.7rem">@_chargingSituation.VWLastUpdateFromServer.ToString("dd.MM.yy hh:mm:ss")</span>
+                        <span style="font-size: 0.7rem">@_chargingSituation.VWLastUpdateFromServer.ToLocalTime().ToString("dd.MM.yy hh:mm:ss")</span>
                         </div>
                     </div> 
             </div>
