@@ -1,0 +1,195 @@
+﻿@page "/"
+
+@using Syncfusion.Blazor.Buttons
+
+@using ColorHelper;
+@using Syncfusion.Blazor.LinearGauge
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+@rendermode InteractiveServer
+
+<div class="control-section">
+    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Orientation.Horizontal">
+        <LinearGaugeEvents OnDrag="OnDragHue" OnDragEnd="OnDragHueEnd" />
+        <LinearGaugeAxes>
+            <LinearGaugeAxis Minimum="0" Maximum="360" OpposedPosition="false">
+                <LinearGaugeLine Width="8" />
+                <LinearGaugeMajorTicks Interval="20" Height="0" Width="1" />
+                <LinearGaugeMinorTicks Interval="10" Height="0" />
+                <LinearGaugeAxisLabelStyle>
+                    <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
+                </LinearGaugeAxisLabelStyle>
+                <LinearGaugePointers>
+                    <LinearGaugePointer EnableDrag="true" PointerValue="@HueValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#000000" Position="Position.Inside" />
+                </LinearGaugePointers>
+                <LinearGaugeRanges>
+                    <LinearGaugeRange Color="#E63B86" Start="0" End="360" StartWidth="40" EndWidth="40">
+                        <LinearGradient StartValue="0%" EndValue="100%">
+                            <ColorStops>
+                                @for (int i = 0; i <= 100; i += 10)
+                                {
+                                    <ColorStop Opacity="1" Offset="@($"{i}%")" Color="@ColorConverter.HslToRgb(new HSL((int)(i*3.6), 100, 50)).ToString()" />
+                                }
+                            </ColorStops>
+                        </LinearGradient>
+                    </LinearGaugeRange>
+                </LinearGaugeRanges>
+            </LinearGaugeAxis>
+        </LinearGaugeAxes>
+    </SfLinearGauge>
+
+</div>
+
+<div class="control-section">
+    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Orientation.Horizontal">
+        <LinearGaugeEvents OnDrag="OnDragBrightness" OnDragEnd="OnDragBrightnessEnd" />
+        <LinearGaugeAxes>
+            <LinearGaugeAxis Minimum="0" Maximum="100" OpposedPosition="false">
+                <LinearGaugeLine Width="8" />
+                <LinearGaugeMajorTicks Interval="20" Height="0" Width="1" />
+                <LinearGaugeMinorTicks Interval="10" Height="0" />
+                <LinearGaugeAxisLabelStyle>
+                    <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
+                </LinearGaugeAxisLabelStyle>
+                <LinearGaugePointers>
+                    <LinearGaugePointer EnableDrag="true" PointerValue="@BrightnessValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Position.Inside" />
+                </LinearGaugePointers>
+                <LinearGaugeRanges>
+                    <LinearGaugeRange Color="#E63B86" Start="0" End="100" StartWidth="40" EndWidth="40">
+                        <LinearGradient StartValue="0%" EndValue="100%">
+                            <ColorStops>
+                                <ColorStop Opacity="1" Offset="0%" Color="#000000" />
+                                <ColorStop Opacity="1" Offset="100%" Color="#FFFFFF" />
+                            </ColorStops>
+                        </LinearGradient>
+                    </LinearGaugeRange>
+                </LinearGaugeRanges>
+            </LinearGaugeAxis>
+        </LinearGaugeAxes>
+    </SfLinearGauge>
+</div>
+
+<div class="control-section">
+    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Orientation.Horizontal">
+        <LinearGaugeEvents OnDrag="OnDragDensity" OnDragEnd="OnDragDensityEnd" />
+        <LinearGaugeAxes>
+            <LinearGaugeAxis Minimum="0" Maximum="101" OpposedPosition="false">
+                <LinearGaugeLine Width="8" />
+                <LinearGaugeMajorTicks Interval="20" Height="0" Width="1" />
+                <LinearGaugeMinorTicks Interval="10" Height="0" />
+                <LinearGaugeAxisLabelStyle>
+                    <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
+                </LinearGaugeAxisLabelStyle>
+                <LinearGaugePointers>
+                    <LinearGaugePointer EnableDrag="true" PointerValue="@DensityValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Position.Inside" />
+                </LinearGaugePointers>
+                <LinearGaugeRanges>
+                    <LinearGaugeRange Color="#9999FF" Start="0" End="100" StartWidth="0" EndWidth="50">
+                    </LinearGaugeRange>
+                </LinearGaugeRanges>
+            </LinearGaugeAxis>
+        </LinearGaugeAxes>
+    </SfLinearGauge>
+</div>
+
+<div class="control-section">
+    <SfSwitch @bind-Checked="@onOff" OffLabel="OFF" OnLabel="ON" ValueChange="ChangeOnOff" TChecked="bool?"></SfSwitch>
+</div>
+
+<div>Selection as RGB: R=@RGBColor.R.ToString()  G=@RGBColor.G.ToString() B=@RGBColor.B.ToString() with Density @DensityValue.ToString() %</div>
+<div style="width:100px; height:100px; background-color:@RGBColor.ToString() ">
+    ColorSample
+</div>
+<div>@StatusMessage</div>
+@code {
+    public int HueValue = 30;
+    public int BrightnessValue = 50;
+    public int DensityValue = 10;
+    public RGB RGBColor = new RGB(0, 0, 0);
+    public string StatusMessage = "Ready";
+    public bool? onOff = true;
+
+    private void ChangeOnOff(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool?> args)
+    {
+        onOff = args.Checked;
+        if (onOff.Value)
+        {
+            CalculateRGBColor();
+            StatusMessage = "Eingeschaltet";
+        }
+        else
+        {
+            SendRGBColor(new RGB(0, 0, 0), 0);
+            StatusMessage = "Ausgeschaltet";
+        }
+    }
+
+    private void OnDragHue(PointerDragEventArgs args)
+    {
+        HueValue = (int)args.CurrentValue;
+    }
+
+    private void OnDragHueEnd(PointerDragEventArgs args)
+    {
+        HueValue = (int)args.CurrentValue;
+        if (onOff.Value)
+            CalculateRGBColor();
+    }
+
+    private void OnDragBrightness(PointerDragEventArgs args)
+    {
+        BrightnessValue = (int)args.CurrentValue;
+    }
+
+    private void OnDragBrightnessEnd(PointerDragEventArgs args)
+    {
+        BrightnessValue = (int)args.CurrentValue;
+        if (onOff.Value)
+            CalculateRGBColor();
+    }
+
+    private void OnDragDensity(PointerDragEventArgs args)
+    {
+        DensityValue = (int)args.CurrentValue;
+    }
+
+    private void OnDragDensityEnd(PointerDragEventArgs args)
+    {
+        DensityValue = (int)args.CurrentValue;
+        if (onOff.Value)
+            CalculateRGBColor();
+    }
+
+    private async Task CalculateRGBColor()
+    {
+        RGBColor = ColorConverter.HslToRgb(new HSL(HueValue, 100, (byte)BrightnessValue));
+        SendRGBColor(RGBColor, DensityValue);
+    }
+
+    private async Task SendRGBColor(RGB rGBColor, int densityValue)
+    {
+        string url = $"http://192.168.178.27/setColor?r={rGBColor.R}&g={rGBColor.G}&b={rGBColor.B}&d={densityValue}";
+        try
+        {
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                StatusMessage = "Color set";
+            }
+            else
+            {
+                StatusMessage = "Error setting color";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error while setting color: {ex.Message}";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        CalculateRGBColor();
+    }
+}
