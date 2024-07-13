@@ -1,0 +1,11 @@
+﻿/* .toggleButtonBig {
+	width: 300px;
+	height: 50px;
+	border-radius: 50%;
+} */
+
+.e-switch-wrapper {
+	width: 300px !important;
+	height: 50px;
+	border-radius: 50%;
+}
