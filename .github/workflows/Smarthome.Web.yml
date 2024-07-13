@@ -1,4 +1,4 @@
-name: Smarthome.Web CD
+name: Smarthome.Web CD 
 
 on:
   push:
