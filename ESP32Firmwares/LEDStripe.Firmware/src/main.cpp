@@ -6,7 +6,7 @@
 #include <time.h>
 #include <ESP32httpUpdate.h>
 
-const char* version = "0.0.4";
+const char* version = "0.0.5";
 
 #define DATA_PIN_1 13
 #define DATA_PIN_2 12
@@ -170,7 +170,7 @@ void clear() {
 
 void initLED() {
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB(10, 5, 2);
+    leds[i] = CRGB(10, 80, 10);
   }
   FastLED.show();
 }
@@ -239,13 +239,18 @@ void setup() {
   Serial.begin(9600);
   Serial.print("LEDStripe ");
   Serial.println(version);
+  Serial.println("InitLED");
   initLED();
-  sleep(500);
+  delay(500);
+  Serial.println("Clear");
   clear();
-  sleep(500);
+  delay(500);
+  Serial.println("InitLED");
   initLED();
-  sleep(500);
+  delay(500);
+  Serial.println("Clear");
   clear();
+
   
   // Connect to WiFi
   WiFi.begin(ssid, password);
