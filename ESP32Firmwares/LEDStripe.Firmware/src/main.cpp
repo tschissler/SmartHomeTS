@@ -145,14 +145,24 @@ void setColorFromJson(String jsonPayload) {
   int gLeft = doc["left"]["g"];
   int bLeft = doc["left"]["b"];
   int dLeft = doc["left"]["d"];
+  bool onLeft = doc["left"]["on"];
 
   int rRight = doc["right"]["r"];
   int gRight = doc["right"]["g"];
   int bRight = doc["right"]["b"];
   int dRight = doc["right"]["d"];
+  bool onRight = doc["right"]["on"];
 
-  setLEDColor(rRight, gRight, bRight, dRight, true);
-  setLEDColor(rLeft, gLeft, bLeft, dLeft, false);
+  if (onLeft) {
+    setLEDColor(rLeft, gLeft, bLeft, dLeft, LEFT);
+  } else {
+    clear(LEFT);
+  }
+  if (onRight) {
+    setLEDColor(rRight, gRight, bRight, dRight, RIGHT);
+  } else {
+    clear(RIGHT);
+  }
 }
 
 void setColor() {
@@ -163,8 +173,7 @@ void setColor() {
     int b = server.arg("b").toInt();
     int d = server.arg("d").toInt();
 
-    setLEDColor(r, g, b, d, true);
-    setLEDColor(r, g, b, d, false);
+    setLEDColor(r, g, b, d, BOTH);
 
     server.send(200, "text/plain", "Color set to RGB(" + String(r) + "," + String(g) + "," + String(b) + ") with density " + String(d));
   } else {
@@ -172,15 +181,16 @@ void setColor() {
   }
 }
 
-void setLEDColor(int r, int g, int b, int d, bool right) {
+void setLEDColor(int r, int g, int b, int d, Panel panel) {
   int trigger = (d == 0 ? 999 : 100 / d);
   int trigger2 = (d == 100 ? 999 : 100 / (100 - d));
 
   // Helper function to set LED color
   auto setLed = [&](int i, bool condition) {
-    if (right) {
+    if (panel == Panel::BOTH || panel == Panel::RIGHT) {
       ledsRight[i] = condition ? CRGB(r, g, b) : CRGB(0, 0, 0);
-    } else {
+    } 
+    if (panel == Panel::BOTH || panel == Panel::LEFT) {
       ledsLeft[i] = condition ? CRGB(r, g, b) : CRGB(0, 0, 0);
     }
   };
@@ -194,18 +204,26 @@ void setLEDColor(int r, int g, int b, int d, bool right) {
   FastLED.show();
 }
 
-void clear() {
+void clear(Panel panel) {
   for (int i = 0; i < NUM_LEDS; i++) {
-    ledsRight[i] = CRGB(0, 0, 0);
-    ledsLeft[i] = CRGB(0, 0, 0);
+    if (panel == Panel::BOTH || panel == Panel::RIGHT) {
+      ledsRight[i] = CRGB(0, 0, 0);
+    }
+    if (panel == Panel::BOTH || panel == Panel::LEFT) {
+      ledsLeft[i] = CRGB(0, 0, 0);
+    }
   }
   FastLED.show();
 }
 
-void initLEDGreen() {
+void initLEDGreen(Panel panel) {
   for (int i = 0; i < NUM_LEDS; i++) {
-    ledsRight[i] = CRGB(10, 80, 10);
-    ledsLeft[i] = CRGB(10, 80, 10);
+    if (panel == Panel::BOTH || panel == Panel::RIGHT) {
+      ledsRight[i] = CRGB(10, 80, 10);
+    }
+    if (panel == Panel::BOTH || panel == Panel::LEFT) {
+      ledsLeft[i] = CRGB(10, 80, 10);
+    }
   }
   FastLED.show();
 }
@@ -291,14 +309,19 @@ void setup() {
 
   setupTime();
 
-  initLEDGreen();
+  initLEDGreen(LEFT);
   delay(500);
-  clear();
+  clear(LEFT);
+  initLEDGreen(RIGHT);
   delay(500);
-  initLEDGreen();
+  clear(RIGHT);
+  initLEDGreen(LEFT);
   delay(500);
-  clear();
-
+  clear(LEFT);
+  initLEDGreen(RIGHT);
+  delay(500);
+  clear(RIGHT);
+  
   WiFiClientSecure client;
   client.setCACert(ca_cert);
 
