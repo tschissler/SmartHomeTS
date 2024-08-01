@@ -6,7 +6,7 @@
 #include <time.h>
 #include <ESP32httpUpdate.h>
 
-const char* version = "0.0.6";
+const char* version = "0.0.7";
 
 #define DATA_PIN_1 13
 #define DATA_PIN_2 12
@@ -249,7 +249,7 @@ void setup() {
   Serial.println("Connected to WiFi");
 
   setupTime();
-  
+
   initLED();
   delay(500);
   clear();
