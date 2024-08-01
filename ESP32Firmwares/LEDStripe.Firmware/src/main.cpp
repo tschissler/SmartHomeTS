@@ -1,10 +1,12 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <FastLED.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <PubSubClient.h>
 #include <time.h>
 #include <ESP32httpUpdate.h>
+#include "main.h"
 
 const char* version = "0.0.8";
 
@@ -99,7 +101,8 @@ const char* ca_cert = \
 // MQTT Broker settings
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
-const char* mqtt_topic = "OTAUpdateLEDStripeTopic";
+const char* mqtt_update_topic = "OTAUpdateLEDStripeTopic";
+const char* mqtt_data_topic = "data/LEDStripe";
 
 WebServer server(80);
 WiFiClient espClient;
@@ -126,6 +129,30 @@ void setupTime() {
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
+void setColorFromJson(String jsonPayload) {
+  // Parse JSON
+  StaticJsonDocument<512> doc;
+  DeserializationError error = deserializeJson(doc, jsonPayload);
+  if (error) {
+    Serial.print("deserializeJson() failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  // Extract RGBD values for left and right panels
+  int rLeft = doc["left"]["r"];
+  int gLeft = doc["left"]["g"];
+  int bLeft = doc["left"]["b"];
+  int dLeft = doc["left"]["d"];
+
+  int rRight = doc["right"]["r"];
+  int gRight = doc["right"]["g"];
+  int bRight = doc["right"]["b"];
+  int dRight = doc["right"]["d"];
+
+  setLEDColor(rLeft, gLeft, bLeft, dLeft);
+}
+
 void setColor() {
   // Check if each parameter exists
   if (server.hasArg("r") && server.hasArg("g") && server.hasArg("b") && server.hasArg("d")) {
@@ -134,26 +161,7 @@ void setColor() {
     int b = server.arg("b").toInt();
     int d = server.arg("d").toInt();
 
-    int trigger = (d==0?999:100 / d);
-    int trigger2 = (d==100?999:100/(100-d));
-
-    // Set LED color
-    for (int i = 0; i < NUM_LEDS; i++) {
-      if (d <= 50) {
-        if (i % trigger == 0) {
-          leds[i] = CRGB(r, g, b);
-        } else {
-          leds[i] = CRGB(0, 0, 0);
-        }
-      } else {
-        if (i % trigger2 == 0) {
-          leds[i] = CRGB(0, 0, 0);
-        } else {
-          leds[i] = CRGB(r, g, b);
-        }
-      }
-    }
-    FastLED.show();
+    setLEDColor(r, g, b, d);
 
     server.send(200, "text/plain", "Color set to RGB(" + String(r) + "," + String(g) + "," + String(b) + ") with density " + String(d));
   } else {
@@ -161,6 +169,39 @@ void setColor() {
   }
 }
 
+void setLEDColor(int r, int g, int b, int d)
+{
+  int trigger = (d == 0 ? 999 : 100 / d);
+  int trigger2 = (d == 100 ? 999 : 100 / (100 - d));
+
+  // Set LED color
+  for (int i = 0; i < NUM_LEDS; i++)
+  {
+    if (d <= 50)
+    {
+      if (i % trigger == 0)
+      {
+        leds[i] = CRGB(r, g, b);
+      }
+      else
+      {
+        leds[i] = CRGB(0, 0, 0);
+      }
+    }
+    else
+    {
+      if (i % trigger2 == 0)
+      {
+        leds[i] = CRGB(0, 0, 0);
+      }
+      else
+      {
+        leds[i] = CRGB(r, g, b);
+      }
+    }
+  }
+  FastLED.show();
+}
 void clear() {
   for (int i = 0; i < NUM_LEDS; i++) {
     leds[i] = CRGB(0, 0, 0);
@@ -168,7 +209,7 @@ void clear() {
   FastLED.show();
 }
 
-void initLED() {
+void initLEDGreen() {
   for (int i = 0; i < NUM_LEDS; i++) {
     leds[i] = CRGB(10, 80, 10);
   }
@@ -202,7 +243,8 @@ void connectToMQTT() {
     mqttClient.setServer(mqtt_broker, mqtt_port);
     while (!mqttClient.connected()) {
         if (mqttClient.connect("ESP32LEDStripeClient")) {
-            mqttClient.subscribe(mqtt_topic);
+            mqttClient.subscribe(mqtt_update_topic);
+            mqttClient.subscribe(mqtt_data_topic);
             Serial.println("Connected to MQTT Broker");
         } else {
             Serial.print("Failed to connect to MQTT Broker: ");
@@ -225,11 +267,16 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
 
     Serial.println(messageTemp);
 
-    if (String(topic) == mqtt_topic) {
-          // Trigger OTA Update
-          Serial.println("OTA Update Triggered");
-          String firmwareUrl = messageTemp;
-          updateFirmwareFromUrl(firmwareUrl);
+    if (String(topic) == mqtt_update_topic) {
+      // Trigger OTA Update
+      Serial.println("OTA Update Triggered");
+      String firmwareUrl = messageTemp;
+      updateFirmwareFromUrl(firmwareUrl);
+    }
+    if (String(topic) == mqtt_data_topic) {
+      // Set LED color from MQTT message
+      Serial.println("Setting LED color from MQTT message");
+      setColorFromJson(messageTemp);
     }
 }
 
@@ -250,11 +297,11 @@ void setup() {
 
   setupTime();
 
-  initLED();
+  initLEDGreen();
   delay(500);
   clear();
   delay(500);
-  initLED();
+  initLEDGreen();
   delay(500);
   clear();
 
