@@ -13,7 +13,8 @@ const char* version = "0.0.8";
 #define DATA_PIN_1 13
 #define DATA_PIN_2 12
 #define NUM_LEDS 256
-CRGB leds[NUM_LEDS];
+CRGB ledsRight[NUM_LEDS];
+CRGB ledsLeft[NUM_LEDS];
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_SSID and WIFI_PASSWORD as environment variables on your dev-system
@@ -150,7 +151,8 @@ void setColorFromJson(String jsonPayload) {
   int bRight = doc["right"]["b"];
   int dRight = doc["right"]["d"];
 
-  setLEDColor(rLeft, gLeft, bLeft, dLeft);
+  setLEDColor(rRight, gRight, bRight, dRight, true);
+  setLEDColor(rLeft, gLeft, bLeft, dLeft, false);
 }
 
 void setColor() {
@@ -161,7 +163,8 @@ void setColor() {
     int b = server.arg("b").toInt();
     int d = server.arg("d").toInt();
 
-    setLEDColor(r, g, b, d);
+    setLEDColor(r, g, b, d, true);
+    setLEDColor(r, g, b, d, false);
 
     server.send(200, "text/plain", "Color set to RGB(" + String(r) + "," + String(g) + "," + String(b) + ") with density " + String(d));
   } else {
@@ -169,7 +172,7 @@ void setColor() {
   }
 }
 
-void setLEDColor(int r, int g, int b, int d)
+void setLEDColor(int r, int g, int b, int d, bool right)
 {
   int trigger = (d == 0 ? 999 : 100 / d);
   int trigger2 = (d == 100 ? 999 : 100 / (100 - d));
@@ -181,22 +184,50 @@ void setLEDColor(int r, int g, int b, int d)
     {
       if (i % trigger == 0)
       {
-        leds[i] = CRGB(r, g, b);
+        if (right)
+        {
+          ledsRight[i] = CRGB(r, g, b);
+        }
+        else
+        {
+          ledsLeft[i] = CRGB(r, g, b);
+        }
       }
       else
       {
-        leds[i] = CRGB(0, 0, 0);
+        if (right)
+        {
+          ledsRight[i] = CRGB(0, 0, 0);
+        }
+        else
+        {
+          ledsLeft[i] = CRGB(0, 0, 0);
+        }
       }
     }
     else
     {
       if (i % trigger2 == 0)
       {
-        leds[i] = CRGB(0, 0, 0);
+        if (right)
+        {
+          ledsRight[i] = CRGB(0, 0, 0);
+        }
+        else
+        {
+          ledsLeft[i] = CRGB(0, 0, 0);
+        }
       }
       else
       {
-        leds[i] = CRGB(r, g, b);
+        if (right)
+        {
+          ledsRight[i] = CRGB(r, g, b);
+        }
+        else
+        {
+          ledsLeft[i] = CRGB(r, g, b);
+        }
       }
     }
   }
@@ -204,14 +235,16 @@ void setLEDColor(int r, int g, int b, int d)
 }
 void clear() {
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB(0, 0, 0);
+    ledsRight[i] = CRGB(0, 0, 0);
+    ledsLeft[i] = CRGB(0, 0, 0);
   }
   FastLED.show();
 }
 
 void initLEDGreen() {
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB(10, 80, 10);
+    ledsRight[i] = CRGB(10, 80, 10);
+    ledsLeft[i] = CRGB(10, 80, 10);
   }
   FastLED.show();
 }
@@ -281,8 +314,8 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
 }
 
 void setup() {
-  FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(leds, NUM_LEDS);
-  FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds, NUM_LEDS);
+  FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(ledsRight, NUM_LEDS);
+  FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(ledsLeft, NUM_LEDS);
   Serial.begin(9600);
   Serial.print("LEDStripe ");
   Serial.println(version);
