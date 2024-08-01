@@ -239,18 +239,6 @@ void setup() {
   Serial.begin(9600);
   Serial.print("LEDStripe ");
   Serial.println(version);
-  Serial.println("InitLED");
-  initLED();
-  delay(500);
-  Serial.println("Clear");
-  clear();
-  delay(500);
-  Serial.println("InitLED");
-  initLED();
-  delay(500);
-  Serial.println("Clear");
-  clear();
-
   
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -259,6 +247,14 @@ void setup() {
     Serial.println("Connecting to WiFi...");
   }
   Serial.println("Connected to WiFi");
+
+  initLED();
+  delay(500);
+  clear();
+  delay(500);
+  initLED();
+  delay(500);
+  clear();
 
   setupTime();
 
