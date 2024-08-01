@@ -6,7 +6,7 @@
 #include <time.h>
 #include <ESP32httpUpdate.h>
 
-const char* version = "0.0.2";
+const char* version = "0.0.3";
 
 #define DATA_PIN_1 13
 #define DATA_PIN_2 12
