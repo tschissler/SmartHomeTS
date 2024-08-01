@@ -1,11 +1,15 @@
 ﻿@page "/"
 
+@using SharedContracts
+@using SmartHome.Web.Services
 @using Syncfusion.Blazor.Buttons
 
 @using ColorHelper;
 @using Syncfusion.Blazor.LinearGauge
+@using System.Text.Json
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject MQTTService MqttService
 
 @rendermode InteractiveServer
 
@@ -104,25 +108,28 @@
 <div>@StatusMessage</div>
 @code {
     public int HueValue = 30;
+    private const string topicName = "commands/illumination/LEDStripe/setColor";
     public int BrightnessValue = 50;
     public int DensityValue = 10;
     public RGB RGBColor = new RGB(0, 0, 0);
     public string StatusMessage = "Ready";
     public bool? onOff = true;
+    public IluminationSituation situation = new IluminationSituation();
 
     private void ChangeOnOff(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool?> args)
     {
         onOff = args.Checked;
         if (onOff.Value)
         {
-            CalculateRGBColor();
+            //CalculateRGBColor();
             StatusMessage = "Eingeschaltet";
         }
         else
         {
-            SendRGBColor(new RGB(0, 0, 0), 0);
+            //SendRGBColor(new RGB(0, 0, 0), 0);
             StatusMessage = "Ausgeschaltet";
         }
+        CalculateRGBColor();
     }
 
     private void OnDragHue(PointerDragEventArgs args)
@@ -169,27 +176,62 @@
 
     private async Task SendRGBColor(RGB rGBColor, int densityValue)
     {
-        string url = $"http://192.168.178.27/setColor?r={rGBColor.R}&g={rGBColor.G}&b={rGBColor.B}&d={densityValue}";
-        try
-        {
-            var response = await Http.GetAsync(url);
-            if (response.IsSuccessStatusCode)
-            {
-                StatusMessage = "Color set";
-            }
-            else
-            {
-                StatusMessage = "Error setting color";
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Error while setting color: {ex.Message}";
-        }
+        // string url = $"http://192.168.178.27/setColor?r={rGBColor.R}&g={rGBColor.G}&b={rGBColor.B}&d={densityValue}";
+        // try
+        // {
+        //     var response = await Http.GetAsync(url);
+        //     if (response.IsSuccessStatusCode)
+        //     {
+        //         StatusMessage = "Color set";
+        //     }
+        //     else
+        //     {
+        //         StatusMessage = "Error setting color";
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     StatusMessage = $"Error while setting color: {ex.Message}";
+        // }
+
+        IluminationSituation situation = new IluminationSituation();
+        situation.Right.Red = rGBColor.R;
+        situation.Right.Green = rGBColor.G;
+        situation.Right.Blue = rGBColor.B;
+        situation.Right.Density = densityValue;
+        situation.Right.On = onOff.Value;
+        situation.Left.Red = rGBColor.R;
+        situation.Left.Green = rGBColor.G;
+        situation.Left.Blue = rGBColor.B;
+        situation.Left.Density = densityValue;
+        situation.Left.On = onOff.Value;
+
+        var jsonString = JsonSerializer.Serialize(situation);
+        await MqttService.PublishAsync(topicName, jsonString, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
     }
 
     protected override void OnInitialized()
     {
-        CalculateRGBColor();
+        MqttService.OnMessageReceived += UpdateData;
+        UpdateValues();
+    }
+
+    private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
+    {
+        if (args.Topic == topicName)
+        {
+            UpdateValues();
+        }
+    }
+
+    private void UpdateValues()
+    {
+        situation = MqttService.IluminationSituation;
+        DensityValue = situation.Right.Density;
+        var hsl = ColorConverter.RgbToHsl(new RGB(situation.Right.Red, situation.Right.Green, situation.Right.Blue));
+        HueValue = hsl.H;
+        BrightnessValue = hsl.L;
+        onOff = situation.Right.On;
+        InvokeAsync(StateHasChanged);
     }
 }

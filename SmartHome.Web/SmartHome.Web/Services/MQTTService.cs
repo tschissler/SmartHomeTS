@@ -16,11 +16,13 @@ namespace SmartHome.Web.Services
         public event EventHandler<MqttMessageReceivedEventArgs> OnMessageReceived;
         public SharedContracts.ChargingSettings ChargingSettings { get; set; }
         public ChargingSituation ChargingSituation { get; set; }
+        public IluminationSituation IluminationSituation { get; set; }
 
         public MQTTService()
         {
             ChargingSettings = new();
             ChargingSituation = new();
+            IluminationSituation = new();
             Task task = ConnectAsync();
         }
 
@@ -40,6 +42,7 @@ namespace SmartHome.Web.Services
                 Console.WriteLine("Connected to MQTT broker.");
                 await _client.SubscribeAsync("data/charging/situation");
                 await _client.SubscribeAsync("config/charging/settings");
+                await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
             };
 
             _client.ApplicationMessageReceivedAsync += e =>
@@ -74,15 +77,32 @@ namespace SmartHome.Web.Services
         private void UpdateSharedData(MqttApplicationMessage message)
         {
             Console.WriteLine("Received message on topic: " + message.Topic);
-            if (message.Topic == "data/charging/situation")
+
+            if (message.PayloadSegment == null)
             {
-                var payload = Encoding.UTF8.GetString(message.Payload);
-                ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);
+                return;
             }
-            else if (message.Topic == "config/charging/settings")
+
+            var payload = Encoding.UTF8.GetString(message.PayloadSegment);
+
+            switch (message.Topic)
             {
-                var payload = Encoding.UTF8.GetString(message.Payload);
-                ChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
+                case "data/charging/situation":
+                    {
+                        ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);
+                        break;
+                    }
+
+                case "config/charging/settings":
+                    {
+                        ChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
+                        break;
+                    }
+                case "commands/illumination/LEDStripe/setColor":
+                    {
+                        IluminationSituation = JsonSerializer.Deserialize<IluminationSituation>(payload);
+                        break;
+                    }
             }
         }
     }

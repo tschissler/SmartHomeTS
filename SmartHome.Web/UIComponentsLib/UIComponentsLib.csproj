@@ -12,10 +12,10 @@
   </ItemGroup>-->
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.2" />
-		<PackageReference Include="Syncfusion.Blazor.Charts" Version="25.1.39" />
-		<PackageReference Include="Syncfusion.Blazor.Navigations" Version="25.1.39" />
-		<PackageReference Include="Syncfusion.Blazor.Themes" Version="25.1.39" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.7" />
+		<PackageReference Include="Syncfusion.Blazor.Charts" Version="26.2.7" />
+		<PackageReference Include="Syncfusion.Blazor.Navigations" Version="26.2.7" />
+		<PackageReference Include="Syncfusion.Blazor.Themes" Version="26.2.7" />
 	</ItemGroup>
 
 	<ItemGroup>
