@@ -130,6 +130,18 @@ void setupTime() {
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
+void clear(Panel panel) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (panel == Panel::BOTH || panel == Panel::RIGHT) {
+      ledsRight[i] = CRGB(0, 0, 0);
+    }
+    if (panel == Panel::BOTH || panel == Panel::LEFT) {
+      ledsLeft[i] = CRGB(0, 0, 0);
+    }
+  }
+  FastLED.show();
+}
+
 void setColorFromJson(String jsonPayload) {
   // Parse JSON
   StaticJsonDocument<512> doc;
@@ -201,18 +213,6 @@ void setLEDColor(int r, int g, int b, int d, Panel panel) {
     setLed(i, condition);
   }
 
-  FastLED.show();
-}
-
-void clear(Panel panel) {
-  for (int i = 0; i < NUM_LEDS; i++) {
-    if (panel == Panel::BOTH || panel == Panel::RIGHT) {
-      ledsRight[i] = CRGB(0, 0, 0);
-    }
-    if (panel == Panel::BOTH || panel == Panel::LEFT) {
-      ledsLeft[i] = CRGB(0, 0, 0);
-    }
-  }
   FastLED.show();
 }
 
