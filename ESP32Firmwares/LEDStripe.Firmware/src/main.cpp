@@ -172,67 +172,28 @@ void setColor() {
   }
 }
 
-void setLEDColor(int r, int g, int b, int d, bool right)
-{
+void setLEDColor(int r, int g, int b, int d, bool right) {
   int trigger = (d == 0 ? 999 : 100 / d);
   int trigger2 = (d == 100 ? 999 : 100 / (100 - d));
 
+  // Helper function to set LED color
+  auto setLed = [&](int i, bool condition) {
+    if (right) {
+      ledsRight[i] = condition ? CRGB(r, g, b) : CRGB(0, 0, 0);
+    } else {
+      ledsLeft[i] = condition ? CRGB(r, g, b) : CRGB(0, 0, 0);
+    }
+  };
+
   // Set LED color
-  for (int i = 0; i < NUM_LEDS; i++)
-  {
-    if (d <= 50)
-    {
-      if (i % trigger == 0)
-      {
-        if (right)
-        {
-          ledsRight[i] = CRGB(r, g, b);
-        }
-        else
-        {
-          ledsLeft[i] = CRGB(r, g, b);
-        }
-      }
-      else
-      {
-        if (right)
-        {
-          ledsRight[i] = CRGB(0, 0, 0);
-        }
-        else
-        {
-          ledsLeft[i] = CRGB(0, 0, 0);
-        }
-      }
-    }
-    else
-    {
-      if (i % trigger2 == 0)
-      {
-        if (right)
-        {
-          ledsRight[i] = CRGB(0, 0, 0);
-        }
-        else
-        {
-          ledsLeft[i] = CRGB(0, 0, 0);
-        }
-      }
-      else
-      {
-        if (right)
-        {
-          ledsRight[i] = CRGB(r, g, b);
-        }
-        else
-        {
-          ledsLeft[i] = CRGB(r, g, b);
-        }
-      }
-    }
+  for (int i = 0; i < NUM_LEDS; i++) {
+    bool condition = (d <= 50) ? (i % trigger == 0) : (i % trigger2 != 0);
+    setLed(i, condition);
   }
+
   FastLED.show();
 }
+
 void clear() {
   for (int i = 0; i < NUM_LEDS; i++) {
     ledsRight[i] = CRGB(0, 0, 0);
