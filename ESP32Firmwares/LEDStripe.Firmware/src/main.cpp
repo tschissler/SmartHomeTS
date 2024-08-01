@@ -102,7 +102,7 @@ const char* ca_cert = \
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
 const char* mqtt_update_topic = "OTAUpdateLEDStripeTopic";
-const char* mqtt_data_topic = "data/LEDStripe";
+const char* mqtt_data_topic = "commands/illumination/LEDStripe/setColor";
 
 WebServer server(80);
 WiFiClient espClient;
