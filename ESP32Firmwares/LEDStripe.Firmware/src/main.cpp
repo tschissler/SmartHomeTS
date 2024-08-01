@@ -153,16 +153,16 @@ void setColorFromJson(String jsonPayload) {
   }
 
   // Extract RGBD values for left and right panels
-  int rLeft = doc["left"]["r"];
-  int gLeft = doc["left"]["g"];
-  int bLeft = doc["left"]["b"];
-  int dLeft = doc["left"]["d"];
+  int rLeft = doc["left"]["red"];
+  int gLeft = doc["left"]["green"];
+  int bLeft = doc["left"]["blue"];
+  int dLeft = doc["left"]["density"];
   bool onLeft = doc["left"]["on"];
 
-  int rRight = doc["right"]["r"];
-  int gRight = doc["right"]["g"];
-  int bRight = doc["right"]["b"];
-  int dRight = doc["right"]["d"];
+  int rRight = doc["right"]["red"];
+  int gRight = doc["right"]["green"];
+  int bRight = doc["right"]["blue"];
+  int dRight = doc["right"]["density"];
   bool onRight = doc["right"]["on"];
 
   if (onLeft) {
