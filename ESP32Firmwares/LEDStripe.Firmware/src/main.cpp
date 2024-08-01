@@ -244,19 +244,19 @@ void setup() {
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Connecting to WiFi " + String(ssid) + "...");
+    Serial.println("Connecting to WiFi " + String(ssid) + " with password " + String(password) + "...");
   }
   Serial.println("Connected to WiFi");
 
-  initLED();
-  delay(500);
-  clear();
-  delay(500);
-  initLED();
-  delay(500);
-  clear();
-
   setupTime();
+  
+  initLED();
+  delay(500);
+  clear();
+  delay(500);
+  initLED();
+  delay(500);
+  clear();
 
   WiFiClientSecure client;
   client.setCACert(ca_cert);
