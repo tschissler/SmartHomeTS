@@ -40,13 +40,13 @@ jobs:
       run: |
         az storage blob upload --account-name iotstoragem1 \
                                --container-name firmwareupdates \
-                               --name firmware_${{ github.run_id }}.bin \
+                               --name LEDStripefirmware_${{ github.run_id }}.bin \
                                --file .pio/build/esp32dev/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/firmware_${{ github.run_id }}.bin" >> $GITHUB_OUTPUT
+      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/LEDStripefirmware_${{ github.run_id }}.bin" >> $GITHUB_OUTPUT
                            
   triggerupdate:
     needs: build
