@@ -169,7 +169,7 @@ void clear() {
 }
 
 void initLED() {
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < NUM_LEDS; i++) {
     leds[i] = CRGB(10, 5, 2);
   }
   FastLED.show();
@@ -240,9 +240,13 @@ void setup() {
   Serial.print("LEDStripe ");
   Serial.println(version);
   initLED();
-
+  sleep(500);
   clear();
-
+  sleep(500);
+  initLED();
+  sleep(500);
+  clear();
+  
   // Connect to WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
