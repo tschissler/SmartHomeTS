@@ -244,7 +244,7 @@ void setup() {
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Connecting to WiFi...");
+    Serial.println("Connecting to WiFi " + String(ssid) + "...");
   }
   Serial.println("Connected to WiFi");
 
@@ -261,9 +261,8 @@ void setup() {
   WiFiClientSecure client;
   client.setCACert(ca_cert);
 
-    if (!client.connect("iotstoragem1.blob.core.windows.net", 443)) {
+  if (!client.connect("iotstoragem1.blob.core.windows.net", 443)) {
     Serial.println("Connection failed!");
-    //return;
   }
   
   // Print the IP address
