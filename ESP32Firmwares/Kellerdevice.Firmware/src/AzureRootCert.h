@@ -3,6 +3,11 @@
 
 #include <pgmspace.h>
 
+// To read the certificate, use this command
+// .\openssl.exe s_client -showcerts -connect iotstoragem1.blob.core.windows.net:443
+// Install OpenSSL from https://slproweb.com/products/Win32OpenSSL.html
+// Extract the DigiCert certificate from the output
+
 const char* azure_root_cert PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
 MIIFrDCCBJSgAwIBAgIQCfluwpVVXyR0nq8eXc7UnTANBgkqhkiG9w0BAQwFADBh
