@@ -20,6 +20,10 @@ const char* mqtt_update_topic = "OTAUpdateKellerdeviceTopic";
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
+const int Red_LED_Pin = 13;
+const int Green_LED_Pin = 12;
+const int Blue_LED_Pin = 27;
+
 void setupTime() {
   // Set timezone (e.g., UTC +1:00)
   // Change according to your timezone
@@ -103,6 +107,16 @@ void setup() {
   Serial.begin(9600);
   Serial.println(String(appName) + " " + String(version));  
   
+  // Set LED pins as output
+  pinMode(Red_LED_Pin, OUTPUT);
+  pinMode(Green_LED_Pin, OUTPUT);
+  pinMode(Blue_LED_Pin, OUTPUT);
+
+  // Turn off all LEDs, turn on blue LED to indicate connecting to WiFi
+  digitalWrite(Red_LED_Pin, LOW);
+  digitalWrite(Green_LED_Pin, LOW);
+  digitalWrite(Blue_LED_Pin, HIGH);
+
   // Connect to WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -126,6 +140,9 @@ void setup() {
   // Set up MQTT
   mqttClient.setCallback(mqttCallback);
   connectToMQTT();
+  
+  digitalWrite(Blue_LED_Pin, LOW);
+
 }
 
 void loop() {
