@@ -9,7 +9,7 @@
 #include "Adafruit_SHTC3.h"
 
 const char* appName = "KellerDevice";
-const char* version = "0.0.4";
+const char* version = "0.0.5";
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_SSID and WIFI_PASSWORD as environment variables on your dev-system
@@ -215,6 +215,13 @@ void loop() {
     // Read the sensor data
     sensors_event_t humidity, temp;
     shtc3.getEvent(&humidity, &temp);
+    Serial.print("Humidity: ");
+    Serial.print(humidity.relative_humidity);
+    Serial.print(" %\t");
+    Serial.print("Temperature: ");
+    Serial.print(temp.temperature);
+    Serial.println(" *C");
+
     mqttClient.publish("data/keller/temperature", String(temp.temperature).c_str());
     mqttClient.publish("data/keller/humidity", String(humidity.relative_humidity).c_str());
   }
