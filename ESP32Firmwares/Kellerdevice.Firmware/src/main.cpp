@@ -4,6 +4,7 @@
 #include <time.h>
 #include <ESP32httpUpdate.h>
 #include <AzureRootCert.h>
+#include "Adafruit_SHTC3.h"
 
 const char* appName = "KellerDevice";
 const char* version = "0.0.2";
@@ -24,6 +25,10 @@ PubSubClient mqttClient(espClient);
 const int Red_LED_Pin = 13;
 const int Green_LED_Pin = 12;
 const int Blue_LED_Pin = 27;
+const int I2CDataPin = 32;
+const int I2CClockPin = 33;
+
+Adafruit_SHTC3 shtc3 = Adafruit_SHTC3();
 
 void setupTime() {
  // Set timezone to Central European Time (CET) with daylight saving time (CEST)
@@ -162,19 +167,50 @@ void setup() {
   // Set up MQTT
   mqttClient.setCallback(mqttCallback);
   connectToMQTT();
+
+  Serial.println("SHTC3 test");
+  if (! shtc3.begin()) {
+    Serial.println("Couldn't find SHTC3");
+    while (1) delay(1);
+  }
+  Serial.println("Found SHTC3 sensor");
   
   digitalWrite(Blue_LED_Pin, LOW);
   digitalWrite(Green_LED_Pin, HIGH);
 
 }
 
+unsigned long previousMillisLED = 0;
+unsigned long previousMillisSensor = 0;
+const long intervalLED = 2000; // Interval for LED blinking (2 seconds)
+const long intervalSensor = 10000; // Interval for sensor reading (10 seconds)
+
 void loop() {
   if (!mqttClient.connected()) {
     connectToMQTT();
   }
   mqttClient.loop();
-  digitalWrite(Green_LED_Pin, HIGH);
-  delay(100);
-  digitalWrite(Green_LED_Pin, LOW);
-  delay(2000);
+
+  sensors_event_t humidity, temp;
+
+  unsigned long currentMillis = millis();
+
+  // Check if it's time to blink the LED
+  if (currentMillis - previousMillisLED >= intervalLED) {
+    previousMillisLED = currentMillis;
+    // Blink the LED
+    digitalWrite(Green_LED_Pin, HIGH);
+    delay(100);
+    digitalWrite(Green_LED_Pin, LOW);
+  }
+
+  // Check if it's time to read the sensor
+  if (currentMillis - previousMillisSensor >= intervalSensor) {
+    previousMillisSensor = currentMillis;
+    // Read the sensor data
+    sensors_event_t humidity, temp;
+    shtc3.getEvent(&humidity, &temp);
+    mqttClient.publish("data/keller/temperature", String(temp.temperature).c_str());
+    mqttClient.publish("data/keller/humidity", String(humidity.relative_humidity).c_str());
+  }
 }
