@@ -5,7 +5,7 @@
 #include <ESP32httpUpdate.h>
 
 const char* appName = "KellerDevice";
-const char* version = "0.0.1";
+const char* version = "0.0.2";
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_SSID and WIFI_PASSWORD as environment variables on your dev-system
