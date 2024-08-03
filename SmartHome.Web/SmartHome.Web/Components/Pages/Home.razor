@@ -33,9 +33,9 @@
                 continue;
             }
             <div class="col-md-3 col-6">
-                <DataValueTextControl Value="@Data[partitionKey].Value"
+                <DataValueTextControl Value="@((decimal)Data[partitionKey].Value)"
                                       Unit="°C"
-                                      Value2="@Data[partitionKey.Replace("_temperature", "_humidity")].Value"
+                                      Value2="@((decimal)Data[partitionKey.Replace("_temperature", "_humidity")].Value)"
                                       Unit2="%"
                                       LastUpdated="@Data[partitionKey].LocalTime"
                                       title="@PartitionKeys[partitionKey]">

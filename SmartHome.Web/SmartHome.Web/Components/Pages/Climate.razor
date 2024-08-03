@@ -1,0 +1,86 @@
+﻿@page "/climate"
+@using SharedContracts
+@using SmartHome.Web.Services
+
+@inject MQTTService MqttService
+
+@rendermode InteractiveServer
+
+<PageTitle>Klimadaten</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Klimadaten</h1>
+</div>
+
+<div class="container mt-4">
+
+    <div class="row">
+        <div class="col-md-3 col-6">
+            <DataValueTextControl Value="@data.OutsideTemperature.value"
+                                  Unit="°C"
+                                  Value2="@data.OutsideHumidity.value"
+                                  Unit2="%"
+                                  LastUpdated="@data.OutsideTemperature.LastUpdated"
+                                  title="Außen">
+            </DataValueTextControl>
+        </div>
+        <div class="col-md-3 col-6">
+            <DataValueTextControl Value="@data.LivingRoomTemperature.value"
+                                  Unit="°C"
+                                  Value2="@data.LivingRoomHumidity.value"
+                                  Unit2="%"
+                                  LastUpdated="@data.LivingRoomTemperature.LastUpdated"
+                                  title="Wohnzimmer">
+            </DataValueTextControl>
+        </div>
+        <div class="col-md-3 col-6">
+            <DataValueTextControl Value="@data.BedroomTemperature.value"
+                                  Unit="°C"
+                                  Value2="@data.BedroomHumidity.value"
+                                  Unit2="%"
+                                  LastUpdated="@data.BedroomTemperature.LastUpdated"
+                                  title="Schlafzimmer">
+            </DataValueTextControl>
+        </div>
+        <div class="col-md-3 col-6">
+            <DataValueTextControl Value="@data.BasementTemperature.value"
+                                  Unit="°C"
+                                  Value2="@data.BasementHumidity.value"
+                                  Unit2="%"
+                                  LastUpdated="@data.BasementTemperature.LastUpdated"
+                                  title="Keller">
+            </DataValueTextControl>
+        </div>
+        <div class="col-md-3 col-6">
+            <DataValueTextControl Value="@data.CisternFillLevel.value"
+                                  Unit="cm"
+                                  LastUpdated="@data.CisternFillLevel.LastUpdated"
+                                  title="Zisterne">
+            </DataValueTextControl>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ClimateData data;
+
+    protected override void OnInitialized()
+    {
+        MqttService.OnMessageReceived += UpdateData;
+        UpdateValues();
+    }
+
+    private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
+    {
+        if (args.Topic.StartsWith("data"))
+        {
+            UpdateValues();
+        }
+    }
+
+    private void UpdateValues()
+    {
+        data = MqttService.ClimateData;
+        InvokeAsync(StateHasChanged);
+    }
+}

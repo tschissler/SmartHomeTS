@@ -3,6 +3,7 @@ using MQTTnet.Client;
 using MQTTnet.Protocol;
 using SharedContracts;
 using SmartHome.Web.Components.Pages;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -17,12 +18,15 @@ namespace SmartHome.Web.Services
         public SharedContracts.ChargingSettings ChargingSettings { get; set; }
         public ChargingSituation ChargingSituation { get; set; }
         public IluminationSituation IluminationSituation { get; set; }
+        public ClimateData ClimateData { get; set; }
 
         public MQTTService()
         {
             ChargingSettings = new();
             ChargingSituation = new();
             IluminationSituation = new();
+            ClimateData = new();
+
             Task task = ConnectAsync();
         }
 
@@ -40,7 +44,7 @@ namespace SmartHome.Web.Services
             _client.ConnectedAsync += async e =>
             {
                 Console.WriteLine("Connected to MQTT broker.");
-                await _client.SubscribeAsync("data/charging/situation");
+                await _client.SubscribeAsync("data/#");
                 await _client.SubscribeAsync("config/charging/settings");
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
             };
@@ -92,7 +96,6 @@ namespace SmartHome.Web.Services
                         ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);
                         break;
                     }
-
                 case "config/charging/settings":
                     {
                         ChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
@@ -103,7 +106,62 @@ namespace SmartHome.Web.Services
                         IluminationSituation = JsonSerializer.Deserialize<IluminationSituation>(payload);
                         break;
                     }
+                case "data/keller/temperature":
+                    {
+                        ClimateData.BasementTemperature = CreateDataPoint(payload) ?? ClimateData.BasementTemperature;
+                        break;
+                    }
+                case "data/keller/humidity":
+                    {
+                        ClimateData.BasementHumidity = CreateDataPoint(payload) ?? ClimateData.BasementHumidity;
+                        break;
+                    }
+                case "data/keller/cisternFillLevel":
+                    {
+                        ClimateData.CisternFillLevel = CreateDataPoint(payload) ?? ClimateData.CisternFillLevel;
+                        break;
+                    }
+                case "data/1c50f3ab6224/temperature":
+                    {
+                        ClimateData.OutsideTemperature = CreateDataPoint(payload) ?? ClimateData.OutsideTemperature;
+                        break;
+                    }
+                case "data/1c50f3ab6224/humidity":
+                    {
+                        ClimateData.OutsideHumidity = CreateDataPoint(payload) ?? ClimateData.OutsideHumidity;
+                        break;
+                    }
+                case "data/1420381fb608/temperature":
+                    {
+                        ClimateData.LivingRoomTemperature = CreateDataPoint(payload) ?? ClimateData.LivingRoomTemperature;
+                        break;
+                    }
+                case "data/1420381fb608/humidity":
+                    {
+                        ClimateData.LivingRoomHumidity = CreateDataPoint(payload) ?? ClimateData.LivingRoomHumidity;
+                        break;
+                    }
+                case "data/88ff1305613c/temperature":
+                    {
+                        ClimateData.BedroomTemperature = CreateDataPoint(payload) ?? ClimateData.BedroomTemperature;
+                        break;
+                    }
+                case "data/88ff1305613c/humidity":
+                    {
+                        ClimateData.BedroomHumidity = CreateDataPoint(payload) ?? ClimateData.BedroomHumidity;
+                        break;
+                    }
             }
+        }
+
+        private DataPoint? CreateDataPoint(string payload)
+        {
+            if (Decimal.TryParse(payload, new CultureInfo("en-US"), out var value))
+            {
+                return new DataPoint(value, DateTimeOffset.Now);
+            }
+
+            return null; 
         }
     }
 
