@@ -4,6 +4,7 @@
 #include <time.h>
 #include <ESP32httpUpdate.h>
 #include <AzureRootCert.h>
+#include <SPI.h>
 #include "Adafruit_SHTC3.h"
 
 const char* appName = "KellerDevice";
