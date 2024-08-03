@@ -8,7 +8,7 @@
 #include "Adafruit_SHTC3.h"
 
 const char* appName = "KellerDevice";
-const char* version = "0.0.2";
+const char* version = "0.0.3";
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_SSID and WIFI_PASSWORD as environment variables on your dev-system
@@ -172,8 +172,10 @@ void setup() {
   Serial.println("SHTC3 test");
   if (! shtc3.begin()) {
     Serial.println("Couldn't find SHTC3");
+    digitalWrite(Red_LED_Pin, HIGH);
     while (1) delay(1);
   }
+  digitalWrite(Red_LED_Pin, LOW);
   Serial.println("Found SHTC3 sensor");
   
   digitalWrite(Blue_LED_Pin, LOW);
