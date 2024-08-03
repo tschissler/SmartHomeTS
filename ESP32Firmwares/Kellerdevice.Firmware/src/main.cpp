@@ -15,7 +15,7 @@ const char* password = WIFI_PASSWORD;
 // MQTT Broker settings
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
-const char* mqtt_update_topic = "OTAUpdateLEDStripeTopic";
+const char* mqtt_update_topic = "OTAUpdateKellerdeviceTopic";
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
