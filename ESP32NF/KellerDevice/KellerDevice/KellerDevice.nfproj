@@ -19,10 +19,17 @@
   <Import Project="$(NanoFrameworkProjectSystemPath)NFProjectSystem.props" Condition="Exists('$(NanoFrameworkProjectSystemPath)NFProjectSystem.props')" />
   <ItemGroup>
     <Compile Include="FileSettings.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Secrets\Secrets.cs" />
+    <Compile Include="Secrets\SecretsTemplate.cs" />
+    <Compile Include="WifiConnector.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="MakoIoT.Device.Utilities.TimeZones">
+      <HintPath>..\packages\MakoIoT.Device.Utilities.TimeZones.1.0.21.23332\lib\MakoIoT.Device.Utilities.TimeZones.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib">
       <HintPath>..\packages\nanoFramework.CoreLibrary.1.15.5\lib\mscorlib.dll</HintPath>
     </Reference>
@@ -31,6 +38,9 @@
     </Reference>
     <Reference Include="nanoFramework.Json">
       <HintPath>..\packages\nanoFramework.Json.2.2.122\lib\nanoFramework.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="nanoFramework.ResourceManager">
+      <HintPath>..\packages\nanoFramework.ResourceManager.1.2.19\lib\nanoFramework.ResourceManager.dll</HintPath>
     </Reference>
     <Reference Include="nanoFramework.Runtime.Events">
       <HintPath>..\packages\nanoFramework.Runtime.Events.1.11.18\lib\nanoFramework.Runtime.Events.dll</HintPath>
@@ -71,6 +81,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Resource\AzureRootCerts.pem" />
+    <None Include="Secrets\SecretsReplacer.ps1" />
   </ItemGroup>
   <Import Project="$(NanoFrameworkProjectSystemPath)NFProjectSystem.CSharp.targets" Condition="Exists('$(NanoFrameworkProjectSystemPath)NFProjectSystem.CSharp.targets')" />
   <ProjectExtensions>
