@@ -3,6 +3,7 @@
 #include <PubSubClient.h>
 #include <time.h>
 #include <ESP32httpUpdate.h>
+#include <AzureRootCert.h>
 
 const char* appName = "Template";
 const char* version = "0.0.1";
@@ -21,10 +22,16 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
 void setupTime() {
-  // Set timezone (e.g., UTC +1:00)
-  // Change according to your timezone
-  // For UTC -5:00, use -5 * 3600, and so on
-  configTime(1 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+ // Set timezone to Central European Time (CET) with daylight saving time (CEST)
+  // CET is UTC+1, CEST is UTC+2
+  // The timezone string format is: "TZ=std offset dst offset, start[/time], end[/time]"
+  // For CET/CEST: "CET-1CEST,M3.5.0/2,M10.5.0/3"
+  // This means:
+  // - Standard time is CET (UTC+1)
+  // - Daylight saving time is CEST (UTC+2)
+  // - DST starts on the last Sunday of March at 2:00 AM
+  // - DST ends on the last Sunday of October at 3:00 AM
+  configTzTime("CET-1CEST,M3.5.0/2,M10.5.0/3", "pool.ntp.org", "time.nist.gov");
 
   // Wait until time is set
   time_t now = time(nullptr);
@@ -59,6 +66,11 @@ void updateFirmwareFromUrl(const String &firmwareUrl) {
         case HTTP_UPDATE_OK:
             Serial.println("HTTP_UPDATE_OK");
                 Serial.println("Update done");
+            break;
+
+          default:
+            Serial.println("Unknown response");
+            Serial.println(ret);
             break;
     }
     Serial.println();
@@ -114,6 +126,7 @@ void setup() {
   setupTime();
   
   WiFiClientSecure client;
+  client.setCACert(azure_root_cert);
 
   if (!client.connect("iotstoragem1.blob.core.windows.net", 443)) {
     Serial.println("Connection failed!");
