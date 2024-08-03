@@ -7,6 +7,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include "Adafruit_SHTC3.h"
+#include <HCSR04.h>
 
 const char* appName = "KellerDevice";
 const char* version = "0.0.5";
@@ -29,8 +30,11 @@ const int Green_LED_Pin = 12;
 const int Blue_LED_Pin = 27;
 const int I2CDataPin = 32;
 const int I2CClockPin = 33;
+const int DistanceSensor_Trigger_Pin = 15;
+const int DistanceSensor_Echo_Pin = 2;
 
 Adafruit_SHTC3 shtc3 = Adafruit_SHTC3();
+UltraSonicDistanceSensor distanceSensor(DistanceSensor_Trigger_Pin, DistanceSensor_Echo_Pin, 200, 20000);
 
 void setupTime() {
  // Set timezone to Central European Time (CET) with daylight saving time (CEST)
@@ -222,7 +226,13 @@ void loop() {
     Serial.print(temp.temperature);
     Serial.println(" *C");
 
+    double distance = 100 - distanceSensor.measureDistanceCm();
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" cm");
+
     mqttClient.publish("data/keller/temperature", String(temp.temperature).c_str());
     mqttClient.publish("data/keller/humidity", String(humidity.relative_humidity).c_str());
+    mqttClient.publish("data/keller/cisternFillLevel", String(distance).c_str());
   }
 }
