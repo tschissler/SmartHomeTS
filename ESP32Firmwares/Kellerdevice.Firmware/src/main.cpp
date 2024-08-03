@@ -142,6 +142,7 @@ void setup() {
   connectToMQTT();
   
   digitalWrite(Blue_LED_Pin, LOW);
+  digitalWrite(Green_LED_Pin, HIGH);
 
 }
 
