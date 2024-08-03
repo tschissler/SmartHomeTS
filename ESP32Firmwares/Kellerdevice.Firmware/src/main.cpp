@@ -64,6 +64,11 @@ void updateFirmwareFromUrl(const String &firmwareUrl) {
             Serial.println("HTTP_UPDATE_OK");
             Serial.println("Update done");
             break;
+
+        default:
+            Serial.println("Unknown response");
+            Serial.println(ret);
+            break;
     }
     Serial.println();
 }
@@ -151,4 +156,8 @@ void loop() {
     connectToMQTT();
   }
   mqttClient.loop();
+  digitalWrite(Green_LED_Pin, HIGH);
+  delay(100);
+  digitalWrite(Green_LED_Pin, LOW);
+  delay(2000);
 }
