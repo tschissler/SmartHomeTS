@@ -62,7 +62,7 @@ void updateFirmwareFromUrl(const String &firmwareUrl) {
 
         case HTTP_UPDATE_OK:
             Serial.println("HTTP_UPDATE_OK");
-                Serial.println("Update done");
+            Serial.println("Update done");
             break;
     }
     Serial.println();
@@ -71,7 +71,7 @@ void updateFirmwareFromUrl(const String &firmwareUrl) {
 void connectToMQTT() {
     mqttClient.setServer(mqtt_broker, mqtt_port);
     while (!mqttClient.connected()) {
-        if (mqttClient.connect("ESP32LEDStripeClient")) {
+        if (mqttClient.connect("ESP32KellerdeviceClient")) {
             mqttClient.subscribe(mqtt_update_topic);
             Serial.println("Connected to MQTT Broker");
         } else {
