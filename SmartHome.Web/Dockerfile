@@ -31,11 +31,17 @@ RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 
 # Final image
 FROM build AS final
+
 # Install locale data
 RUN apt-get update && \
     apt-get install -y locales && \
-    locale-gen de_DE.UTF-8 && \
-    update-locale LANG=de_DE.UTF-8
+    sed -i -e 's/# de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen
+
+# Set the locale
+ENV LANG de_DE.UTF-8
+ENV LANGUAGE de_DE:de
+ENV LC_ALL de_DE.UTF-8
 
 # Set the time zone
 ENV TZ=Europe/Berlin
