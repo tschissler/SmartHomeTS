@@ -31,6 +31,16 @@ RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 
 # Final image
 FROM build AS final
+# Install locale data
+RUN apt-get update && \
+    apt-get install -y locales && \
+    locale-gen de_DE.UTF-8 && \
+    update-locale LANG=de_DE.UTF-8
+
+# Set the time zone
+ENV TZ=Europe/Berlin
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app/publish .

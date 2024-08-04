@@ -20,3 +20,7 @@ spec:
           env:
             - name: SyncfusionLicenseKey
               value: init
+            - name: TZ
+              value: "Europe/Berlin"
+            - name: LANG
+              value: "de_DE.UTF-8"
