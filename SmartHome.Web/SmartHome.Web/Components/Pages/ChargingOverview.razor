@@ -126,7 +126,7 @@
                             <div class="batteryLevel" style="height: @_chargingSituation.BMWBatteryLevel%"></div>
                         </div>
                         <div class="batteryLabel">
-                        @_chargingSituation.BMWBatteryLevel %
+                        @_chargingSituation.BMWBatteryLevel %<br/>
                         <span style="font-size: 0.7rem">@(new MarkupString(_chargingSituation.BMWLastUpdateFromServer.ToLocalTime().ToString("dd.MM.yy hh:mm:ss").Replace(" ", "<br>")))</span>
                         </div>
                     </div> 
@@ -155,7 +155,7 @@
                             <div class="batteryLevel" style="height: @_chargingSituation.VWBatteryLevel%"></div>
                         </div>
                         <div class="batteryLabel">
-                        @_chargingSituation.VWBatteryLevel %<br/
+                        @_chargingSituation.VWBatteryLevel %<br/>
                         <span style="font-size: 0.7rem">@(new MarkupString(_chargingSituation.VWLastUpdateFromServer.ToLocalTime().ToString("dd.MM.yy hh:mm:ss").Replace(" ", "<br>")))</span>
                         </div>
                     </div> 
