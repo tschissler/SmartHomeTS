@@ -34,6 +34,7 @@ async def main():
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
 
+    print("BMW Connector started")
     while True:
         result = await fetch_vehicle_info()
         payload = json.dumps(result)

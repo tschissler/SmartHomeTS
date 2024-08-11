@@ -9,5 +9,6 @@ namespace ChargingController
     public record BMWData (
         string brand,
         string name,
-        int battery);
+        int battery,
+        DateTimeOffset last_update);
 }

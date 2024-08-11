@@ -127,6 +127,7 @@
                         </div>
                         <div class="batteryLabel">
                         @_chargingSituation.BMWBatteryLevel %
+                        <span style="font-size: 0.7rem">@(new MarkupString(_chargingSituation.BMWLastUpdateFromServer.ToLocalTime().ToString("dd.MM.yy hh:mm:ss").Replace(" ", "<br>")))</span>
                         </div>
                     </div> 
             </div>

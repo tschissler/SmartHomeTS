@@ -79,6 +79,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         {
             var bmwData = JsonSerializer.Deserialize<BMWData>(payload);
             currentChargingSituation.BMWBatteryLevel = bmwData.battery;
+            currentChargingSituation.BMWLastUpdateFromServer = bmwData.last_update;
         }
         else if (topic == "data/charging/VW")
         {

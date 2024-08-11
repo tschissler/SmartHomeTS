@@ -75,6 +75,11 @@
         public bool BMWReadyForCharging { get; set; }
 
         /// <summary>
+        /// Indicates when BMW data have been last updated from the server
+        /// </summary>
+        public DateTimeOffset BMWLastUpdateFromServer { get; set; }
+
+        /// <summary>
         /// The current battery level of the VW in percent
         /// </summary>
         public int VWBatteryLevel { get; set; }
