@@ -38,7 +38,7 @@ async def main():
         payload = json.dumps(result)
         client.publish(MQTT_TOPIC, payload)
         print("Topic :" + MQTT_TOPIC + " | Message Sent: ", payload)
-        await asyncio.sleep(600)  # wait for 60 seconds before the next run
+        await asyncio.sleep(900)  # wait for 15 minutes before the next run
 
     loop.close()
     client.loop_stop()
