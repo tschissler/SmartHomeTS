@@ -25,7 +25,7 @@ async def fetch_vehicle_info():
         "brand": vehicle.brand,
         "name": vehicle.name,
         "battery": vehicle.fuel_and_battery.remaining_battery_percent,
-        "last_update": vehicle.timestamp,
+        "last_update": vehicle.timestamp.isoformat(),
     }
 
 async def main():
