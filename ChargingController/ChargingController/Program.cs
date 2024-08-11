@@ -110,7 +110,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                 Console.WriteLine($"Inside charging current was set too recently. Skipping.");
             }
         }
-        if (chargingResult.OutsideChargingCurrentmA != currentChargingSituation.OutsideChargingLatestmA)
+        if (chargingResult.OutsideChargingCurrentmA != currentChargingSituation.OutsideCurrentChargingPower)
         {
             if (DateTime.Now.Subtract(lastOutsideSetTime).Seconds > minimumSetIntervalSeconds)
             {
