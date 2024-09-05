@@ -34,7 +34,7 @@ namespace StorageConnector
         private static void MqttController_OnDataUpdated(string topic, double value, DateTime time)
         {
             var topicParts = topic.Split('/');
-            var partitionKey = String.Join("/", topicParts); // topicParts[1]+"/"+topicParts[2];
+            var partitionKey = topicParts[1]+"/"+topicParts[2];
             dBController.WriteData(partitionKey, Converters.ConvertDateTimeToReverseRowKey(time), value, time);
             Console.WriteLine($"Wrote data to storage table {dBController.TableName}, time: {time.ToString("yyyy-MM-ddTHH:mm:ss")} | value: {value}");
         }
