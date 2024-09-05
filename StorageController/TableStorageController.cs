@@ -43,7 +43,15 @@ namespace StorageController
                 { "Value", value },
                 { "Time", time.ToUniversalTime() }
             };
-            tableClient.AddEntity(entity);
+
+            try
+            {
+                tableClient.AddEntity(entity);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to write data to table", ex);
+            }
         }
 
         public void WriteData(string partitionKey, string rowKey, string value, DateTime time)
@@ -54,7 +62,14 @@ namespace StorageController
                 { "Value", value },
                 { "Time", time.ToUniversalTime() }
             };
-            tableClient.AddEntity(entity);
+            try
+            {
+                tableClient.AddEntity(entity);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to write data to table", ex);
+            }
         }
 
         public void WriteData(DataValueTableEntity item)

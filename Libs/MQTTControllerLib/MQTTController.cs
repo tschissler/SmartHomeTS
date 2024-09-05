@@ -1,6 +1,7 @@
 ﻿using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Server;
+using Newtonsoft.Json;
 using System.Globalization;
 
 namespace MQTTControllerLib
@@ -80,6 +81,19 @@ namespace MQTTControllerLib
             var time = DateTime.Now;
 
             double value = 0;
+            if (topic.StartsWith("data/watermeter"))
+            {
+                if (topic == "data/watermeter/main/json")
+                {
+                    var data = JsonConvert.DeserializeObject<WatermeterData>(payload);
+                    if (double.TryParse(data.raw, new CultureInfo("en-US"), out value))
+                    {
+                        OnDataUpdated?.Invoke(topic, value, data.timestamp.ToUniversalTime());
+                    }
+                }
+                return Task.CompletedTask;
+            }
+
             if (double.TryParse(payload, new CultureInfo("en-US"), out value))
             {
                 OnDataUpdated?.Invoke(topic, value, time);
