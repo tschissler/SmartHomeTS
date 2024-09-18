@@ -6,7 +6,8 @@ on:
     paths:
       - .github/workflows/vwconnector.yml
       - VWConnector/**
-
+  workflow_dispatch:
+    
 env:
   PROJECT_NAME: VWConnector
   IMAGE_NAME: vwconnector
