@@ -9,7 +9,7 @@ on:
 
 env:
   PROJECT_NAME: ShellyConnector
-  IMAGE_NAME: Shellyconnector
+  IMAGE_NAME: shellyconnector
   
 jobs:
   build:
