@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smarthomeweb-service
+spec:
+  selector:
+    app: smarthomeweb
+  ports:
+    - protocol: TCP
+      port: 33000
+      nodePort: 32000 # Port to access the service outside the cluste
+      targetPort: 8080  # Port your application is listening on inside the pods
+  type: NodePort      # Set the Service type to NodePort
