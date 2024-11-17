@@ -238,10 +238,8 @@
 
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
     {
-        if (args.Topic == topicName)
+        if (args.Topic == topicName || args.Topic == lampeTopicName)
             UpdateValues();
-        if (args.Topic == lampeTopicName)
-            LampeOnOff = situation.LampOn;
     }
 
     private void UpdateValues()
@@ -252,6 +250,7 @@
         HueValue = hsl.H;
         BrightnessValue = hsl.L;
         SchrankbeleuchtungOnOff = situation.Right.On;
+        LampeOnOff = situation.LampOn;
         InvokeAsync(StateHasChanged);
     }
 }
