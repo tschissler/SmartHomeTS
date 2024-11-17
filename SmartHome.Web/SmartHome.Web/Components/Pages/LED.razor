@@ -98,7 +98,12 @@
 </div>
 
 <div class="control-section">
-    <SfSwitch @bind-Checked="@onOff" OffLabel="OFF" OnLabel="ON" ValueChange="ChangeOnOff" TChecked="bool?" ></SfSwitch>
+    Schrank-Beleuchtung
+    <SfSwitch @bind-Checked="@SchrankbeleuchtungOnOff" OffLabel="OFF" OnLabel="ON" ValueChange="ChangeSchrankbeleuchtung" TChecked="bool?" ></SfSwitch>
+</div>
+<div class="control-section">
+    Wohnzimmerlampe
+    <SfSwitch @bind-Checked="@LampeOnOff" OffLabel="OFF" OnLabel="ON" ValueChange="ChangeLampe" TChecked="bool?"></SfSwitch>
 </div>
 
 <div>Selection as RGB: R=@RGBColor.R.ToString()  G=@RGBColor.G.ToString() B=@RGBColor.B.ToString() with Density @DensityValue.ToString() %</div>
@@ -109,17 +114,19 @@
 @code {
     public int HueValue = 30;
     private const string topicName = "commands/illumination/LEDStripe/setColor";
+    private const string lampeTopicName = "commands/shelly/Lampe";
     public int BrightnessValue = 50;
     public int DensityValue = 10;
     public RGB RGBColor = new RGB(0, 0, 0);
     public string StatusMessage = "Ready";
-    public bool? onOff = true;
+    public bool? SchrankbeleuchtungOnOff = true;
+    public bool? LampeOnOff = true;
     public IluminationSituation situation = new IluminationSituation();
 
-    private void ChangeOnOff(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool?> args)
+    private void ChangeSchrankbeleuchtung(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool?> args)
     {
-        onOff = args.Checked;
-        if (onOff.Value)
+        SchrankbeleuchtungOnOff = args.Checked;
+        if (SchrankbeleuchtungOnOff.Value)
         {
             //CalculateRGBColor();
             StatusMessage = "Eingeschaltet";
@@ -132,6 +139,19 @@
         CalculateRGBColor();
     }
 
+    private async void ChangeLampe(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool?> args)
+    {
+        LampeOnOff = args.Checked;
+        if (LampeOnOff.Value)
+        {
+            await MqttService.PublishAsync(lampeTopicName, "on", MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
+        }
+        else
+        {
+            await MqttService.PublishAsync(lampeTopicName, "off", MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
+        }
+    }
+
     private void OnDragHue(PointerDragEventArgs args)
     {
         HueValue = (int)args.CurrentValue;
@@ -140,7 +160,7 @@
     private void OnDragHueEnd(PointerDragEventArgs args)
     {
         HueValue = (int)args.CurrentValue;
-        if (onOff.Value)
+        if (SchrankbeleuchtungOnOff.Value)
             CalculateRGBColor();
     }
 
@@ -152,7 +172,7 @@
     private void OnDragBrightnessEnd(PointerDragEventArgs args)
     {
         BrightnessValue = (int)args.CurrentValue;
-        if (onOff.Value)
+        if (SchrankbeleuchtungOnOff.Value)
             CalculateRGBColor();
     }
 
@@ -164,7 +184,7 @@
     private void OnDragDensityEnd(PointerDragEventArgs args)
     {
         DensityValue = (int)args.CurrentValue;
-        if (onOff.Value)
+        if (SchrankbeleuchtungOnOff.Value)
             CalculateRGBColor();
     }
 
@@ -199,12 +219,12 @@
         situation.Right.Green = rGBColor.G;
         situation.Right.Blue = rGBColor.B;
         situation.Right.Density = densityValue;
-        situation.Right.On = onOff.Value;
+        situation.Right.On = SchrankbeleuchtungOnOff.Value;
         situation.Left.Red = rGBColor.R;
         situation.Left.Green = rGBColor.G;
         situation.Left.Blue = rGBColor.B;
         situation.Left.Density = densityValue;
-        situation.Left.On = onOff.Value;
+        situation.Left.On = SchrankbeleuchtungOnOff.Value;
 
         var jsonString = JsonSerializer.Serialize(situation);
         await MqttService.PublishAsync(topicName, jsonString, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
@@ -231,7 +251,7 @@
         var hsl = ColorConverter.RgbToHsl(new RGB(situation.Right.Red, situation.Right.Green, situation.Right.Blue));
         HueValue = hsl.H;
         BrightnessValue = hsl.L;
-        onOff = situation.Right.On;
+        SchrankbeleuchtungOnOff = situation.Right.On;
         InvokeAsync(StateHasChanged);
     }
 }
