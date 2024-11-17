@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
@@ -12,10 +12,10 @@
   </ItemGroup>-->
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.7" />
-		<PackageReference Include="Syncfusion.Blazor.Charts" Version="26.2.7" />
-		<PackageReference Include="Syncfusion.Blazor.Navigations" Version="26.2.7" />
-		<PackageReference Include="Syncfusion.Blazor.Themes" Version="26.2.7" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.0" />
+		<PackageReference Include="Syncfusion.Blazor.Charts" Version="27.2.2" />
+		<PackageReference Include="Syncfusion.Blazor.Navigations" Version="27.2.2" />
+		<PackageReference Include="Syncfusion.Blazor.Themes" Version="27.2.2" />
 	</ItemGroup>
 
 	<ItemGroup>
