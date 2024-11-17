@@ -9,6 +9,7 @@
             Left = new();
             Right = new();
         }
+        public bool LampOn { get; set; }
     }
     
     public class IluminationSettings

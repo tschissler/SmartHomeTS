@@ -47,6 +47,7 @@ namespace SmartHome.Web.Services
                 await _client.SubscribeAsync("data/#");
                 await _client.SubscribeAsync("config/charging/settings");
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
+                await _client.SubscribeAsync("commands/shelly/Lampe");
             };
 
             _client.ApplicationMessageReceivedAsync += e =>
@@ -149,6 +150,16 @@ namespace SmartHome.Web.Services
                 case "data/88ff1305613c/humidity":
                     {
                         ClimateData.BedroomHumidity = CreateDataPoint(payload) ?? ClimateData.BedroomHumidity;
+                        break;
+                    }
+                case "commands/shelly/Lampe":
+                    {
+                        if (payload.ToLower() == "toggle")
+                        {
+                            IluminationSituation.LampOn = !IluminationSituation.LampOn;
+                        }
+                        else
+                            IluminationSituation.LampOn = payload == "on";
                         break;
                     }
             }

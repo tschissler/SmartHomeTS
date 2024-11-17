@@ -239,9 +239,9 @@
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
     {
         if (args.Topic == topicName)
-        {
             UpdateValues();
-        }
+        if (args.Topic == lampeTopicName)
+            LampeOnOff = situation.LampOn;
     }
 
     private void UpdateValues()
