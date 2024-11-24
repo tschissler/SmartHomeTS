@@ -219,12 +219,13 @@
         situation.Right.Green = rGBColor.G;
         situation.Right.Blue = rGBColor.B;
         situation.Right.Density = densityValue;
-        situation.Right.On = SchrankbeleuchtungOnOff.Value;
+        situation.Right.On = SchrankbeleuchtungOnOff!.Value;
         situation.Left.Red = rGBColor.R;
         situation.Left.Green = rGBColor.G;
         situation.Left.Blue = rGBColor.B;
         situation.Left.Density = densityValue;
-        situation.Left.On = SchrankbeleuchtungOnOff.Value;
+        situation.Left.On = SchrankbeleuchtungOnOff!.Value;
+        situation.LampOn = LampeOnOff!.Value;
 
         var jsonString = JsonSerializer.Serialize(situation);
         await MqttService.PublishAsync(topicName, jsonString, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
