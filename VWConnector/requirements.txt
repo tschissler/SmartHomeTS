@@ -1,2 +1,2 @@
-weconnect
+weconnect>=0.60.6
 paho-mqtt
