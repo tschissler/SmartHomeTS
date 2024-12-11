@@ -29,6 +29,11 @@ microk8s status --wait-ready
 sudo apt install linux-modules-extra-raspi
 ```
 
+## Upgrade microk8s
+``` bash
+sudo snap refresh microk8s --channel=latest/stable
+```
+
 
 ## Uninstall microk8s
 ``` bash
