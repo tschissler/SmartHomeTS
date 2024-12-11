@@ -32,6 +32,15 @@ sudo apt install linux-modules-extra-raspi
 ## Upgrade microk8s
 ``` bash
 sudo snap refresh microk8s --channel=latest/stable
+
+microk8s stop
+microk8s start
+```
+
+Before stopping microk8s the node should be drained:
+
+``` bash
+kubectl drain smarthomepi2 --ignore-daemonsets --delete-emptydir-data
 ```
 
 
