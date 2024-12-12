@@ -61,7 +61,8 @@ def load_oauth_store_from_envvariable(envVariableName: str, account: MyBMWAccoun
         print(f"Environment variable {envVariableName} not set")
         return {}
     try:
-        oauth_data = json.loads(os.getenv(envVariableName))
+        oauth_data_raw = os.getenv(envVariableName)
+        oauth_data = json.loads(oauth_data_raw)
     except json.JSONDecodeError:
         print("Error loading OAuth data from environment variable")
         return {}
