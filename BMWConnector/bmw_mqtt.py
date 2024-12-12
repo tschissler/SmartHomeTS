@@ -102,7 +102,7 @@ async def main():
     vin = os.getenv('BMW_VIN')
 
     parser = argparse.ArgumentParser(description='Connecting to the BMW API')
-    parser.add_argument('--captcha_token', type=str, required=True, help='Captcha token for BMW')
+    parser.add_argument('--captcha_token', type=str, required=False, help='Captcha token for BMW')
     args = parser.parse_args()
     captcha_token = args.captcha_token
     #captcha_token = os.getenv('BMW_CAPTCHA_TOKEN')
