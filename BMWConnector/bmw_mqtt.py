@@ -64,7 +64,7 @@ def load_oauth_store_from_envvariable(envVariableName: str, account: MyBMWAccoun
         oauth_data_raw = os.getenv(envVariableName)
         oauth_data = json.loads(oauth_data_raw)
     except json.JSONDecodeError:
-        print("Error loading OAuth data from environment variable")
+        print("Error loading OAuth data from environment variable {oauth_data_raw}")
         return {}
 
     print("Loaded OAuth data from environment variable")
