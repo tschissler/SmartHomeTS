@@ -55,6 +55,28 @@ def load_oauth_store_from_file(oauth_store: Path, account: MyBMWAccount) -> Dict
 
     return {**oauth_data, "session_id_timestamp": session_id_timestamp}
 
+def load_oauth_store_from_envvariable(envVariableName: str, account: MyBMWAccount) -> Dict:
+    """Load the OAuth details from an environment variable if it exists."""
+    if envVariableName not in os.environ:
+        print(f"Environment variable {envVariableName} not set")
+        return {}
+    try:
+        oauth_data = json.loads(os.getenv(envVariableName))
+    except json.JSONDecodeError:
+        print("Error loading OAuth data from environment variable")
+        return {}
+
+    print("Loaded OAuth data from environment variable")
+    session_id_timestamp = oauth_data.pop("session_id_timestamp", None)
+    # Pop session_id every 14 days to it gets recreated
+    if (time.time() - (session_id_timestamp or 0)) > 14 * 24 * 60 * 60:
+        oauth_data.pop("session_id", None)
+        session_id_timestamp = None
+
+    account.set_refresh_token(**oauth_data)
+
+    return {**oauth_data, "session_id_timestamp": session_id_timestamp}
+
 def store_oauth_store_to_file(
     oauth_store: Path, account: MyBMWAccount, session_id_timestamp: Optional[float] = None
 ) -> None:
@@ -105,9 +127,9 @@ async def main():
     parser.add_argument('--captcha_token', type=str, required=False, help='Captcha token for BMW')
     args = parser.parse_args()
     captcha_token = args.captcha_token
-    #captcha_token = os.getenv('BMW_CAPTCHA_TOKEN')
     account = MyBMWAccount(username, password, Regions.REST_OF_WORLD, hcaptcha_token=captcha_token)
-    oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
+    #oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
+    oauth_store_data = load_oauth_store_from_envvariable('BMW_OAUTH', account)
     loop = asyncio.get_event_loop()
     
     payload = None
@@ -123,7 +145,7 @@ async def main():
             sys.stderr.write(f"Error: {e}\n")
             sys.exit(1)
 
-        await asyncio.sleep(10)  # wait for 30 minutes before the next run
+        await asyncio.sleep(60)  
 
     loop.close()
     client.loop_stop()
