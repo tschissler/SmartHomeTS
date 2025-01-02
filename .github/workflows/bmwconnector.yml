@@ -13,21 +13,42 @@ env:
   
 jobs:
   build:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
 
+    - name: Set up Python
+      uses: actions/setup-python@v5.3.0
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+    
     - name: Build and publish Docker image
       working-directory: ${{env.PROJECT_NAME}}
       run: |        
         # Build the Docker image with the package version tag.
-        docker build \
-            -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
-            -t tschissler/${{ env.IMAGE_NAME }}:latest \
-            -f ./dockerfile \
-            --push .
+        docker buildx build \
+          --platform linux/arm64 \
+          -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
+          -t tschissler/${{ env.IMAGE_NAME }}:latest \
+          -f ./dockerfile \
+          --push .
 
+  deploy:
+    runs-on: [self-hosted, linux]
+    needs: build
+    
+    steps:
     - name: Deploy to Kubernetes if depoyment does not exist yet
       run: |
         if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
@@ -39,4 +60,4 @@ jobs:
         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_USERNAME="${{ secrets.BMW_USERNAME }}"
         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_PASSWORD="${{ secrets.BMW_PASSWORD }}"
         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_VIN="${{ secrets.BMW_VIN }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_OAUTH="$(echo '${{ secrets.BMW_OAUTH }}' | sed 's/"/\\"/g')"
+        # microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_OAUTH="$(echo '${{ secrets.BMW_OAUTH }}' | sed 's/"/\\"/g')"
