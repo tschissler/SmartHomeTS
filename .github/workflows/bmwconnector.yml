@@ -18,6 +18,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: pip install
+      run: pip install -r requirements.txt
+      
     - name: Build and publish Docker image
       working-directory: ${{env.PROJECT_NAME}}
       run: |        
