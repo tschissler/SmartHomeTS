@@ -1,27 +1,18 @@
 # Use an official Python runtime as a parent image
 FROM python:3.12
 
-# Install OS packages for Pillow dependencies
-# RUN apt-get update && apt-get install -y \
-#     zlib1g-dev \
-#     libjpeg-dev \
-#     libtiff-dev \
-#     libfreetype6-dev \
-#     liblcms2-dev \
-#     libwebp-dev \
-#     libharfbuzz-dev \
-#     libfribidi-dev \
-#     libxcb1-dev \
-#     && rm -rf /var/lib/apt/lists/*
-
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy requirements file first to leverage Docker cache
+COPY requirements.txt /app/requirements.txt
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Copy the rest of the application code
+COPY . /app
 
 # Make port 5000 available to the world outside this container
 EXPOSE 5000
