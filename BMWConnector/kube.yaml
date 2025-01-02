@@ -28,3 +28,9 @@ spec:
             value: "env:BMW_PASSWORD"
           - name: BMW_VIN
             value: "env:BMW_VIN"
+          - name: Mini_USERNAME
+            value: "env:Mini_USERNAME"
+          - name: Mini_PASSWORD
+            value: "env:Mini_PASSWORD"
+          - name: Mini_VIN
+            value: "env:Mini_VIN"

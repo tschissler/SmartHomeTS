@@ -2,7 +2,7 @@ import argparse
 import os
 import asyncio
 import sys
-import time
+import json
 from typing import Dict, Optional
 import paho.mqtt.client as mqtt
 from bimmer_connected.account import MyBMWAccount
@@ -45,6 +45,7 @@ async def fetch_vehicle_info(account: MyBMWAccount, vin: str) -> Dict:
         "brand": vehicle.brand,
         "name": vehicle.name,
         "battery": vehicle.fuel_and_battery.remaining_battery_percent,
+        "mileage": vehicle.mileage,
         "last_update": vehicle.timestamp.isoformat(),
     }
 
