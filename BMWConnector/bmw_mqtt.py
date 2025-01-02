@@ -129,8 +129,8 @@ async def main():
     args = parser.parse_args()
     captcha_token = args.captcha_token
     account = MyBMWAccount(username, password, Regions.REST_OF_WORLD, hcaptcha_token=captcha_token)
-    #oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
-    oauth_store_data = load_oauth_store_from_envvariable('BMW_OAUTH', account)
+    oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
+    #oauth_store_data = load_oauth_store_from_envvariable('BMW_OAUTH', account)
     loop = asyncio.get_event_loop()
     
     payload = None
@@ -144,9 +144,9 @@ async def main():
             store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
         except Exception as e:
             sys.stderr.write(f"Error: {e}\n")
-            sys.exit(1)
+            #sys.exit(1)
 
-        await asyncio.sleep(60)  
+        await asyncio.sleep(10)  
 
     loop.close()
     client.loop_stop()
