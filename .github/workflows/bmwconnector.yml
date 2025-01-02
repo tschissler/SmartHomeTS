@@ -59,4 +59,4 @@ jobs:
         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_USERNAME="${{ secrets.BMW_USERNAME }}"
         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_PASSWORD="${{ secrets.BMW_PASSWORD }}"
         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_VIN="${{ secrets.BMW_VIN }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_OAUTH="$(echo '${{ secrets.BMW_OAUTH }}' | sed 's/"/\\"/g')"
+        # microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_OAUTH="$(echo '${{ secrets.BMW_OAUTH }}' | sed 's/"/\\"/g')"
