@@ -2,6 +2,7 @@ import argparse
 import os
 import asyncio
 import json
+from kubernetes import client, config
 from pathlib import Path
 import sys
 import time
@@ -43,14 +44,7 @@ def load_oauth_store_from_file(oauth_store: Path, account: MyBMWAccount) -> Dict
         print(f"OAuth store file {oauth_store} does not exist")
         return {}
     try:
-        # Read the Base64 encoded content
-        encoded_content = oauth_store.read_text()
-
-        # Decode the Base64 content
-        decoded_content = base64.b64decode(encoded_content).decode('utf-8')
-
-        # Parse the decoded content as JSON
-        oauth_data = json.loads(decoded_content)
+        oauth_data = json.loads(oauth_store.read_text())
     except json.JSONDecodeError:
         return {}
 
@@ -103,7 +97,81 @@ def store_oauth_store_to_file(
             }
         ),
     )
-    
+
+def load_k8s_config():
+    """Load Kubernetes configuration based on the environment."""
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        config.load_kube_config()
+
+def load_oauth_store_from_k8s_secret(secret_name: str, namespace: str, account: MyBMWAccount) -> Dict:
+    """Read the OAuth details from a Kubernetes secret."""
+    print(f"Loading OAuth data from Kubernetes secret {secret_name} in namespace {namespace}")
+    load_k8s_config()
+    v1 = client.CoreV1Api()
+
+    try:
+        secret = v1.read_namespaced_secret(secret_name, namespace)
+        secret_data = secret.data
+
+        oauth_data = {
+            "refresh_token": base64.b64decode(secret_data["refresh_token"]).decode('utf-8'),
+            "gcid": base64.b64decode(secret_data["gcid"]).decode('utf-8'),
+            "access_token": base64.b64decode(secret_data["access_token"]).decode('utf-8'),
+            "session_id": base64.b64decode(secret_data["session_id"]).decode('utf-8'),
+            "session_id_timestamp": float(base64.b64decode(secret_data["session_id_timestamp"]).decode('utf-8')),
+        }
+
+        #print(f"Loaded OAuth data from Kubernetes secret {oauth_data}")
+        session_id_timestamp = oauth_data.pop("session_id_timestamp", None)
+        # Pop session_id every 14 days to it gets recreated
+        if (time.time() - (session_id_timestamp or 0)) > 14 * 24 * 60 * 60:
+            oauth_data.pop("session_id", None)
+            session_id_timestamp = None
+
+        account.set_refresh_token(**oauth_data)
+        
+        return {**oauth_data, "session_id_timestamp": session_id_timestamp}
+
+    except client.exceptions.ApiException as e:
+        if e.status == 404:
+            raise ValueError(f"Secret {secret_name} not found in namespace {namespace}")
+        else:
+            raise e
+
+def store_oauth_store_to_k8s_secret(
+    secret_name: str, namespace: str, account: MyBMWAccount, session_id_timestamp: Optional[float] = None
+) -> None:
+    """Store the OAuth details in a Kubernetes secret."""
+    #print(f"Storing OAuth data in Kubernetes secret {secret_name} in namespace {namespace}")
+    load_k8s_config()
+    v1 = client.CoreV1Api()
+
+    #print(f"refresh_token: {account.config.authentication.refresh_token} | gcid: {account.config.authentication.gcid} | access_token: {account.config.authentication.access_token} | session_id: {account.config.authentication.session_id} | session_id_timestamp: {session_id_timestamp or time.time()}")
+
+    secret_data = {
+        "refresh_token": base64.b64encode(account.config.authentication.refresh_token.encode()).decode('utf-8'),
+        "gcid": base64.b64encode(account.config.authentication.gcid.encode()).decode('utf-8'),
+        "access_token": base64.b64encode(account.config.authentication.access_token.encode()).decode('utf-8'),
+        "session_id": base64.b64encode(account.config.authentication.session_id.encode()).decode('utf-8'),
+        "session_id_timestamp": base64.b64encode(str(session_id_timestamp or time.time()).encode()).decode('utf-8'),
+    }
+
+    secret = client.V1Secret(
+        metadata=client.V1ObjectMeta(name=secret_name),
+        data=secret_data,
+    )
+
+    try:
+        v1.read_namespaced_secret(secret_name, namespace)
+        v1.replace_namespaced_secret(secret_name, namespace, secret)
+    except client.exceptions.ApiException as e:
+        if e.status == 404:
+            v1.create_namespaced_secret(namespace, secret)
+        else:
+            raise e
+
 def on_connect(client, userdata, flags, rc, properties):
     print(f"Connected with result code {rc}")
 
@@ -138,8 +206,11 @@ async def main():
     args = parser.parse_args()
     captcha_token = args.captcha_token
     account = MyBMWAccount(username, password, Regions.REST_OF_WORLD, hcaptcha_token=captcha_token)
-    oauth_store_data = load_oauth_store_from_file(Path("/etc/secrets/refresh-token"), account)
-    #oauth_store_data = load_oauth_store_from_envvariable('BMW_OAUTH', account)
+    #oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
+    oauth_store_data = {}
+    if (captcha_token is None):
+        oauth_store_data = load_oauth_store_from_k8s_secret("bmw-connect-api-token", "default", account)
+
     loop = asyncio.get_event_loop()
     
     payload = None
@@ -150,7 +221,8 @@ async def main():
             payload = json.dumps(result)
             client.publish(MQTT_TOPIC, payload)
             print("Topic :" + MQTT_TOPIC + " | Message Sent: ", payload)
-            store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
+            #store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
+            store_oauth_store_to_k8s_secret("bmw-connect-api-token", "default", account, oauth_store_data.get("session_id_timestamp"))
         except Exception as e:
             sys.stderr.write(f"Error: {e}\n")
             #sys.exit(1)

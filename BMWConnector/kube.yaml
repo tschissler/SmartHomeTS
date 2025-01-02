@@ -17,10 +17,10 @@ spec:
       containers:
         - name: bmwconnector
           image: tschissler/bmwconnector:latest
-          volumeMounts:
-          - name: token-volume
-            mountPath: /etc/secrets
-            readOnly: true
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
           env:
           - name: BMW_USERNAME
             value: "env:BMW_USERNAME"
@@ -28,7 +28,3 @@ spec:
             value: "env:BMW_PASSWORD"
           - name: BMW_VIN
             value: "env:BMW_VIN"
-      volumes:
-        - name: token-volume
-          secret:
-            secretName: bmw-connect-api-token
