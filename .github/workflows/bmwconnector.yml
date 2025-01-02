@@ -44,7 +44,7 @@ jobs:
             -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
             -t tschissler/${{ env.IMAGE_NAME }}:latest \
             -f ./dockerfile \
-            -platforms linux/arm64
+            --platforms linux/arm64
             --push .
 
   deploy:
