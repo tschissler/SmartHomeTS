@@ -10,6 +10,7 @@ import paho.mqtt.client as mqtt
 from bimmer_connected.account import MyBMWAccount
 from bimmer_connected.api.regions import Regions
 from bimmer_connected import __version__ as VERSION
+import base64
 
 # MQTT Broker settings
 MQTT_BROKER = 'smarthomepi2.fritz.box'
@@ -39,9 +40,17 @@ def main_parser() -> argparse.ArgumentParser:
 def load_oauth_store_from_file(oauth_store: Path, account: MyBMWAccount) -> Dict:
     """Load the OAuth details from a file if it exists."""
     if not oauth_store.exists():
+        print(f"OAuth store file {oauth_store} does not exist")
         return {}
     try:
-        oauth_data = json.loads(oauth_store.read_text())
+        # Read the Base64 encoded content
+        encoded_content = oauth_store.read_text()
+
+        # Decode the Base64 content
+        decoded_content = base64.b64decode(encoded_content).decode('utf-8')
+
+        # Parse the decoded content as JSON
+        oauth_data = json.loads(decoded_content)
     except json.JSONDecodeError:
         return {}
 
@@ -129,7 +138,7 @@ async def main():
     args = parser.parse_args()
     captcha_token = args.captcha_token
     account = MyBMWAccount(username, password, Regions.REST_OF_WORLD, hcaptcha_token=captcha_token)
-    oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
+    oauth_store_data = load_oauth_store_from_file(Path("/etc/secrets/refresh-token"), account)
     #oauth_store_data = load_oauth_store_from_envvariable('BMW_OAUTH', account)
     loop = asyncio.get_event_loop()
     
