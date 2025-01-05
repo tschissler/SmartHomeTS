@@ -4,19 +4,10 @@ metadata:
   name: influxdb-pv
 spec:
   capacity:
-    storage: 10Gi
+    storage: 50Gi
   accessModes:
     - ReadWriteOnce
-  hostPath:
-    path: /mnt/influxdb-data
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: influxdb-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+  storageClassName: influxdb-storage
+  nfs:
+    path: /mnt/ssd
+    server: smarthomepi2

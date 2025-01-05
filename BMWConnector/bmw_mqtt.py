@@ -61,10 +61,11 @@ async def main():
 
     print("")
     print(" - Connecting to BMW Connected Drive API")
-    username = os.getenv('BMW_USERNAME')
-    password = os.getenv('BMW_PASSWORD')
-    vin = os.getenv('BMW_VIN')
+    username = os.getenv('MINI_USERNAME')
+    password = os.getenv('MINI_PASSWORD')
+    vin = os.getenv('MINI_VIN')
 
+    print(f" - Username: {username} | Password: {password} | VIN: {vin}")
     parser = argparse.ArgumentParser(description='Connecting to the BMW API')
     parser.add_argument('--captcha_token', type=str, required=False, help='Captcha token for BMW')
     args = parser.parse_args()

@@ -23,9 +23,15 @@ spec:
             - name: INFLUXDB_DB
               value: "smarthomedb"
             - name: INFLUXDB_ADMIN_USER
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: INFLUXDB_ADMIN_USER
             - name: INFLUXDB_ADMIN_PASSWORD
-              value: "Dimako09"
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: INFLUXDB_ADMIN_PASSWORD
           volumeMounts:
             - name: influxdb-storage
               mountPath: /var/lib/influxdb2
@@ -33,16 +39,3 @@ spec:
         - name: influxdb-storage
           persistentVolumeClaim:
             claimName: influxdb-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: influxdb-service
-spec:
-  selector:
-    app: influxdb
-  ports:
-    - protocol: TCP
-      port: 8086
-      targetPort: 8086
-  type: ClusterIP
