@@ -17,15 +17,17 @@ spec:
       - name: mosquitto
         image: eclipse-mosquitto:latest
         ports:
-        - containerPort: 1883
+          - containerPort: 1883
+          - containerPort: 9001
         volumeMounts:
-        - name: config-volume
-          mountPath: /mosquitto/config
-
+          - name: mosquitto-data
+            mountPath: /mosquitto/data
+          - name: mosquitto-config
+            mountPath: /mosquitto/config
       volumes:
-      - name: config-volume
-        configMap:
-          name: mosquitto-config
-          items:
-          - key: mosquitto.conf
-            path: mosquitto.conf
+        - name: mosquitto-data
+          persistentVolumeClaim:
+            claimName: mosquitto-pvc
+        - name: mosquitto-config
+          configMap:
+            name: mosquitto-config
