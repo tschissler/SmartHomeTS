@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: telegraf-config
+  namespace: default
+  labels:
+    app: telegraf
+data:
+  telegraf.conf: |
+    [agent]
+      interval = "10s"
+      round_interval = true
+      metric_batch_size = 1000
+      metric_buffer_limit = 10000
+      collection_jitter = "0s"
+      flush_interval = "10s"
+      flush_jitter = "0s"
+      precision = ""
+      debug = false
+      quiet = false
+      logfile = ""
+      hostname = "$HOSTNAME"
+      omit_hostname = false
+
+    [[outputs.influxdb_v2]]
+      urls = ["http://smarthomepi2:32086/"]
+      token = "zM9s-WGpMaeVtQJ1MusgmMM1258L9zTdUso-8GnWt5t9AH17fw_XoaAbcqraNbDA4IpnfbIBgRZ9FlKqG2k0qg=="
+      organization = "smarthome"
+      bucket = "data"
+
+    [[inputs.cpu]]
+      percpu = true
+      totalcpu = true
+      collect_cpu_time = false
+      report_active = true
+
+    [[inputs.mem]]
+    [[inputs.disk]]
+      ignore_fs = ["tmpfs", "devtmpfs"]
+
+    # [[inputs.net]]
+    # [[inputs.containerd]]
+    #   endpoint = "/run/containerd/containerd.sock"
+    #   timeout = "5s"
+    #   namespace = "k8s.io"
+    #   metrics_include = ["*"]

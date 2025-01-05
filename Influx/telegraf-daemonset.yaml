@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: telegraf
+  namespace: default
+  labels:
+    app: telegraf
+spec:
+  selector:
+    matchLabels:
+      app: telegraf
+  template:
+    metadata:
+      labels:
+        app: telegraf
+    spec:
+      containers:
+        - name: telegraf
+          image: telegraf:latest
+          args:
+            - "--config"
+            - "http://smarthomepi2:32086/api/v2/telegrafs/0e36fce2a35f7000"
+          env:
+            - name: INFLUX_TOKEN
+              value: "zM9s-WGpMaeVtQJ1MusgmMM1258L9zTdUso-8GnWt5t9AH17fw_XoaAbcqraNbDA4IpnfbIBgRZ9FlKqG2k0qg=="
+          resources:
+            limits:
+              memory: 256Mi
+              cpu: 200m
+            requests:
+              memory: 128Mi
+              cpu: 100m
+          volumeMounts:
+            - name: config
+              mountPath: /etc/telegraf
+            # - name: containerd-sock
+            #   mountPath: /run/containerd/containerd.sock
+            #   readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: telegraf-config
+        # - name: containerd-sock
+        #   hostPath:
+        #     path: /run/containerd/containerd.sock
+
