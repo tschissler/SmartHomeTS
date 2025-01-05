@@ -31,7 +31,7 @@ const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
 // Deep Sleep Configuration
-#define BLINK_DURATION 300       // Blink duration in milliseconds, blinking will happen every second
+#define BLINK_DURATION 100       // Blink duration in milliseconds, blinking will happen every second
  
 #define DHTTYPE DHT22   
 DHT dht(DHTPIN, DHTTYPE);
