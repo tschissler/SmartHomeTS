@@ -253,6 +253,7 @@ void findWifi() {
   // Identify the strongest WiFi signal
   int maxRSSI = -1000;
   int maxRSSIIndex = -1;
+  Serial.println("Configured WiFi networks: " + passwords.length());
   for (int i = 0; i < numberOfNetworks; i++) {
     if (WiFi.RSSI(i) > maxRSSI && passwords.indexOf(WiFi.SSID(i)) >=0) {
       maxRSSI = WiFi.RSSI(i);
