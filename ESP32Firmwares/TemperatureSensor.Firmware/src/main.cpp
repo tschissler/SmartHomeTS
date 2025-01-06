@@ -278,6 +278,7 @@ void setup() {
   Serial.begin(9600);
   Serial.print("TemperatureSensor version ");
   Serial.println(version);
+  Serial.println(passwords);
 
   // Get the high 2 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
   chipID += String((uint16_t)(ESP.getEfuseMac() >> 32), HEX);
