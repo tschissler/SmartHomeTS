@@ -47,7 +47,7 @@ const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
 const char* mqtt_OTAtopic = "OTAUpdate/TemperatureSensor";
 
-WiFiClient espClient;
+WiFiClient wifiClient;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 MQTTClient mqttClient;
@@ -110,6 +110,7 @@ void printInformationOnTFT(String temperature, String humidity, bool mqttMessage
   tft.println(Ping.ping(mqtt_broker)?"Ping successful":"Ping failed");
 }
 void mqttCallback(String topic, String &payload) {
+    Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
     if (otaInProgress || !otaEnable)
       return;
     
@@ -139,29 +140,6 @@ void mqttCallback(String topic, String &payload) {
 }
 
 void connectToMQTT() {
-    while(!Ping.ping(mqtt_broker))
-    {
-      Serial.println("Ping failed, retrying...");
-      delay(1000);
-    }
-    mqttClient.begin(mqtt_broker, mqtt_port, espClient);
-    mqttClient.setKeepAlive(5);
-    
-    while (!mqttClient.connected()) {
-      String clientId = "ESP32TemperatureSensorClient_" + chipID;
-      if (mqttClient.connect(clientId.c_str())) {
-          mqttClient.subscribe(mqtt_OTAtopic);
-      } else {
-          Serial.print("Failed to connect to MQTT Broker: ");
-          Serial.println(mqtt_broker);
-          Serial.println(mqttClient.lastError());
-          delay(5000);
-      }
-  }
-  mqttClient.onMessage(mqttCallback);
-}
-
-void reconnect() {
   if (WiFi.status() != WL_CONNECTED) {
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
@@ -173,24 +151,26 @@ void reconnect() {
     Serial.println("Reconnected to WiFi");
   }
   Serial.println("Wifi is connected");
-  mqttClient.begin(mqtt_broker, mqtt_port, espClient);
+  mqttClient.begin(mqtt_broker, mqtt_port, wifiClient);
   mqttClient.onMessage(mqttCallback);
+  mqttClient.setOptions(60, false, 1000);
   while (!mqttClient.connected()) {
     String clientId = "ESP32TemperatureSensorClient_" + chipID;
     Serial.println("ClientId = " + clientId);
     if (mqttClient.connect(clientId.c_str())) {
-      bool subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
-      if (subscribeSuccess) {
-        Serial.print("Subscribed to topic: ");
-        Serial.println(mqtt_OTAtopic);
-      } else {
-        Serial.print("Failed to subscribe to topic: ");
-        Serial.println(mqtt_OTAtopic);
-        Serial.print("Last Error: ");
-        Serial.println(mqttClient.lastError());
-      }
+      // bool subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
+      // if (subscribeSuccess) {
+      //   Serial.print("Subscribed to topic: ");
+      //   Serial.println(mqtt_OTAtopic);
+      // } else {
+      //   Serial.print("Failed to subscribe to topic: ");
+      //   Serial.println(mqtt_OTAtopic);
+      //   Serial.print("Last Error: ");
+      //   Serial.println(mqttClient.lastError());
+      // }
       Serial.print("Connected to MQTT Broker ");
-      Serial.println(mqtt_broker);
+      Serial.print(mqtt_broker);
+      Serial.print(" with Connection Status: ");
       Serial.println(mqttClient.connected());
     } else {
         Serial.print("Failed to connect to MQTT Broker: ");
@@ -203,11 +183,11 @@ void reconnect() {
 
 void readSensorAndPublish() {
   // Stay awake for a short period to receive messages
-  unsigned long startMillis = millis();
-  while (millis() - startMillis < 10000) {
-    mqttClient.loop();
-    delay(10);  // Small delay to prevent WDT reset
-  }
+  // unsigned long startMillis = millis();
+  // while (millis() - startMillis < 10000) {
+  //   mqttClient.loop();
+  //   delay(10);  // Small delay to prevent WDT reset
+  // }
 
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
@@ -224,15 +204,15 @@ void readSensorAndPublish() {
 
   if (sendMQTTMessages)
   {
-    if (!mqttClient.connected()) {
-      Serial.println("MQTT Client not connected, reconnecting before publish...");
-      reconnect();
-    }
+    // if (!mqttClient.connected()) {
+    //   Serial.println("MQTT Client not connected, reconnecting before publish...");
+    //   connectToMQTT();
+    // }
     
     mqttSuccess = mqttClient.publish("temp/temperature", "1.0", true, 2);
-    // mqttSuccess =  mqttClient.publish((baseTopic + "temperature").c_str(), String(tempString), true, 2);
-    // mqttClient.publish((baseTopic + "humidity").c_str(), String(humString), true, 2);
-    // mqttClient.publish(("meta/" + chipID + "/version").c_str(), String(version), true, 2);
+    mqttSuccess =  mqttClient.publish((baseTopic + "temperature").c_str(), String(tempString), true, 2);
+    mqttClient.publish((baseTopic + "humidity").c_str(), String(humString), true, 2);
+    mqttClient.publish(("meta/" + chipID + "/version").c_str(), String(version), true, 2);
     Serial.println(mqttSuccess?"Published new values to MQTT Broker":"Publishing to MQTT Broker failed");
     Serial.println(" -> Connected:" + String(mqttClient.connected()) + " -> LastError:"  + String(mqttClient.lastError())  + " -> ReturnCode:" + String(mqttClient.returnCode()));
   }
@@ -244,7 +224,7 @@ void sendMQTTMessage(String subtopic, String message)
 {
   if (!mqttClient.connected()) {
       Serial.println("MQTT Client not connected, reconnecting before publish...");
-      reconnect();
+      connectToMQTT();
     }
     
     mqttClient.publish(baseTopic + (subtopic).c_str(), String(message), true, 2);
@@ -354,7 +334,7 @@ void setup() {
 }
 
 void loop() {
-  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
+  //otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
   // TRansmit data every minute
   int currentMinute = timeClient.getMinutes();
@@ -364,13 +344,17 @@ void loop() {
     //if (MQTT_MESSAGE_FREQUENCY_COUNTER >= MQTT_MESSAGE_FREQUENCY) {
     // if (!mqttClient.connected()) {
     //   Serial.println("MQTT Client not connected, reconnecting in loop...");
-    //   reconnect();
+    //   connectToMQTT();
     // }
 
     readSensorAndPublish();
-    mqttClient.loop();
   } 
 
+  if(!mqttClient.loop())
+  {
+    Serial.println("MQTT Client not connected, reconnecting in loop...");
+    connectToMQTT();
+  }
   // if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
   //   switchTopStatus = digitalRead(SWITCH_TOP_PIN);
   //   sendMQTTMessage("window_top", switchTopStatus?"open":"closed");
@@ -407,5 +391,5 @@ void loop() {
   //   digitalWrite(LED_INTERNAL_PIN, LOW);
   // }
 
-  delay(1000);
+  //delay(100);
 }
