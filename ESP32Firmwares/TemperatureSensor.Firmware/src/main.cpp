@@ -245,7 +245,7 @@ void readSensorAndPublish() {
     // }
     
     mqttSuccess =  mqttClient.publish((baseTopic + "temperatur").c_str(), String(tempString), true, 2);
-    mqttClient.publish((baseTopic + "humidity").c_str(), String(humString), true, 2);
+    mqttClient.publish((baseTopic + "luftfeuchtigkeit").c_str(), String(humString), true, 2);
     mqttClient.publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
     
     Serial.println(mqttSuccess?"Published new values to MQTT Broker":"Publishing to MQTT Broker failed");
@@ -253,13 +253,13 @@ void readSensorAndPublish() {
 
     if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
       switchTopStatus = digitalRead(SWITCH_TOP_PIN);
-      mqttClient.publish((baseTopic + "window_top").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      mqttClient.publish((baseTopic + "fenster_oben").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
       Serial.println("Switch Top Status changed to " + String(switchTopStatus));
     }
 
     if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
       switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
-      mqttClient.publish((baseTopic + "window_bottom").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      mqttClient.publish((baseTopic + "fenster_unten").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
       Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
     }
   }
