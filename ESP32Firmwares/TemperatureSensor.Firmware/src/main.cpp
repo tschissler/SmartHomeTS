@@ -89,8 +89,8 @@ void printInformationOnTFT(String temperature, String humidity, bool mqttMessage
   tft.println(chipID);
   tft.print("Sensor Name: ");
   tft.println(sensorName);
-
-  tft.setCursor(0, 30);
+  tft.println();
+  // tft.setCursor(0, 31);
 
   // Update NTP client
   timeClient.update();
@@ -107,7 +107,7 @@ void printInformationOnTFT(String temperature, String humidity, bool mqttMessage
   if (mqttMessage) {
     tft.println();
     if (sendMQTTMessages) {
-      tft.println(mqttSuccess?"MQTT message sent\nsuccessfully":"Sending MQTT\nmessage failed");
+      tft.println(mqttSuccess?"MQTT sent successfully":"Sending MQTT failed");
     } else {
       tft.println("MQTT messages disabled");
     }
@@ -115,6 +115,7 @@ void printInformationOnTFT(String temperature, String humidity, bool mqttMessage
 
   tft.println(Ping.ping(mqtt_broker)?"Ping successful":"Ping failed");
 }
+
 void mqttCallback(String topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
@@ -241,12 +242,24 @@ void readSensorAndPublish() {
     //   connectToMQTT();
     // }
     
-    mqttSuccess = mqttClient.publish("temp/temperature", "1.0", true, 2);
     mqttSuccess =  mqttClient.publish((baseTopic + "temperatur").c_str(), String(tempString), true, 2);
     mqttClient.publish((baseTopic + "humidity").c_str(), String(humString), true, 2);
     mqttClient.publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+    
     Serial.println(mqttSuccess?"Published new values to MQTT Broker":"Publishing to MQTT Broker failed");
     Serial.println(" -> Connected:" + String(mqttClient.connected()) + " -> LastError:"  + String(mqttClient.lastError())  + " -> ReturnCode:" + String(mqttClient.returnCode()));
+
+    if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
+      switchTopStatus = digitalRead(SWITCH_TOP_PIN);
+      mqttClient.publish((baseTopic + "window_top").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      Serial.println("Switch Top Status changed to " + String(switchTopStatus));
+    }
+
+    if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
+      switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
+      mqttClient.publish((baseTopic + "window_bottom").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
+    }
   }
   Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
   printInformationOnTFT(String(temperature), String(humidity), true);
@@ -385,18 +398,6 @@ void loop() {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
     }
-    // if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
-    //   switchTopStatus = digitalRead(SWITCH_TOP_PIN);
-    //   sendMQTTMessage("window_top", switchTopStatus?"open":"closed");
-    //   Serial.println("Switch Top Status changed to " + String(switchTopStatus));
-    // }
-
-    // if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
-    //   switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
-    //   sendMQTTMessage("window_bottom", switchBottomStatus?"open":"closed");
-    //   Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
-    // }
-
     // bool pingSuccess = Ping.ping(mqtt_broker);
 
     // digitalWrite(LED_INTERNAL_PIN, HIGH);
