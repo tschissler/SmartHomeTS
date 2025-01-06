@@ -46,6 +46,7 @@ String password;
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
 const char* mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
+static String mqtt_ConfigTopic = "config/TemperaturSensor/Sensorname/";
 // Define the maximum packet size for the MQTT client
 #define MQTT_MAX_PACKET_SIZE 4096
 
@@ -63,6 +64,7 @@ static int switchTopStatus = false;
 static int switchBottomStatus = false;
 
 static String baseTopic = "";
+static String sensorName = "";
 
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
@@ -113,15 +115,22 @@ void printInformationOnTFT(String temperature, String humidity, bool mqttMessage
 }
 void mqttCallback(String topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
-    if (otaInProgress || !otaEnable) {
-      if (otaInProgress)
-        Serial.println("OTA in progress, ignoring message");
-      if (!otaEnable)
-        Serial.println("OTA disabled, ignoring message");
-      return;
-    }
+
+    if (topic == mqtt_ConfigTopic) {
+      sensorName = payload;
+      baseTopic = "data/" + sensorName + "/";
+      Serial.println("Sensor name set to: " + sensorName);
+    } 
 
     if (topic == mqtt_OTAtopic) {
+      if (otaInProgress || !otaEnable) {
+        if (otaInProgress)
+          Serial.println("OTA in progress, ignoring message");
+        if (!otaEnable)
+          Serial.println("OTA disabled, ignoring message");
+        return;
+      }
+  
       String updateVersion = extractVersionFromUrl(payload);
       Serial.println("Current firmware version is " + String(version));
       Serial.println("New firmware version is " + updateVersion);
@@ -173,6 +182,16 @@ void connectToMQTT() {
         Serial.print("Last Error: ");
         Serial.println(mqttClient.lastError());
       }
+      subscribeSuccess = mqttClient.subscribe(mqtt_ConfigTopic);
+      if (subscribeSuccess) {
+        Serial.print("Subscribed to topic: ");
+        Serial.println(mqtt_ConfigTopic);
+      } else {
+        Serial.print("Failed to subscribe to topic: ");
+        Serial.println(mqtt_ConfigTopic);
+        Serial.print("Last Error: ");
+        Serial.println(mqttClient.lastError());
+      }
       Serial.print("Connected to MQTT Broker ");
       Serial.print(mqtt_broker);
       Serial.print(" with Connection Status: ");
@@ -193,6 +212,11 @@ void readSensorAndPublish() {
   //   mqttClient.loop();
   //   delay(10);  // Small delay to prevent WDT reset
   // }
+
+  if (sensorName == "") {
+    Serial.println("Sensor name not set, skipping sensor reading");
+    return;
+  }
 
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
@@ -215,9 +239,9 @@ void readSensorAndPublish() {
     // }
     
     mqttSuccess = mqttClient.publish("temp/temperature", "1.0", true, 2);
-    mqttSuccess =  mqttClient.publish((baseTopic + "temperature").c_str(), String(tempString), true, 2);
+    mqttSuccess =  mqttClient.publish((baseTopic + "temperatur").c_str(), String(tempString), true, 2);
     mqttClient.publish((baseTopic + "humidity").c_str(), String(humString), true, 2);
-    mqttClient.publish(("meta/" + chipID + "/version").c_str(), String(version), true, 2);
+    mqttClient.publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
     Serial.println(mqttSuccess?"Published new values to MQTT Broker":"Publishing to MQTT Broker failed");
     Serial.println(" -> Connected:" + String(mqttClient.connected()) + " -> LastError:"  + String(mqttClient.lastError())  + " -> ReturnCode:" + String(mqttClient.returnCode()));
   }
@@ -287,7 +311,8 @@ void setup() {
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
 
-  baseTopic = "data/" + chipID + "/"; // Base topic with the chipID
+  //baseTopic = "data/" + chipID + "/"; // Base topic with the chipID
+  mqtt_ConfigTopic += chipID;
 
   findWifi();
   while (ssid == "" || password == "") {
@@ -309,7 +334,7 @@ void setup() {
   // Print the IP address
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
-
+  
   // Initialize display
   tft.initR(INITR_BLACKTAB);      // Initialize a ST7735S chip, black tab
   tft.fillScreen(ST77XX_BLACK);   // Fill screen with black color
