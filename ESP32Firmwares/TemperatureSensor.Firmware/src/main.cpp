@@ -31,7 +31,7 @@ const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
 // Deep Sleep Configuration
-#define BLINK_DURATION 100       // Blink duration in milliseconds, blinking will happen every second
+#define BLINK_DURATION 10       // Blink duration in milliseconds, blinking will happen every second
  
 #define DHTTYPE DHT22   
 DHT dht(DHTPIN, DHTTYPE);
@@ -176,17 +176,7 @@ void connectToMQTT() {
     String clientId = "ESP32TemperatureSensorClient_" + chipID;
     Serial.println("ClientId = " + clientId);
     if (mqttClient.connect(clientId.c_str())) {
-      bool subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
-      if (subscribeSuccess) {
-        Serial.print("Subscribed to topic: ");
-        Serial.println(mqtt_OTAtopic);
-      } else {
-        Serial.print("Failed to subscribe to topic: ");
-        Serial.println(mqtt_OTAtopic);
-        Serial.print("Last Error: ");
-        Serial.println(mqttClient.lastError());
-      }
-      subscribeSuccess = mqttClient.subscribe(mqtt_ConfigTopic);
+      bool subscribeSuccess = mqttClient.subscribe(mqtt_ConfigTopic);
       if (subscribeSuccess) {
         Serial.print("Subscribed to topic: ");
         Serial.println(mqtt_ConfigTopic);
@@ -196,6 +186,18 @@ void connectToMQTT() {
         Serial.print("Last Error: ");
         Serial.println(mqttClient.lastError());
       }
+
+      subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
+      if (subscribeSuccess) {
+        Serial.print("Subscribed to topic: ");
+        Serial.println(mqtt_OTAtopic);
+      } else {
+        Serial.print("Failed to subscribe to topic: ");
+        Serial.println(mqtt_OTAtopic);
+        Serial.print("Last Error: ");
+        Serial.println(mqttClient.lastError());
+      }
+
       Serial.print("Connected to MQTT Broker ");
       Serial.print(mqtt_broker);
       Serial.print(" with Connection Status: ");
@@ -398,29 +400,29 @@ void loop() {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
     }
-    // bool pingSuccess = Ping.ping(mqtt_broker);
+    bool pingSuccess = Ping.ping(mqtt_broker);
 
-    // digitalWrite(LED_INTERNAL_PIN, HIGH);
-    // delay(BLINK_DURATION);
-    // digitalWrite(LED_INTERNAL_PIN, LOW);
-    // if (!pingSuccess) {
-    //   Serial.println("Ping failed");
-    //   delay(BLINK_DURATION);
-    //   digitalWrite(LED_INTERNAL_PIN, HIGH);
-    //   delay(BLINK_DURATION);
-    //   digitalWrite(LED_INTERNAL_PIN, LOW);
-    // }
-    // if (!mqttSuccess) {
-    //   Serial.println("MQTT failed");
-    //   delay(BLINK_DURATION);
-    //   digitalWrite(LED_INTERNAL_PIN, HIGH);
-    //   delay(BLINK_DURATION);
-    //   digitalWrite(LED_INTERNAL_PIN, LOW);
-    //   delay(BLINK_DURATION);
-    //   digitalWrite(LED_INTERNAL_PIN, HIGH);
-    //   delay(BLINK_DURATION);
-    //   digitalWrite(LED_INTERNAL_PIN, LOW);
-    // }
+    digitalWrite(LED_INTERNAL_PIN, HIGH);
+    delay(BLINK_DURATION);
+    digitalWrite(LED_INTERNAL_PIN, LOW);
+    if (!pingSuccess) {
+      Serial.println("Ping failed");
+      delay(BLINK_DURATION);
+      digitalWrite(LED_INTERNAL_PIN, HIGH);
+      delay(BLINK_DURATION);
+      digitalWrite(LED_INTERNAL_PIN, LOW);
+    }
+    if (!mqttSuccess) {
+      Serial.println("MQTT failed");
+      delay(BLINK_DURATION);
+      digitalWrite(LED_INTERNAL_PIN, HIGH);
+      delay(BLINK_DURATION);
+      digitalWrite(LED_INTERNAL_PIN, LOW);
+      delay(BLINK_DURATION);
+      digitalWrite(LED_INTERNAL_PIN, HIGH);
+      delay(BLINK_DURATION);
+      digitalWrite(LED_INTERNAL_PIN, LOW);
+    }
   }
   delay(100);
 }
