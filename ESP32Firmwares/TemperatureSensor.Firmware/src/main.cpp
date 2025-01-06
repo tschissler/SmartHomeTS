@@ -45,7 +45,7 @@ String password;
 // MQTT Broker settings
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
-const char* mqtt_OTAtopic = "OTAUpdate/TemperatureSensor";
+const char* mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
 // Define the maximum packet size for the MQTT client
 #define MQTT_MAX_PACKET_SIZE 4096
 
