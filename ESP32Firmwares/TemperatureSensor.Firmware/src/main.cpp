@@ -46,11 +46,13 @@ String password;
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
 const char* mqtt_OTAtopic = "OTAUpdate/TemperatureSensor";
+// Define the maximum packet size for the MQTT client
+#define MQTT_MAX_PACKET_SIZE 4096
 
 WiFiClient wifiClient;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
-MQTTClient mqttClient;
+MQTTClient mqttClient(MQTT_MAX_PACKET_SIZE);
 
 static bool otaInProgress = false;
 static bool otaEnable = true;
@@ -158,16 +160,16 @@ void connectToMQTT() {
     String clientId = "ESP32TemperatureSensorClient_" + chipID;
     Serial.println("ClientId = " + clientId);
     if (mqttClient.connect(clientId.c_str())) {
-      // bool subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
-      // if (subscribeSuccess) {
-      //   Serial.print("Subscribed to topic: ");
-      //   Serial.println(mqtt_OTAtopic);
-      // } else {
-      //   Serial.print("Failed to subscribe to topic: ");
-      //   Serial.println(mqtt_OTAtopic);
-      //   Serial.print("Last Error: ");
-      //   Serial.println(mqttClient.lastError());
-      // }
+      bool subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
+      if (subscribeSuccess) {
+        Serial.print("Subscribed to topic: ");
+        Serial.println(mqtt_OTAtopic);
+      } else {
+        Serial.print("Failed to subscribe to topic: ");
+        Serial.println(mqtt_OTAtopic);
+        Serial.print("Last Error: ");
+        Serial.println(mqttClient.lastError());
+      }
       Serial.print("Connected to MQTT Broker ");
       Serial.print(mqtt_broker);
       Serial.print(" with Connection Status: ");
@@ -391,5 +393,5 @@ void loop() {
   //   digitalWrite(LED_INTERNAL_PIN, LOW);
   // }
 
-  //delay(100);
+  delay(100);
 }
