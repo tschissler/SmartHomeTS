@@ -45,7 +45,7 @@ String password;
 // MQTT Broker settings
 const char* mqtt_broker = "smarthomepi2";
 const int mqtt_port = 32004;
-const char* mqtt_OTAtopic = "OTAUpdateTemperatureSensor";
+const char* mqtt_OTAtopic = "OTAUpdate/TemperatureSensor";
 
 WiFiClient espClient;
 WiFiUDP ntpUDP;
@@ -148,16 +148,17 @@ void connectToMQTT() {
     mqttClient.setKeepAlive(5);
     
     while (!mqttClient.connected()) {
-        if (mqttClient.connect("ESP32TemperatureSensorClient")) {
-            mqttClient.subscribe(mqtt_OTAtopic);
-        } else {
-            Serial.print("Failed to connect to MQTT Broker: ");
-            Serial.println(mqtt_broker);
-            Serial.println(mqttClient.lastError());
-            delay(5000);
-        }
-    }
-    mqttClient.onMessage(mqttCallback);
+      String clientId = "ESP32TemperatureSensorClient_" + chipID;
+      if (mqttClient.connect(clientId.c_str())) {
+          mqttClient.subscribe(mqtt_OTAtopic);
+      } else {
+          Serial.print("Failed to connect to MQTT Broker: ");
+          Serial.println(mqtt_broker);
+          Serial.println(mqttClient.lastError());
+          delay(5000);
+      }
+  }
+  mqttClient.onMessage(mqttCallback);
 }
 
 void reconnect() {
@@ -171,18 +172,33 @@ void reconnect() {
     }
     Serial.println("Reconnected to WiFi");
   }
-    mqttClient.begin(mqtt_broker, mqtt_port, espClient);
-    mqttClient.onMessage(mqttCallback);
-    while (!mqttClient.connected()) {
-        if (mqttClient.connect("ESP32TemperatureSensorClient")) {
-            mqttClient.subscribe(mqtt_OTAtopic);
-        } else {
-            Serial.print("Failed to connect to MQTT Broker: ");
-            Serial.println(mqtt_broker);
-            Serial.println(mqttClient.lastError());
-            delay(5000);
-        }
+  Serial.println("Wifi is connected");
+  mqttClient.begin(mqtt_broker, mqtt_port, espClient);
+  mqttClient.onMessage(mqttCallback);
+  while (!mqttClient.connected()) {
+    String clientId = "ESP32TemperatureSensorClient_" + chipID;
+    Serial.println("ClientId = " + clientId);
+    if (mqttClient.connect(clientId.c_str())) {
+      bool subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
+      if (subscribeSuccess) {
+        Serial.print("Subscribed to topic: ");
+        Serial.println(mqtt_OTAtopic);
+      } else {
+        Serial.print("Failed to subscribe to topic: ");
+        Serial.println(mqtt_OTAtopic);
+        Serial.print("Last Error: ");
+        Serial.println(mqttClient.lastError());
+      }
+      Serial.print("Connected to MQTT Broker ");
+      Serial.println(mqtt_broker);
+      Serial.println(mqttClient.connected());
+    } else {
+        Serial.print("Failed to connect to MQTT Broker: ");
+        Serial.println(mqtt_broker);
+        Serial.println(mqttClient.lastError());
+        delay(1000);
     }
+  }
 }
 
 void readSensorAndPublish() {
@@ -213,9 +229,10 @@ void readSensorAndPublish() {
       reconnect();
     }
     
-    mqttSuccess =  mqttClient.publish((baseTopic + "temperature").c_str(), String(tempString), true, 2);
-    mqttClient.publish((baseTopic + "humidity").c_str(), String(humString), true, 2);
-    mqttClient.publish(("meta/" + chipID + "/version").c_str(), String(version), true, 2);
+    mqttSuccess = mqttClient.publish("temp/temperature", "1.0", true, 2);
+    // mqttSuccess =  mqttClient.publish((baseTopic + "temperature").c_str(), String(tempString), true, 2);
+    // mqttClient.publish((baseTopic + "humidity").c_str(), String(humString), true, 2);
+    // mqttClient.publish(("meta/" + chipID + "/version").c_str(), String(version), true, 2);
     Serial.println(mqttSuccess?"Published new values to MQTT Broker":"Publishing to MQTT Broker failed");
     Serial.println(" -> Connected:" + String(mqttClient.connected()) + " -> LastError:"  + String(mqttClient.lastError())  + " -> ReturnCode:" + String(mqttClient.returnCode()));
   }
@@ -344,51 +361,51 @@ void loop() {
   if(currentMinute != lastMQTTSentMinute) {
     lastMQTTSentMinute = currentMinute;
    
-  //if (MQTT_MESSAGE_FREQUENCY_COUNTER >= MQTT_MESSAGE_FREQUENCY) {
-    if (!mqttClient.connected()) {
-      Serial.println("MQTT Client not connected, reconnecting in loop...");
-      reconnect();
-    }
+    //if (MQTT_MESSAGE_FREQUENCY_COUNTER >= MQTT_MESSAGE_FREQUENCY) {
+    // if (!mqttClient.connected()) {
+    //   Serial.println("MQTT Client not connected, reconnecting in loop...");
+    //   reconnect();
+    // }
 
     readSensorAndPublish();
     mqttClient.loop();
   } 
 
-  if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
-    switchTopStatus = digitalRead(SWITCH_TOP_PIN);
-    sendMQTTMessage("window_top", switchTopStatus?"open":"closed");
-    Serial.println("Switch Top Status changed to " + String(switchTopStatus));
-  }
+  // if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
+  //   switchTopStatus = digitalRead(SWITCH_TOP_PIN);
+  //   sendMQTTMessage("window_top", switchTopStatus?"open":"closed");
+  //   Serial.println("Switch Top Status changed to " + String(switchTopStatus));
+  // }
 
-  if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
-    switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
-    sendMQTTMessage("window_bottom", switchBottomStatus?"open":"closed");
-    Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
-  }
+  // if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
+  //   switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
+  //   sendMQTTMessage("window_bottom", switchBottomStatus?"open":"closed");
+  //   Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
+  // }
 
-  bool pingSuccess = Ping.ping(mqtt_broker);
+  // bool pingSuccess = Ping.ping(mqtt_broker);
 
-  digitalWrite(LED_INTERNAL_PIN, HIGH);
-  delay(BLINK_DURATION);
-  digitalWrite(LED_INTERNAL_PIN, LOW);
-  if (!pingSuccess) {
-    Serial.println("Ping failed");
-    delay(BLINK_DURATION);
-    digitalWrite(LED_INTERNAL_PIN, HIGH);
-    delay(BLINK_DURATION);
-    digitalWrite(LED_INTERNAL_PIN, LOW);
-  }
-  if (!mqttSuccess) {
-    Serial.println("MQTT failed");
-    delay(BLINK_DURATION);
-    digitalWrite(LED_INTERNAL_PIN, HIGH);
-    delay(BLINK_DURATION);
-    digitalWrite(LED_INTERNAL_PIN, LOW);
-    delay(BLINK_DURATION);
-    digitalWrite(LED_INTERNAL_PIN, HIGH);
-    delay(BLINK_DURATION);
-    digitalWrite(LED_INTERNAL_PIN, LOW);
-  }
+  // digitalWrite(LED_INTERNAL_PIN, HIGH);
+  // delay(BLINK_DURATION);
+  // digitalWrite(LED_INTERNAL_PIN, LOW);
+  // if (!pingSuccess) {
+  //   Serial.println("Ping failed");
+  //   delay(BLINK_DURATION);
+  //   digitalWrite(LED_INTERNAL_PIN, HIGH);
+  //   delay(BLINK_DURATION);
+  //   digitalWrite(LED_INTERNAL_PIN, LOW);
+  // }
+  // if (!mqttSuccess) {
+  //   Serial.println("MQTT failed");
+  //   delay(BLINK_DURATION);
+  //   digitalWrite(LED_INTERNAL_PIN, HIGH);
+  //   delay(BLINK_DURATION);
+  //   digitalWrite(LED_INTERNAL_PIN, LOW);
+  //   delay(BLINK_DURATION);
+  //   digitalWrite(LED_INTERNAL_PIN, HIGH);
+  //   delay(BLINK_DURATION);
+  //   digitalWrite(LED_INTERNAL_PIN, LOW);
+  // }
 
   delay(1000);
 }
