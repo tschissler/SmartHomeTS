@@ -87,6 +87,8 @@ void printInformationOnTFT(String temperature, String humidity, bool mqttMessage
   tft.println(version);
   tft.print("Chip ID: ");
   tft.println(chipID);
+  tft.print("Sensor Name: ");
+  tft.println(sensorName);
 
   tft.setCursor(0, 30);
 
@@ -120,6 +122,7 @@ void mqttCallback(String topic, String &payload) {
       sensorName = payload;
       baseTopic = "data/" + sensorName + "/";
       Serial.println("Sensor name set to: " + sensorName);
+      return;
     } 
 
     if (topic == mqtt_OTAtopic) {
