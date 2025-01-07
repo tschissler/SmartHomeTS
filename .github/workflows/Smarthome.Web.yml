@@ -7,14 +7,14 @@ on:
       - .github/workflows/Smarthome.Web.yml
       - SmartHome.Web/**
       - '!SmartHome.Web/SmartHomeBlazorApp/**'
-    workflow_dispatch:
 env:
   PROJECT_NAME: SmartHome.Web
   IMAGE_NAME: smarthomeweb
   
 jobs:
   build:
-    runs-on: [self-hosted, linux]
+    #runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
@@ -27,7 +27,10 @@ jobs:
             -t tschissler/${{ env.IMAGE_NAME }}:latest \
             -f ./${{ env.PROJECT_NAME }}/Dockerfile \
             --push .
-
+  deploy:
+    needs: build
+    runs-on: [self-hosted, linux]
+    steps:
     - name: Deploy to Kubernetes if depoyment does not exist yet
       run: |
         if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
