@@ -45,6 +45,7 @@ namespace SmartHome.Web.Services
             {
                 Console.WriteLine("Connected to MQTT broker.");
                 await _client.SubscribeAsync("data/#");
+                await _client.SubscribeAsync("daten/#");
                 await _client.SubscribeAsync("config/charging/settings");
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
                 await _client.SubscribeAsync("commands/shelly/Lampe");
@@ -122,32 +123,32 @@ namespace SmartHome.Web.Services
                         ClimateData.CisternFillLevel = CreateDataPoint(payload) ?? ClimateData.CisternFillLevel;
                         break;
                     }
-                case "data/1c50f3ab6224/temperature":
+                case "daten/temperatur/Aussen":
                     {
                         ClimateData.OutsideTemperature = CreateDataPoint(payload) ?? ClimateData.OutsideTemperature;
                         break;
                     }
-                case "data/1c50f3ab6224/humidity":
+                case "daten/luftfeuchtigkeit/Aussen":
                     {
                         ClimateData.OutsideHumidity = CreateDataPoint(payload) ?? ClimateData.OutsideHumidity;
                         break;
                     }
-                case "data/1420381fb608/temperature":
+                case "daten/temperatur/Wohnzimmer":
                     {
                         ClimateData.LivingRoomTemperature = CreateDataPoint(payload) ?? ClimateData.LivingRoomTemperature;
                         break;
                     }
-                case "data/1420381fb608/humidity":
+                case "daten/luftfeuchtigkeit/Wohnzimmer":
                     {
                         ClimateData.LivingRoomHumidity = CreateDataPoint(payload) ?? ClimateData.LivingRoomHumidity;
                         break;
                     }
-                case "data/88ff1305613c/temperature":
+                case "daten/temperatur/Schlafzimmer":
                     {
                         ClimateData.BedroomTemperature = CreateDataPoint(payload) ?? ClimateData.BedroomTemperature;
                         break;
                     }
-                case "data/88ff1305613c/humidity":
+                case "daten/luftfeuchtigkeit/Schlafzimmer":
                     {
                         ClimateData.BedroomHumidity = CreateDataPoint(payload) ?? ClimateData.BedroomHumidity;
                         break;
