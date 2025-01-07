@@ -1,0 +1,1 @@
+kubectl create secret generic influx-token-secret --from-literal=INFLUX_TOKEN=my-secret-token

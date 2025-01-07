@@ -1,3 +1,7 @@
+###############################################
+# Be sure to run kubectl create configmap telegraf-config --from-file=mqtt_import.conf
+# before applying this deployment
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,15 +21,14 @@ spec:
       containers:
         - name: telegraf
           image: telegraf:latest
-          args:
-            - "--config"
-            - "http://smarthomepi2:32086/api/v2/telegrafs/0e3c2d03bb094000"
           env:
             - name: INFLUX_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: influx-token-secret
                   key: INFLUX_TOKEN
+            - name: TELEGRAF_CONFIG_PATH
+              value: "/etc/telegraf/mqtt_import.conf"
           resources:
             limits:
               memory: 256Mi
@@ -35,7 +38,8 @@ spec:
               cpu: 100m
           volumeMounts:
             - name: config
-              mountPath: /etc/telegraf
+              mountPath: /etc/telegraf/mqtt_import.conf
+              subPath: mqtt_import.conf
       volumes:
         - name: config
           configMap:
