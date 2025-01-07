@@ -1,12 +1,12 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <MQTT.h>
 #include "DHT.h"
-#include "AzureOTAUpdater.h"
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <ESP32Ping.h>
 
+#include "AzureOTAUpdater.h"
+#include "MQTTClientLib.h"
 #include "TFTDisplay.h"
 
 #include "soc/soc.h"
@@ -35,21 +35,13 @@ String ssid;
 String passwords = WIFI_PASSWORDS;
 String password;
 
-// MQTT Broker settings
-const char* mqtt_broker = "smarthomepi2";
-const int mqtt_port = 32004;
-const char* mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
-static String mqtt_ConfigTopic = "config/TemperaturSensor/Sensorname/";
-// Define the maximum packet size for the MQTT client
-#define MQTT_MAX_PACKET_SIZE 4096
-
 WiFiClient wifiClient;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
-MQTTClient mqttClient(MQTT_MAX_PACKET_SIZE);
+MQTTClientLib* mqttClientLib = nullptr;
 
 static bool otaInProgress = false;
-static bool otaEnable = true;
+static bool otaEnable = false;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
@@ -58,6 +50,9 @@ static int switchBottomStatus = false;
 
 static String baseTopic = "";
 static String sensorName = "";
+const String mqtt_broker = "smarthomepi2";
+static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
+static String mqtt_ConfigTopic = "config/TemperaturSensor/Sensorname/";
 
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
@@ -90,12 +85,12 @@ void printInformationOnTFT(String temperature, String humidity, bool displayMQTT
   data.displayMQTTMessage = displayMQTTMessage;
   data.mqttEnabled = sendMQTTMessages;
   data.mqttSuccess = mqttSuccess;
-  data.pingSuccess = Ping.ping(mqtt_broker);
+  data.pingSuccess = Ping.ping(mqtt_broker.c_str());
 
   tftDisplay.printInformation(data);
 }
 
-void mqttCallback(String topic, String &payload) {
+void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
     if (topic == mqtt_ConfigTopic) {
@@ -147,47 +142,8 @@ void connectToMQTT() {
     }
     Serial.println("Reconnected to WiFi");
   }
+  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
   Serial.println("Wifi is connected");
-  mqttClient.begin(mqtt_broker, mqtt_port, wifiClient);
-  mqttClient.onMessage(mqttCallback);
-  mqttClient.setOptions(60, false, 1000);
-  while (!mqttClient.connected()) {
-    String clientId = "ESP32TemperatureSensorClient_" + chipID;
-    Serial.println("ClientId = " + clientId);
-    if (mqttClient.connect(clientId.c_str())) {
-      bool subscribeSuccess = mqttClient.subscribe(mqtt_ConfigTopic);
-      if (subscribeSuccess) {
-        Serial.print("Subscribed to topic: ");
-        Serial.println(mqtt_ConfigTopic);
-      } else {
-        Serial.print("Failed to subscribe to topic: ");
-        Serial.println(mqtt_ConfigTopic);
-        Serial.print("Last Error: ");
-        Serial.println(mqttClient.lastError());
-      }
-
-      subscribeSuccess = mqttClient.subscribe(mqtt_OTAtopic);
-      if (subscribeSuccess) {
-        Serial.print("Subscribed to topic: ");
-        Serial.println(mqtt_OTAtopic);
-      } else {
-        Serial.print("Failed to subscribe to topic: ");
-        Serial.println(mqtt_OTAtopic);
-        Serial.print("Last Error: ");
-        Serial.println(mqttClient.lastError());
-      }
-
-      Serial.print("Connected to MQTT Broker ");
-      Serial.print(mqtt_broker);
-      Serial.print(" with Connection Status: ");
-      Serial.println(mqttClient.connected());
-    } else {
-        Serial.print("Failed to connect to MQTT Broker: ");
-        Serial.println(mqtt_broker);
-        Serial.println(mqttClient.lastError());
-        delay(1000);
-    }
-  }
 }
 
 void readSensorAndPublish() {
@@ -211,37 +167,24 @@ void readSensorAndPublish() {
 
   if (sendMQTTMessages)
   {
-    mqttSuccess =  mqttClient.publish((baseTopic + "temperatur").c_str(), String(tempString), true, 2);
-    mqttClient.publish((baseTopic + "luftfeuchtigkeit").c_str(), String(humString), true, 2);
-    mqttClient.publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+    mqttSuccess = mqttClientLib->publish((baseTopic + "temperatur").c_str(), String(tempString), true, 2);
+    mqttClientLib->publish((baseTopic + "luftfeuchtigkeit").c_str(), String(humString), true, 2);
+    mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
     
-    Serial.println(mqttSuccess?"Published new values to MQTT Broker":"Publishing to MQTT Broker failed");
-    Serial.println(" -> Connected:" + String(mqttClient.connected()) + " -> LastError:"  + String(mqttClient.lastError())  + " -> ReturnCode:" + String(mqttClient.returnCode()));
-
     if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
       switchTopStatus = digitalRead(SWITCH_TOP_PIN);
-      mqttClient.publish((baseTopic + "fenster_oben").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      mqttClientLib->publish((baseTopic + "fenster_oben").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
       Serial.println("Switch Top Status changed to " + String(switchTopStatus));
     }
 
     if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
       switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
-      mqttClient.publish((baseTopic + "fenster_unten").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      mqttClientLib->publish((baseTopic + "fenster_unten").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
       Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
     }
   }
   Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
   printInformationOnTFT(String(temperature), String(humidity), true);
-}
-
-void sendMQTTMessage(String subtopic, String message)
-{
-  if (!mqttClient.connected()) {
-      Serial.println("MQTT Client not connected, reconnecting before publish...");
-      connectToMQTT();
-    }
-    
-    mqttClient.publish(baseTopic + (subtopic).c_str(), String(message), true, 2);
 }
 
 void findWifi() {
@@ -323,7 +266,9 @@ void setup() {
   // Initialize display
   tftDisplay.init();
 
-  // // Set up MQTT
+  // Set up MQTT
+  String mqttClientID = "ESP32TemperatureSensorClient_" + chipID;
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT();
 
   //Init DHT sensor
@@ -356,12 +301,12 @@ void loop() {
       readSensorAndPublish();
     } 
 
-    if(!mqttClient.loop())
+    if(!mqttClientLib->loop())
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
     }
-    bool pingSuccess = Ping.ping(mqtt_broker);
+    bool pingSuccess = Ping.ping(mqtt_broker.c_str());
 
     digitalWrite(LED_INTERNAL_PIN, HIGH);
     delay(BLINK_DURATION);
