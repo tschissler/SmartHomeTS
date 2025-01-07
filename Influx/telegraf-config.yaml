@@ -24,7 +24,7 @@ data:
 
     [[outputs.influxdb_v2]]
       urls = ["http://smarthomepi2:32086/"]
-      token = "zM9s-WGpMaeVtQJ1MusgmMM1258L9zTdUso-8GnWt5t9AH17fw_XoaAbcqraNbDA4IpnfbIBgRZ9FlKqG2k0qg=="
+      token = "${file:/etc/secrets/INFLUX_TOKEN}"
       organization = "smarthome"
       bucket = "data"
 
