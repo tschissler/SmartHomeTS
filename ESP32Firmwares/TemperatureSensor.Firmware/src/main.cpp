@@ -48,7 +48,7 @@ static int lastMQTTSentMinute = 0;
 static int switchTopStatus = false;
 static int switchBottomStatus = false;
 
-static String baseTopic = "";
+static String baseTopic = "daten";
 static String sensorName = "";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
@@ -95,7 +95,6 @@ void mqttCallback(String &topic, String &payload) {
 
     if (topic == mqtt_ConfigTopic) {
       sensorName = payload;
-      baseTopic = "data/" + sensorName + "/";
       Serial.println("Sensor name set to: " + sensorName);
       return;
     } 
@@ -167,19 +166,19 @@ void readSensorAndPublish() {
 
   if (sendMQTTMessages)
   {
-    mqttSuccess = mqttClientLib->publish((baseTopic + "temperatur").c_str(), String(tempString), true, 2);
-    mqttClientLib->publish((baseTopic + "luftfeuchtigkeit").c_str(), String(humString), true, 2);
+    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
+    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
     mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
     
     if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
       switchTopStatus = digitalRead(SWITCH_TOP_PIN);
-      mqttClientLib->publish((baseTopic + "fenster_oben").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      mqttClientLib->publish((baseTopic + "/fenster/fenster_oben/" + sensorName).c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
       Serial.println("Switch Top Status changed to " + String(switchTopStatus));
     }
 
     if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
       switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
-      mqttClientLib->publish((baseTopic + "fenster_unten").c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+      mqttClientLib->publish((baseTopic + "/fenster/fenster_unten/" + sensorName).c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
       Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
     }
   }
