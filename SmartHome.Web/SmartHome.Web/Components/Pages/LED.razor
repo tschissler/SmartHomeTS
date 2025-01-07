@@ -14,7 +14,7 @@
 @rendermode InteractiveServer
 
 <div class="control-section">
-    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Orientation.Horizontal">
+    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Syncfusion.Blazor.LinearGauge.Orientation.Horizontal">
         <LinearGaugeEvents OnDrag="OnDragHue" OnDragEnd="OnDragHueEnd" />
         <LinearGaugeAxes>
             <LinearGaugeAxis Minimum="0" Maximum="360" OpposedPosition="false">
@@ -25,7 +25,7 @@
                     <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
                 </LinearGaugeAxisLabelStyle>
                 <LinearGaugePointers>
-                    <LinearGaugePointer EnableDrag="true" PointerValue="@HueValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#000000" Position="Position.Inside" />
+                    <LinearGaugePointer EnableDrag="true" PointerValue="@HueValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#000000" Position="Syncfusion.Blazor.LinearGauge.Position.Inside" />
                 </LinearGaugePointers>
                 <LinearGaugeRanges>
                     <LinearGaugeRange Color="#E63B86" Start="0" End="360" StartWidth="40" EndWidth="40">
@@ -46,7 +46,7 @@
 </div>
 
 <div class="control-section">
-    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Orientation.Horizontal">
+    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Syncfusion.Blazor.LinearGauge.Orientation.Horizontal">
         <LinearGaugeEvents OnDrag="OnDragBrightness" OnDragEnd="OnDragBrightnessEnd" />
         <LinearGaugeAxes>
             <LinearGaugeAxis Minimum="0" Maximum="100" OpposedPosition="false">
@@ -57,7 +57,7 @@
                     <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
                 </LinearGaugeAxisLabelStyle>
                 <LinearGaugePointers>
-                    <LinearGaugePointer EnableDrag="true" PointerValue="@BrightnessValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Position.Inside" />
+                    <LinearGaugePointer EnableDrag="true" PointerValue="@BrightnessValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Syncfusion.Blazor.LinearGauge.Position.Inside" />
                 </LinearGaugePointers>
                 <LinearGaugeRanges>
                     <LinearGaugeRange Color="#E63B86" Start="0" End="100" StartWidth="40" EndWidth="40">
@@ -75,7 +75,7 @@
 </div>
 
 <div class="control-section">
-    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Orientation.Horizontal">
+    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Syncfusion.Blazor.LinearGauge.Orientation.Horizontal">
         <LinearGaugeEvents OnDrag="OnDragDensity" OnDragEnd="OnDragDensityEnd" />
         <LinearGaugeAxes>
             <LinearGaugeAxis Minimum="0" Maximum="101" OpposedPosition="false">
@@ -86,7 +86,7 @@
                     <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
                 </LinearGaugeAxisLabelStyle>
                 <LinearGaugePointers>
-                    <LinearGaugePointer EnableDrag="true" PointerValue="@DensityValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Position.Inside" />
+                    <LinearGaugePointer EnableDrag="true" PointerValue="@DensityValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Syncfusion.Blazor.LinearGauge.Position.Inside" />
                 </LinearGaugePointers>
                 <LinearGaugeRanges>
                     <LinearGaugeRange Color="#9999FF" Start="0" End="100" StartWidth="0" EndWidth="50">

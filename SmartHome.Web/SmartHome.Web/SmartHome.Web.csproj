@@ -9,11 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Azure.Data.Tables" Version="12.9.1" />
     <PackageReference Include="ColorHelper" Version="1.8.1" />
-    <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
-    <PackageReference Include="Syncfusion.Blazor.Charts" Version="27.2.2" />
-    <PackageReference Include="Syncfusion.Blazor.LinearGauge" Version="27.2.2" />
-    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="27.2.2" />
-    <PackageReference Include="Syncfusion.Blazor.Themes" Version="27.2.2" />
+    <PackageReference Include="InfluxDB.Client" Version="4.19.0-dev.15190" />
+	<PackageReference Include="MQTTnet" Version="4.3.7.1207" />
+    <PackageReference Include="Syncfusion.Blazor.Charts" Version="28.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.LinearGauge" Version="28.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="28.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="28.1.38" />
     <PackageReference Include="System.Text.Json" Version="9.0.0" />
   </ItemGroup>
 
