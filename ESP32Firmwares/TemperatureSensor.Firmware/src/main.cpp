@@ -7,30 +7,23 @@
 #include <NTPClient.h>
 #include <ESP32Ping.h>
 
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
+#include "TFTDisplay.h"
 
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
 // Pin configuration
-#define TFT_CS     15
-#define TFT_RST    4  
-#define TFT_DC     2
-#define TFT_MOSI   23
-#define TFT_SCLK   18
 #define LED_INTERNAL_PIN 2
 #define DHTPIN 25    
 #define SWITCH_TOP_PIN 33
 #define SWITCH_BOTTOM_PIN 32
 
-// Initialize Adafruit ST7735
-Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+// Initialize TFT Display
+TFTDisplay tftDisplay;
 
 const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
-// Deep Sleep Configuration
 #define BLINK_DURATION 10       // Blink duration in milliseconds, blinking will happen every second
  
 #define DHTTYPE DHT22   
@@ -77,43 +70,29 @@ String extractVersionFromUrl(String url) {
     return ""; // Return empty string if the pattern is not found
 }
 
-void printInformationOnTFT(String temperature, String humidity, bool mqttMessage) {
-  // Clear TFT screen
-  tft.fillScreen(ST77XX_BLACK);
-  tft.setCursor(0, 0);
-
-  tft.println("TemperatureSensor");
-  tft.print("Version: ");
-  tft.println(version);
-  tft.print("Chip ID: ");
-  tft.println(chipID);
-  tft.print("Sensor Name: ");
-  tft.println(sensorName);
-  tft.println();
-  // tft.setCursor(0, 31);
-
+void printInformationOnTFT(String temperature, String humidity, bool displayMQTTMessage) {
+  
+  DisplayInformation data;
+  
   // Update NTP client
   timeClient.update();
 
   // Get current time
-  String formattedTime = timeClient.getFormattedTime();
-  tft.println(formattedTime);
-  tft.println("Temperature: " + temperature + "C");
-  tft.println("Humidity: " + humidity + "%");
-  tft.println("IP: " + WiFi.localIP().toString());
-  tft.println("SSID: " + ssid);
-  tft.println("RSSI: " + String(WiFi.RSSI()) + " dBm");
+  data.time = timeClient.getFormattedTime();
+  data.temperature = temperature;
+  data.humidity = humidity;
+  data.version = version;
+  data.chipID = chipID;
+  data.sensorName = sensorName;
+  data.ip = WiFi.localIP().toString();
+  data.ssid = ssid;
+  data.rssi = String(WiFi.RSSI());
+  data.displayMQTTMessage = displayMQTTMessage;
+  data.mqttEnabled = sendMQTTMessages;
+  data.mqttSuccess = mqttSuccess;
+  data.pingSuccess = Ping.ping(mqtt_broker);
 
-  if (mqttMessage) {
-    tft.println();
-    if (sendMQTTMessages) {
-      tft.println(mqttSuccess?"MQTT sent successfully":"Sending MQTT failed");
-    } else {
-      tft.println("MQTT messages disabled");
-    }
-  }
-
-  tft.println(Ping.ping(mqtt_broker)?"Ping successful":"Ping failed");
+  tftDisplay.printInformation(data);
 }
 
 void mqttCallback(String topic, String &payload) {
@@ -212,13 +191,6 @@ void connectToMQTT() {
 }
 
 void readSensorAndPublish() {
-  // Stay awake for a short period to receive messages
-  // unsigned long startMillis = millis();
-  // while (millis() - startMillis < 10000) {
-  //   mqttClient.loop();
-  //   delay(10);  // Small delay to prevent WDT reset
-  // }
-
   if (sensorName == "") {
     Serial.println("Sensor name not set, skipping sensor reading");
     return;
@@ -239,11 +211,6 @@ void readSensorAndPublish() {
 
   if (sendMQTTMessages)
   {
-    // if (!mqttClient.connected()) {
-    //   Serial.println("MQTT Client not connected, reconnecting before publish...");
-    //   connectToMQTT();
-    // }
-    
     mqttSuccess =  mqttClient.publish((baseTopic + "temperatur").c_str(), String(tempString), true, 2);
     mqttClient.publish((baseTopic + "luftfeuchtigkeit").c_str(), String(humString), true, 2);
     mqttClient.publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
@@ -354,13 +321,7 @@ void setup() {
   Serial.println(WiFi.localIP());
   
   // Initialize display
-  tft.initR(INITR_BLACKTAB);      // Initialize a ST7735S chip, black tab
-  tft.fillScreen(ST77XX_BLACK);   // Fill screen with black color
-  tft.setRotation(1);             // Set orientation (0-3)
-
-  // Text settings
-  tft.setTextSize(1);             // Set text size
-  tft.setTextColor(ST77XX_WHITE); // Set text color
+  tftDisplay.init();
 
   // // Set up MQTT
   connectToMQTT();
