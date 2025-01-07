@@ -1,1 +1,5 @@
 kubectl create secret generic influx-token-secret --from-literal=INFLUX_TOKEN=my-secret-token
+
+
+kubectl delete configmap telegraf-config
+kubectl create configmap telegraf-config --from-file=mqtt_import.conf
