@@ -41,7 +41,7 @@ NTPClient timeClient(ntpUDP);
 MQTTClientLib* mqttClientLib = nullptr;
 
 static bool otaInProgress = false;
-static bool otaEnable = false;
+static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
