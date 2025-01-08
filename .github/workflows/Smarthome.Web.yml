@@ -13,12 +13,18 @@ env:
   
 jobs:
   build:
-    #runs-on: [self-hosted, linux]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
+    #runs-on: ubuntu-latest-arm64
 
     steps:
     - uses: actions/checkout@v3
 
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          
     - name: Build and publish Docker image
       run: |        
         # Build the Docker image with the package version tag.
