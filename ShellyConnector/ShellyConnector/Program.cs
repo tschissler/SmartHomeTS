@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MQTTClient;
+using Newtonsoft.Json;
 using ShellyConnector;
 using SmartHomeHelpers.Logging;
 
@@ -43,6 +44,27 @@ mqttClient.OnMessageReceived += (sender, e) =>
     ShellyConnector.ShellyConnector.SetRelay(devices.First(i => i.DeviceName == deviceName), state);
 };
 
+ConsoleHelpers.PrintInformation(" ### Creating timer to read data from devices every second");
+ConsoleHelpers.PrintInformation("     and send the data as MQTT messages");
+var timer = new System.Timers.Timer(1000);
+timer.Elapsed += async (sender, e) =>
+{
+    var tasks = devices.Select(async device =>
+    {
+        var powerData = ShellyConnector.ShellyConnector.GetPowerData(device);
+        if (powerData is null)
+            ConsoleHelpers.PrintInformation($"  --- Could not read meter data from device {device.DeviceName}");
+        else
+        {
+            var jsonPayload = JsonConvert.SerializeObject(powerData);
+            await mqttClient.PublishAsync($"data/strom/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
+        }
+    });
+
+    await Task.WhenAll(tasks);
+};
+timer.Start();
+ConsoleHelpers.PrintInformation("");
 ConsoleHelpers.PrintInformation(" ### Done");
 
 // Run the host to keep the application running and processing events
