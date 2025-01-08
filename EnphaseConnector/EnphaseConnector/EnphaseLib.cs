@@ -80,15 +80,31 @@ namespace EnphaseConnector
                     response.EnsureSuccessStatusCode();
                     var body = await response.Content.ReadAsStringAsync();
                     var rawData = JsonConvert.DeserializeObject<EnphaseLiveData>(body);
-                    return new EnphaseData(
-                        DateTimeOffset.FromUnixTimeSeconds(rawData.Meters.Last_Update),
-                        rawData.Meters.Soc,
-                        rawData.Meters.Enc_Agg_Energy,
-                        rawData.Meters.Pv.Agg_P_Mw,
-                        rawData.Meters.Storage.Agg_P_Mw,
-                        rawData.Meters.Grid.Agg_P_Mw,
-                        rawData.Meters.Load.Agg_P_Mw
-                        );
+
+                    if (deviceName == "envoym1")
+                    {
+                        return new EnphaseData(
+                            DateTimeOffset.FromUnixTimeSeconds(rawData.Meters.Last_Update),
+                            rawData.Meters.Soc,
+                            rawData.Meters.Enc_Agg_Energy,
+                            rawData.Meters.Pv.Agg_P_Mw / 1000,
+                            rawData.Meters.Storage.Agg_P_Mw / 1000,
+                            rawData.Meters.Grid.Agg_P_Mw / 1000,
+                            rawData.Meters.Load.Agg_P_Mw / 1000
+                            );
+                    }
+                    else
+                    {
+                        return new EnphaseData(
+                            DateTimeOffset.FromUnixTimeSeconds(rawData.Meters.Last_Update),
+                            rawData.Meters.Soc,
+                            rawData.Meters.Enc_Agg_Energy,
+                            rawData.Meters.Pv.Agg_P_Mw,
+                            rawData.Meters.Storage.Agg_P_Mw,
+                            rawData.Meters.Grid.Agg_P_Mw,
+                            rawData.Meters.Load.Agg_P_Mw
+                            );
+                    }
                 }
             }
             catch (HttpRequestException e)
