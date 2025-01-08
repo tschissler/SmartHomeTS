@@ -18,14 +18,21 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+        
     - name: Build and publish Docker image
       run: |        
         # Build the Docker image with the package version tag.
         docker build \
             -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
             -t tschissler/${{ env.IMAGE_NAME }}:latest \
-            -f ./${{ env.PROJECT_NAME }}/Dockerfile \
-            --push .
+            -f ./${{ env.PROJECT_NAME }}/Dockerfile .
+        docker push tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+        docker push tschissler/${{ env.IMAGE_NAME }}:latest
 
     - name: Deploy to Kubernetes if depoyment does not exist yet
       run: |
