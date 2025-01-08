@@ -1,0 +1,180 @@
+﻿@using InfluxDB.Client
+@using InfluxDB.Client.Api.Domain
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Charts
+@using Syncfusion.Blazor.DropDowns
+@using System.Collections.ObjectModel
+@inject NavigationManager Navigation
+
+@page "/powerconsumption"
+
+<PageTitle>Stromverbrauch</PageTitle>
+
+<div>
+    <h3>Stromverbrauch</h3>
+
+    @*     <div class="mb-3 col-lg-12">
+        <label for="timeframe">Select Timeframe:</label>
+        <SfDropDownList TValue="string" TItem="TimeFrame" @bind-Value="@selectedTimeframe" DataSource="@timeframes" Width="300px">
+            <DropDownListEvents TValue="string" TItem="TimeFrame" ValueChange="OnTimeframeChanged"/>
+            <DropDownListFieldSettings Text="Name" Value="Value"/>
+        </SfDropDownList>
+    </div> *@
+    <div class="control-section" align="center">
+        <SfChart title="Stromverbrauch M1" @ref="lineChart" Width="100%" Height="800px">
+            <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime"></ChartPrimaryXAxis>
+            <ChartPrimaryYAxis LabelFormat="{value}W"></ChartPrimaryYAxis>
+            <ChartTooltipSettings Enable="true"></ChartTooltipSettings>
+            <ChartArea>
+                <ChartAreaBorder Width="0"></ChartAreaBorder>
+            </ChartArea>
+            <ChartLegendSettings EnableHighlight="true"></ChartLegendSettings>
+            <ChartSeriesCollection>
+                @foreach (var series in powerConsumptionChartSeries)
+                {
+                    <ChartSeries DataSource="@series.Data" XName="@nameof(ChartDataPoint.Time)" YName="@nameof(ChartDataPoint.Value)" Type="ChartSeriesType.StackingArea" Name="@series.Name" Opacity="0.3">
+                        <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+                    </ChartSeries>
+                }
+                <ChartSeries DataSource="@completeConsumptionChartSeries.Data" XName="@nameof(ChartDataPoint.Time)" YName="@nameof(ChartDataPoint.Value)" Type="ChartSeriesType.Area" Name="@completeConsumptionChartSeries.Name" Fill="#B0C4DE">
+                    <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+                </ChartSeries>
+            </ChartSeriesCollection>
+        </SfChart>
+    </div>
+
+    <div class="mt-3">
+        <button class="btn btn-primary" @onclick="LoadChartData">Reload Data</button>
+    </div>
+</div>
+
+@code {
+    private SfChart lineChart;
+    private Timer timer;
+    //private string selectedTimeframe = "3h"; // Default timeframe
+    private ObservableCollection<ChartSeriesData> powerConsumptionChartSeries = new ObservableCollection<ChartSeriesData>();
+    private ChartSeriesData completeConsumptionChartSeries = new();
+    // private List<TimeFrame> timeframes = new List<TimeFrame>
+    // {
+    //     new TimeFrame { Name = "Letzte 1 Stunde", Value = "1h" },
+    //     new TimeFrame { Name = "Letzte 3 Stunden", Value = "3h" },
+    //     new TimeFrame { Name = "Letzte 24 Stunden", Value = "24h" },
+    //     new TimeFrame { Name = "Letzte 7 Tage", Value = "7d" },
+    //     new TimeFrame { Name = "Letzte 30 Tage", Value = "30d" }
+    // };
+
+    // Chart data model
+    public class ChartDataPoint
+    {
+        public DateTime Time { get; set; }
+        public double Value { get; set; }
+    }
+
+    public class TimeFrame
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+
+    public class ChartSeriesData
+    {
+        public string Name { get; set; }
+        public ObservableCollection<ChartDataPoint> Data { get; set; } = new ObservableCollection<ChartDataPoint>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChartData();
+        timer = new Timer(async _ => await TimerElapsed(), null, 0, 10000);
+    }
+
+    private async Task TimerElapsed()
+    {
+        await InvokeAsync(async () => await LoadChartData());
+    }
+
+    private async Task LoadChartData()
+    {
+        try
+        {
+            using var client = new InfluxDBClient("http://smarthomepi2:32086?org=smarthome", "4s2KAy_B9R2Z_0D5hEbzqFW69cps1ljWrplHwwSX_qxIIWgnnu9sTTRyPDlUFP-SO62DLJiuues5q8ObzlI6Ug==");
+            var queryApi = client.GetQueryApi();
+
+            await LoadMeasurementData(queryApi, "", powerConsumptionChartSeries);
+            completeConsumptionChartSeries = await LoadCompleteConsumption(queryApi);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading chart data: {ex.Message}");
+        }
+    }
+
+    private async Task<ChartSeriesData> LoadCompleteConsumption(QueryApi queryApi)
+    {
+        var fluxQuery = $@"
+            from(bucket: ""SmartHomeData"")
+              |> range(start: -10m)
+              |> filter(fn: (r) => r[""_measurement""] == ""electricity"")
+              |> filter(fn: (r) => r[""_field""] == ""PowerToHouse"")
+              |> filter(fn: (r) => r[""location""] == ""envoym1"")
+              |> aggregateWindow(every: 3s, fn: mean, createEmpty: true)
+              |> yield(name: ""mean"")
+              ";
+        var tables = await queryApi.QueryAsync(fluxQuery);
+
+        var seriesData = new ChartSeriesData
+            {
+                Name = "Gesamtverbrauch"
+            };
+        foreach (var record in tables.First().Records)
+        {
+            seriesData.Data.Add(new ChartDataPoint
+                {
+                    Time = record.GetTime()?.ToDateTimeUtc() ?? DateTime.MinValue,
+                    Value = Convert.ToDouble(record.GetValueByKey("_value"))
+                });
+        }
+        return seriesData;
+    }
+
+    private async Task LoadMeasurementData(QueryApi queryApi, string measurement, ObservableCollection<ChartSeriesData> chartSeries)
+    {        
+        var fluxQuery = $@"
+            from(bucket: ""SmartHomeData"")
+              |> range(start: -10m)
+              |> filter(fn: (r) => r[""_measurement""] == ""strom"")
+              |> filter(fn: (r) => r[""_field""] == ""Power"")
+              |> filter(fn: (r) => r[""location""] == ""M1"")
+              |> aggregateWindow(every: 3s, fn: mean, createEmpty: true)
+              |> yield(name: ""mean"")
+              ";
+        var tables = await queryApi.QueryAsync(fluxQuery);
+
+        chartSeries.Clear();
+
+        foreach (var table in tables)
+        {
+            var seriesData = new ChartSeriesData
+                {
+                    Name = table.Records[0].GetValueByKey("device")?.ToString() ?? "Gesamtverbrauch"
+                };
+            foreach (var record in table.Records)
+            {
+                seriesData.Data.Add(new ChartDataPoint
+                    {
+                        Time = record.GetTime()?.ToDateTimeUtc() ?? DateTime.MinValue,
+                        Value = Convert.ToDouble(record.GetValueByKey("_value"))
+                    });
+            }
+            chartSeries.Add(seriesData);
+        }
+    }
+
+    // public async Task OnTimeframeChanged(Syncfusion.Blazor.DropDowns.ChangeEventArgs<string, TimeFrame> args)
+    // {
+    //     selectedTimeframe = args.ItemData?.Value??"-3h";
+    //     await LoadChartData();
+    // }
+}

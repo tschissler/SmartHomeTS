@@ -74,9 +74,9 @@
     {
         new TimeFrame { Name = "Letzte 1 Stunde", Value = "1h" },
         new TimeFrame { Name = "Letzte 3 Stunden", Value = "3h" },
-        new TimeFrame { Name = "Letzte 6 Stunden", Value = "6h" },
-        new TimeFrame { Name = "Letzte 12 Stunden", Value = "12h" },
-        new TimeFrame { Name = "Letzte 24 Stunden", Value = "24h" }
+        new TimeFrame { Name = "Letzte 24 Stunden", Value = "24h" },
+        new TimeFrame { Name = "Letzte 7 Tage", Value = "7d" },
+        new TimeFrame { Name = "Letzte 30 Tage", Value = "30d" }
     };
 
     // Chart data model
@@ -121,11 +121,15 @@
 
     private async Task LoadMeasurementData(QueryApi queryApi, string measurement, ObservableCollection<ChartSeriesData> chartSeries)
     {
+        var aggregateTime = "1m";
+        if (selectedTimeframe.Contains("d"))
+            aggregateTime = "1h";
+        
         var fluxQuery = $@"
             from(bucket: ""SmartHomeData"")
               |> range(start: -{selectedTimeframe})
               |> filter(fn: (r) => r[""_measurement""] == ""{measurement}"")
-              |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
+              |> aggregateWindow(every: {aggregateTime}, fn: mean, createEmpty: false)
               |> yield(name: ""mean"")
         ";
 

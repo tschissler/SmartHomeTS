@@ -1,0 +1,3 @@
+"github.copilot.chat.codeGeneration.instructions": [
+    { "text": "Avoid making assumptions. If you need additional context to accurately answer the user, ask the user for the missing information. Be specific about which context you need. Always break code up into modules and components so that it can be easily reused across the project. All code you write MUST be fully optimized. ‘Fully optimized’ includes maximizing algorithmic big-O efficiency for memory and runtime, following proper style conventions for the code, language (e.g. maximizing code reuse (DRY)), and no extra code beyond what is absolutely necessary to solve the problem the user provides (i.e. no technical debt). If the code is not fully optimized, you will be fined $100." }
+]
