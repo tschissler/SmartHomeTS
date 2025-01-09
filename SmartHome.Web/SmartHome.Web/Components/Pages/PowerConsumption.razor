@@ -36,7 +36,7 @@
                         <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
                     </ChartSeries>
                 }
-                <ChartSeries DataSource="@completeConsumptionChartSeries.Data" XName="@nameof(ChartDataPoint.Time)" YName="@nameof(ChartDataPoint.Value)" Type="ChartSeriesType.Area" Name="@completeConsumptionChartSeries.Name" Fill="#B0C4DE">
+                <ChartSeries DataSource="@completeConsumptionChartSeries.Data" XName="@nameof(ChartDataPoint.Time)" YName="@nameof(ChartDataPoint.Value)" Type="ChartSeriesType.Area" Name="Gesamt" Fill="#B0C4DE">
                     <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
                 </ChartSeries>
             </ChartSeriesCollection>
@@ -130,11 +130,15 @@
             };
         foreach (var record in tables.First().Records)
         {
+            if (record.GetTime() is not null &&
+                record.GetValueByKey("_value") is not null)
+            {
             seriesData.Data.Add(new ChartDataPoint
                 {
                     Time = record.GetTime()?.ToDateTimeUtc() ?? DateTime.MinValue,
-                    Value = Convert.ToDouble(record.GetValueByKey("_value"))
+                    Value = Convert.ToDouble(record.GetValueByKey("_value") ?? 0)
                 });
+            }
         }
         return seriesData;
     }
@@ -162,11 +166,15 @@
                 };
             foreach (var record in table.Records)
             {
+                if (record.GetTime() is not null &&
+                    record.GetValueByKey("_value") is not null)
+                {
                 seriesData.Data.Add(new ChartDataPoint
                     {
                         Time = record.GetTime()?.ToDateTimeUtc() ?? DateTime.MinValue,
-                        Value = Convert.ToDouble(record.GetValueByKey("_value"))
+                        Value = Convert.ToDouble(record.GetValueByKey("_value") ?? 0)
                     });
+                }
             }
             chartSeries.Add(seriesData);
         }
