@@ -133,7 +133,7 @@
             seriesData.Data.Add(new ChartDataPoint
                 {
                     Time = record.GetTime()?.ToDateTimeUtc() ?? DateTime.MinValue,
-                    Value = Convert.ToDouble(record.GetValueByKey("_value"))
+                    Value = Convert.ToDouble(record.GetValueByKey("_value") ?? 0)
                 });
         }
         return seriesData;
@@ -165,7 +165,7 @@
                 seriesData.Data.Add(new ChartDataPoint
                     {
                         Time = record.GetTime()?.ToDateTimeUtc() ?? DateTime.MinValue,
-                        Value = Convert.ToDouble(record.GetValueByKey("_value"))
+                        Value = Convert.ToDouble(record.GetValueByKey("_value") ?? 0)
                     });
             }
             chartSeries.Add(seriesData);
