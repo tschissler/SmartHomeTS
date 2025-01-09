@@ -90,6 +90,12 @@ namespace ShellyConnector
                     DeviceType : DeviceType.ShellyPlusPlugS,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 57 }),
                     Location : Location.M1
+               ),
+                new ShellyDevice(
+                    DeviceName : "Thermomix",
+                    DeviceType : DeviceType.ShellyPlusPlugS,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 70 }),
+                    Location : Location.M1
                )
             };
         }
