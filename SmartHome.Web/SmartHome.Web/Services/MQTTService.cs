@@ -82,7 +82,7 @@ namespace SmartHome.Web.Services
         }
         private void UpdateSharedData(MqttApplicationMessage message)
         {
-            Console.WriteLine("Received message on topic: " + message.Topic);
+            //Console.WriteLine("Received message on topic: " + message.Topic);
 
             if (message.PayloadSegment == null)
             {
