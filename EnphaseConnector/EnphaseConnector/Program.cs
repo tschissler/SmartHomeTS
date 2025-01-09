@@ -16,7 +16,7 @@ string envoySerialM3 = Enphase.EnvoyM3Serial;
 var tokenM1 = enphaseAuth.GetTokenAsync(userName, password, envoySerialM1).Result;
 Thread.Sleep(1000);
 var tokenM3 = enphaseAuth.GetTokenAsync(userName, password, envoySerialM3).Result;
-var Leseintervall = 3000;
+var Leseintervall = 1000;
 
 var mqttFactory = new MqttFactory();
 
