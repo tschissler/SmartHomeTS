@@ -61,7 +61,7 @@ namespace ShellyConnector
                                 TotalPower: meterData.Total,
                                 Voltage: 0,
                                 Timestamp: DateTimeOffset.Now,
-                                IsValid: meterData.IsValid
+                                IsValid: meterData.Is_Valid
                                 );
                             break;
                         case DeviceType.ShellyPlusPlugS:
