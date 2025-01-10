@@ -50,7 +50,7 @@ namespace ShellyConnector
                                 TotalPower: emeterData.Emeters[0].Total + emeterData.Emeters[1].Total + emeterData.Emeters[2].Total,
                                 Voltage: (emeterData.Emeters[0].Voltage + emeterData.Emeters[0].Voltage + emeterData.Emeters[0].Voltage) / 3,
                                 Timestamp: DateTimeOffset.Now,
-                                IsValid: emeterData.Emeters[0].IsValid
+                                IsValid: emeterData.Emeters[0].Is_Valid
                                 );
                             break;
                         case DeviceType.ShellyPlugS:

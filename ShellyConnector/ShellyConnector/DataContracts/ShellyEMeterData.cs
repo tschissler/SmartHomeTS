@@ -12,7 +12,7 @@ namespace ShellyConnector.DataContracts
         public double Pf { get; set; }
         public double Current { get; set; }
         public double Voltage { get; set; }
-        public bool IsValid { get; set; }
+        public bool Is_Valid { get; set; }
         public double Total { get; set; }
         public double TotalReturned { get; set; }
     }
