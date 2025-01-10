@@ -5,6 +5,7 @@
         double Power,
         double Voltage,
         double TotalPower,
-        DateTimeOffset Timestamp
+        DateTimeOffset Timestamp,
+        bool IsValid
     );
 }

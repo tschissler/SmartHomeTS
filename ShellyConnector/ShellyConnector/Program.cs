@@ -31,7 +31,7 @@ foreach (var device in devices)
     if (status is null)
         ConsoleHelpers.PrintInformation($"  --- Could not connect to device {device.DeviceName}");
     else
-        ConsoleHelpers.PrintInformation($"  - {device.DeviceName, -30} {"(" + device.IPAddress + ")", -20} {status.app + status.type, 20} => success");
+        ConsoleHelpers.PrintInformation($"  - {device.DeviceName,-30} {"(" + device.IPAddress + ")",-20} {status.app + status.type,20} => success");
 }
 
 ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
@@ -53,12 +53,16 @@ timer.Elapsed += async (sender, e) =>
     {
         var powerData = ShellyConnector.ShellyConnector.GetPowerData(device);
         if (powerData is null)
-            ConsoleHelpers.PrintInformation($"  --- Could not read meter data from device {device.DeviceName}");
-        else
         {
-            var jsonPayload = JsonConvert.SerializeObject(powerData);
-            await mqttClient.PublishAsync($"data/strom/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
+            ConsoleHelpers.PrintInformation($"  --- Could not read meter data from device {device.DeviceName}");
+            return;
         }
+        if (!powerData.IsValid)
+        {
+            ConsoleHelpers.PrintInformation($"  --- Data from device {device.DeviceName} is invalid");
+        }
+        var jsonPayload = JsonConvert.SerializeObject(powerData);
+        await mqttClient.PublishAsync($"data/strom/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
     });
 
     await Task.WhenAll(tasks);

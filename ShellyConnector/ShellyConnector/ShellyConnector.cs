@@ -3,6 +3,7 @@ using ShellyConnector.DataContracts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -48,7 +49,8 @@ namespace ShellyConnector
                                 Power: emeterData.Emeters[0].Power + emeterData.Emeters[1].Power + emeterData.Emeters[2].Power,
                                 TotalPower: emeterData.Emeters[0].Total + emeterData.Emeters[1].Total + emeterData.Emeters[2].Total,
                                 Voltage: (emeterData.Emeters[0].Voltage + emeterData.Emeters[0].Voltage + emeterData.Emeters[0].Voltage) / 3,
-                                Timestamp: DateTimeOffset.Now
+                                Timestamp: DateTimeOffset.Now,
+                                IsValid: emeterData.Emeters[0].IsValid
                                 );
                             break;
                         case DeviceType.ShellyPlugS:
@@ -58,7 +60,8 @@ namespace ShellyConnector
                                 Power: meterData.Power,
                                 TotalPower: meterData.Total,
                                 Voltage: 0,
-                                Timestamp: DateTimeOffset.Now
+                                Timestamp: DateTimeOffset.Now,
+                                IsValid: meterData.IsValid
                                 );
                             break;
                         case DeviceType.ShellyPlusPlugS:
@@ -69,7 +72,8 @@ namespace ShellyConnector
                                 Power: plugPlusMeterData.Switch0.apower,
                                 TotalPower: plugPlusMeterData.Switch0.aenergy.total,
                                 Voltage: plugPlusMeterData.Switch0.voltage,
-                                Timestamp: DateTimeOffset.Now
+                                Timestamp: DateTimeOffset.Now,
+                                IsValid: true
                                 );
                             break;
                         default:
