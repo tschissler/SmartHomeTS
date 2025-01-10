@@ -60,6 +60,7 @@ timer.Elapsed += async (sender, e) =>
         if (!powerData.IsValid)
         {
             ConsoleHelpers.PrintInformation($"  --- Data from device {device.DeviceName} is invalid");
+            return;
         }
         var jsonPayload = JsonConvert.SerializeObject(powerData);
         await mqttClient.PublishAsync($"data/strom/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
