@@ -4,6 +4,8 @@ import asyncio
 import sys
 import json
 from typing import Dict, Optional, Tuple
+import bimmer_connected
+import bimmer_connected.vehicle
 import paho.mqtt.client as mqtt
 from bimmer_connected.account import MyBMWAccount
 from bimmer_connected.api.regions import Regions
@@ -48,6 +50,14 @@ async def fetch_vehicle_info(account: MyBMWAccount, vin: str) -> Dict:
         "last_update": vehicle.timestamp.isoformat(),
     }
 
+# Define a function to save the image to a file
+async def save_vehicle_image(vehicle, view_direction):
+    filename = f"{vehicle.brand}_{view_direction}.jpg"
+    image_bytes = await vehicle.get_vehicle_image(view_direction)
+    with open(filename, 'wb') as image_file:
+        image_file.write(image_bytes)
+
+
 async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser) -> Tuple[str, MyBMWAccount, Optional[Dict]]:
     print("")
     print(f" - Connecting to {vehicleName} Connected Drive API")
@@ -55,7 +65,7 @@ async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser) -> 
     password = os.getenv(vehicleName + '_PASSWORD')
     vin = os.getenv(vehicleName + '_VIN')
    
-    print(f" - Username: {username} | Password: {password} | VIN: {vin}")
+    #print(f" - Username: {username} | Password: {password} | VIN: {vin}")
     args = parser.parse_args()
     captcha_token_arg = f'captcha_token_{vehicleName}'
     captcha_token = getattr(args, captcha_token_arg)
@@ -75,7 +85,21 @@ async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser) -> 
 
     print(" - Vehicle Information:")
     print(vehicle.brand, vehicle.name, vehicle.vin)
-    
+
+    if (args.get_vehicle_images):
+        print(" - Getting vehicle images")
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.ANGLE_SIDE_VIEW_FORTY)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.ANGLE_SIDE_VIEW_SIXTY)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.FRONTSIDE)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.FRONT_LEFT)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.FRONT_RIGHT)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.REAR_LEFT)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.REAR_RIGHT)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.REAR_VIEW)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.SIDE)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.DASHBOARD)
+        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.DRIVERDOOR)
+
     return vin,account,oauth_store_data
 
 async def main():
@@ -86,6 +110,7 @@ async def main():
     parser = argparse.ArgumentParser(description=f"Connecting to the BMW/Mini API")
     parser.add_argument('--captcha_token_BMW', type=str, required=False, help=f'Captcha token for BMW API login')
     parser.add_argument('--captcha_token_Mini', type=str, required=False, help=f'Captcha token for Mini API login')
+    parser.add_argument('--get_vehicle_images', action='store_true', help='Print debug logs')
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
