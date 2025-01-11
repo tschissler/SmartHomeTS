@@ -13,7 +13,7 @@ def load_k8s_config():
 
 def load_oauth_store_from_k8s_secret(secret_name: str, namespace: str, account: MyBMWAccount) -> Dict:
     """Read the OAuth details from a Kubernetes secret."""
-    print(f"Loading OAuth data from Kubernetes secret {secret_name} in namespace {namespace}")
+    print(f"    -- Loading OAuth data from Kubernetes secret {secret_name} in namespace {namespace}")
     load_k8s_config()
     v1 = client.CoreV1Api()
 
