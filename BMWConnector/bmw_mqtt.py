@@ -46,7 +46,13 @@ async def fetch_vehicle_info(account: MyBMWAccount, vin: str) -> Dict:
         "brand": vehicle.brand,
         "name": vehicle.name,
         "battery": vehicle.fuel_and_battery.remaining_battery_percent,
+        "chargingstatus": vehicle.fuel_and_battery.charging_status,
+        "chargingtarget": vehicle.fuel_and_battery.charging_target,
+        "chargerconnected" : vehicle.fuel_and_battery.is_charger_connected,
+        "remainingrange": vehicle.fuel_and_battery.remaining_range_electric,
         "mileage": vehicle.mileage,
+        "moving": vehicle.is_vehicle_active,
+
         "last_update": vehicle.timestamp.isoformat(),
     }
 
