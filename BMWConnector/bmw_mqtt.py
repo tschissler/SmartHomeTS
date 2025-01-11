@@ -128,7 +128,7 @@ async def main():
         try:
             result = await fetch_vehicle_info(bmwAccount, bmwVin)
             payload = json.dumps(result)
-            client.publish(MQTT_TOPIC, payload)
+            client.publish(MQTT_TOPIC + "BMW", payload)
             print("Topic :" + MQTT_TOPIC + "BMW" + " | Message Sent: ", payload)
             #store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
             store_oauth_store_to_k8s_secret("bmw-connect-api-token", "default", bmwAccount, bmwOauth_store_data.get("session_id_timestamp"))
@@ -139,7 +139,7 @@ async def main():
         try:
             result = await fetch_vehicle_info(miniAccount, miniVin)
             payload = json.dumps(result)
-            client.publish(MQTT_TOPIC, payload)
+            client.publish(MQTT_TOPIC + "Mini", payload)
             print("Topic :" + MQTT_TOPIC + "Mini" + " | Message Sent: ", payload)
             #store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
             store_oauth_store_to_k8s_secret("mini-connect-api-token", "default", miniAccount, miniOauth_store_data.get("session_id_timestamp"))
