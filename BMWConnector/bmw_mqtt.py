@@ -153,7 +153,7 @@ async def main():
             sys.stderr.write(f"Error: {e}\n")
             #sys.exit(1)
 
-        await asyncio.sleep(10)  
+        await asyncio.sleep(60)  
 
     loop.close()
     client.loop_stop()
