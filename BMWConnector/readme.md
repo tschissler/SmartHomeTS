@@ -20,3 +20,22 @@ Additionally the API requires a Captcha-Token to ensure you are not a robot. You
   You can provide this token as a commandline argument --captcha_token_BMW / --captcha_token_Mini
 
 Once the connection is established, you do not need the Captcha-Token for further access during the lifetime of the connection. But to survive a reeboot, you can store a Refresh-Token. In the current implementation, the Refresh-Token is stored as a Kubernetes Secret but you can also store it in a file or somewhere else. If the Captcha-Token is not provided, the service loads the Refresh-Token and uses this to connect to the cloud.
+
+## Datacollection and sending as MQTT message
+The current implementation collects the following data and sends a MQTT message with it:
+
+``` python
+        "brand": vehicle.brand,
+        "name": vehicle.name,
+        "battery": vehicle.fuel_and_battery.remaining_battery_percent,
+        "chargingstatus": vehicle.fuel_and_battery.charging_status,
+        "chargingtarget": vehicle.fuel_and_battery.charging_target,
+        "chargerconnected" : vehicle.fuel_and_battery.is_charger_connected,
+        "remainingrange": vehicle.fuel_and_battery.remaining_range_electric,
+        "mileage": vehicle.mileage,
+        "moving": vehicle.is_vehicle_active,
+
+        "last_update": vehicle.timestamp.isoformat(),
+```
+
+You can find more available data on the [bimmer documentation](https://bimmer-connected.readthedocs.io/en/stable/module/vehicle.html).
