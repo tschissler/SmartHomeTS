@@ -23,13 +23,25 @@ async def fetch_vehicle_info():
     weConnect.login()
     weConnect.update()
 
+    #weConnect.update(updateCapabilities=False, updatePictures=False, selective=[]) 
+    #allElements = weConnect.getLeafChildren()
+    #for element in allElements:
+    #    print(element.getGlobalAddress())
+    
     vehicle = weConnect.vehicles[carvin]
         
     return {
+        "nickname": vehicle.nickname.value,
+        "brand": vehicle.brandCode.value.value,
         "model": vehicle.model.value,
         "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value),
-        "batteryupdate": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
-        "chargingstate": vehicle.domains['charging']["chargingStatus"].chargingState.value.value
+        "chargingstate": vehicle.domains['charging']["chargingStatus"].chargingState.value.value,
+        "chargingTarget": vehicle.domains['automation']["chargingProfiles"].profiles[1].targetSOC_pct.value,
+        "remainingCharginTime": vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value,
+        "chargerConnected": vehicle.domains["charging"]["plugStatus"].plugConnectionState.value.value,
+        "remainingRange": vehicle.domains['charging']["batteryStatus"].cruisingRangeElectric_km.value,
+        "muleage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
+        "lastUpdate": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
     }
 
 async def main():
