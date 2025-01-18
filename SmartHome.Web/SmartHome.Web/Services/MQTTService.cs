@@ -19,6 +19,10 @@ namespace SmartHome.Web.Services
         public ChargingSituation ChargingSituation { get; set; }
         public IluminationSituation IluminationSituation { get; set; }
         public ClimateData ClimateData { get; set; }
+        public CarStatusData bmwStatusData { get; set; }
+        public CarStatusData miniStatusData { get; set; }
+        public CarStatusData vwStatusData { get; set; }
+
 
         public MQTTService()
         {
@@ -93,6 +97,21 @@ namespace SmartHome.Web.Services
 
             switch (message.Topic)
             {
+                case "data/charging/BMW":
+                    {
+                        bmwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
+                        break;
+                    }
+                case "data/charging/Mini":
+                    {
+                        miniStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
+                        break;
+                    }
+                case "data/charging/VW":
+                    {
+                        vwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
+                        break;
+                    }
                 case "data/charging/situation":
                     {
                         ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);

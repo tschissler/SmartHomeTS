@@ -49,11 +49,11 @@
     </div>
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: #614680"></div>
-        <div class="LegendText">BMW: <span class="nowrap">@FormatPower(_chargingSituation.InsideCurrentChargingPower)</span></div>
+        <div class="LegendText">Garage: <span class="nowrap">@FormatPower(_chargingSituation.InsideCurrentChargingPower)</span></div>
     </div>
     <div class="LegendGroup">
         <div class="LegendColorIndicator" style="background-color: #be8ce5"></div>
-        <div class="LegendText">ID4: <span class="nowrap">@FormatPower(_chargingSituation.OutsideCurrentChargingPower)</span></div>
+        <div class="LegendText">Außen: <span class="nowrap">@FormatPower(_chargingSituation.OutsideCurrentChargingPower)</span></div>
     </div>
 </div>
 
@@ -104,63 +104,38 @@
 
 <div>
     <div class="carsGrid">
-        <div class="carBox">
-            <img class="carImage" src="/images/BMW.webp" />
-            <div class="carControls">
-                <img class="carConnectedIcon" src="/images/@(_chargingSituation.InsideConnected ? "connected.svg" : "disconnected.svg")" />
-                <img src="/images/@(chargingSettings.InsideChargingEnabled ? (
-                    chargingSettings.PreferedChargingStation == ChargingStation.Inside ? "dblchecked.svg" : "checked.svg" ) : "unchecked.svg")" 
-                    @onclick="() => 
-                    {
-                        chargingSettings.InsideChargingEnabled = !chargingSettings.InsideChargingEnabled;
-                        CommunicateSettings();
-                    }"
-                    @ondblclick="() => 
-                    {
-                        chargingSettings.InsideChargingEnabled = true; 
-                        chargingSettings.PreferedChargingStation = ChargingStation.Inside;
-                        CommunicateSettings();
-                    }"/>
-                    <div class="batteryInformationContainer">
-                        <div class="batteryBorder">
-                            <div class="batteryLevel" style="height: @_chargingSituation.BMWBatteryLevel%"></div>
-                        </div>
-                        <div class="batteryLabel">
-                        @_chargingSituation.BMWBatteryLevel %<br/>
-                        <span style="font-size: 0.7rem">@(new MarkupString(_chargingSituation.BMWLastUpdateFromServer.ToLocalTime().ToString("dd.MM.yy hh:mm:ss").Replace(" ", "<br>")))</span>
-                        </div>
-                    </div> 
-            </div>
-        </div>
-        <div class="carBox">
+        <SmartHome.Web.Components.UIComponents.CarStatusDataVisualizer carStatusData="@bwmStatusData" chargingSettings="@chargingSettings" />
+        <SmartHome.Web.Components.UIComponents.CarStatusDataVisualizer carStatusData="@miniStatusData" chargingSettings="@chargingSettings" />
+        <SmartHome.Web.Components.UIComponents.CarStatusDataVisualizer carStatusData="@vwStatusData" chargingSettings="@chargingSettings" />
+        @* <div class="carBox">
             <img class="carImage" src="/images/ID4.png" />
             <div class="carControls">
                 <img class="carConnectedIcon" 
-                    src="/images/@(_chargingSituation.OutsideConnected ? (_chargingSituation.VWReadyForCharging ? "connected.svg" : "connectednotready.svg") : "disconnected.svg")" />
+                src="/images/@(_chargingSituation.OutsideConnected ? (_chargingSituation.VWReadyForCharging ? "connected.svg" : "connectednotready.svg") : "disconnected.svg")" />
                 <img src="images/@(chargingSettings.OutsideChargingEnabled ? (
                     chargingSettings.PreferedChargingStation == ChargingStation.Outside ? "dblchecked.svg" : "checked.svg") : "unchecked.svg" )"
-                    @onclick="() => 
+                @onclick="() => 
                     {
                         chargingSettings.OutsideChargingEnabled = !chargingSettings.OutsideChargingEnabled;
                         CommunicateSettings();
                     }"
-                    @ondblclick="() => 
+                @ondblclick="() => 
                     {
                         chargingSettings.OutsideChargingEnabled = true; 
                         chargingSettings.PreferedChargingStation = ChargingStation.Outside;
                         CommunicateSettings();
                     }"/>
-                    <div class="batteryInformationContainer">
-                        <div class="batteryBorder">
-                            <div class="batteryLevel" style="height: @_chargingSituation.VWBatteryLevel%"></div>
-                        </div>
-                        <div class="batteryLabel">
+                <div class="batteryInformationContainer">
+                    <div class="batteryBorder">
+                        <div class="batteryLevel" style="height: @_chargingSituation.VWBatteryLevel%"></div>
+                    </div>
+                    <div class="batteryLabel">
                         @_chargingSituation.VWBatteryLevel %<br/>
                         <span style="font-size: 0.7rem">@(new MarkupString(_chargingSituation.VWLastUpdateFromServer.ToLocalTime().ToString("dd.MM.yy hh:mm:ss").Replace(" ", "<br>")))</span>
-                        </div>
-                    </div> 
+                    </div>
+                </div> 
             </div>
-        </div>
+        </div> *@
     </div>
 </div>
 @code {
@@ -168,6 +143,10 @@
     private int _manualCurrent = 6;
     private bool _useManualCharging = false;
     ChargingSituation _chargingSituation = new ();
+    private CarStatusData bwmStatusData = new();
+    private CarStatusData miniStatusData = new();
+    private CarStatusData vwStatusData = new();
+
     private AvailabilityData availabilityData = new (); 
     private ConsumptionData consumptionData = new ();
     private SharedContracts.ChargingSettings chargingSettings = new ();
@@ -184,7 +163,7 @@
 
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
     {
-        if (args.Topic == "data/charging/situation")
+        if (args.Topic.StartsWith("data/charging/"))
         {
             UpdateChargingSituation();
         }
@@ -197,6 +176,10 @@
     private void UpdateChargingSituation()
     {
         _chargingSituation = MqttService.ChargingSituation;
+        bwmStatusData = MqttService.bmwStatusData ?? new CarStatusData();
+        miniStatusData = MqttService.miniStatusData ?? new CarStatusData();
+        vwStatusData = MqttService.vwStatusData ?? new CarStatusData();
+
         availabilityData = ChargingSituationManager.CalculateAvailabilityData(
             _chargingSituation.PowerFromPV,
             _chargingSituation.PowerFromBattery,

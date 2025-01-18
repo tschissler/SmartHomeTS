@@ -1,0 +1,79 @@
+@using DataContracts
+@using MQTTnet
+@using MQTTnet.Client
+@using MQTTnet.Protocol
+@using SmartHome.Web.Services
+@using SmartHomeWebManagers
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.LinearGauge
+@using System.Text.Json
+@using SharedContracts
+@using MouseEventArgs = Microsoft.AspNetCore.Components.Web.MouseEventArgs
+@using Placement = Syncfusion.Blazor.Inputs.Placement
+@using Orientation = Syncfusion.Blazor.LinearGauge.Orientation
+@using Syncfusion.Blazor.Popups
+
+<div class="carBox">
+    <div class="carImageContainer">
+        <img class="carImage" src="/images/@(GetCarImage(carStatusData.Brand))" />
+        <br />
+        <span style="font-size: 0.7rem">@(new MarkupString(carStatusData.LastUpdate?.ToLocalTime().ToString("dd.MM.yy HH:mm:ss")??""))</span>
+        <br />
+        @carStatusData.Mileage km >>
+        @carStatusData.RemainingRange km
+    </div>
+    <div class="carControls">
+        <img class="carConnectedIcon" src="/images/@(carStatusData.ChargerConnected ? "connected.svg" : "disconnected.svg")" />
+        <img src="/images/@(chargingSettings.InsideChargingEnabled ? (
+            chargingSettings.PreferedChargingStation == ChargingStation.Inside ? "dblchecked.svg" : "checked.svg" ) : "unchecked.svg")"
+             @onclick="() =>
+            {
+                chargingSettings.InsideChargingEnabled = !chargingSettings.InsideChargingEnabled;
+                communicateSettings();
+            }"
+             @ondblclick="() =>
+            {
+                chargingSettings.InsideChargingEnabled = true;
+                chargingSettings.PreferedChargingStation = ChargingStation.Inside;
+                communicateSettings();
+            }" />
+        <div class="batteryInformationContainer">
+            <div class="batteryBorder">
+                <div class="batteryLevel" style="height: @carStatusData.Battery%"></div>
+            </div>
+            <div class="batteryLabel">
+                @carStatusData.Battery % / @carStatusData.ChargingTarget %<br />
+                @(carStatusData.ChargingEndTime.HasValue ? "Bis: " + carStatusData.ChargingEndTime?.ToLocalTime().ToString("HH:mm") : "")
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public CarStatusData carStatusData { get; set; }
+    [Parameter]
+    public ChargingSettings chargingSettings { get; set; }
+    [Parameter]
+    public EventCallback CommunicateSettings { get; set; }
+
+    public void communicateSettings()
+    {
+        CommunicateSettings.InvokeAsync();
+    }
+
+    public string GetCarImage(string brand)
+    {
+        switch (brand.ToLower())
+        {
+            case "bmw":
+                return "BMW.webp";
+            case "mini":
+                return "CarBrands.MINI_VehicleViewDirection.FRONT_LEFT.jpg";
+            case "vw":
+                return "ID4.png";
+        }
+        return "empty.png";
+    }
+}

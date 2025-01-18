@@ -104,61 +104,10 @@
 
 .carsGrid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     grid-column-gap: 30px;
     margin-left: 40px;
     margin-right: 40px;
     margin-top: 20px;
     text-align: center;
-}
-
-.carBox {
-    align-content: center;
-    display: flex;
-}
-
-.carImage {
-    width: 50%;
-    object-fit: contain
-}
-
-.carControls {
-    width: 50%;
-    text-align: left;
-}
-
-.carConnectedIcon {
-    height: 60px;
-    width: 60px;
-    margin-bottom: 10px;
-}
-
-.batteryInformationContainer {
-    display: flex;
-    height: 50%;
-    margin-left: 10px;
-}
-
-.batteryBorder {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    border: 1px solid black;
-    border-radius: 10px;
-    padding: 2px;
-    margin-left: 10px;
-    margin-right: 20px;
-    height: 100%;
-    width: 20px;
-}
-
-.batteryLevel {
-    background-color: #4e8752;
-    width: 100%;
-    border-radius: 6px;
-}
-
-.batteryLabel {
-    height: 100%;
-    align-content: center;
 }
