@@ -52,7 +52,7 @@ async def fetch_vehicle_info():
         "remainingRange": vehicle.domains['charging']["batteryStatus"].cruisingRangeElectric_km.value,
         "mileage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
 
-        "last_Update": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
+        "last_update": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
     }
 
 async def main():
