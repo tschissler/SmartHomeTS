@@ -6,6 +6,7 @@ import paho.mqtt.client as mqtt
 from weconnect import weconnect
 from weconnect.domain import Domain
 from weconnect.elements.plug_status import PlugStatus
+from weconnect.elements.charging_status import ChargingStatus
 
 #MQTT Broker settings
 MQTT_BROKER = 'smarthomepi2'
@@ -40,10 +41,9 @@ async def fetch_vehicle_info():
     else:
         brand = "Unknown"
 
-    print(vehicle.domains["charging"]["plugStatus"].plugConnectionState.value.value)
     chargingEndTime = None
-    if vehicle.domains['charging']["chargingStatus"] == "charging" :
-        chargingEndTime = (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoFormat()
+    if vehicle.domains['charging']["chargingStatus"].chargingState.value == ChargingStatus.ChargingState.CHARGING :
+        chargingEndTime = (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoformat()
     return {
         "nickname": vehicle.nickname.value,
         "brand": brand,
