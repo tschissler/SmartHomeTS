@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import os
 import asyncio
 import json
@@ -46,11 +46,11 @@ async def fetch_vehicle_info():
         "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value),
         "chargingstatus": vehicle.domains['charging']["chargingStatus"].chargingState.value.value,
         "chargingTarget": vehicle.domains['automation']["chargingProfiles"].profiles[1].targetSOC_pct.value,
-        "chargingEndTime": datetime.now() + vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value,
+        "chargingEndTime": (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoformat(),
         "chargerConnected": vehicle.domains["charging"]["plugStatus"].plugConnectionState.value.value,
         "remainingRange": vehicle.domains['charging']["batteryStatus"].cruisingRangeElectric_km.value,
         "mileage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
-        
+
         "last_Update": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
     }
 
