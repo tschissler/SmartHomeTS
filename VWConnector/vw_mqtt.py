@@ -5,6 +5,7 @@ import json
 import paho.mqtt.client as mqtt
 from weconnect import weconnect
 from weconnect.domain import Domain
+from weconnect.elements.plug_status import PlugStatus
 
 #MQTT Broker settings
 MQTT_BROKER = 'smarthomepi2'
@@ -47,7 +48,7 @@ async def fetch_vehicle_info():
         "chargingstatus": vehicle.domains['charging']["chargingStatus"].chargingState.value.value,
         "chargingTarget": vehicle.domains['automation']["chargingProfiles"].profiles[1].targetSOC_pct.value,
         "chargingEndTime": (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoformat(),
-        "chargerConnected": vehicle.domains["charging"]["plugStatus"].plugConnectionState.value.value,
+        "chargerConnected": vehicle.domains["charging"]["plugStatus"].plugConnectionState.value.value == PlugStatus.PlugConnectionState.CONNECTED,
         "remainingRange": vehicle.domains['charging']["batteryStatus"].cruisingRangeElectric_km.value,
         "mileage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
 
