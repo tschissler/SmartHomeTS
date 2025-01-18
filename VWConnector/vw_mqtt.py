@@ -1,3 +1,4 @@
+import datetime
 import os
 import asyncio
 import json
@@ -30,18 +31,27 @@ async def fetch_vehicle_info():
     
     vehicle = weConnect.vehicles[carvin]
         
+    brand_code = vehicle.brandCode.value.value
+    if brand_code == 'V':
+        brand = "VW"
+    elif brand_code == 'N':
+        brand = "ID Buzz"
+    else:
+        brand = "Unknown"
+
     return {
         "nickname": vehicle.nickname.value,
-        "brand": vehicle.brandCode.value.value,
-        "model": vehicle.model.value,
+        "brand": brand,
+        "name": vehicle.model.value,
         "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value),
-        "chargingstate": vehicle.domains['charging']["chargingStatus"].chargingState.value.value,
+        "chargingstatus": vehicle.domains['charging']["chargingStatus"].chargingState.value.value,
         "chargingTarget": vehicle.domains['automation']["chargingProfiles"].profiles[1].targetSOC_pct.value,
-        "remainingCharginTime": vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value,
+        "chargingEndTime": datetime.now() + vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value,
         "chargerConnected": vehicle.domains["charging"]["plugStatus"].plugConnectionState.value.value,
         "remainingRange": vehicle.domains['charging']["batteryStatus"].cruisingRangeElectric_km.value,
-        "muleage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
-        "lastUpdate": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
+        "mileage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
+        
+        "last_Update": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
     }
 
 async def main():
