@@ -40,6 +40,9 @@ async def fetch_vehicle_info():
     else:
         brand = "Unknown"
 
+    chargingEndTime = None
+    if vehicle.domains['charging']["chargingStatus"] == "charging" :
+        chargingEndTime = (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoFormat()
     return {
         "nickname": vehicle.nickname.value,
         "brand": brand,
@@ -47,12 +50,12 @@ async def fetch_vehicle_info():
         "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value),
         "chargingStatus": vehicle.domains['charging']["chargingStatus"].chargingState.value.value,
         "chargingTarget": vehicle.domains['automation']["chargingProfiles"].profiles[1].targetSOC_pct.value,
-        "chargingEndTime": (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoformat(),
+        "chargingEndTime": chargingEndTime,
         "chargerConnected": vehicle.domains["charging"]["plugStatus"].plugConnectionState.value.value == PlugStatus.PlugConnectionState.CONNECTED,
         "remainingRange": vehicle.domains['charging']["batteryStatus"].cruisingRangeElectric_km.value,
         "mileage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
 
-        "last_Update": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
+        "lastUpdate": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
     }
 
 async def main():

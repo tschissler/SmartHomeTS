@@ -53,7 +53,7 @@ async def fetch_vehicle_info(account: MyBMWAccount, vin: str) -> Dict:
         "remainingRange": vehicle.fuel_and_battery.remaining_range_electric.value,
         "mileage": vehicle.mileage.value,
         "moving": vehicle.is_vehicle_active,
-        "last_update": vehicle.timestamp.isoformat(),
+        "lastUpdate": vehicle.timestamp.isoformat(),
     }
 
 # Define a function to save the image to a file
