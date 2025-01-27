@@ -18,56 +18,65 @@ SMLData::SMLData(float t1, float t2, float p) : Tarif1(t1), Tarif2(t2), Power(p)
 
 // SMLParser Methods
 SMLData* SMLParser::Parse(std::vector<uint8_t>& data) {
-    //while (!data.empty()) {
-        // std::vector<uint8_t> package = ExtractPackage(data);
-        // if (package.empty()) {
-        //     return nullptr;
-        // }
+    std::vector<ISMLNode*> elements = ExtractNodes(data);
+    
+    if (elements.empty()) {
+        throw std::runtime_error("Error while parsing SML package. No elements could be identified");
+    }
 
-        std::vector<ISMLNode*> elements = ExtractNodes(data);
-        if (elements.empty()) {
-            throw std::runtime_error("Error while parsing SML package. No elements could be identified");
-        }
+    if (elements.size() < 2) {
+        throw std::runtime_error("Error while parsing SML package. Expected 2 elements on root level, but found " + std::to_string(elements.size()));
+    }
 
-        if (elements.size() < 2) {
-            throw std::runtime_error("Error while parsing SML package. Expected 2 elements on root level, but found " + std::to_string(elements.size()));
-        }
+    if (elements[1] == nullptr) {
+        throw std::runtime_error("Error while parsing SML package. Second element on root level is null");
+    }
 
-        if (elements[1]->getType() != 2) {
-            throw std::runtime_error("Error while parsing SML package. Second element on root level is not a list");
-        }
+    if (elements[1]->getType() != 2) {
+        throw std::runtime_error("Error while parsing SML package. Second element on root level is not a list");
+    }
 
-        SMLList* dataRootElement = static_cast<SMLList*>(elements[1]);
+    SMLList* dataRootElement = static_cast<SMLList*>(elements[1]);
 
-        if (dataRootElement->elements.size() < 4) {
-            throw std::runtime_error("Error while parsing SML package. Second list does not contain enough elements");
-        }
+    if (dataRootElement->elements.size() < 4) {
+        throw std::runtime_error("Error while parsing SML package. Second list does not contain enough elements");
+    }
 
-        if (dataRootElement->elements[3]->getType() != 2) {
-            throw std::runtime_error("Error while parsing SML package. Fourth element on second level is not a list");
-        }
+    if (dataRootElement->elements[3] == nullptr) {
+        throw std::runtime_error("Error while parsing SML package. Fourth element on second level is null");
+    }
 
-        SMLList* dataLevel2Element = static_cast<SMLList*>(dataRootElement->elements[3]);
+    if (dataRootElement->elements[3]->getType() != 2) {
+        throw std::runtime_error("Error while parsing SML package. Fourth element on second level is not a list");
+    }
 
-        if (dataLevel2Element->elements.size() < 2) {
-            throw std::runtime_error("Error while parsing SML package. Third list does not contain enough elements");
-        }
+    SMLList* dataLevel2Element = static_cast<SMLList*>(dataRootElement->elements[3]);
 
-        try {
-            SMLElement* tarif1Element = static_cast<SMLElement*>(((SMLList*)((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[2])->elements[5]);
-            SMLElement* tarif2Element = static_cast<SMLElement*>(((SMLList*)((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[3])->elements[5]);
-            SMLElement* LeistungsElement = static_cast<SMLElement*>(((SMLList*)((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[4])->elements[5]);
+    if (dataLevel2Element->elements.size() < 2) {
+        throw std::runtime_error("Error while parsing SML package. Third list does not contain enough elements");
+    }
 
-            int tarif1 = SMLElementToInteger(tarif1Element);
-            int tarif2 = SMLElementToInteger(tarif2Element);
-            int Leistung = SMLElementToInteger(LeistungsElement);
+    if (dataLevel2Element->elements[1] == nullptr ||
+        ((SMLList*)dataLevel2Element->elements[1])->elements[4] == nullptr ||
+        ((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[2] == nullptr ||
+        ((SMLList*)((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[2])->elements[5] == nullptr) {
+        throw std::runtime_error("Error while parsing SML package. Elements are null");
+    }
 
-            return new SMLData(tarif1 / 10000.0f, tarif2 / 10000.0f, Leistung);
+    try {
+        SMLElement* tarif1Element = static_cast<SMLElement*>(((SMLList*)((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[2])->elements[5]);
+        SMLElement* tarif2Element = static_cast<SMLElement*>(((SMLList*)((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[3])->elements[5]);
+        SMLElement* LeistungsElement = static_cast<SMLElement*>(((SMLList*)((SMLList*)((SMLList*)dataLevel2Element->elements[1])->elements[4])->elements[4])->elements[5]);
 
-        } catch (const std::exception& ex) {
-            throw std::runtime_error("Error while parsing SML package. " + std::string(ex.what()));
-        }
-    //}
+        int tarif1 = SMLElementToInteger(tarif1Element);
+        int tarif2 = SMLElementToInteger(tarif2Element);
+        int Leistung = SMLElementToInteger(LeistungsElement);
+
+        return new SMLData(tarif1 / 10000.0f, tarif2 / 10000.0f, Leistung);
+
+    } catch (const std::exception& ex) {
+        throw std::runtime_error("Error while parsing SML package. " + std::string(ex.what()));
+    }
     return nullptr;
 }
 
@@ -144,8 +153,6 @@ std::vector<ISMLNode*> SMLParser::ExtractNodes(std::vector<uint8_t>& data) {
 
 std::vector<ISMLNode*> SMLParser::ExtractNodes(std::vector<uint8_t>& data, int& index, int listitems) {
     std::vector<ISMLNode*> elements;
-    Serial.print("   ---  Extract Nodes Index: ");
-    Serial.println(index);
     while (index < data.size()) {
         int elementType = data[index] >> 4; // Extract the type from the start byte
         int elementLength = data[index] & 0x0F; // Extract the length from the start byte
@@ -155,10 +162,12 @@ std::vector<ISMLNode*> SMLParser::ExtractNodes(std::vector<uint8_t>& data, int& 
         if (elementType == 0x07) {
             index++;
             std::vector<ISMLNode*> element = ExtractNodes(data, index, elementLength);
-            if (element.size() != elementLength) {
+            if (element.empty() || element.size() != elementLength) {
                 throw std::out_of_range("Number of elements in list does not match the specified length for the list");
             }
-            elements.push_back(new SMLList(element));
+            else {
+                elements.push_back(new SMLList(element));
+            }
         } else {
             if (index + elementLength > data.size()) {
                 throw std::out_of_range("Not enough data for the element");

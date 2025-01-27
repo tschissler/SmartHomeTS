@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include <sml/sml_file.h>
 #include <deque>
 #include <SMLParser.h>
 
@@ -112,7 +111,7 @@ void loop() {
                     // Clean up the allocated memory
                     delete smlData;
                 } else {
-                    Serial.println("Parsing failed: No data returned");
+                    //Serial.println("Parsing failed: No data returned");
                 }
             } catch (const std::exception& ex) {
                 // Handle any exceptions that occur during parsing
