@@ -12,7 +12,7 @@ namespace ChargingControllerTests
     public class ChargingControllerDecisionTests
     {
         [Theory]
-        [ExcelData(fileName: @"TestCases/ChargingDecisions.xlsx", numberOfRowsToSkip:1)]
+        [ExcelData(fileName: @"../../../TestCases/ChargingDecisions.xlsx", numberOfRowsToSkip:1)]
         public async void RunExcelTestCases(
             int Id,
             int level,

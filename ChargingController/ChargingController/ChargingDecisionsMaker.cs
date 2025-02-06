@@ -33,13 +33,17 @@ namespace ChargingController
             else if (situation.InsideConnected && settings.InsideChargingEnabled &&
                 situation.OutsideConnected && settings.OutsideChargingEnabled)
             {
-                if (availableChargingPower >= 2 * MinimumChargingPower)
+                if (settings.ChargingLevel == 4)
+                {
+                    calculatedIsideChargingPower = MinimumChargingPower;
+                    calculatedOutsideChargingPower = MinimumChargingPower;
+                }
+                else if (availableChargingPower >= 2 * MinimumChargingPower)
                 {
                     calculatedIsideChargingPower = availableChargingPower / 2;
                     calculatedOutsideChargingPower = availableChargingPower / 2;
                 }
-                else
-                if (settings.PreferedChargingStation == ChargingStation.Outside)
+                else if (settings.PreferedChargingStation == ChargingStation.Outside)
                 {
                     calculatedOutsideChargingPower = availableChargingPower;
                 }
