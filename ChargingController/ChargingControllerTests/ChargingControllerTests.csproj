@@ -39,7 +39,7 @@
 
   <ItemGroup>
     <None Update="TestCases\ChargingDecisions.xlsx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
