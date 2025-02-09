@@ -5,6 +5,7 @@
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <ESP32Ping.h>
+#include <memory>
 
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
@@ -28,7 +29,7 @@ String password;
 WiFiClient wifiClient;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
-MQTTClientLib* mqttClientLib = nullptr;
+std::unique_ptr<MQTTClientLib> mqttClientLib = nullptr;
 
 static bool otaInProgress = false;
 static bool otaEnable = true;
@@ -186,7 +187,7 @@ void setup() {
     
     // Set up MQTT
     String mqttClientID = "ESP32SMLSensorClient_" + chipID;
-    mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+    mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
     connectToMQTT();
     
     // Print the IP address
@@ -262,24 +263,24 @@ void loop() {
             std::vector<uint8_t> bufferVector(buffer.begin() + startIndex, buffer.begin() + endIndex);
             try {
                 // Call the Parse method
-                SMLData* smlData = SMLParser::Parse(bufferVector);
+                std::shared_ptr<SMLData> smlData = SMLParser::Parse(bufferVector);
 
                 // Check if the parsing was successful
                 if (smlData) {
                     // Output the parsed data
                     Serial.print("Tarif1: ");
-                    Serial.println(smlData->Tarif1);
+                    Serial.print(smlData->Tarif1);
+                    Serial.print(" kWh\t");
                     Serial.print("Tarif2: ");
-                    Serial.println(smlData->Tarif2);
+                    Serial.print(smlData->Tarif2);
+                    Serial.print(" kWh\t");
                     Serial.print("Power: ");
-                    Serial.println(smlData->Power);
+                    Serial.print(smlData->Power);
+                    Serial.println(" W");
 
                     mqttSuccess = mqttClientLib->publish((baseTopic + "/strom/m1/Netzbezug").c_str(), String(smlData->Tarif1), true, 0);
                     mqttClientLib->publish((baseTopic + "/strom/m1/Netzeinspeissung").c_str(), String(smlData->Tarif2), true, 0);
                     mqttClientLib->publish((baseTopic + "/strom/m1/NetzanschlussMomentanleistung").c_str(), String(smlData->Power), true, 0);
-
-                    // Clean up the allocated memory
-                    delete smlData;
                 } else {
                     //Serial.println("Parsing failed: No data returned");
                 }
@@ -287,6 +288,14 @@ void loop() {
                 // Handle any exceptions that occur during parsing
                 Serial.print("Exception occurred: ");
                 Serial.println(ex.what());
+                Serial.println("Data: ");
+                for (uint8_t byte : bufferVector) {
+                    if (byte < 0x10) {
+                      Serial.print("0");
+                    }
+                    Serial.print(byte, HEX);
+                    Serial.print(" ");
+                }
             }
 
             // Remove the processed data from the buffer

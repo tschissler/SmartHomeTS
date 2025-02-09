@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <vector>
 #include <stdexcept>
+#include <memory>
 #include <algorithm>
 
 class ISMLNode {
@@ -21,9 +22,8 @@ public:
 
 class SMLList : public ISMLNode {
 public:
-    std::vector<ISMLNode*> elements;
-    SMLList(std::vector<ISMLNode*> e);
-    ~SMLList();
+    std::vector<std::shared_ptr<ISMLNode>> elements;
+    SMLList(std::vector<std::shared_ptr<ISMLNode>> e);
     int getType() const override { return 2; }
 };
 
@@ -37,14 +37,14 @@ public:
 
 class SMLParser {
 public:
-    static SMLData* Parse(std::vector<uint8_t>& data);
+    static std::shared_ptr<SMLData> Parse(std::vector<uint8_t>& data);
 
 private:
-    static int SMLElementToInteger(SMLElement* byteData);
+    static int SMLElementToInteger(std::shared_ptr<SMLElement> byteData);
     static bool isLittleEndian();
     static std::vector<uint8_t> ExtractPackage(std::vector<uint8_t>& data);
-    static std::vector<ISMLNode*> ExtractNodes(std::vector<uint8_t>& data);
-    static std::vector<ISMLNode*> ExtractNodes(std::vector<uint8_t>& data, int& index, int listitems);
+    static std::vector<std::shared_ptr<ISMLNode>> ExtractNodes(std::vector<uint8_t>& data);
+    static std::vector<std::shared_ptr<ISMLNode>> ExtractNodes(std::vector<uint8_t>& data, int& index, int listitems);
 };
 
 #endif // SMLPARSER_H
