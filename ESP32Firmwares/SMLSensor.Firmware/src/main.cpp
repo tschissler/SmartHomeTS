@@ -6,6 +6,7 @@
 #include <NTPClient.h>
 #include <ESP32Ping.h>
 #include <memory>
+#include <ArduinoJson.h>
 
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
@@ -278,9 +279,15 @@ void loop() {
                     Serial.print(smlData->Power);
                     Serial.println(" W");
 
-                    mqttSuccess = mqttClientLib->publish((baseTopic + "/strom/M1/Netzbezug").c_str(), String(smlData->Tarif1), true, 0);
-                    mqttClientLib->publish((baseTopic + "/strom/M1/Netzeinspeissung").c_str(), String(smlData->Tarif2), true, 0);
-                    mqttClientLib->publish((baseTopic + "/strom/M1/NetzanschlussMomentanleistung").c_str(), String(smlData->Power), true, 0);
+                    StaticJsonDocument<200> jsonDoc;
+                    jsonDoc["Netzbezug"] = smlData->Tarif1;
+                    jsonDoc["Netzeinspeissung"] = smlData->Tarif2;
+                    jsonDoc["NetzanschlussMomentanleistung"] = smlData->Power;
+                    
+                    String jsonString;
+                    serializeJson(jsonDoc, jsonString);
+                    
+                    mqttSuccess = mqttClientLib->publish((baseTopic + "/strom/M1/Zaehler").c_str(), jsonString, true, 0);
                 } else {
                     //Serial.println("Parsing failed: No data returned");
                 }
