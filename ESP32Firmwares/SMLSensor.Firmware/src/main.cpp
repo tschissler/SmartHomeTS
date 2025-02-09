@@ -278,9 +278,9 @@ void loop() {
                     Serial.print(smlData->Power);
                     Serial.println(" W");
 
-                    mqttSuccess = mqttClientLib->publish((baseTopic + "/strom/m1/Netzbezug").c_str(), String(smlData->Tarif1), true, 0);
-                    mqttClientLib->publish((baseTopic + "/strom/m1/Netzeinspeissung").c_str(), String(smlData->Tarif2), true, 0);
-                    mqttClientLib->publish((baseTopic + "/strom/m1/NetzanschlussMomentanleistung").c_str(), String(smlData->Power), true, 0);
+                    mqttSuccess = mqttClientLib->publish((baseTopic + "/strom/M1/Netzbezug").c_str(), String(smlData->Tarif1), true, 0);
+                    mqttClientLib->publish((baseTopic + "/strom/M1/Netzeinspeissung").c_str(), String(smlData->Tarif2), true, 0);
+                    mqttClientLib->publish((baseTopic + "/strom/M1/NetzanschlussMomentanleistung").c_str(), String(smlData->Power), true, 0);
                 } else {
                     //Serial.println("Parsing failed: No data returned");
                 }
@@ -296,6 +296,7 @@ void loop() {
                     Serial.print(byte, HEX);
                     Serial.print(" ");
                 }
+                Serial.println();
             }
 
             // Remove the processed data from the buffer
