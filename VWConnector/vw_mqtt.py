@@ -33,14 +33,7 @@ async def fetch_vehicle_info():
     
     vehicle = weConnect.vehicles[carvin]
         
-    brand_code = vehicle.brandCode.value.value
-    if brand_code == 'V':
-        brand = "VW"
-    elif brand_code == 'N':
-        brand = "ID Buzz"
-    else:
-        brand = "Unknown"
-
+    brand = "VW"
     chargingEndTime = None
     if vehicle.domains['charging']["chargingStatus"].chargingState.value == ChargingStatus.ChargingState.CHARGING :
         chargingEndTime = (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoformat()
