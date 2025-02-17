@@ -2,6 +2,7 @@
 @using MQTTnet
 @using MQTTnet.Client
 @using MQTTnet.Protocol
+@using SmartHome.Web.Components.UIComponents
 @using SmartHome.Web.Services
 @using SmartHomeWebManagers
 @using Syncfusion.Blazor.Buttons
@@ -104,38 +105,24 @@
 
 <div>
     <div class="carsGrid">
-        <SmartHome.Web.Components.UIComponents.CarStatusDataVisualizer carStatusData="@bwmStatusData" chargingSettings="@chargingSettings" />
-        <SmartHome.Web.Components.UIComponents.CarStatusDataVisualizer carStatusData="@miniStatusData" chargingSettings="@chargingSettings" />
-        <SmartHome.Web.Components.UIComponents.CarStatusDataVisualizer carStatusData="@vwStatusData" chargingSettings="@chargingSettings" />
-        @* <div class="carBox">
-            <img class="carImage" src="/images/ID4.png" />
-            <div class="carControls">
-                <img class="carConnectedIcon" 
-                src="/images/@(_chargingSituation.OutsideConnected ? (_chargingSituation.VWReadyForCharging ? "connected.svg" : "connectednotready.svg") : "disconnected.svg")" />
-                <img src="images/@(chargingSettings.OutsideChargingEnabled ? (
-                    chargingSettings.PreferedChargingStation == ChargingStation.Outside ? "dblchecked.svg" : "checked.svg") : "unchecked.svg" )"
-                @onclick="() => 
-                    {
-                        chargingSettings.OutsideChargingEnabled = !chargingSettings.OutsideChargingEnabled;
-                        CommunicateSettings();
-                    }"
-                @ondblclick="() => 
-                    {
-                        chargingSettings.OutsideChargingEnabled = true; 
-                        chargingSettings.PreferedChargingStation = ChargingStation.Outside;
-                        CommunicateSettings();
-                    }"/>
-                <div class="batteryInformationContainer">
-                    <div class="batteryBorder">
-                        <div class="batteryLevel" style="height: @_chargingSituation.VWBatteryLevel%"></div>
-                    </div>
-                    <div class="batteryLabel">
-                        @_chargingSituation.VWBatteryLevel %<br/>
-                        <span style="font-size: 0.7rem">@(new MarkupString(_chargingSituation.VWLastUpdateFromServer.ToLocalTime().ToString("dd.MM.yy hh:mm:ss").Replace(" ", "<br>")))</span>
-                    </div>
-                </div> 
-            </div>
-        </div> *@
+        <CarStatusDataVisualizer 
+        CarStatusData="@bwmStatusData"  
+        @bind-IsChargingEnabled="chargingSettings.InsideChargingEnabled"  
+        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
+        SetChargingStation="@ChargingStation.Inside"
+        CommunicateSettings="CommunicateSettings"/>
+        <CarStatusDataVisualizer 
+        CarStatusData="@miniStatusData" 
+        @bind-IsChargingEnabled="chargingSettings.OutsideChargingEnabled" 
+        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
+        SetChargingStation="@ChargingStation.Outside"
+        CommunicateSettings="CommunicateSettings"/>
+        <CarStatusDataVisualizer 
+        CarStatusData="@vwStatusData" 
+        @bind-IsChargingEnabled="chargingSettings.OutsideChargingEnabled" 
+        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
+        SetChargingStation="@ChargingStation.Outside"
+        CommunicateSettings="CommunicateSettings"/>
     </div>
 </div>
 @code {
@@ -210,14 +197,12 @@
         await CommunicateSettings();
         InvokeAsync(StateHasChanged);
     }
-
     private async void ChargingLevel1(MouseEventArgs e)
     {
         chargingSettings.ChargingLevel = 1;
         await CommunicateSettings();
         InvokeAsync(StateHasChanged);
     }
-
     private async void ChargingLevel2(MouseEventArgs e)
     {
         chargingSettings.ChargingLevel = 2;
@@ -249,7 +234,6 @@
             "config/charging/settings",
             JsonSerializer.Serialize(chargingSettings),
             MqttQualityOfServiceLevel.AtLeastOnce,
-        true);
-
+            true);
     }
 }

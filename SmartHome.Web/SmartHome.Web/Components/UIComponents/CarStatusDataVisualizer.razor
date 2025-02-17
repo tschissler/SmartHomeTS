@@ -16,35 +16,34 @@
 
 <div class="carBox">
     <div class="carImageContainer">
-        <img class="carImage" src="/images/@(GetCarImage(carStatusData.Brand))" />
+        <img class="carImage" src="/images/@(GetCarImage(CarStatusData.Brand))" />
         <br />
-        <span style="font-size: 0.7rem">@(new MarkupString(carStatusData.LastUpdate?.ToLocalTime().ToString("dd.MM.yy HH:mm:ss")??""))</span>
+        <span style="font-size: 0.7rem">@(new MarkupString(CarStatusData.LastUpdate?.ToLocalTime().ToString("dd.MM.yy HH:mm:ss")??""))</span>
         <br />
-        @carStatusData.Mileage km >>
-        @carStatusData.RemainingRange km
+        @CarStatusData.Mileage km >>
+        @CarStatusData.RemainingRange km
     </div>
     <div class="carControls">
-        <img class="carConnectedIcon" src="/images/@(carStatusData.ChargerConnected ? "connected.svg" : "disconnected.svg")" />
-        <img src="/images/@(chargingSettings.InsideChargingEnabled ? (
-            chargingSettings.PreferedChargingStation == ChargingStation.Inside ? "dblchecked.svg" : "checked.svg" ) : "unchecked.svg")"
-             @onclick="() =>
+        <img class="carConnectedIcon" src="/images/@(CarStatusData.ChargerConnected ? "connected.svg" : "disconnected.svg")" />
+        <img src="/images/@(IsChargingEnabled ? (PreferedChargingStation == SetChargingStation ? "dblchecked.svg" : "checked.svg" ) : "unchecked.svg")"
+        @onclick="async () =>
             {
-                chargingSettings.InsideChargingEnabled = !chargingSettings.InsideChargingEnabled;
+                IsChargingEnabled = !IsChargingEnabled;
                 communicateSettings();
             }"
-             @ondblclick="() =>
+        @ondblclick="async () =>
             {
-                chargingSettings.InsideChargingEnabled = true;
-                chargingSettings.PreferedChargingStation = ChargingStation.Inside;
+                IsChargingEnabled = true;
+                PreferedChargingStation = SetChargingStation;
                 communicateSettings();
             }" />
         <div class="batteryInformationContainer">
             <div class="batteryBorder">
-                <div class="batteryLevel" style="height: @carStatusData.Battery%"></div>
+                <div class="batteryLevel" style="height: @CarStatusData.Battery%"></div>
             </div>
             <div class="batteryLabel">
-                @carStatusData.Battery % / @carStatusData.ChargingTarget %<br />
-                @(carStatusData.ChargingEndTime.HasValue ? "Bis: " + carStatusData.ChargingEndTime?.ToLocalTime().ToString("HH:mm") : "")
+                @CarStatusData.Battery % / @CarStatusData.ChargingTarget %<br />
+                @(CarStatusData.ChargingEndTime.HasValue ? "Bis: " + CarStatusData.ChargingEndTime?.ToLocalTime().ToString("HH:mm") : "")
             </div>
         </div>
     </div>
@@ -52,15 +51,36 @@
 
 @code {
     [Parameter]
-    public CarStatusData carStatusData { get; set; }
+    public CarStatusData CarStatusData { get; set; }
     [Parameter]
-    public ChargingSettings chargingSettings { get; set; }
+    public bool IsChargingEnabled { get; set; }
+    [Parameter]
+    public ChargingStation PreferedChargingStation { get; set; }
+    [Parameter]
+    public ChargingStation SetChargingStation { get; set; }
     [Parameter]
     public EventCallback CommunicateSettings { get; set; }
 
-    public void communicateSettings()
+    [Parameter]
+    public EventCallback<bool> IsChargingEnabledChanged { get; set; }
+    [Parameter]
+    public EventCallback<ChargingStation> PreferedChargingStationChanged { get; set; }
+    private void OnIsChargingEnabledChanged(bool newValue)
     {
-        CommunicateSettings.InvokeAsync();
+        IsChargingEnabled = newValue;
+        IsChargingEnabledChanged.InvokeAsync(newValue);
+    }
+    private void OnPreferedChargingStationChanged(ChargingStation newValue)
+    {
+        PreferedChargingStation = newValue;
+        PreferedChargingStationChanged.InvokeAsync(newValue);
+    }
+
+    public async void communicateSettings()
+    {
+        await IsChargingEnabledChanged.InvokeAsync(IsChargingEnabled);
+        await PreferedChargingStationChanged.InvokeAsync(PreferedChargingStation);
+        await CommunicateSettings.InvokeAsync();
     }
 
     public string GetCarImage(string brand)
