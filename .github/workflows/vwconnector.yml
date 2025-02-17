@@ -24,12 +24,6 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-    - name: Create Python venv
-      run: python3 -m venv ./venv
-      
-    - name: Update pip packages
-      run: ./venv/bin/pip install --upgrade -r ./requirements.txt
       
     - name: Build and publish Docker image
       working-directory: ${{env.PROJECT_NAME}}
