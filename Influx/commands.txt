@@ -3,3 +3,6 @@ kubectl create secret generic influx-token-secret --from-literal=INFLUX_TOKEN=my
 telegraf.exe --config mqtt_import.conf
 kubectl delete configmap telegraf-config
 kubectl create configmap telegraf-config --from-file=mqtt_import.conf
+
+
+influx delete --org smarthome --bucket "SmartHomeData" --predicate '_measurement="m1"' --start 1970-01-01T00:00:00Z  --stop 2050-01-01T00:00:00Z

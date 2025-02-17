@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: influxdb
+      annotations:
+        checksum/config: "{{ .Values.configmap | toYaml | sha256sum }}"
     spec:
       containers:
         - name: influxdb
