@@ -46,8 +46,8 @@ bool MQTTClientLib::loop() {
 
 bool MQTTClientLib::publish(const String& topic, const String& payload, bool retained, int qos) {
     bool mqttSuccess = mqttClient.publish(topic.c_str(), payload.c_str(), retained, qos);
-    Serial.println(mqttSuccess?"Published new values to MQTT Broker on topic " + topic:"Publishing to MQTT Broker failed");
-    Serial.println(" -> Connected:" + String(mqttClient.connected()) + " -> LastError:"  + String(mqttClient.lastError())  + " -> ReturnCode:" + String(mqttClient.returnCode()));
+    //Serial.println(mqttSuccess?"Published new values to MQTT Broker on topic " + topic:"Publishing to MQTT Broker failed");
+    //Serial.println(" -> Connected:" + String(mqttClient.connected()) + " -> LastError:"  + String(mqttClient.lastError())  + " -> ReturnCode:" + String(mqttClient.returnCode()));
     return mqttSuccess;
 }
 
