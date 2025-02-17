@@ -1,5 +1,4 @@
 ﻿using MQTTnet;
-using MQTTnet.Client;
 using MQTTnet.Protocol;
 using SharedContracts;
 using SmartHome.Web.Components.Pages;
@@ -36,7 +35,7 @@ namespace SmartHome.Web.Services
 
         public async Task ConnectAsync()
         {
-            var factory = new MqttFactory();
+            var factory = new MqttClientFactory();
             _client = factory.CreateMqttClient();
 
             _options = new MqttClientOptionsBuilder()
@@ -88,12 +87,12 @@ namespace SmartHome.Web.Services
         {
             //Console.WriteLine("Received message on topic: " + message.Topic);
 
-            if (message.PayloadSegment == null)
+            if (message.Payload.Length == 0)
             {
                 return;
             }
 
-            var payload = Encoding.UTF8.GetString(message.PayloadSegment);
+            var payload = Encoding.UTF8.GetString(message.Payload);
 
             switch (message.Topic)
             {
