@@ -1,6 +1,4 @@
-﻿using DataContracts;
-
-namespace SmartHomeWebManagers
+﻿namespace SmartHomeWebManagers
 {
     public class ChargingSituationManager
     {
