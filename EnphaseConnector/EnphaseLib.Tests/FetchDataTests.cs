@@ -1,5 +1,5 @@
 using EnphaseConnector;
-using FluentAssertions;
+using Shouldly;
 using SmartHomeHelpers.Configuration;
 
 [TestClass]
@@ -22,13 +22,13 @@ public class FetchDataTests
         sw.Stop();
         System.Console.WriteLine($"FetchDataAsync took {sw.ElapsedMilliseconds}ms");
 
-        actual.PowerToHouse.Should().BeGreaterThan(0);
+        actual.PowerToHouse.ShouldBeGreaterThan(0);
 
         sw.Start();
         actual = target.FetchDataAsync(token, "envoym1").Result;
         sw.Stop();
         System.Console.WriteLine($"FetchDataAsync took {sw.ElapsedMilliseconds}ms");
 
-        actual.PowerToHouse.Should().BeGreaterThan(0);
+        actual.PowerToHouse.ShouldBeGreaterThan(0);
     }
 }

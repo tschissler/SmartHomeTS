@@ -1,7 +1,6 @@
 ﻿
 using EnphaseConnector;
 using MQTTnet;
-using MQTTnet.Client;
 using SmartHomeHelpers.Configuration;
 using System.Text.Json;
 
@@ -18,7 +17,7 @@ Thread.Sleep(1000);
 var tokenM3 = enphaseAuth.GetTokenAsync(userName, password, envoySerialM3).Result;
 var Leseintervall = 1000;
 
-var mqttFactory = new MqttFactory();
+var mqttFactory = new MqttClientFactory();
 
 using (var mqttClient = mqttFactory.CreateMqttClient())
 {

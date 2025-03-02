@@ -1,5 +1,5 @@
 ﻿using EnphaseConnector;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SmartHomeHelpers.Configuration;
 using System;
@@ -20,10 +20,10 @@ namespace EnphaseLib.Tests
             string userName = Enphase.EnphaseUserName;
             string password = Enphase.EnphasePassword;
             var token = enphaseAuth.GetTokenAsync(userName, password, Enphase.EnvoyM1Serial).Result;
-            token.Token.Should().NotBeNullOrEmpty(); 
+            token.Token.ShouldNotBeNullOrEmpty(); 
             Thread.Sleep(1000);
             var token2 = enphaseAuth.GetTokenAsync(userName, password, Enphase.EnvoyM3Serial).Result;
-            token2.Token.Should().NotBeNullOrEmpty();
+            token2.Token.ShouldNotBeNullOrEmpty();
         }
     }
 }

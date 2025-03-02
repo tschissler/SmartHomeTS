@@ -6,7 +6,7 @@ namespace EnphaseConnector
 {
     public class EnphaseLib
     {
-        private const string LocalProductionApiUrl = "https://envoym3/production.json";
+        private const string LocalProductionApiUrl = "https://{devicename}/production.json";
         private const string LocalInventoryApiUrl = "https://envoy.local/ivp/ensemble/inventory";
         private const string LiveDataUrl = "https://{devicename}/ivp/livedata/status";
         private const string AKtiviereLiveDataStreamUrl = "https://{devicename}/ivp/livedata/stream";
