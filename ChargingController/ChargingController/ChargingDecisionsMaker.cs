@@ -71,9 +71,12 @@ namespace ChargingController
                 case 0:
                     return 0;
                 case 1:
-                    if (situation.BatteryLevel < 90)
+                    if (situation.BatteryLevel < 90 && availableChargingPower > BatteryChargingMaxPower)
                     {
-                        availableChargingPower -= BatteryChargingMaxPower;
+                        if (availableChargingPower < BatteryChargingMaxPower + MinimumChargingPower)
+                            availableChargingPower = MinimumChargingPower;
+                        else
+                            availableChargingPower -= BatteryChargingMaxPower;
                     }
                     break;
                 case 2:
