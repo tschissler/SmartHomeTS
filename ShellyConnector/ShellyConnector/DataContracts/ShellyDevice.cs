@@ -2,7 +2,7 @@
 
 namespace ShellyConnector.DataContracts
 {
-    public enum DeviceType { ShellyPlugS, ShellyPlusPlugS, ShellyPlus1PM, Shelly3EM }
+    public enum DeviceType { ShellyPlugS, ShellyPlusPlugS, ShellyPlus1PM, Shelly3EM, ShellyPlug2 }
     public enum Location { M1, M3 }
 
     public record ShellyDevice(

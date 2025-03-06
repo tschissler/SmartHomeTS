@@ -27,8 +27,8 @@ namespace ShellyConnector
                 ),
                 new ShellyDevice(
                     DeviceName : "Kaffeemaschine",
-                    DeviceType : DeviceType.ShellyPlus1PM,
-                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 84 }),
+                    DeviceType : DeviceType.ShellyPlug2,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 85 }),
                     Location : Location.M1
                 ),
                 new ShellyDevice(

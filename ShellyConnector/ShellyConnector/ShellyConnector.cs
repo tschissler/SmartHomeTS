@@ -54,6 +54,7 @@ namespace ShellyConnector
                                 );
                             break;
                         case DeviceType.ShellyPlugS:
+                        case DeviceType.ShellyPlug2:
                             jsonString = Http.GetStringAsync($"http://{device.IPAddress}/meter/0").Result;
                             var meterData = JsonConvert.DeserializeObject<ShellyPlugMeterData>(jsonString);
                             powerData = new ShellyPowerData(
