@@ -14,9 +14,26 @@
             Text="{Binding Value, StringFormat='Batterie Ladestand: {0}%'}"
             HorizontalOptions="Center"
             FontSize="10"/>
-        <components:StackedProgressBar
-            Value="{Binding Value}"
-            BarHeight="20"
-            />
+        <Grid x:Name="ParentGrid" BindingContext="{x:Reference root}">
+            <BoxView
+                 x:Name="BackgroundBoxView"
+                 BackgroundColor="#d6d6d6"
+                 HeightRequest="{Binding BarHeight}"
+                 HorizontalOptions="Fill"
+                 />
+            <BoxView
+                 x:Name="ProgressBoxView"
+                 BackgroundColor="#4e8752"
+                 HeightRequest="{Binding BarHeight}"
+                 HorizontalOptions="Start"
+                 CornerRadius="{Binding CornerRadius}"
+                 WidthRequest="{
+                     Binding Source={x:Reference ParentGrid}, 
+                     Path=Width, 
+                     Converter={StaticResource PercentageConverter}, 
+                     ConverterParameter={Binding Source={x:Reference root}, Path=Value}
+                 }"
+              />
+        </Grid>
     </VerticalStackLayout>
 </ContentView>
