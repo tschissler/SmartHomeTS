@@ -102,6 +102,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                 await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
                     .WithTopic("commands/charging/KebaGarage")
                     .WithPayload(payloadOut)
+                    .WithRetainFlag()
                     .Build());
                 Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
                 currentChargingSituation.InsideChargingLatestmA = chargingResult.InsideChargingCurrentmA;
@@ -119,6 +120,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                 await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
                     .WithTopic("commands/charging/KebaOutside")
                     .WithPayload(payloadOut)
+                    .WithRetainFlag()
                     .Build());
                 Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
                 currentChargingSituation.OutsideChargingLatestmA = chargingResult.OutsideChargingCurrentmA;
@@ -133,6 +135,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
             .WithTopic("data/charging/situation")
             .WithPayload(payloadChargingSituation)
+            .WithRetainFlag()
             .Build());
     } 
     catch (Exception ex) 
