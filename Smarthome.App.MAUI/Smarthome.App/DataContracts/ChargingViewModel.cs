@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Smarthome.App.DataContracts
 {
-    public partial class Model : ObservableObject
+    public partial class ChargingViewModel : ObservableObject
     {
         [ObservableProperty]
         private ChargingSituation chargingSituation = new();

@@ -7,7 +7,7 @@ namespace Smarthome.App
 {
     public partial class MainPage : ContentPage
     {
-        private Model model = new();
+        private ChargingViewModel model = new();
         private MQTTService MqttService;
 
         public MainPage(MQTTService MqttService)

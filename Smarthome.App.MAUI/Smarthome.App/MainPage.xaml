@@ -2,7 +2,9 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:components="clr-namespace:Smarthome.App.Components"
+             xmlns:viewmodels="clr-namespace:Smarthome.App.DataContracts"
              x:Class="Smarthome.App.MainPage"
+             x:DataType="viewmodels:ChargingViewModel"
              Title="Lade-Einstellungen">
 
     <ScrollView>
@@ -10,6 +12,7 @@
             Padding="10,0"
             Spacing="10">
             <components:BatteryState Value="{Binding ChargingSituation.BatteryLevel}"></components:BatteryState>
+            <components:EnergyBar PVProduction="{Binding ChargingSituation.PowerFromPV}"/>
         </VerticalStackLayout>
     </ScrollView>
 

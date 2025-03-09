@@ -16,6 +16,7 @@
 		<OutputType>Exe</OutputType>
 		<RootNamespace>Smarthome.App</RootNamespace>
 		<UseMaui>true</UseMaui>
+		<EnableSourceGenerators>true</EnableSourceGenerators>
 		<SingleProject>true</SingleProject>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -73,13 +74,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Update="Components\EnergyBar.xaml.cs">
+	    <DependentUpon>EnergyBar.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <MauiXaml Update="Components\BatteryState.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Components\EnergyConsumptionBar.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Components\EnergySourcesBar.xaml">
+	  <MauiXaml Update="Components\EnergyBar.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>
