@@ -63,7 +63,7 @@ async def main():
         result = await fetch_vehicle_info()
         payload = json.dumps(result)
         client.publish(MQTT_TOPIC, payload)
-        print("Topic :" + MQTT_TOPIC + " | Message Sent: ", payload)
+        print("Topic :" + MQTT_TOPIC + " | Message Sent: ", payload, qos=1, retain=True)
         await asyncio.sleep(60)  # wait for 60 seconds before the next run
 
     loop.close()
