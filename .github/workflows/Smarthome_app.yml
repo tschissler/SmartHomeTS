@@ -43,7 +43,7 @@ jobs:
 
     # Step 5: Upload artifacts (optional, for debugging or manual download)
     - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4.6.2
       with:
         name: app-release.aab
         path: build/app/outputs/bundle/release/app-release.aab
