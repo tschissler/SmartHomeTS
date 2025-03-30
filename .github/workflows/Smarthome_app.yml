@@ -26,7 +26,7 @@ jobs:
 
     - name: Update versionCode
       run: |
-        sed -i "s/versionCode = .*/versionCode = ${{ github.run_number }}/" android/app/build.gradle.kts
+        sed -i "s/versionCode = .*/versionCode = ${{ github.run_number }}/" ./${{ env.PROJECT_NAME }}/android/app/build.gradle.kts
         echo "Updated versionCode to ${{ github.run_number }}"
         
     - name: Recreate release-key.jks
