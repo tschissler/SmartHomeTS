@@ -52,16 +52,6 @@ jobs:
         name: app-release.aab
         path: ./${{ env.PROJECT_NAME }}/build/app/outputs/bundle/release/app-release.aab
 
-  deploy:
-    name: Deploy to Google Play
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-
     - name: Deploy to Google Play
       uses: r0adkll/upload-google-play@v1
       with:
