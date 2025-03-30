@@ -20,7 +20,7 @@ jobs:
       run: ls
       
     - name : Switch Directory
-      run: cd ./SmartHomeTS/smarthome_app
+      run: cd ./smarthome_app
 
     - name: Set up Flutter
       uses: subosito/flutter-action@v2.14.0
