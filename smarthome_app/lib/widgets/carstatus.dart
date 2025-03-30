@@ -10,7 +10,7 @@ class CarStatusWidget extends StatelessWidget {
   final DateFormat dateTimeFormatter = DateFormat('dd.MM.yy HH:mm:ss');
   final DateFormat timeFormatter = DateFormat('HH:mm');
   final textStyle = TextStyle(fontSize: 15);
-  final textStyleSmall = TextStyle(fontSize: 12);
+  final textStyleSmall = TextStyle(fontSize: 11);
 
   CarStatusWidget({super.key, required this.car, required this.carStatus});
 
@@ -23,27 +23,30 @@ class CarStatusWidget extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                children: [
-                  if (car.name == CarType.id4.name)
-                    Image.asset('assets/images/ID4.png')
-                  else
-                    Image.asset('assets/images/${car.name}.jpg'),
-                  Text(
-                    carStatus != null
-                        ? dateTimeFormatter.format(carStatus!.lastUpdate)
-                        : "--.--.-- --:--:--",
-                    style: textStyleSmall,
-                  ),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text("${carStatus?.mileage.toString() ?? "-"} km",
-                        style: textStyle),
-                  ),
-                ],
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.03),
+                child: Column(
+                  children: [
+                    if (car.name == CarType.id4.name)
+                      Image.asset('assets/images/id4.png')
+                    else
+                      Image.asset('assets/images/${car.name}.jpg'),
+                    Text(
+                      carStatus != null
+                          ? dateTimeFormatter.format(carStatus!.lastUpdate)
+                          : "--.--.-- --:--:--",
+                      style: textStyleSmall,
+                    ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text("${carStatus?.mileage.toString() ?? "-"} km",
+                          style: textStyle),
+                    ),
+                  ],
+                ),
               ),
             ),
-            Expanded(
+            IntrinsicWidth(
               child: Column(
                 children: [
                   Row(
@@ -68,18 +71,11 @@ class CarStatusWidget extends StatelessWidget {
                               minHeight: 6.0,
                               value: (carStatus?.battery ?? 0) / 100,
                               backgroundColor: Colors.grey,
-                              borderRadius: BorderRadius.all(Radius.circular(3)),
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(3)),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                   Color.fromARGB(255, 78, 135, 82)),
                             ),
-                            if (carStatus?.chargingEndTime != null)
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  "Bis: ${carStatus != null ? timeFormatter.format(carStatus!.chargingEndTime!.toLocal()) : "-"}",
-                                  style: textStyle,
-                                ),
-                              ),
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
@@ -87,6 +83,14 @@ class CarStatusWidget extends StatelessWidget {
                                 style: textStyle,
                               ),
                             ),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  carStatus?.chargingEndTime != null ?
+                                  ("Bis: ${carStatus != null ? timeFormatter.format(carStatus!.chargingEndTime!.toLocal()) : "-"}") : " ",
+                                  style: textStyle,
+                                ),
+                              ),
                           ],
                         ),
                       ),

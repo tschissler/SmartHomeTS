@@ -65,7 +65,7 @@ async def save_vehicle_image(vehicle, view_direction):
 
 
 async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser) -> Tuple[str, MyBMWAccount, Optional[Dict]]:
-    print("")
+    print("##############################################################")
     print(f" - Connecting to {vehicleName} Connected Drive API")
     username = os.getenv(vehicleName + '_USERNAME')
     password = os.getenv(vehicleName + '_PASSWORD')
@@ -76,8 +76,10 @@ async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser) -> 
     captcha_token_arg = f'captcha_token_{vehicleName}'
     captcha_token = getattr(args, captcha_token_arg)
     if captcha_token:
+        print(f" - Using provided captcha token for {vehicleName} API login")
         account = MyBMWAccount(username, password, Regions.REST_OF_WORLD, hcaptcha_token=captcha_token)
     else:
+        print(f" - Using refresh token from Kubernetes Secret for {vehicleName} API login")
         account = MyBMWAccount(username, password, Regions.REST_OF_WORLD)
 
     #oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
@@ -108,6 +110,11 @@ async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser) -> 
 
     return vin,account,oauth_store_data
 
+async def refresh_token_if_needed(account: MyBMWAccount):
+    if account.oauth_token.is_expired():
+        print(" - OAuth token expired, refreshing...")
+        await account.refresh_oauth_token()
+
 async def main():
     print("BMW Connector started")
     print("---------------------")
@@ -137,6 +144,7 @@ async def main():
             client.publish(MQTT_TOPIC + "BMW", payload, qos=1, retain=True)
             print("Topic :" + MQTT_TOPIC + "BMW" + " | Message Sent: ", payload)
             #store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
+            refresh_token_if_needed
             store_oauth_store_to_k8s_secret("bmw-connect-api-token", "default", bmwAccount, bmwOauth_store_data.get("session_id_timestamp"))
         except Exception as e:
             sys.stderr.write(f"Error: {e}\n")
@@ -148,6 +156,7 @@ async def main():
             client.publish(MQTT_TOPIC + "Mini", payload, qos=1, retain=True)
             print("Topic :" + MQTT_TOPIC + "Mini" + " | Message Sent: ", payload)
             #store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
+            refresh_token_if_needed
             store_oauth_store_to_k8s_secret("mini-connect-api-token", "default", miniAccount, miniOauth_store_data.get("session_id_timestamp"))
         except Exception as e:
             sys.stderr.write(f"Error: {e}\n")

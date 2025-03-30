@@ -63,7 +63,9 @@ class _ChargingSettingsPageState extends State<ChargingSettingsPage> {
     return Scaffold(
         drawer: SmarthomeDrawer(),
         appBar: AppBar(
-          title: Text('Ladeeinstellungen'),
+          title: Text('Ladeeinstellungen', style: TextStyle(fontSize: 16)),
+          toolbarHeight: 20,
+          iconTheme: IconThemeData(size: 16),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(10.0),
@@ -84,15 +86,6 @@ class _ChargingSettingsPageState extends State<ChargingSettingsPage> {
             SizedBox(height: 20),
             ChargingLevelSelector(),
             SizedBox(height: 10),
-            // Wrap(
-            //   spacing: 15,
-            //   runSpacing: 5,
-            //   children: [
-            //     CarStatusWidget(car: CarType.BMW, carStatus: bmwStatus),
-            //     CarStatusWidget(car: CarType.Mini, carStatus: miniStatus),
-            //     CarStatusWidget(car: CarType.ID4, carStatus: id4Status),
-            //   ],
-            // ),
             ScalableWidget(widgets: [
               CarStatusWidget(car: CarType.bmw, carStatus: bmwStatus),
               CarStatusWidget(car: CarType.mini, carStatus: miniStatus),

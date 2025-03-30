@@ -9,7 +9,7 @@ class ScalableWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       double availableWidth = (constraints.maxWidth-16) / widgets.length;
-      double minWidth = 200;
+      double minWidth = 250;
       return Wrap(
         spacing: 8.0,
         runSpacing: 8.0,
