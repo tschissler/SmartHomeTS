@@ -1,0 +1,69 @@
+name: Smarthome App CD
+
+on:
+    push:
+      branches: [ "main" ]
+      paths:
+        - .github/workflows/Smarthome_app.yml
+        - smarthome_app/**
+
+jobs:
+  build:
+    name: Build Flutter App
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    # Step 2: Set up Flutter
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: 'stable'
+
+    # Step 3: Install dependencies
+    - name: Install Dependencies
+      run: flutter pub get
+
+    # Step 4: Build the appbundle
+    - name: Build AppBundle
+      env:
+        # Pass secrets to the build process
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      run: |
+        echo "storePassword=$KEYSTORE_PASSWORD" > android/key.properties
+        echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
+        echo "keyAlias=$KEY_ALIAS" >> android/key.properties
+        echo "storeFile=release-key.jks" >> android/key.properties
+        flutter build appbundle --release
+
+    # Step 5: Upload artifacts (optional, for debugging or manual download)
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-release.aab
+        path: build/app/outputs/bundle/release/app-release.aab
+
+  deploy:
+    name: Deploy to Google Play
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    # Step 2: Set up Google Play CLI
+    - name: Deploy to Google Play
+      uses: r0adkll/upload-google-play@v1
+      with:
+        serviceAccountJson: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        packageName: "dev.tschissler.smarthome_app"
+        releaseFiles: build/app/outputs/bundle/release/app-release.aab
+        track: internal
