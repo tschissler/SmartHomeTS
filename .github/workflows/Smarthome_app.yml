@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name : Switch Directory
+      run: cd smarthome_app
+      
     # Step 1: Checkout the repository
     - name: Checkout Repository
       uses: actions/checkout@v3
