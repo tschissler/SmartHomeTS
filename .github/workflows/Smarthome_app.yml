@@ -13,30 +13,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      
     - name : Show Directory
       run: ls
       
     - name : Switch Directory
       run: cd ./SmartHomeTS/smarthome_app
-      
-    # Step 1: Checkout the repository
-    - name: Checkout Repository
-      uses: actions/checkout@v3
 
-    # Step 2: Set up Flutter
     - name: Set up Flutter
       uses: subosito/flutter-action@v2.14.0
       with:
         channel: 'stable'
 
-    # Step 3: Install dependencies
     - name: Install Dependencies
       run: flutter pub get
 
-    # Step 4: Build the appbundle
     - name: Build AppBundle
       env:
-        # Pass secrets to the build process
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -47,7 +42,6 @@ jobs:
         echo "storeFile=release-key.jks" >> android/key.properties
         flutter build appbundle --release
 
-    # Step 5: Upload artifacts (optional, for debugging or manual download)
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4.6.2
       with:
@@ -61,11 +55,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-    # Step 1: Checkout the repository
     - name: Checkout Repository
       uses: actions/checkout@v3
 
-    # Step 2: Set up Google Play CLI
     - name: Deploy to Google Play
       uses: r0adkll/upload-google-play@v1
       with:
