@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name : Switch Directory
-      run: cd ./smarthome_app
+      run: cd ./SmartHomeTS/smarthome_app
       
     # Step 1: Checkout the repository
     - name: Checkout Repository
