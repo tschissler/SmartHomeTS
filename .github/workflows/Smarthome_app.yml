@@ -57,9 +57,9 @@ jobs:
         name: app-release.aab
         path: ./${{ env.PROJECT_NAME }}/build/app/outputs/bundle/release/app-release.aab
 
-    - name: Write Google Play Service Account JSON
+    - name: Decode Google Play Service Account JSON
       run: |
-        echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}" > service-account.json
+        echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}" | base64 -d > service-account.json
         
     - name: Deploy to Google Play
       uses: r0adkll/upload-google-play@v1
