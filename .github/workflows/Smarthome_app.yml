@@ -39,7 +39,7 @@ jobs:
         echo "keyAlias=$KEY_ALIAS" >> android/key.properties
         echo "storeFile=release-key.jks" >> android/key.properties
         flutter build appbundle --release
-        working-directory: ./${{ env.PROJECT_NAME }}
+      working-directory: ./${{ env.PROJECT_NAME }}
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4.6.2
