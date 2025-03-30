@@ -24,6 +24,11 @@ jobs:
       with:
         channel: 'stable'
 
+    - name: Recreate release-key.jks
+      run: |
+        echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release-key.jks
+      working-directory: ./${{ env.PROJECT_NAME }}
+
     - name: Install Dependencies
       run: flutter pub get
       working-directory: ./${{ env.PROJECT_NAME }}
