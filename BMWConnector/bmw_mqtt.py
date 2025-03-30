@@ -64,51 +64,46 @@ async def save_vehicle_image(vehicle, view_direction):
         image_file.write(image_bytes)
 
 
-async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser) -> Tuple[str, MyBMWAccount, Optional[Dict]]:
+async def connect_vehicle(vehicleName: str, parser: argparse.ArgumentParser, interactive: bool) -> Tuple[str, MyBMWAccount, Optional[Dict]]:
     print("##############################################################")
     print(f" - Connecting to {vehicleName} Connected Drive API")
     username = os.getenv(vehicleName + '_USERNAME')
     password = os.getenv(vehicleName + '_PASSWORD')
     vin = os.getenv(vehicleName + '_VIN')
-   
-    #print(f" - Username: {username} | Password: {password} | VIN: {vin}")
-    args = parser.parse_args()
-    captcha_token_arg = f'captcha_token_{vehicleName}'
-    captcha_token = getattr(args, captcha_token_arg)
-    if captcha_token:
-        print(f" - Using provided captcha token for {vehicleName} API login")
-        account = MyBMWAccount(username, password, Regions.REST_OF_WORLD, hcaptcha_token=captcha_token)
-    else:
-        print(f" - Using refresh token from Kubernetes Secret for {vehicleName} API login")
-        account = MyBMWAccount(username, password, Regions.REST_OF_WORLD)
 
-    #oauth_store_data = load_oauth_store_from_file(Path("bimmer.oauth"), account)
+    account = None
     oauth_store_data = {}
-    if not captcha_token:
-        print(" - Loading OAuth2 tokens from Kubernetes Secret")
-        oauth_store_data = load_oauth_store_from_k8s_secret( vehicleName.lower() + "-connect-api-token", "default", account)
-    
-    await account.get_vehicles()
+
+    while True:
+        try:
+            # Attempt to load the token from Kubernetes Secret
+            print(f" - Loading OAuth2 tokens from Kubernetes Secret for {vehicleName}")
+            account = MyBMWAccount(username, password, Regions.REST_OF_WORLD)
+            oauth_store_data = load_oauth_store_from_k8s_secret(vehicleName.lower() + "-connect-api-token", "default", account)
+            await account.get_vehicles()
+            break  # Exit the loop if successful
+        except Exception as e:
+            print(f" - Failed to authenticate using Kubernetes Secret for {vehicleName}: {e}")
+            if interactive:
+                # Prompt user for captcha token if the secret fails and interactive mode is enabled
+                captcha_token = input(f"Enter captcha token for {vehicleName}: ").strip()
+                try:
+                    account = MyBMWAccount(username, password, Regions.REST_OF_WORLD, hcaptcha_token=captcha_token)
+                    await account.get_vehicles()
+                    # Store the new token in Kubernetes Secret
+                    store_oauth_store_to_k8s_secret(vehicleName.lower() + "-connect-api-token", "default", account, oauth_store_data.get("session_id_timestamp"))
+                    break  # Exit the loop if successful
+                except Exception as captcha_error:
+                    print(f" - Failed to authenticate with captcha token for {vehicleName}: {captcha_error}")
+            print(f" - Retrying in 10 seconds...")
+            await asyncio.sleep(10)  # Wait before retrying
+
     vehicle = account.get_vehicle(vin)
 
     print(" - Vehicle Information:")
     print(vehicle.brand, vehicle.name, vehicle.vin)
 
-    if (args.get_vehicle_images):
-        print(" - Getting vehicle images")
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.ANGLE_SIDE_VIEW_FORTY)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.ANGLE_SIDE_VIEW_SIXTY)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.FRONTSIDE)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.FRONT_LEFT)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.FRONT_RIGHT)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.REAR_LEFT)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.REAR_RIGHT)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.REAR_VIEW)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.SIDE)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.DASHBOARD)
-        await save_vehicle_image(vehicle, bimmer_connected.vehicle.vehicle.VehicleViewDirection.DRIVERDOOR)
-
-    return vin,account,oauth_store_data
+    return vin, account, oauth_store_data
 
 async def refresh_token_if_needed(account: MyBMWAccount):
     if account.oauth_token.is_expired():
@@ -121,17 +116,17 @@ async def main():
     print(" - Connecting to MQTT Broker: " + MQTT_BROKER)
 
     parser = argparse.ArgumentParser(description=f"Connecting to the BMW/Mini API")
-    parser.add_argument('--captcha_token_BMW', type=str, required=False, help=f'Captcha token for BMW API login')
-    parser.add_argument('--captcha_token_Mini', type=str, required=False, help=f'Captcha token for Mini API login')
     parser.add_argument('--get_vehicle_images', action='store_true', help='Print debug logs')
+    parser.add_argument('-interactive', action='store_true', help='Enable interactive mode for captcha token input')
+    args = parser.parse_args()
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
 
-    bmwVin, bmwAccount, bmwOauth_store_data = await connect_vehicle("BMW", parser)
-    miniVin, miniAccount, miniOauth_store_data = await connect_vehicle("Mini", parser)
+    bmwVin, bmwAccount, bmwOauth_store_data = await connect_vehicle("BMW", parser, args.interactive)
+    miniVin, miniAccount, miniOauth_store_data = await connect_vehicle("Mini", parser, args.interactive)
 
     loop = asyncio.get_event_loop()
     
@@ -143,24 +138,18 @@ async def main():
             payload = json.dumps(result)
             client.publish(MQTT_TOPIC + "BMW", payload, qos=1, retain=True)
             print("Topic :" + MQTT_TOPIC + "BMW" + " | Message Sent: ", payload)
-            #store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
-            refresh_token_if_needed
             store_oauth_store_to_k8s_secret("bmw-connect-api-token", "default", bmwAccount, bmwOauth_store_data.get("session_id_timestamp"))
         except Exception as e:
             sys.stderr.write(f"Error: {e}\n")
-            #sys.exit(1)
 
         try:
             result = await fetch_vehicle_info(miniAccount, miniVin)
             payload = json.dumps(result)
             client.publish(MQTT_TOPIC + "Mini", payload, qos=1, retain=True)
             print("Topic :" + MQTT_TOPIC + "Mini" + " | Message Sent: ", payload)
-            #store_oauth_store_to_file(Path("bimmer.oauth"), account, oauth_store_data.get("session_id_timestamp"))
-            refresh_token_if_needed
             store_oauth_store_to_k8s_secret("mini-connect-api-token", "default", miniAccount, miniOauth_store_data.get("session_id_timestamp"))
         except Exception as e:
             sys.stderr.write(f"Error: {e}\n")
-            #sys.exit(1)
 
         await asyncio.sleep(60)  
 
