@@ -26,7 +26,7 @@ jobs:
 
     - name: Recreate release-key.jks
       run: |
-        echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release-key.jks
+        echo "${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release-key.jks
       working-directory: ./${{ env.PROJECT_NAME }}
 
     - name: Install Dependencies
@@ -35,9 +35,9 @@ jobs:
 
     - name: Build AppBundle
       env:
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       run: |
         echo "storePassword=$KEYSTORE_PASSWORD" > android/key.properties
         echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
