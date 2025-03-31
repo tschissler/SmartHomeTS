@@ -59,12 +59,12 @@ jobs:
 
     - name: Decode Google Play Service Account JSON
       run: |
-        echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}" | base64 -d > service-account.json
+        echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}" | base64 -d > ./${{ env.PROJECT_NAME }}/service-account.json
         
     - name: Deploy to Google Play
       uses: r0adkll/upload-google-play@v1
       with:
-        serviceAccountJson: service-account.json
+        serviceAccountJson: ./${{ env.PROJECT_NAME }}/service-account.json
         packageName: "dev.tschissler.smarthome_app"
         releaseFiles: ./${{ env.PROJECT_NAME }}/build/app/outputs/bundle/release/app-release.aab
         track: internal
