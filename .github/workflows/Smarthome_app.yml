@@ -24,11 +24,14 @@ jobs:
       with:
         channel: 'stable'
 
-    - name: Update versionCode
+    - name: Update versionCode and versionName
       run: |
+        NEW_VERSION_NAME="1.0.${{ github.run_number }}"
         sed -i "s/versionCode = .*/versionCode = ${{ github.run_number }}/" ./${{ env.PROJECT_NAME }}/android/app/build.gradle.kts
+        sed -i "s/versionName = \".*\"/versionName = \"$NEW_VERSION_NAME\"/" ./${{ env.PROJECT_NAME }}/android/app/build.gradle.kts
         echo "Updated versionCode to ${{ github.run_number }}"
-        
+        echo "Updated versionName to $NEW_VERSION_NAME"
+      
     - name: Recreate release-key.jks
       run: |
         echo "${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release-key.jks
