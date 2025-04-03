@@ -10,7 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FE91F6DE-9EE8-41A6-9806-8D102135D9D8}"
 	ProjectSection(SolutionItems) = preProject
 		Dockerfile = Dockerfile
-		..\..\SmartHome.NF\KebaLib\kecontactp30udp_pgen.pdf = ..\..\SmartHome.NF\KebaLib\kecontactp30udp_pgen.pdf
+		kecontactp30udp_pgen.pdf = kecontactp30udp_pgen.pdf
 		kube.yaml = kube.yaml
 	EndProjectSection
 EndProject

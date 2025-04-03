@@ -69,8 +69,8 @@ namespace KebaConnector
                     data.CurrentPhase2,
                     data.CurrentPhase3,
                     data.CurrentChargingPower,
-                    data.EnergyCurrentChargingSession,
-                    data.EnergyTotal
+                    data.EnergyCurrentChargingSession / 10,
+                    data.EnergyTotal / 10
                     );
             }
             catch (Exception ex)
@@ -120,7 +120,51 @@ namespace KebaConnector
             var data = new KebaDeviceStatusData();
             try
             {
+                // Report 2 Data
+                //{
+                //  "ID": "2",
+                //  "State": 5,
+                //  "Error1": 0,
+                //  "Error2": 0,
+                //  "Plug": 7,
+                //  "AuthON": 0,
+                //  "Authreq": 0,
+                //  "Enable sys": 0,
+                //  "Enable user": 0,
+                //  "Max curr": 0,
+                //  "Max curr %": 1000,
+                //  "Curr HW": 16000,
+                //  "Curr user": 6000,
+                //  "Curr FS": 0,
+                //  "Tmo FS": 0,
+                //  "Curr timer": 0,
+                //  "Tmo CT": 0,
+                //  "Setenergy": 0,
+                //  "Output": 0,
+                //  "Input": 0,
+                //  "X2 phaseSwitch source": 0,
+                //  "X2 phaseSwitch": 0,
+                //  "Serial": "22588720",
+                //  "Sec": 44829
+                //}
                 var report2 = ExecuteUDPCommand("report 2");
+
+                // Report 3 data
+                //{
+                //  "ID": "3",
+                //  "U1": 0,
+                //  "U2": 0,
+                //  "U3": 0,
+                //  "I1": 0,
+                //  "I2": 0,
+                //  "I3": 0,
+                //  "P": 0,
+                //  "PF": 0,
+                //  "E pres": 164170,
+                //  "E total": 94751800,
+                //  "Serial": "22588720",
+                //  "Sec": 45306
+                //}
                 var report3 = ExecuteUDPCommand("report 3");
                 dataString = report2 + report3;
                 JObject report2Json = JObject.Parse(report2);

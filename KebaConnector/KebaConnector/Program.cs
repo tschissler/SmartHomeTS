@@ -44,7 +44,7 @@ await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("commands
 
 Console.WriteLine("    ...Done");
 
-var timer = new Timer(Update, null, 0, 5000);
+var timer = new Timer(Update, null, 5000, 5000);
 
 Thread.Sleep(Timeout.Infinite);
 
@@ -58,7 +58,7 @@ void Update(object? state)
             if (task.IsCompletedSuccessfully)
             {
                 var data = task.Result;
-                Console.WriteLine($"Keba Outside: {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
+                Console.WriteLine($"Keba Outside: {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession:#,##0}Wh, {data.EnergyTotal:#,##0}Wh");
                 SendDataAsMQTTMessage(mqttClient, data, "KebaOutside");
             }
         });
@@ -68,7 +68,7 @@ void Update(object? state)
             if (task.IsCompletedSuccessfully)
             {
                 var data = task.Result;
-                Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession}Wh, {data.EnergyTotal}Wh");
+                Console.WriteLine($"Keba Garage : {data.PlugStatus}, {data.CurrentChargingPower}W, {data.EnergyCurrentChargingSession:#,##0}Wh, {data.EnergyTotal:#,##0}Wh");
                 SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
             }
         }));
