@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: influximporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influximporter
+  template:
+    metadata:
+      labels:
+        app: influximporter
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet 
+      containers:
+        - name: influximporter
+          image: tschissler/influximporter:latest
+          env:
+          - name: INFLUX_TOKEN
+            value: "env:INFLUX_TOKEN"
+          # - name: EnphaseUserName
+          #   value: "env:EnphaseUserName"
+          # - name: EnphasePassword
+          #   value: "env:EnphasePassword"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: influximporter-service
+spec:
+  type: ClusterIP    
+  ports:  
+  - name: udp-port
+    port: 7090
+    protocol: UDP
+  selector:
+    app: influximporter
