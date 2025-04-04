@@ -52,6 +52,10 @@ async def fetch_vehicle_info(account: MyBMWAccount, vin: str) -> Dict:
         "chargerConnected" : vehicle.fuel_and_battery.is_charger_connected,
         "remainingRange": vehicle.fuel_and_battery.remaining_range_electric.value,
         "mileage": vehicle.mileage.value,
+        "position": {
+            "latitude": vehicle.vehicle_location.location.latitude,
+            "longitude": vehicle.vehicle_location.location.longitude,
+        },
         "moving": vehicle.is_vehicle_active,
         "lastUpdate": vehicle.timestamp.isoformat(),
     }
