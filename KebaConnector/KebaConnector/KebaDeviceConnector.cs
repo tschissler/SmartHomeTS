@@ -40,7 +40,7 @@ namespace KebaConnector
             return;
         }
 
-        public async Task<KebaData> ReadDeviceData()
+        public async Task<KebaData?> ReadDeviceData()
         {
             if (udpExceptionInProgress)
             {
