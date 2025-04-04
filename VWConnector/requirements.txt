@@ -1,3 +1,4 @@
 weconnect>=0.60.6
 carconnectivity>=0.6
+carconnectivity-connector-volkswagen>=0.6
 paho-mqtt

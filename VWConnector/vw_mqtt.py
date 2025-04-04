@@ -96,7 +96,7 @@ async def main():
     print("Starting VW Connector")
     print("##################################")
     print()
-    print("Connecting to MQtT broker " + MQTT_BROKER + " on port " + str(MQTT_PORT) + " ...")
+    print("Connecting to MQTT broker " + MQTT_BROKER + " on port " + str(MQTT_PORT) + " ...")
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
