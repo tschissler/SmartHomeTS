@@ -65,14 +65,14 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         else if (topic == "data/charging/KebaGarage")
         {
             var kebaGarageData = JsonSerializer.Deserialize<ChargingGetData>(payload);
-            currentChargingSituation.InsideCurrentChargingPower = kebaGarageData.CurrentChargingPower / 1000;
+            currentChargingSituation.InsideCurrentChargingPower = kebaGarageData.CurrentChargingPower;
             currentChargingSituation.InsideConnected = kebaGarageData.CarIsPlugedIn;
         }
 
         else if (topic == "data/charging/KebaOutside")
         {
             var kebaOutsideData = JsonSerializer.Deserialize<ChargingGetData>(payload);
-            currentChargingSituation.OutsideCurrentChargingPower = kebaOutsideData.CurrentChargingPower / 1000;
+            currentChargingSituation.OutsideCurrentChargingPower = kebaOutsideData.CurrentChargingPower;
             currentChargingSituation.OutsideConnected = kebaOutsideData.CarIsPlugedIn;
         }
         else if (topic == "data/charging/BMW")
