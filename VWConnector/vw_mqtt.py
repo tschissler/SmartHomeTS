@@ -33,7 +33,7 @@ async def fetch_vehicle_info(carConnect: carconnectivity.CarConnectivity) -> dic
     vehicle = garage.get_vehicle(carvin)
 
     chargingEndTime = None
-    if vehicle.charging.state.value.value == ChargingStatus.ChargingState.CHARGING.value :
+    if vehicle.charging.state.value.value == ChargingStatus.ChargingState.CHARGING.value and vehicle.charging.estimated_date_reached.value is not None:
         chargingEndTime = vehicle.charging.estimated_date_reached.value.isoformat()
 
     return {
