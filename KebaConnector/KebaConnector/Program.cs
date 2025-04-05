@@ -7,8 +7,9 @@ using MQTTnet.Client;
 using SharedContracts;
 using System.Net;
 using System.Text.Json;
+using MQTTClient;
 
-IMqttClient mqttClient;
+MQTTClient.MQTTClient mqttClient;
 KebaDeviceConnector kebaOutside;
 KebaDeviceConnector kebaGarage;
 
@@ -36,11 +37,12 @@ Console.WriteLine("    ...Done");
 
 Console.WriteLine("  - Connecting to MQTT Broker");
 
-var factory = new MqttFactory();
-mqttClient = factory.CreateMqttClient();
-await MQTTConnectAsync();
-mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
-await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("commands/charging/#").Build());
+mqttClient = new MQTTClient.MQTTClient("KebaConnector");
+Console.WriteLine($"    ClientId: {mqttClient.ClientId}");
+
+mqttClient.OnMessageReceived += MqttMessageReceived;
+
+await mqttClient.SubscribeToTopic("commands/charging/#");
 
 Console.WriteLine("    ...Done");
 
@@ -79,42 +81,10 @@ void Update(object? state)
     }
 }
 
-async Task MQTTConnectAsync()
+async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
 {
-    var mqttOptions = new MqttClientOptionsBuilder()
-        .WithTcpServer("smarthomepi2", 32004)
-        .WithClientId("Smarthome.KebaConnector")
-        .Build();
-
-    while (true)
-    {
-        if (mqttClient.IsConnected)
-            break;
-        try
-        {
-            await mqttClient.ConnectAsync(mqttOptions);
-            if (mqttClient.IsConnected)
-            {
-                Console.WriteLine("Connected to MQTT Broker.");
-                break;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error connecting to MQTT Broker: {ex.Message}");
-            Thread.Sleep(5000);
-        }
-    }
-}
-
-async Task MQTTDisconnectAsync()
-{
-    await mqttClient.DisconnectAsync();
-}
-async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
-{
-    string payload = args.ApplicationMessage.ConvertPayloadToString();
-    var topic = args.ApplicationMessage.Topic;
+    string payload = e.Payload;
+    var topic = e.Topic;
     var time = DateTime.Now;
 
     Console.WriteLine($"Received message from {topic} at {time}: {payload}");
@@ -153,7 +123,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
     return;
 }
 
-static void SendDataAsMQTTMessage(IMqttClient mqttClient, KebaData data, string device)
+static void SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaData data, string device)
 {
     var messageData = new ChargingGetData()
     {
@@ -162,10 +132,5 @@ static void SendDataAsMQTTMessage(IMqttClient mqttClient, KebaData data, string 
         EnergyCurrentChargingSession = data.EnergyCurrentChargingSession,
         EnergyTotal = data.EnergyTotal
     };
-    var message = new MqttApplicationMessageBuilder()
-        .WithTopic($"data/charging/{device}")
-        .WithPayload(JsonSerializer.Serialize(messageData))
-        .WithRetainFlag()
-        .Build();
-    mqttClient.PublishAsync(message);
+    mqttClient.PublishAsync($"data/charging/{device}", JsonSerializer.Serialize(messageData), MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce, false);
 }

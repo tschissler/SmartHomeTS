@@ -68,7 +68,7 @@ namespace KebaConnector
                     data.CurrentPhase1,
                     data.CurrentPhase2,
                     data.CurrentPhase3,
-                    data.CurrentChargingPower,
+                    data.CurrentChargingPower / 1000,
                     data.EnergyCurrentChargingSession / 10,
                     data.EnergyTotal / 10
                     );

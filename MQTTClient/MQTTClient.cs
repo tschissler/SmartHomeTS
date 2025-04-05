@@ -11,13 +11,14 @@ namespace MQTTClient
     {
         private IMqttClient _client;
         private MqttClientOptions _options;
-        private string _clientId;
+        public string ClientId { get; init; }
+        public bool IsConnected => _client.IsConnected;
 
         public event EventHandler<MqttMessageReceivedEventArgs> OnMessageReceived;
 
         public MQTTClient(string clientId)
         {
-            _clientId = clientId;
+            ClientId = clientId + "_" + Environment.MachineName;
             Task.Run(async () => await ConnectAsync()).Wait();
         }
 
@@ -28,7 +29,7 @@ namespace MQTTClient
 
             _options = new MqttClientOptionsBuilder()
             .WithTcpServer("smarthomepi2", 32004)
-            .WithClientId(_clientId)
+            .WithClientId(ClientId)
             .WithKeepAlivePeriod(new TimeSpan(0, 1, 0, 0))
             .Build();
 
