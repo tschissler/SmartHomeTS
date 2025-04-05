@@ -19,13 +19,13 @@ namespace SharedContracts
         public string Name { get; set; }
 
         [JsonPropertyName("battery")]
-        public int Battery { get; set; }
+        public double Battery { get; set; }
 
         [JsonPropertyName("chargingStatus")]
         public string ChargingStatus { get; set; }
 
         [JsonPropertyName("chargingTarget")]
-        public int ChargingTarget { get; set; }
+        public double ChargingTarget { get; set; }
 
         [JsonPropertyName("chargingEndTime")]
         public DateTime? ChargingEndTime { get; set; }
@@ -33,14 +33,20 @@ namespace SharedContracts
         [JsonPropertyName("chargerConnected")]
         public bool ChargerConnected { get; set; }
 
+        [JsonPropertyName("state")]
+        public string State { get; set; }
+
         [JsonPropertyName("remainingRange")]
-        public int RemainingRange { get; set; }
+        public double RemainingRange { get; set; }
 
         [JsonPropertyName("mileage")]
-        public int Mileage { get; set; }
+        public double Mileage { get; set; }
 
         [JsonPropertyName("lastUpdate")]
         public DateTime? LastUpdate { get; set; }
+
+        [JsonPropertyName("position")]
+        public GeoPosition? Position { get; set; }
 
         [JsonPropertyName("moving")]
         public bool Moving { get; set; }
@@ -48,6 +54,7 @@ namespace SharedContracts
 
         public CarStatusData()
         {
+            Nickname = "";
             Brand = "";
             Name = "";
             Battery = 0;
@@ -58,7 +65,22 @@ namespace SharedContracts
             RemainingRange = 0;
             Mileage = 0;
             Moving = false;
+            State = "";
+            Position = new GeoPosition();
             LastUpdate = DateTime.MinValue;
+        }
+    }
+
+    public class GeoPosition
+    {
+        [JsonPropertyName("latitude")]
+        public double Latitude { get; set; }
+        [JsonPropertyName("longitude")]
+        public double Longitude { get; set; }
+        public GeoPosition()
+        {
+            Latitude = 0;
+            Longitude = 0;
         }
     }
 }
