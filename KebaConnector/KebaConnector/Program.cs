@@ -123,8 +123,10 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
     return;
 }
 
-static void SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaData data, string device)
+static void SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaData? data, string device)
 {
+    if (data is null)
+        return;
     var messageData = new ChargingGetData()
     {
         CarIsPlugedIn = data.PlugStatus == PlugStatus.CablePluggedInChargingStationAndVehicleAndLocked,
