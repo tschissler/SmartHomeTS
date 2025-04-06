@@ -28,32 +28,37 @@ def on_connect(client, userdata, flags, rc, properties):
     print(f"Connected with result code {rc}")
 
 async def fetch_vehicle_info(carConnect: carconnectivity.CarConnectivity) -> dict:
-    carvin = os.getenv('VW_VIN')
-    garage: Optional[Garage] = carConnect.get_garage()
-    vehicle = garage.get_vehicle(carvin)
+    try:
+        carvin = os.getenv('VW_VIN')
+        garage: Optional[Garage] = carConnect.get_garage()
+        vehicle = garage.get_vehicle(carvin)
 
-    chargingEndTime = None
-    if vehicle.charging.state.value.value == ChargingStatus.ChargingState.CHARGING.value and vehicle.charging.estimated_date_reached.value is not None:
-        chargingEndTime = vehicle.charging.estimated_date_reached.value.isoformat()
+        chargingEndTime = None
+        if vehicle.charging.state.value.value == ChargingStatus.ChargingState.CHARGING.value and vehicle.charging.estimated_date_reached.value is not None:
+            chargingEndTime = vehicle.charging.estimated_date_reached.value.isoformat()
 
-    return {
-        "nickname": vehicle.name.value,
-        "brand": "VW",
-        "name": vehicle.model.value,
-        "battery": vehicle.drives.drives["primary"].level.value,
-        "remainingRange": vehicle.drives.drives["primary"].range.value,
-        "mileage": vehicle.odometer.value,
-        "chargerConnected": vehicle.charging.connector.connection_state.value.value == "connected",
-        "chargingStatus": vehicle.charging.state.value.value,
-        "chargingTarget": vehicle.charging.settings.target_level.value,
-        "chargingEndTime": chargingEndTime,
-        "state": vehicle.state.value.value,
-        "position": {
-            "latitude": vehicle.position.latitude.value ,
-            "longitude": vehicle.position.longitude.value
-        },
-        "lastUpdate": vehicle.charging.state.last_updated_local.isoformat(),
-    }
+        return {
+            "nickname": vehicle.name.value,
+            "brand": "VW",
+            "name": vehicle.model.value,
+            "battery": vehicle.drives.drives["primary"].level.value,
+            "remainingRange": vehicle.drives.drives["primary"].range.value,
+            "mileage": vehicle.odometer.value,
+            "chargerConnected": vehicle.charging.connector.connection_state.value.value == "connected",
+            "chargingStatus": vehicle.charging.state.value.value,
+            "chargingTarget": vehicle.charging.settings.target_level.value,
+            "chargingEndTime": chargingEndTime,
+            "state": vehicle.state.value.value,
+            "position": {
+                "latitude": vehicle.position.latitude.value ,
+                "longitude": vehicle.position.longitude.value
+            },
+            "lastUpdate": vehicle.charging.state.last_updated_local.isoformat(),
+        }
+    except Exception as e:
+        print("Error fetching vehicle info:", e)
+        return {}
+        
 
 async def fetch_vehicle_info_weconnect():
     username = os.getenv('VW_USERNAME')
@@ -91,7 +96,14 @@ async def fetch_vehicle_info_weconnect():
         "lastUpdate": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
     }
 
+def validate_env_vars():
+    required_vars = ['VW_USERNAME', 'VW_PASSWORD', 'VW_VIN']
+    for var in required_vars:
+        if not os.getenv(var):
+            raise EnvironmentError(f"Environment variable '{var}' is not set.")
+
 async def main():
+    validate_env_vars()
 
     print("Starting VW Connector")
     print("##################################")
@@ -109,35 +121,39 @@ async def main():
     password = os.getenv('VW_PASSWORD')
     carvin = os.getenv('VW_VIN')
 
-    car_connectivity_config = {
-        "carConnectivity": {
-            "connectors": [
-                {
-                    "type": "volkswagen",
-                    "config": {
-                        "username": username,
-                        "password": password
-                    }
-                },
-            ]
+    try:
+        car_connectivity_config = {
+            "carConnectivity": {
+                "connectors": [
+                    {
+                        "type": "volkswagen",
+                        "config": {
+                            "username": username,
+                            "password": password
+                        }
+                    },
+                ]
+            }
         }
-    }
 
-    carConnect = carconnectivity.CarConnectivity(config=car_connectivity_config, tokenstore_file="tokenstore.json")
-    carConnect.fetch_all()
-    garage: Optional[Garage] = carConnect.get_garage()
-    vehicle = garage.get_vehicle(carvin)
-    print("successfully connected for vehicle " + vehicle.name.value)
+        carConnect = carconnectivity.CarConnectivity(config=car_connectivity_config, tokenstore_file="tokenstore.json")
+        carConnect.fetch_all()
+        garage: Optional[Garage] = carConnect.get_garage()
+        vehicle = garage.get_vehicle(carvin)
+        print("successfully connected for vehicle " + vehicle.name.value)
+    except Exception as e:
+        print("Error connecting to VW API:", e)
 
     while True:
-        result = await fetch_vehicle_info(carConnect)
-        payload = json.dumps(result)
-        client.publish(MQTT_TOPIC, payload, qos=1, retain=True)
-        print("Topic :" + MQTT_TOPIC + " | Message Sent: ", payload)
-        await asyncio.sleep(60)  # wait for 60 seconds before the next run
+        try:
+            result = await fetch_vehicle_info(carConnect)
+            payload = json.dumps(result)
+            client.publish(MQTT_TOPIC, payload, qos=1, retain=True)
+            print("Topic :" + MQTT_TOPIC + " | Message Sent: ", payload)
+            await asyncio.sleep(60)  # wait for 60 seconds before the next run
 
-    loop.close()
-    client.loop_stop()
+        except Exception as e:
+            print("Error:", e)
 
 if __name__ == '__main__':
     asyncio.run(main())
