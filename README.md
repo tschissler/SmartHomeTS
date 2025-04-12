@@ -21,7 +21,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 - **C/C++**: Essential for low-level programming, these languages are used in ESP32 firmware to control IoT devices like sensors and actuators. This is a great example of how to build efficient and reliable embedded systems. Learn more at [C++ Documentation](https://cplusplus.com/) and [C Programming](https://en.cppreference.com/w/).
 - **PlatformIO**: A professional collaborative platform for embedded development fully integrated in VS Code. It is used in the ESP32Firmwares projects to simplify the development, deployment (flashing) of firmware for IoT devices. Learn more at [PlatformIO](https://platformio.org/).
 - **MQTT**: A lightweight messaging protocol ideal for IoT. It enables seamless communication between devices and services. Learn more at [MQTT.org](https://mqtt.org/). Switching from REST API calls to MQTT made the solution much more robust and resilient by reducing direct dependencies.
-![Screenshot of MQTT Explorer demonstrating the basics of the MQTT messages](docs/images/image3.png)
+![Screenshot of MQTT Explorer demonstrating the basics of the MQTT messages](./docs/images/image3.png)
 - **InfluxDB**: A time-series database optimized for storing and querying time-stamped data. This repository uses InfluxDB to manage energy consumption and climate metrics, showcasing its power in data analytics. Learn more at [InfluxDB Documentation](https://docs.influxdata.com/).
 - **Kubernetes**: A container orchestration platform that ensures scalability and reliability. Kubernetes is used across multiple projects to manage containerized applications, making it a must-learn for modern DevOps. Learn more at [Kubernetes.io](https://kubernetes.io/). In this project I uses [microk8s](https://microk8s.io/) to host a kubernetes cluster on a set of Raspberry Pis. 
 - **Docker**: Simplifies application deployment by containerizing services. Container images are build during the build process and then used to deploy to the kubernetes cluster. Learn more at [Docker Documentation](https://docs.docker.com/).
@@ -60,7 +60,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 ### Influx
 - **Purpose**: Manages InfluxDB for storing and querying time-series data, such as energy consumption and climate metrics.
 - **Inspiration**: See how to use time-series databases for advanced data analytics.
-![Screenshot of Influx Web UI](docs/images/image2.png)
+![Screenshot of Influx Web UI](./docs/images/image2.png)
 
 ### MQTTBroker
 - **Purpose**: Sets up an MQTT broker for communication between devices and services.
@@ -74,7 +74,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 ### SmartHome.Web
 - **Purpose**: A web interface for visualizing and controlling the SmartHome system, offering a centralized dashboard.
 - **Inspiration**: Learn how to build interactive web applications with Blazor and Syncfusion.
-![Screenshot of SmartHome.Web](docs/images/image1.png)
+![Screenshot of SmartHome.Web](./docs/images/image1.png)
 
 ### ShellyConnector
 - **Purpose**: Integrates with Shelly smart devices, enabling control and monitoring of connected appliances.
