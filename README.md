@@ -23,6 +23,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 - **MQTT**: A lightweight messaging protocol ideal for IoT. It enables seamless communication between devices and services. Learn more at [MQTT.org](https://mqtt.org/). Switching from REST API calls to MQTT made the solution much more robust and resilient by reducing direct dependencies.
 ![Screenshot of MQTT Explorer demonstrating the basics of the MQTT messages](./Docs/images/image3.png)
 - **InfluxDB**: A time-series database optimized for storing and querying time-stamped data. This repository uses InfluxDB to manage energy consumption and climate metrics, showcasing its power in data analytics. Learn more at [InfluxDB Documentation](https://docs.influxdata.com/).
+- **Model Context Protocol (MCP)**: A protocol for AI tools that allows for structured retrieval and manipulation of data. This repository features a C# MCP server for InfluxDB, enabling AI assistants to directly query schema and sample data to allow better assitance in creating flux queries. Learn more at [Model Context Protocol](https://github.com/microsoft/node-model-context-protocol).
 - **Kubernetes**: A container orchestration platform that ensures scalability and reliability. Kubernetes is used across multiple projects to manage containerized applications, making it a must-learn for modern DevOps. Learn more at [Kubernetes.io](https://kubernetes.io/). In this project I uses [microk8s](https://microk8s.io/) to host a kubernetes cluster on a set of Raspberry Pis. 
 - **Docker**: Simplifies application deployment by containerizing services. Container images are build during the build process and then used to deploy to the kubernetes cluster. Learn more at [Docker Documentation](https://docs.docker.com/).
 - **Flutter**: A cross-platform framework for building mobile apps. The Smarthome_app project illustrates how to create a use Flutter to build aps that run on mobile devices, Windows and in the browser. Learn more at [Flutter.dev](https://flutter.dev/).
@@ -44,6 +45,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 ### ChargingController
 - **Purpose**: Manages electric vehicle charging processes, optimizing energy usage based on availability and demand.
 - **Inspiration**: Learn how to automate decision making based on various data. This project also demonstrates how to use Data-Driven Unit-Tests using an Excel-Sheet as datasource.
+This project uses data-driven unit-tests based on Excel data.
 
 ### DataAggregator
 - **Purpose**: Aggregates and processes data from various sources, providing a unified view of the smart home system.
@@ -56,6 +58,38 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 ### ESP32Firmwares
 - **Purpose**: Firmware for ESP32-based devices, including LED strips, temperature sensors, and more.
 - **Inspiration**: Learn how to program microcontrollers for IoT applications.
+
+### MCPServer
+- **Purpose**: Provides a structured interface for AI tools to query and analyze InfluxDB time-series data through the Model Context Protocol (MCP).
+- **Inspiration**: Learn how to build MCP servers in C# that enable AI assistants to work directly with time-series databases.
+- **Usage**:
+  1. Configure the server in `.vscode/mcp.json` to register it with VS Code:
+     ```json
+     {
+       "servers": [
+         {
+           "id": "csharp-influxdb-server",
+           "name": "C# InfluxDB MCP Server",
+           "command": "dotnet",
+           "args": ["run", "--project", "${workspaceFolder}/MCPServer/MCPServer.csproj"],
+           "transport": "stdio",
+           "supportsDynamicRegistration": true
+         }
+       ]
+     }
+     ```
+  2. Set environment variables for InfluxDB connection:
+     - `INFLUXDB_URL`: The URL of your InfluxDB instance (default: "http://localhost:8086")
+     - `INFLUXDB_TOKEN`: Your InfluxDB authentication token
+     - `INFLUXDB_ORG`: Your InfluxDB organization name (default: "SmartHome")
+  3. Use the MCP tools to query InfluxDB data:
+     - `GetSchema`: Retrieve the complete schema of your InfluxDB instance
+     - `GetBuckets`: List all available buckets
+     - `GetMeasurements`: Get all measurements in a specific bucket
+     - `GetFields`: Get all field keys for a given measurement
+     - `GetTags`: Get all tag keys for a measurement
+     - `GetSample`: Get sample data from a measurement
+     - And other utilities for time range analysis and field type inspection
 
 ### Influx
 - **Purpose**: Manages InfluxDB for storing and querying time-series data, such as energy consumption and climate metrics.

@@ -1,0 +1,12 @@
+{
+  "servers": [
+    {
+      "id": "csharp-influxdb-server",
+      "name": "C# InfluxDB MCP Server",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}/MCPServer/MCPServer.csproj"],
+      "transport": "stdio",
+      "supportsDynamicRegistration": true
+    }
+  ]
+}
