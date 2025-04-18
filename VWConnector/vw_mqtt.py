@@ -30,9 +30,9 @@ def on_connect(client, userdata, flags, rc, properties):
 async def fetch_vehicle_info(carConnect: carconnectivity.CarConnectivity) -> dict:
     try:
         carvin = os.getenv('VW_VIN')
+        carConnect.fetch_all()
         garage: Optional[Garage] = carConnect.get_garage()
         vehicle = garage.get_vehicle(carvin)
-        carConnect.fetch_all()
         chargingEndTime = None
         if vehicle.charging.state.value.value == ChargingStatus.ChargingState.CHARGING.value and vehicle.charging.estimated_date_reached.value is not None:
             chargingEndTime = vehicle.charging.estimated_date_reached.value.isoformat()
