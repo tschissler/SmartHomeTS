@@ -36,7 +36,7 @@ var options = InfluxDBClientOptions.Builder
                .AuthenticateToken(InfluxToken.ToCharArray())
                .LogLevel(InfluxDB.Client.Core.LogLevel.None)
                .Build();
-using var influxDBClient = InfluxDBClientFactory.Create(options);
+using var influxDBClient = new InfluxDBClient(options);
 var writeApi = influxDBClient.GetWriteApi();
 
 // Setup MQTT client options
