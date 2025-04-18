@@ -65,34 +65,13 @@
         public int OutsideChargingLatestmA { get; set; }
 
         /// <summary>
-        /// The current battery level of the BMW in percent
+        /// The energy that has been charged in the current session in Wh
         /// </summary>
-        public int BMWBatteryLevel { get; set; }
-
+        public decimal InsideChargingCurrentSessionWh { get; set; }
         /// <summary>
-        /// BMW indicates that it is ready for charging
+        /// The energy that has been charged in the current session in Wh
         /// </summary>
-        public bool BMWReadyForCharging { get; set; }
-
-        /// <summary>
-        /// Indicates when BMW data have been last updated from the server
-        /// </summary>
-        public DateTimeOffset BMWLastUpdateFromServer { get; set; }
-
-        /// <summary>
-        /// The current battery level of the VW in percent
-        /// </summary>
-        public int VWBatteryLevel { get; set; }
-
-        /// <summary>
-        /// VW indicates that it is ready for charging
-        /// </summary>
-        public bool VWReadyForCharging { get; set; }
-
-        /// <summary>
-        /// Indicates when VW data have been last updated from the server
-        /// </summary>
-        public DateTimeOffset VWLastUpdateFromServer { get; set; }
+        public decimal OutsideChargingCurrentSessionWh { get; set; }
 
         public ChargingSituation()
         {

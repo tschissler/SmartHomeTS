@@ -67,6 +67,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             var kebaGarageData = JsonSerializer.Deserialize<ChargingGetData>(payload);
             currentChargingSituation.InsideCurrentChargingPower = kebaGarageData.CurrentChargingPower;
             currentChargingSituation.InsideConnected = kebaGarageData.CarIsPlugedIn;
+            currentChargingSituation.InsideChargingCurrentSessionWh = kebaGarageData.EnergyCurrentChargingSession;
         }
 
         else if (topic == "data/charging/KebaOutside")
@@ -74,19 +75,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             var kebaOutsideData = JsonSerializer.Deserialize<ChargingGetData>(payload);
             currentChargingSituation.OutsideCurrentChargingPower = kebaOutsideData.CurrentChargingPower;
             currentChargingSituation.OutsideConnected = kebaOutsideData.CarIsPlugedIn;
-        }
-        else if (topic == "data/charging/BMW")
-        {
-            var bmwData = JsonSerializer.Deserialize<BMWData>(payload);
-            currentChargingSituation.BMWBatteryLevel = bmwData.battery;
-            currentChargingSituation.BMWLastUpdateFromServer = bmwData.last_update;
-        }
-        else if (topic == "data/charging/VW")
-        {
-            var vwData = JsonSerializer.Deserialize<VWData>(payload);
-            currentChargingSituation.VWBatteryLevel = vwData.battery;
-            currentChargingSituation.VWReadyForCharging = vwData.chargingstate != "notReadyForCharging";
-            currentChargingSituation.VWLastUpdateFromServer = vwData.batteryupdate;
+            currentChargingSituation.OutsideChargingCurrentSessionWh = kebaOutsideData.EnergyCurrentChargingSession;
         }
         else
         {
