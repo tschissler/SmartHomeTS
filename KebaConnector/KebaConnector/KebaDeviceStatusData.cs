@@ -129,7 +129,7 @@ namespace KebaConnector
         /// <summary>
         /// Serial number of the device.
         /// </summary>
-        public string Serial { get; set; }
+        public string Serial { get; set; } = String.Empty;
 
         /// <summary>
         /// Current state of the system clock in seconds from the last startup of the device.

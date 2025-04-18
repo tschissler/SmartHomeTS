@@ -42,7 +42,7 @@ Console.WriteLine($"    ClientId: {mqttClient.ClientId}");
 
 mqttClient.OnMessageReceived += MqttMessageReceived;
 
-await mqttClient.SubscribeToTopic("commands/charging/#");
+//await mqttClient.SubscribeToTopic("commands/charging/#");
 
 Console.WriteLine("    ...Done");
 
@@ -51,29 +51,70 @@ var timer = new Timer(Update, null, 2000, 5000);
 Thread.Sleep(Timeout.Infinite);
 
 
-void Update(object? state)
+// Fix for CS4014: Add 'await' to asynchronous calls to ensure proper execution order.
+async void Update(object? state)
 {
     try
     {
-        kebaOutside.ReadDeviceData().ContinueWith((task) =>
+        await kebaOutside.ReadDeviceData().ContinueWith((task) =>
         {
             if (task.IsCompletedSuccessfully && task.Result is not null)
             {
                 var data = task.Result;
                 Console.WriteLine($"Keba Outside: {data.PlugStatus,-50} {data.CurrentChargingPower,10} W {data.EnergyCurrentChargingSession,15:#,##0} Wh {data.EnergyTotal,15:#,##0} Wh");
-                SendDataAsMQTTMessage(mqttClient, data, "KebaOutside");
+                SendDataAsMQTTMessage(mqttClient, data, "KebaOutside").Wait();
             }
         });
 
-        kebaGarage.ReadDeviceData().ContinueWith((task) =>
+        await kebaGarage.ReadDeviceData().ContinueWith((task) =>
         {
             if (task.IsCompletedSuccessfully && task.Result is not null)
             {
                 var data = task.Result;
                 Console.WriteLine($"Keba Garage : {data.PlugStatus,-50} {data.CurrentChargingPower,10} W {data.EnergyCurrentChargingSession,15:#,##0} Wh {data.EnergyTotal,15:#,##0} Wh");
-                SendDataAsMQTTMessage(mqttClient, data, "KebaGarage");
+                SendDataAsMQTTMessage(mqttClient, data, "KebaGarage").Wait();
             }
         });
+
+        await kebaGarage.CheckIfChargingSessionEnded().ContinueWith((task) =>
+        {
+            if (task.IsCompletedSuccessfully && task.Result is not null)
+            {
+                var data = task.Result;
+                Console.WriteLine($"--- Keba Garage Charging Session ended ---\n  SessionID {data.SessionID,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
+                SendChargingSessionAsMQTTMessage(mqttClient, data, "KebaGarage").Wait();
+            }
+        });
+
+        await kebaOutside.CheckIfChargingSessionEnded().ContinueWith((task) =>
+        {
+            if (task.IsCompletedSuccessfully && task.Result is not null)
+            {
+                var data = task.Result;
+                Console.WriteLine($"--- Keba Outside Charging Session ended ---\n  SessionID {data.SessionID,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
+                SendChargingSessionAsMQTTMessage(mqttClient, data, "KebaOutside").Wait();
+            }
+        });
+
+        //foreach (var chargingDataReport in kebaOutside.ReadReports()) 
+        //{
+        //    if (chargingDataReport.session is not null)
+        //    {
+        //        Console.WriteLine($"Report {chargingDataReport.report}:" 
+        //            + $" Session-{chargingDataReport.session.SessionID}"
+        //            + $" {chargingDataReport.session.CurrHW,15:#,##0 W}" 
+        //            + $" {chargingDataReport.session.Estart,20:#,##0 Wh}"
+        //            + $" {chargingDataReport.session.Epres,20:#,##0 Wh}"
+        //            + $" TimeQ-{chargingDataReport.session.TimeQ,3}"
+        //            + $" Reason-{chargingDataReport.session.Reason,3}"
+        //            + "\n           "
+        //            + $" Start-{chargingDataReport.session.Started,30}"
+        //            + "\n           "
+        //            + $" End  -{chargingDataReport.session.Ended,30}"
+        //            );
+        //    }
+        //}
+        //Console.WriteLine("---------------------------------------------------------------------------------------------------------------------");
     }
     catch (Exception ex)
     {
@@ -89,10 +130,15 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
 
     Console.WriteLine($"Received message from {topic} at {time}: {payload}");
 
-    ChargingSetData chargingSetData = null;
+    ChargingSetData? chargingSetData = null;
     try
     {
         chargingSetData = JsonSerializer.Deserialize<ChargingSetData>(payload);
+        if (chargingSetData is null)
+        {
+            Console.WriteLine($"Failed to deserialize payload: {payload}");
+            return;
+        }
     }
     catch (Exception ex)
     {
@@ -100,8 +146,8 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
         return;
     }
 
-    var topicparts = topic.Split("/");
-    if (topicparts.Length < 3)
+    var topicParts = topic.Split("/");
+    if (topicParts.Length < 3)
     {
         Console.WriteLine($"Invalid topic {topic}, topic needs to follow pattern [commands/Charging/<Device>]");
         return;
@@ -123,7 +169,7 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
     return;
 }
 
-static void SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaData? data, string device)
+static async Task SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaData? data, string device)
 {
     if (data is null)
         return;
@@ -134,5 +180,12 @@ static void SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaData? da
         EnergyCurrentChargingSession = data.EnergyCurrentChargingSession,
         EnergyTotal = data.EnergyTotal
     };
-    mqttClient.PublishAsync($"data/charging/{device}", JsonSerializer.Serialize(messageData), MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce, false);
+    await mqttClient.PublishAsync($"data/charging/{device}", JsonSerializer.Serialize(messageData), MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce, false);
+}
+
+static async Task SendChargingSessionAsMQTTMessage(MQTTClient.MQTTClient mqttClient, ChargingSession? data, string device)
+{
+    if (data is null)
+        return;
+    await mqttClient.PublishAsync($"data/charging/{device}_ChargingSessionEnded", JsonSerializer.Serialize(data), MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce, false);
 }

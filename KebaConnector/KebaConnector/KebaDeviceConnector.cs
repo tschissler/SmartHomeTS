@@ -12,8 +12,9 @@ namespace KebaConnector
         private int uDPPort;
         private int previousChargingCurrencyWrittenToDevice = 0;
         private bool udpExceptionInProgress = false;
+        private int LastChargingSessionPublishedViaMQTT = 0;
 
-        public KebaDeviceConnector(IPAddress IpAddress, int UDPPort, object lockObject = null)
+        public KebaDeviceConnector(IPAddress IpAddress, int UDPPort, object? lockObject = null)
         {
             ipAddress = IpAddress;
             uDPPort = UDPPort;
@@ -30,7 +31,8 @@ namespace KebaConnector
         /// <param name="state"></param>
         public async Task UpdateDeviceDesiredCurrent(int newCurrent)
         {
-            if (Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE") == null || Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE").ToLower() != "true")
+            string? writeToDeviceFlag = Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE");
+            if (writeToDeviceFlag == null || writeToDeviceFlag.ToLower() != "true")
             {
                 Console.WriteLine("Environment variable KEBA_WRITE_TO_DEVICE is not set to 'true', so we will not write to the device");
                 Console.WriteLine($"Would have written {newCurrent} mA as charging current to device otherwise");
@@ -44,7 +46,7 @@ namespace KebaConnector
         {
             if (udpExceptionInProgress)
             {
-                throw new Exception("Other UDP Operation is still in progress, skipping read from device. This might be du to failing UDP communication with device.");
+                throw new Exception("Other UDP Operation is still in progress, skipping read from device. This might be due to failing UDP communication with device.");
             }
             udpExceptionInProgress = true;
             KebaDeviceStatusData data;
@@ -95,6 +97,86 @@ namespace KebaConnector
         internal string GetDeviceReport2()
         {
             return ExecuteUDPCommand("report 2");
+        }
+
+
+        public List<(int report, KebaReportData? session)> ReadReports()
+        {
+            return [
+                (100, JsonConvert.DeserializeObject<KebaReportData>(GetDeviceReport(100))), 
+                (101, JsonConvert.DeserializeObject<KebaReportData>(GetDeviceReport(101))), 
+                (102, JsonConvert.DeserializeObject<KebaReportData>(GetDeviceReport(102))),
+                (103, JsonConvert.DeserializeObject<KebaReportData>(GetDeviceReport(103)))
+                ];
+        }
+
+        public async Task<ChargingSession?> CheckIfChargingSessionEnded()
+        {
+            var currentChargingSession = ReadReport(101);
+            if (currentChargingSession is not null
+                && currentChargingSession.EnergyOfChargingSession > 0 
+                && LastChargingSessionPublishedViaMQTT != currentChargingSession.SessionID)
+            {
+                LastChargingSessionPublishedViaMQTT = currentChargingSession.SessionID;
+                return currentChargingSession;
+            }
+            return null;
+        }
+
+        private ChargingSession? ReadReport(int reportId)
+        {
+            if (udpExceptionInProgress)
+            {
+                throw new Exception("Other UDP Operation is still in progress, skipping read from device. This might be due to failing UDP communication with device.");
+            }
+            udpExceptionInProgress = true;
+            KebaReportData? data;
+            try
+            {
+                data = JsonConvert.DeserializeObject<KebaReportData>(GetDeviceReport(reportId));
+                if (data == null)
+                {
+                    Console.WriteLine("Failed to read data from Keba device");
+                    udpExceptionInProgress = false;
+                    return null;
+                }
+                udpExceptionInProgress = false;
+                return new ChargingSession()
+                {
+                    SessionID = data.SessionID,
+                    StartTime = ParseDateTimeOffset(data.Started),
+                    EndTime = ParseDateTimeOffset(data.Ended),
+                    TatalEnergyAtStart = data.Estart / 10.0,
+                    EnergyOfChargingSession = data.Epres / 10.0,
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to read charging session from Keba device, Error: {ex.Message}");
+                udpExceptionInProgress = false;
+            }
+            return null;
+        }
+
+        internal DateTimeOffset? ParseDateTimeOffset(string? input)
+        {
+            if (input is null || input == "0")
+                return null;
+
+            if (DateTimeOffset.TryParseExact(input, "yyyy-MM-dd HH:mm:ss.fff",
+                                             System.Globalization.CultureInfo.InvariantCulture,
+                                             System.Globalization.DateTimeStyles.None,
+                                             out var result))
+            {
+                return result;
+            }
+            throw new FormatException("Input string is not in the correct format: YYYY-MM-DD hh:mm:ss,000");
+        }
+
+        internal string GetDeviceReport(int reportId)
+        {
+            Task.Delay(500).Wait(); // Wait for 500ms to avoid UDP command collision
+            return ExecuteUDPCommand($"report {reportId}");
         }
 
         private void WriteChargingCurrentToDevice(int current)
