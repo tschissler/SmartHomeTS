@@ -42,7 +42,7 @@ Console.WriteLine($"    ClientId: {mqttClient.ClientId}");
 
 mqttClient.OnMessageReceived += MqttMessageReceived;
 
-//await mqttClient.SubscribeToTopic("commands/charging/#");
+await mqttClient.SubscribeToTopic("commands/charging/#");
 
 Console.WriteLine("    ...Done");
 
