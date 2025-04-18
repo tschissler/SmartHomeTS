@@ -114,7 +114,7 @@ namespace KebaConnector
         {
             var currentChargingSession = ReadReport(101);
             if (currentChargingSession is not null
-                && currentChargingSession.EnergyOfChargingSession > 0 
+                && currentChargingSession.EndTime is not null 
                 && LastChargingSessionPublishedViaMQTT != currentChargingSession.SessionID)
             {
                 LastChargingSessionPublishedViaMQTT = currentChargingSession.SessionID;
