@@ -108,18 +108,21 @@
         CarStatusData="@bwmStatusData"  
         @bind-IsChargingEnabled="chargingSettings.InsideChargingEnabled"  
         @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
+        CurrentChargingSessionEnergy="_chargingSituation.InsideChargingCurrentSessionWh/1000"
         SetChargingStation="@ChargingStation.Inside"
         CommunicateSettings="CommunicateSettings"/>
         <CarStatusDataVisualizer 
         CarStatusData="@miniStatusData" 
         @bind-IsChargingEnabled="chargingSettings.OutsideChargingEnabled" 
         @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
+        CurrentChargingSessionEnergy="_chargingSituation.OutsideChargingCurrentSessionWh/1000"
         SetChargingStation="@ChargingStation.Outside"
         CommunicateSettings="CommunicateSettings"/>
         <CarStatusDataVisualizer 
         CarStatusData="@vwStatusData" 
         @bind-IsChargingEnabled="chargingSettings.OutsideChargingEnabled" 
         @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
+        CurrentChargingSessionEnergy="_chargingSituation.OutsideChargingCurrentSessionWh/1000"
         SetChargingStation="@ChargingStation.Outside"
         CommunicateSettings="CommunicateSettings"/>
     </div>

@@ -42,7 +42,16 @@
             </div>
             <div class="batteryLabel">
                 @CarStatusData.Battery % / @CarStatusData.ChargingTarget %<br />
-                @(CarStatusData.ChargingEndTime.HasValue ? "Bis: " + CarStatusData.ChargingEndTime?.ToLocalTime().ToString("HH:mm") : "")
+                @if (CarStatusData.ChargingEndTime.HasValue)
+                {
+                    <span>Bis: </span>
+                    @CarStatusData.ChargingEndTime?.ToLocalTime().ToString("HH:mm")
+                    <br/>
+                }
+                @if (CarStatusData.ChargerConnected)
+                {
+                    @CurrentChargingSessionEnergy.ToString("0.00 KWh")
+                }
             </div>
         </div>
     </div>
@@ -59,7 +68,8 @@
     public ChargingStation SetChargingStation { get; set; }
     [Parameter]
     public EventCallback CommunicateSettings { get; set; }
-
+    [Parameter]
+    public Decimal CurrentChargingSessionEnergy { get; set; }
     [Parameter]
     public EventCallback<bool> IsChargingEnabledChanged { get; set; }
     [Parameter]
