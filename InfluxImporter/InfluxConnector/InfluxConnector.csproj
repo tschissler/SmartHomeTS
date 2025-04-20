@@ -11,9 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="SmartHomeHelpers">
-      <HintPath>..\..\SmartHomeHelpers\obj\Debug\net8.0\ref\SmartHomeHelpers.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\SmartHomeHelpers\SmartHomeHelpers.csproj" />
   </ItemGroup>
 
 </Project>
