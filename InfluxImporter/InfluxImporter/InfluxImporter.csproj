@@ -9,12 +9,14 @@
 
   <ItemGroup>
     <PackageReference Include="InfluxDB.Client" Version="4.18.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\MQTTClient\MQTTClient.csproj" />
+    <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
+    <ProjectReference Include="..\InfluxConnector\InfluxConnector.csproj" />
   </ItemGroup>
 
 </Project>

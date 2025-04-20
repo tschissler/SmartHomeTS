@@ -1,50 +1,45 @@
-﻿using InfluxDB.Client;
+﻿using InfluxConnector;
+using InfluxDB.Client;
 using InfluxDB.Client.Api.Domain;
 using InfluxDB.Client.Writes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using SharedContracts;
 using SmartHomeHelpers.Logging;
+using System.Drawing;
+using System.Text.Json;
 
 // Update these with your InfluxDB connection details.
-const string InfluxUrl = "http://smarthomepi2:32086";
-const string Org = "smarthome";
-const string Bucket = "Smarthome_ChargingData";
+const string influxUrl = "http://smarthomepi2:32086";
+const string org = "smarthome";
+const string bucket = "Smarthome_ChargingData";
 
-var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices((context, services) =>
-    {
-        services.AddSingleton<MQTTClient.MQTTClient>(provider => new MQTTClient.MQTTClient("InfluxImporter"));
-        services.AddLogging();
-    })
-    .Build();
-using var serviceScope = host.Services.CreateScope();
-var services = serviceScope.ServiceProvider;
-
-string? InfluxToken = Environment.GetEnvironmentVariable("INFLUX_TOKEN");
-if (String.IsNullOrEmpty(InfluxToken))
+string? influxToken = Environment.GetEnvironmentVariable("INFLUX_TOKEN");
+if (String.IsNullOrEmpty(influxToken))
 {
     ConsoleHelpers.PrintErrorMessage("Environmentvariable INFLUX_TOKEN not set. Please set it to your InfluxDB token.");
     return;
 }
 
-// Create InfluxDB client
-var options = InfluxDBClientOptions.Builder
-               .CreateNew()
-               .Url(InfluxUrl)
-               .AuthenticateToken(InfluxToken.ToCharArray())
-               .LogLevel(InfluxDB.Client.Core.LogLevel.None)
-               .Build();
-using var influxDBClient = new InfluxDBClient(options);
-var writeApi = influxDBClient.GetWriteApi();
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices((context, services) =>
+    {
+        services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter"));
+        services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, org, influxToken));
+        services.AddLogging();
+    })
+    .Build();
+using var serviceScope = host.Services.CreateScope();
+var services = serviceScope.ServiceProvider;
+var influxConnector = services.GetRequiredService<InfluxDbConnector>();
 
 // Setup MQTT client options
 ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
 var mqttClient = services.GetRequiredService<MQTTClient.MQTTClient>();
 await mqttClient.SubscribeToTopic("data/charging/#");
 
-mqttClient.OnMessageReceived += (sender, e) =>
+mqttClient.OnMessageReceived += async (sender, e) =>
 {
     ConsoleHelpers.PrintInformation($"Message received: {e.Topic}");
     try
@@ -52,56 +47,44 @@ mqttClient.OnMessageReceived += (sender, e) =>
         string topic = e.Topic;
         string payload = e.Payload;
 
-        // Parse the JSON payload
-        var jsonData = JObject.Parse(payload);
-
-        // Use the topic (trimmed) as the measurement name
-        string measurementName = topic.Replace("data/charging/", "");
-
-        // Build the InfluxDB point
-        var point = PointData.Measurement(measurementName)
-            .Tag("topic", topic)
-            .Timestamp(DateTime.UtcNow, WritePrecision.Ns);
-
-        // Add fields from the JSON
-        foreach (var property in jsonData.Properties())
+        switch (topic)
         {
-            var value = property.Value;
-            // Store booleans, numbers, or strings accordingly
-            if (value.Type == JTokenType.Boolean)
-            {
-                point = point.Field(property.Name, value.Value<bool>());
-            }
-            else if (value.Type == JTokenType.Integer || value.Type == JTokenType.Float)
-            {
-                point = point.Field(property.Name, value.Value<double>());
-            }
-            else if (value.Type == JTokenType.String)
-            {
-                point = point.Field(property.Name, value.Value<string>());
-            }
-            // Handle nested JSON objects (e.g. position)
-            else if (value.Type == JTokenType.Object)
-            {
-                foreach (var subProp in ((JObject)value).Properties())
+            case "data/charging/KebaGarage_ChargingSessionEnded":
+                WriteChargingSessionEndedData(bucket, influxConnector, "Garage", payload);
+                break;
+            case "data/charging/KebaOutside_ChargingSessionEnded":
+                WriteChargingSessionEndedData(bucket, influxConnector, "Stellplatz", payload);
+                break;
+            default:
+                var fields = new Dictionary<string, object>();
+                var jsonData = JObject.Parse(payload);
+                string measurementName = topic.Replace("data/charging/", "");
+
+                foreach (var property in jsonData.Properties())
                 {
-                    var fieldName = $"{property.Name}_{subProp.Name}";
-                    var subValue = subProp.Value;
-                    if (subValue.Type == JTokenType.Integer || subValue.Type == JTokenType.Float)
+                    var value = property.Value;
+                    if (value.Type == JTokenType.Object)
                     {
-                        point = point.Field(fieldName, subValue.Value<double>());
+                        foreach (var subProp in ((JObject)value).Properties())
+                        {
+                            var fieldName = $"{property.Name}_{subProp.Name}";
+                            var subValue = subProp.Value;
+                            fields.Add(fieldName, subValue);
+                        }
                     }
-                    else if (subValue.Type == JTokenType.String)
+                    else
                     {
-                        point = point.Field(fieldName, subValue.Value<string>());
+                        fields.Add(property.Name, value);
                     }
                 }
-            }
-        }
 
-        // Write the point to InfluxDB
-        writeApi.WritePoint(point, Bucket, Org);
-        ConsoleHelpers.PrintInformation($"Data written to InfluxDB bucket '{Bucket}'");
+                influxConnector.WritePointDataToInfluxDb(
+                    bucket,
+                    measurementName,
+                    fields,
+                    new Dictionary<string, string>() { { "topic", topic } });
+                break;
+        }
     }
     catch (Exception ex)
     {
@@ -111,3 +94,29 @@ mqttClient.OnMessageReceived += (sender, e) =>
 
 // Run the host to keep the application running and processing events
 await host.RunAsync();
+
+static void WriteChargingSessionEndedData(string bucket, InfluxDbConnector influxConnector, string wallbox, string payload)
+{
+    var fields = new Dictionary<string, object>();
+    var data = JsonSerializer.Deserialize<ChargingSession>(payload);
+    if (data != null)
+    {
+        fields = new Dictionary<string, object>
+                    {
+                        { "SessionId", data.SessionID },
+                        { "StartTime", data.StartTime },
+                        { "EndTime", data.EndTime },
+                        { "TatalEnergyAtStart", data.TatalEnergyAtStart },
+                        { "EnergyOfChargingSession", data.EnergyOfChargingSession }
+                    };
+        influxConnector.WritePointDataToInfluxDb(
+            bucket,
+            "ChargingSessionEnded",
+            fields,
+            new Dictionary<string, string>() { { "Wallbox", wallbox } });
+    }
+    else
+    {
+        ConsoleHelpers.PrintErrorMessage("Failed to deserialize ChargingSession data.");
+    }
+}
