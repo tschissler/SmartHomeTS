@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SharedContracts;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
