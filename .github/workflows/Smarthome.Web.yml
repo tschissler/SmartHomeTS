@@ -32,6 +32,8 @@ jobs:
         context: .
         file: ./${{ env.PROJECT_NAME }}/Dockerfile
         push: true
+        cache-from: type=registry,ref=tschissler/${{ env.IMAGE_NAME }}:latest
+        cache-to: type=inline
         tags: |
           tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
           tschissler/${{ env.IMAGE_NAME }}:latest
