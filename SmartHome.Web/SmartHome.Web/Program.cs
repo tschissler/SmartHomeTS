@@ -24,7 +24,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<MqttService>();
 builder.Services.AddScoped<IChargingSessionService, ChargingSessionService>();
-builder.Services.AddScoped<IInfluxConnector>(provider =>
+builder.Services.AddScoped<IInfluxDBConnector>(provider =>
 {
     var influxUrl = Environment.GetEnvironmentVariable("INFLUXDB_URL");
     var org = Environment.GetEnvironmentVariable("INFLUXDB_ORG");

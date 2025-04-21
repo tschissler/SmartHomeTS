@@ -9,7 +9,7 @@ public interface IChargingSessionService
     Task<List<ChargingSession>> GetChargingSessionsAsync(DateTime start, DateTime end);
 }
 
-public class ChargingSessionService(IInfluxConnector influxConnector) : IChargingSessionService
+public class ChargingSessionService(IInfluxDBConnector influxConnector) : IChargingSessionService
 {
     public async Task<List<ChargingSession>> GetChargingSessionsAsync(DateTime start, DateTime end)
     {
