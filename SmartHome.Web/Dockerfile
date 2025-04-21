@@ -39,9 +39,9 @@ RUN apt-get update && \
     locale-gen
 
 # Set the locale
-ENV LANG de_DE.UTF-8
-ENV LANGUAGE de_DE:de
-ENV LC_ALL de_DE.UTF-8
+ENV LANG=de_DE.UTF-8
+ENV LANGUAGE=de_DE:de
+ENV LC_ALL=de_DE.UTF-8
 
 # Set the time zone
 ENV TZ=Europe/Berlin

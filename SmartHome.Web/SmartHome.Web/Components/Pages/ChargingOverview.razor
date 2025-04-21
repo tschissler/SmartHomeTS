@@ -1,5 +1,4 @@
 ﻿@using DataContracts
-@using MQTTnet
 @using MQTTnet.Protocol
 @using SmartHome.Web.Components.UIComponents
 @using SmartHome.Web.Services
@@ -168,8 +167,6 @@
     private List<string> Months = Enumerable.Range(0, 12)
         .Select(i => DateTime.Now.AddMonths(-i).ToString("MMMM yyyy"))
         .ToList();
-
-    IMqttClient? _mqttClient;
 
     protected override async Task OnInitializedAsync()
     {
