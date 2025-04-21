@@ -43,7 +43,7 @@ var influxConnector = services.GetRequiredService<InfluxDbConnector>();
 // Setup MQTT client options
 ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
 var mqttClient = services.GetRequiredService<MQTTClient.MQTTClient>();
-await mqttClient.SubscribeToTopic("data/charging/KebaGarage_ChargingSessionEnded");
+await mqttClient.SubscribeToTopic("data/charging/#");
 
 mqttClient.OnMessageReceived += async (sender, e) =>
 {
