@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace SharedContracts
 {
-    public class ChargingSession
-    {
-        public int SessionID { get; set; }
-        public DateTimeOffset? StartTime { get; set; }
-        public DateTimeOffset? EndTime { get; set; }
-        public double TatalEnergyAtStart { get; set; }
-        public double EnergyOfChargingSession { get; set; }
-    }
+    public record ChargingSession(
+        int SessionId,
+        DateTimeOffset? StartTime,
+        DateTimeOffset? EndTime,
+        double TatalEnergyAtStart,
+        double EnergyOfChargingSession,
+        string WallboxName
+    );
 }

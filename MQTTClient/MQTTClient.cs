@@ -35,12 +35,15 @@ namespace MQTTClient
 
             _client.ApplicationMessageReceivedAsync += e =>
             {
-                var messageReceivedEventArgs = new MqttMessageReceivedEventArgs
+                if (e.ApplicationMessage.Payload is not null)
                 {
-                    Topic = e.ApplicationMessage.Topic,
-                    Payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload)
-                };
-                OnMessageReceived?.Invoke(this, messageReceivedEventArgs);
+                    var messageReceivedEventArgs = new MqttMessageReceivedEventArgs
+                    {
+                        Topic = e.ApplicationMessage.Topic,
+                        Payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload)
+                    };
+                    OnMessageReceived?.Invoke(this, messageReceivedEventArgs);
+                }
                 return Task.CompletedTask;
             };
 

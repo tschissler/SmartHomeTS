@@ -116,9 +116,9 @@ namespace KebaConnector
             var currentChargingSession = ReadReport(101);
             if (currentChargingSession is not null
                 && currentChargingSession.EndTime is not null 
-                && LastChargingSessionPublishedViaMQTT != currentChargingSession.SessionID)
+                && LastChargingSessionPublishedViaMQTT != currentChargingSession.SessionId)
             {
-                LastChargingSessionPublishedViaMQTT = currentChargingSession.SessionID;
+                LastChargingSessionPublishedViaMQTT = currentChargingSession.SessionId;
                 return currentChargingSession;
             }
             return null;
@@ -142,14 +142,15 @@ namespace KebaConnector
                     return null;
                 }
                 udpExceptionInProgress = false;
-                return new ChargingSession()
-                {
-                    SessionID = data.SessionID,
-                    StartTime = ParseDateTimeOffset(data.Started),
-                    EndTime = ParseDateTimeOffset(data.Ended),
-                    TatalEnergyAtStart = data.Estart / 10.0,
-                    EnergyOfChargingSession = data.Epres / 10.0,
-                };
+                return new ChargingSession
+                (
+                    SessionId: data.SessionID,
+                    StartTime: ParseDateTimeOffset(data.Started),
+                    EndTime: ParseDateTimeOffset(data.Ended),
+                    TatalEnergyAtStart: data.Estart / 10.0,
+                    EnergyOfChargingSession: data.Epres / 10.0,
+                    ""
+                );
             }
             catch (Exception ex)
             {

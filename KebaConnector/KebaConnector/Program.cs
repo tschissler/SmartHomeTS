@@ -81,7 +81,7 @@ async void Update(object? state)
             if (task.IsCompletedSuccessfully && task.Result is not null)
             {
                 var data = task.Result;
-                Console.WriteLine($"--- Keba Garage Charging Session ended ---\n  SessionID {data.SessionID,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
+                Console.WriteLine($"--- Keba Garage Charging Session ended ---\n  SessionID {data.SessionId,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
                 SendChargingSessionAsMQTTMessage(mqttClient, data, "KebaGarage").Wait();
             }
         });
@@ -91,7 +91,7 @@ async void Update(object? state)
             if (task.IsCompletedSuccessfully && task.Result is not null)
             {
                 var data = task.Result;
-                Console.WriteLine($"--- Keba Outside Charging Session ended ---\n  SessionID {data.SessionID,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
+                Console.WriteLine($"--- Keba Outside Charging Session ended ---\n  SessionID {data.SessionId,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
                 SendChargingSessionAsMQTTMessage(mqttClient, data, "KebaOutside").Wait();
             }
         });
