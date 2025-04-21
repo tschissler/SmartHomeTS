@@ -76,7 +76,7 @@ async void Update(object? state)
             }
         });
 
-        await kebaGarage.CheckIfChargingSessionEnded().ContinueWith((task) =>
+        await kebaGarage.CheckIfChargingSessionEnded("Garage").ContinueWith((task) =>
         {
             if (task.IsCompletedSuccessfully && task.Result is not null)
             {
@@ -86,7 +86,7 @@ async void Update(object? state)
             }
         });
 
-        await kebaOutside.CheckIfChargingSessionEnded().ContinueWith((task) =>
+        await kebaOutside.CheckIfChargingSessionEnded("Stellplatz").ContinueWith((task) =>
         {
             if (task.IsCompletedSuccessfully && task.Result is not null)
             {

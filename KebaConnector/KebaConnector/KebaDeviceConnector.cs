@@ -111,9 +111,9 @@ namespace KebaConnector
                 ];
         }
 
-        public async Task<ChargingSession?> CheckIfChargingSessionEnded()
+        public async Task<ChargingSession?> CheckIfChargingSessionEnded(string wallbox)
         {
-            var currentChargingSession = ReadReport(101);
+            var currentChargingSession = ReadReport(101, wallbox);
             if (currentChargingSession is not null
                 && currentChargingSession.EndTime is not null 
                 && LastChargingSessionPublishedViaMQTT != currentChargingSession.SessionId)
@@ -124,7 +124,7 @@ namespace KebaConnector
             return null;
         }
 
-        private ChargingSession? ReadReport(int reportId)
+        private ChargingSession? ReadReport(int reportId, string wallbox)
         {
             if (udpExceptionInProgress)
             {
@@ -149,7 +149,7 @@ namespace KebaConnector
                     EndTime: ParseDateTimeOffset(data.Ended),
                     TatalEnergyAtStart: data.Estart / 10.0,
                     EnergyOfChargingSession: data.Epres / 10.0,
-                    ""
+                    wallbox
                 );
             }
             catch (Exception ex)
