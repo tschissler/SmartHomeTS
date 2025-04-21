@@ -46,7 +46,18 @@ namespace InfluxConnector
                 }
                 else
                 {
-                    point = point.Field(field.Key, field.Value);
+                    if (field.Value is DateTime dateTime)
+                    {
+                        point = point.Field(field.Key, dateTime.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                    }
+                    else if (field.Value is DateTimeOffset dateTimeOffset)
+                    {
+                        point = point.Field(field.Key, dateTimeOffset.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                    }
+                    else
+                    {
+                        point = point.Field(field.Key, field.Value);
+                    }
                 }
             }
             return point;

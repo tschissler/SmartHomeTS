@@ -141,11 +141,17 @@ static bool CheckIfSessionWithIdExists(InfluxDbConnector influxConnector, string
             |> filter(fn: (r) => r["_field"] == "SessionId")
             |> filter(fn: (r) => r["_value"] == {sessionId})
         """;
-    var result = influxConnector.QueryDataAsync(query).Result;
-    if (result != null && result.Count > 0 && result[0].Records.Count > 0)
+
+    try
     {
-        ConsoleHelpers.PrintInformation($"Session with ID {sessionId} already exists in InfluxDB, ignoring new data.");
-        return true;
+        var result = influxConnector.QueryDataAsync(query).Result;
+        if (result != null && result.Count > 0 && result[0].Records.Count > 0)
+        {
+            ConsoleHelpers.PrintInformation($"Session with ID {sessionId} already exists in InfluxDB, ignoring new data.");
+            return true;
+        }
     }
+    catch(Exception _)
+    { }
     return false;
 }
