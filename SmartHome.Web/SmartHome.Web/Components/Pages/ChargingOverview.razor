@@ -13,11 +13,16 @@
 @using Placement = Syncfusion.Blazor.Inputs.Placement
 @using Orientation = Syncfusion.Blazor.LinearGauge.Orientation
 @using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Calendars
 
 @page "/chargingoverview"
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
-@inject MQTTService MqttService
+@inject MqttService MqttService
+@inject IChargingSessionService ChargingSessionService
+
 
 <h3>Lade-Einstellungen</h3>
 
@@ -97,7 +102,7 @@
     <div>Aus</div>
     <div>PV-Laden mit Batterie-Prio</div>
     <div>PV-Laden mit Auto-Prio</div>
-    <div>PV + Batterie-Laden</div
+    <div>PV + Batterie-Laden</div>
     <div>Sofort-Laden</div>
     <div>Schnell-Laden</div>
 </div>
@@ -121,12 +126,30 @@
         <CarStatusDataVisualizer 
         CarStatusData="@vwStatusData" 
         @bind-IsChargingEnabled="chargingSettings.OutsideChargingEnabled" 
-        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
+        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation"
         CurrentChargingSessionEnergy="_chargingSituation.OutsideChargingCurrentSessionWh/1000"
         SetChargingStation="@ChargingStation.Outside"
         CommunicateSettings="CommunicateSettings"/>
     </div>
 </div>
+
+<div>
+    <SfDropDownList @bind-Value="SelectedMonth" DataSource="Months" Placeholder="Select Month" />
+    <SfButton OnClick="ExportToExcel">Export to Excel</SfButton>
+    <SfButton OnClick="ExportToPDF">Export to PDF</SfButton>
+
+    <SfGrid DataSource="@ChargingSessions" AllowPaging="true" AllowSorting="true" Toolbar="@(new List<string> { "Search" })">
+        <GridColumns>
+            <GridColumn Field="WallboxName" HeaderText="Wallbox" Width="100"></GridColumn>
+            <GridColumn Field="SessionId" HeaderText="Ladesitzung" Width="100"></GridColumn>
+            <GridColumn Field="StartTime" HeaderText="Start" Format="dd.MM.yyyy HH:mm" Width="150"></GridColumn>
+            <GridColumn Field="EndTime" HeaderText="Ende" Format="dd.MM.yyyy HH:mm" Width="150"></GridColumn>
+            <GridColumn Field="EnergyOfChargingSession" Format="0.0 KWh" TextAlign="TextAlign.Right" HeaderText="Ladeenergie" Width="150"></GridColumn>
+            <GridColumn Field="TatalEnergyAtStart" Format="0.0 KWh" TextAlign="TextAlign.Right" HeaderText="Energie gesamt" Width="150"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
 @code {
     private int _batteryMinLevel = 30;
     private int _manualCurrent = 6;
@@ -140,14 +163,44 @@
     private ConsumptionData consumptionData = new ();
     private SharedContracts.ChargingSettings chargingSettings = new ();
 
+    private List<ChargingSession> ChargingSessions = new();
+    private string SelectedMonth = DateTime.Now.ToString("MMMM yyyy");
+    private List<string> Months = Enumerable.Range(0, 12)
+        .Select(i => DateTime.Now.AddMonths(-i).ToString("MMMM yyyy"))
+        .ToList();
+
     IMqttClient? _mqttClient;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         UpdateChargingSituation();
         UpdateChargingSettings();
 
         MqttService.OnMessageReceived += UpdateData;
+        await LoadChargingSessions();
+    }
+        
+    private async Task LoadChargingSessions()
+    {
+        var monthStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+        if (!string.IsNullOrEmpty(SelectedMonth))
+        {
+            var selectedDate = DateTime.ParseExact(SelectedMonth, "MMMM yyyy", null);
+            monthStart = new DateTime(selectedDate.Year, selectedDate.Month, 1);
+        }
+        var monthEnd = monthStart.AddMonths(1).AddSeconds(-1);
+
+        ChargingSessions = await ChargingSessionService.GetChargingSessionsAsync(monthStart, monthEnd);
+    }
+
+    private async Task ExportToExcel()
+    {
+        // Logic to export the grid data to Excel
+    }
+
+    private async Task ExportToPDF()
+    {
+        // Logic to export the grid data to PDF
     }
 
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
@@ -165,9 +218,9 @@
     private void UpdateChargingSituation()
     {
         _chargingSituation = MqttService.ChargingSituation;
-        bwmStatusData = MqttService.bmwStatusData ?? new CarStatusData();
-        miniStatusData = MqttService.miniStatusData ?? new CarStatusData();
-        vwStatusData = MqttService.vwStatusData ?? new CarStatusData();
+        bwmStatusData = MqttService.BmwStatusData ?? new CarStatusData();
+        miniStatusData = MqttService.MiniStatusData ?? new CarStatusData();
+        vwStatusData = MqttService.VwStatusData ?? new CarStatusData();
 
         availabilityData = ChargingSituationManager.CalculateAvailabilityData(
             _chargingSituation.PowerFromPV,

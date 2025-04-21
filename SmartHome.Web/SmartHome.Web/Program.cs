@@ -1,3 +1,4 @@
+using InfluxConnector;
 using SmartHome.Web.Components;
 using SmartHome.Web.Services;
 using Syncfusion.Blazor;
@@ -6,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 try
 {
-    Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(System.Environment.GetEnvironmentVariable("SyncfusionLicenseKey"));
+    Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(Environment.GetEnvironmentVariable("SyncfusionLicenseKey"));
     Console.WriteLine("Setting license key for syncfusion components");
 }
 catch (Exception ex)
@@ -20,7 +21,20 @@ builder.Services.AddRazorComponents()
 builder.Services.AddLocalization();
 builder.Services.AddSyncfusionBlazor();
 builder.Services.AddControllers();
-builder.Services.AddSingleton<MQTTService>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<MqttService>();
+builder.Services.AddScoped<IChargingSessionService, ChargingSessionService>();
+builder.Services.AddScoped<IInfluxConnector>(provider =>
+{
+    var influxUrl = Environment.GetEnvironmentVariable("INFLUXDB_URL");
+    var org = Environment.GetEnvironmentVariable("INFLUXDB_ORG");
+    var token = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
+    if (string.IsNullOrEmpty(influxUrl) || string.IsNullOrEmpty(org) || string.IsNullOrEmpty(token))
+    {
+        throw new InvalidOperationException("InfluxDB connection details are not set in environment variables.");
+    }
+    return new InfluxDbConnector(influxUrl, org, token);
+});
 
 var app = builder.Build();
 app.UseRequestLocalization(new RequestLocalizationOptions()

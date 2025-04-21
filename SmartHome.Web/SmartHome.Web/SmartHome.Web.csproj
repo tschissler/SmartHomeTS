@@ -7,23 +7,29 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Data.Tables" Version="12.10.0" />
     <PackageReference Include="ColorHelper" Version="1.8.1" />
     <PackageReference Include="InfluxDB.Client" Version="4.19.0-dev.15190" />
 	<PackageReference Include="MQTTnet" Version="5.0.1.1416" />
-    <PackageReference Include="Syncfusion.Blazor.Charts" Version="28.2.5" />
-    <PackageReference Include="Syncfusion.Blazor.LinearGauge" Version="28.2.5" />
-    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="28.2.5" />
-    <PackageReference Include="Syncfusion.Blazor.Themes" Version="28.2.5" />
-    <PackageReference Include="System.Text.Json" Version="9.0.2" />
+	<PackageReference Include="Syncfusion.Blazor.Calendars" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.Charts" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.Grid" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.LinearGauge" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="29.1.38" />
+    <PackageReference Include="System.Text.Json" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\DataContracts\DataContracts.csproj" />
+    <ProjectReference Include="..\..\InfluxImporter\InfluxConnector\InfluxConnector.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
     <ProjectReference Include="..\..\SmartHomeHelpers\SmartHomeHelpers.csproj" />
     <ProjectReference Include="..\SmartHomeWebManagers\SmartHomeWebManagers.csproj" />
     <ProjectReference Include="..\UIComponentsLib\UIComponentsLib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>

@@ -8,29 +8,29 @@ using System.Text.Json;
 
 namespace SmartHome.Web.Services
 {
-    public class MQTTService
+    public class MqttService
     {
         private IMqttClient _client;
         private MqttClientOptions _options;
 
         public event EventHandler<MqttMessageReceivedEventArgs> OnMessageReceived;
-        public SharedContracts.ChargingSettings ChargingSettings { get; set; }
+        public ChargingSettings ChargingSettings { get; set; }
         public ChargingSituation ChargingSituation { get; set; }
         public IluminationSituation IluminationSituation { get; set; }
         public ClimateData ClimateData { get; set; }
-        public CarStatusData bmwStatusData { get; set; }
-        public CarStatusData miniStatusData { get; set; }
-        public CarStatusData vwStatusData { get; set; }
+        public CarStatusData BmwStatusData { get; set; }
+        public CarStatusData MiniStatusData { get; set; }
+        public CarStatusData VwStatusData { get; set; }
 
 
-        public MQTTService()
+        public MqttService()
         {
             ChargingSettings = new();
             ChargingSituation = new();
             IluminationSituation = new();
             ClimateData = new();
 
-            Task task = ConnectAsync();
+            ConnectAsync();
         }
 
         public async Task ConnectAsync()
@@ -98,17 +98,17 @@ namespace SmartHome.Web.Services
             {
                 case "data/charging/BMW":
                     {
-                        bmwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
+                        BmwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
                         break;
                     }
                 case "data/charging/Mini":
                     {
-                        miniStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
+                        MiniStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
                         break;
                     }
                 case "data/charging/VW":
                     {
-                        vwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
+                        VwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
                         break;
                     }
                 case "data/charging/situation":
