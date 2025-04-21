@@ -40,7 +40,7 @@ namespace InfluxConnector
                             point = point.Field(field.Key, jValue.Value?.ToString());
                             break;
                         case JTokenType.Date:
-                            point = point.Field(field.Key, ((DateTime)jValue.Value).ToString("o"));
+                            point = point.Field(field.Key, ((DateTime)jValue.Value).ToString("yyyy-MM-ddTHH:mm:ssZ"));
                             break;
                     }
                 }

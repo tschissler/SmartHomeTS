@@ -2,7 +2,7 @@
 
 namespace InfluxConnector
 {
-    public interface IInfluxConnector
+    public interface IInfluxDBConnector
     {
         void EnsureBucketExists(string bucketName);
         Task<List<FluxTable>> QueryDataAsync(string query);

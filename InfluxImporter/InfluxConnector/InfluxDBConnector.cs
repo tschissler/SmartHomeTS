@@ -7,7 +7,7 @@ using SmartHomeHelpers.Logging;
 
 namespace InfluxConnector
 {
-    public class InfluxDbConnector : IInfluxConnector
+    public class InfluxDbConnector : IInfluxDBConnector
     {
         private readonly WriteApi _writeApi;
         private readonly BucketsApi _bucketsApi;

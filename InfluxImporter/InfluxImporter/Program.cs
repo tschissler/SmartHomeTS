@@ -13,13 +13,19 @@ using System.Text.Json;
 // Update these with your InfluxDB connection details.
 const string influxUrl = "http://smarthomepi2:32086";
 const string org = "smarthome";
-const string bucket = "Smarthome_ChargingData";
+string bucket = "Smarthome_ChargingData";
 
 string? influxToken = Environment.GetEnvironmentVariable("INFLUX_TOKEN");
 if (String.IsNullOrEmpty(influxToken))
 {
     ConsoleHelpers.PrintErrorMessage("Environmentvariable INFLUX_TOKEN not set. Please set it to your InfluxDB token.");
     return;
+}
+
+string? envBucket = Environment.GetEnvironmentVariable("INFLUX_CHARINGDATA_BUCKET");
+if (!String.IsNullOrEmpty(envBucket))
+{
+    bucket = envBucket;
 }
 
 var host = Host.CreateDefaultBuilder(args)
@@ -37,7 +43,7 @@ var influxConnector = services.GetRequiredService<InfluxDbConnector>();
 // Setup MQTT client options
 ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
 var mqttClient = services.GetRequiredService<MQTTClient.MQTTClient>();
-await mqttClient.SubscribeToTopic("data/charging/#");
+await mqttClient.SubscribeToTopic("data/charging/KebaGarage_ChargingSessionEnded");
 
 mqttClient.OnMessageReceived += async (sender, e) =>
 {
@@ -101,22 +107,44 @@ static void WriteChargingSessionEndedData(string bucket, InfluxDbConnector influ
     var data = JsonSerializer.Deserialize<ChargingSession>(payload);
     if (data != null)
     {
-        fields = new Dictionary<string, object>
+        if (!CheckIfSessionWithIdExists(influxConnector, bucket, data.SessionId, wallbox))
+        {
+            fields = new Dictionary<string, object>
                     {
-                        { "SessionId", data.SessionID },
+                        { "SessionId", data.SessionId },
                         { "StartTime", data.StartTime },
                         { "EndTime", data.EndTime },
                         { "TatalEnergyAtStart", data.TatalEnergyAtStart },
                         { "EnergyOfChargingSession", data.EnergyOfChargingSession }
                     };
-        influxConnector.WritePointDataToInfluxDb(
-            bucket,
-            "ChargingSessionEnded",
-            fields,
-            new Dictionary<string, string>() { { "Wallbox", wallbox } });
+            influxConnector.WritePointDataToInfluxDb(
+                bucket,
+                "ChargingSessionEnded",
+                fields,
+                new Dictionary<string, string>() { { "Wallbox", wallbox } });
+        }
     }
     else
     {
         ConsoleHelpers.PrintErrorMessage("Failed to deserialize ChargingSession data.");
     }
+}
+
+static bool CheckIfSessionWithIdExists(InfluxDbConnector influxConnector, string bucket, int sessionId, string wallbox)
+{
+    string query = $"""
+            from(bucket: "{bucket}")
+            |> range(start: -1mo)
+            |> filter(fn: (r) => r["_measurement"] == "ChargingSessionEnded")
+            |> filter(fn: (r) => r["Wallbox"] == "{wallbox}")
+            |> filter(fn: (r) => r["_field"] == "SessionId")
+            |> filter(fn: (r) => r["_value"] == {sessionId})
+        """;
+    var result = influxConnector.QueryDataAsync(query).Result;
+    if (result != null && result.Count > 0 && result[0].Records.Count > 0)
+    {
+        ConsoleHelpers.PrintInformation($"Session with ID {sessionId} already exists in InfluxDB, ignoring new data.");
+        return true;
+    }
+    return false;
 }
