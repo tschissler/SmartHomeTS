@@ -28,6 +28,7 @@ if (!String.IsNullOrEmpty(envBucket))
     bucket = envBucket;
 }
 
+ConsoleHelpers.PrintInformation($"Using bucket: {bucket} on org: {org} at {influxUrl}");
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
@@ -47,7 +48,7 @@ await mqttClient.SubscribeToTopic("data/charging/#");
 
 mqttClient.OnMessageReceived += async (sender, e) =>
 {
-    ConsoleHelpers.PrintInformation($"Message received: {e.Topic}");
+    //ConsoleHelpers.PrintInformation($"Message received: {e.Topic}");
     try
     {
         string topic = e.Topic;

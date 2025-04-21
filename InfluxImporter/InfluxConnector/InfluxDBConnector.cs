@@ -1,9 +1,11 @@
 ﻿using InfluxDB.Client;
 using InfluxDB.Client.Api.Domain;
+using InfluxDB.Client.Core;
 using InfluxDB.Client.Core.Flux.Domain;
 using InfluxDB.Client.Writes;
 using Newtonsoft.Json.Linq;
 using SmartHomeHelpers.Logging;
+using System.Diagnostics;
 
 namespace InfluxConnector
 {
@@ -71,7 +73,7 @@ namespace InfluxConnector
 
             // Write the point to InfluxDB
             _writeApi.WritePoint(point, bucketName);
-            ConsoleHelpers.PrintInformation($"Data written to InfluxDB bucket '{bucketName}'");
+            //ConsoleHelpers.PrintInformation($"Data written to InfluxDB bucket '{bucketName}'");
         }
 
         public async Task<List<FluxTable>> QueryDataAsync(string query)
