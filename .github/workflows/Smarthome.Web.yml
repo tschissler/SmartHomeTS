@@ -54,7 +54,7 @@ jobs:
     - name: Deploy to Kubernetes if deployment does not exist yet
       run: |
         if ! kubectl get deployment ${{ env.IMAGE_NAME }}; then
-          kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
+          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
         fi
         
     - name: Update Kubernetes deployment
