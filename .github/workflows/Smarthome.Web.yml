@@ -59,10 +59,10 @@ jobs:
         
     - name: Update Kubernetes deployment
       run: |        
-        kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} 
-        kubectl set env deployment/${{ env.IMAGE_NAME }} SyncfusionLicenseKey="${{ secrets.SYNCFUSION_LICENSEKEY }}"
-        kubectl set env deployment/${{ env.IMAGE_NAME }} SmartHomeStorageUri="${{ secrets.SMARTHOMESTORAGEURI }}"
-        kubectl set env deployment/${{ env.IMAGE_NAME }} SmartHomeStorageKey="${{ secrets.SMARTHOMESTORAGEKEY }}"
-        kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_URL="${{ secrets.INFLUXDB_URL }}"
-        kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_ORG="${{ secrets.INFLUXDB_ORG }}"
-        kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_TOKEN="${{ secrets.INFLUXDB_TOKEN }}"
+        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} 
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SyncfusionLicenseKey="${{ secrets.SYNCFUSION_LICENSEKEY }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SmartHomeStorageUri="${{ secrets.SMARTHOMESTORAGEURI }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SmartHomeStorageKey="${{ secrets.SMARTHOMESTORAGEKEY }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_URL="${{ secrets.INFLUXDB_URL }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_ORG="${{ secrets.INFLUXDB_ORG }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_TOKEN="${{ secrets.INFLUXDB_TOKEN }}"
