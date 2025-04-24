@@ -431,7 +431,35 @@ public static class InfluxDBClient
             return JsonSerializer.Serialize(new { error = ex.Message });
         }
     }
-    
+
+    [McpServerTool, Description("Executes a query on the InfluxDB database and returns 'Is OK' if successful or the error message if it fails.")]
+    public static async Task<string> ExecuteQuery(string query)
+    {
+        try
+        {
+            var options = new InfluxDBClientOptions.Builder()
+                .Url(INFLUXDB_URL)
+                .AuthenticateToken(INFLUXDB_TOKEN)
+                .Org(INFLUXDB_ORG)
+                .Build();
+
+            using var client = new InfluxDB.Client.InfluxDBClient(options);
+            var queryApi = client.GetQueryApi();
+
+            // Execute the query
+            await queryApi.QueryAsync(query, INFLUXDB_ORG);
+
+            // If no exception is thrown, the query is OK
+            return JsonSerializer.Serialize(new { result = "Is OK" });
+        }
+        catch (Exception ex)
+        {
+            // Return the error message
+            return JsonSerializer.Serialize(new { error = ex.Message });
+        }
+    }
+
+
     [McpServerTool, Description("Return recent sample data for a specific bucket and measurement.")]
     public static async Task<string> GetSample(string bucket, string measurement, int limit = 5)
     {
