@@ -133,23 +133,60 @@
 </div>
 
 <div>
-    <SfDropDownList @bind-Value="SelectedMonth" DataSource="Months" Placeholder="Select Month" />
-    <SfButton OnClick="ExportToExcel">Export to Excel</SfButton>
-    <SfButton OnClick="ExportToPDF">Export to PDF</SfButton>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <!-- Month Dropdown -->
+        <SfDropDownList @bind-Value="SelectedMonth" DataSource="Months" Width="50%" Placeholder="Select Month" />
 
-    <SfGrid DataSource="@ChargingSessions" AllowPaging="true" AllowSorting="true" Toolbar="@(new List<string> { "Search" })">
+        <!-- Car Selection Checkboxes -->
+        <div>
+            <SfCheckBox @bind-Checked="SelectedCars.BMW" @onchange="OnCarSelectionChanged">BMW</SfCheckBox>
+            <SfCheckBox @bind-Checked="SelectedCars.Mini" @onchange="OnCarSelectionChanged">Mini</SfCheckBox>
+            <SfCheckBox @bind-Checked="SelectedCars.VW" @onchange="OnCarSelectionChanged">VW</SfCheckBox>
+        </div>
+    </div>
+
+    <SfGrid ID="ChargingSessions" @ref="ChargingSessionsGrid" DataSource="@FilteredChargingSessions" AllowPaging="false" AllowSorting="true" Toolbar="@(new List<string>() { "ExcelExport", "PdfExport" })" AllowExcelExport="true" AllowPdfExport="true">
+        <GridEvents OnToolbarClick="ToolbarClickHandler" TValue="ChargingSession"></GridEvents>
+        <GridAggregates>
+            <GridAggregate>
+                <GridAggregateColumns>
+                    <GridAggregateColumn Field=@nameof(ChargingSession.EnergyOfChargingSession) Type="AggregateType.Sum" Format="#,##0.00 KWh">
+                        <FooterTemplate>
+                            @{
+                                var aggregate = (context as AggregateTemplateContext);
+                                <div>
+                                    <p>Summe: @aggregate.Sum</p>
+                                </div>
+                            }
+                        </FooterTemplate>
+                    </GridAggregateColumn>
+                </GridAggregateColumns>
+            </GridAggregate>
+        </GridAggregates>
         <GridColumns>
-            <GridColumn Field="WallboxName" HeaderText="Wallbox" Width="100"></GridColumn>
-            <GridColumn Field="SessionId" HeaderText="Ladesitzung" Width="100"></GridColumn>
-            <GridColumn Field="StartTime" HeaderText="Start" Format="dd.MM.yyyy HH:mm" Width="150"></GridColumn>
-            <GridColumn Field="EndTime" HeaderText="Ende" Format="dd.MM.yyyy HH:mm" Width="150"></GridColumn>
-            <GridColumn Field="EnergyOfChargingSession" Format="0.0 KWh" TextAlign="TextAlign.Right" HeaderText="Ladeenergie" Width="150"></GridColumn>
-            <GridColumn Field="TatalEnergyAtStart" Format="0.0 KWh" TextAlign="TextAlign.Right" HeaderText="Energie gesamt" Width="150"></GridColumn>
+            <GridColumn Field="WallboxName" HeaderText="Wallbox"></GridColumn>
+            <GridColumn Field="ChargedCar" HeaderText="Fahrzeug"></GridColumn>
+            <GridColumn Field="SessionId" HeaderText="Ladesitzung"></GridColumn>
+            <GridColumn Field="StartTime" HeaderText="Start" Format="dd.MM.yyyy HH:mm"></GridColumn>
+            <GridColumn Field="EndTime" HeaderText="Ende" Format="dd.MM.yyyy HH:mm"></GridColumn>
+            <GridColumn Field="EnergyOfChargingSession" Format="#,##0.00 KWh" TextAlign="TextAlign.Right" HeaderText="Ladeenergie"></GridColumn>
+            <GridColumn Field="TatalEnergyAtStart" Format="#,##0.00 KWh" TextAlign="TextAlign.Right" HeaderText="Energie gesamt"></GridColumn>
         </GridColumns>
     </SfGrid>
 </div>
 
 @code {
+    private class CarSelection
+    {
+        public bool BMW { get; set; }
+        public bool Mini { get; set; }
+        public bool VW { get; set; }
+    }
+
+    private CarSelection SelectedCars = new CarSelection();
+    private List<ChargingSession> FilteredChargingSessions = new();
+
+    private SfGrid<ChargingSession> ChargingSessionsGrid;
     private int _batteryMinLevel = 30;
     private int _manualCurrent = 6;
     private bool _useManualCharging = false;
@@ -164,9 +201,7 @@
 
     private List<ChargingSession> ChargingSessions = new();
     private string SelectedMonth = DateTime.Now.ToString("MMMM yyyy");
-    private List<string> Months = Enumerable.Range(0, 12)
-        .Select(i => DateTime.Now.AddMonths(-i).ToString("MMMM yyyy"))
-        .ToList();
+    private List<string> Months = []; 
 
     protected override async Task OnInitializedAsync()
     {
@@ -175,8 +210,43 @@
 
         MqttService.OnMessageReceived += UpdateData;
         await LoadChargingSessions();
+        await FillMonthSelectionList();
+
+        ApplyCarFilter();
     }
-        
+
+    private void ApplyCarFilter()
+    {
+        FilteredChargingSessions = ChargingSessions.Where(session =>
+            (SelectedCars.BMW && session.ChargedCar == "BMW") ||
+            (SelectedCars.Mini && session.ChargedCar == "Mini") ||
+            (SelectedCars.VW && session.ChargedCar == "VW") ||
+            (!SelectedCars.BMW && !SelectedCars.Mini && !SelectedCars.VW) // Show all if no car is selected
+        ).ToList();
+    }
+
+    private async void OnCarSelectionChanged(ChangeEventArgs args)
+    {
+        ApplyCarFilter();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task FillMonthSelectionList()
+    {
+        Months = new List<string>();
+        var timerange = await ChargingSessionService.GetChargingSessionsTimeRange();
+
+        // Create a Month/Year entry for each month between start and end in timerange
+        if (timerange.EarliestStartTime is null || timerange.LatestStartTime is null)
+            return;
+        var startDate = new DateTime(timerange.EarliestStartTime.Value.Year, timerange.EarliestStartTime.Value.Month, 1);
+        var endDate = new DateTime(timerange.LatestStartTime.Value.Year, timerange.LatestStartTime.Value.Month, 1);
+        for (var date = startDate; date <= endDate; date = date.AddMonths(1))
+        {
+            Months.Add(date.ToString("MMMM yyyy"));
+        }
+    }
+
     private async Task LoadChargingSessions()
     {
         var monthStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -188,16 +258,6 @@
         var monthEnd = monthStart.AddMonths(1).AddSeconds(-1);
 
         ChargingSessions = await ChargingSessionService.GetChargingSessionsAsync(monthStart, monthEnd);
-    }
-
-    private async Task ExportToExcel()
-    {
-        // Logic to export the grid data to Excel
-    }
-
-    private async Task ExportToPDF()
-    {
-        // Logic to export the grid data to PDF
     }
 
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
@@ -287,5 +347,17 @@
             JsonSerializer.Serialize(chargingSettings),
             MqttQualityOfServiceLevel.AtLeastOnce,
             true);
+    }
+
+    public async Task ToolbarClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args.Item.Id == "ChargingSessions_excelexport") 
+        {
+            await this.ChargingSessionsGrid.ExportToExcelAsync();
+        }
+        if (args.Item.Id == "ChargingSessions_pdfexport") 
+        {
+            await this.ChargingSessionsGrid.ExportToPdfAsync();
+        }
     }
 }

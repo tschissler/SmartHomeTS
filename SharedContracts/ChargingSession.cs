@@ -12,6 +12,7 @@ namespace SharedContracts
         DateTimeOffset? EndTime,
         double TatalEnergyAtStart,
         double EnergyOfChargingSession,
-        string WallboxName
+        string WallboxName,
+        string ChargedCar
     );
 }
