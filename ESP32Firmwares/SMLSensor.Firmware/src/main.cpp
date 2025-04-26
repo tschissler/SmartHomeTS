@@ -48,8 +48,6 @@ std::deque<uint8_t> buffer;
 const std::vector<uint8_t> startSequence = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const std::vector<uint8_t> endSequencePrefix = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
 
-int counter = 0;
-
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
     int lastDotIndex = url.lastIndexOf('.');
@@ -164,6 +162,8 @@ void setup() {
           delay (1000);
       }
   } 
+
+  mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
   //serialPort.onReceive(receiveHandler);
 }
 
@@ -276,13 +276,6 @@ void loop() {
 
             // Remove the processed data from the buffer
             buffer.erase(buffer.begin(), buffer.begin() + endIndex + endSequencePrefix.size() + 3);
-
-            if (counter > 60)
-            {
-                mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
-                counter = 0;
-            }
-            counter++;
         }
       }
     }
