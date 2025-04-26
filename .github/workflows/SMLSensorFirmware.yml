@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Generating version 
-      run: echo "version=0.0.$(( ${{ github.run_number }} - 18 ))" >> $GITHUB_ENV
+      run: echo "version=0.0.$(( ${{ github.run_number }}))" >> $GITHUB_ENV
       
     - name: Set up Python
       uses: actions/setup-python@v5
