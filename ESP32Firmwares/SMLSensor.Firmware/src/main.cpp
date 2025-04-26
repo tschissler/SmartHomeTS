@@ -13,6 +13,7 @@
 
 const int irLedPin = 19; // Define the pin for the IR LED
 const int irPhototransistorPin = 23;   // Define the pin for the IR sensor
+const int ledPin = 18; // Define the pin for the LED
 
 EspSoftwareSerial::UART serialPort;
 
@@ -155,6 +156,10 @@ void findWifi() {
 void setup() {
     pinMode(irLedPin, OUTPUT); // Initialize the LED pin as an output
     pinMode(irPhototransistorPin, INPUT);   // Initialize the IR pin as an input
+    pinMode(ledPin, OUTPUT); // Initialize the LED pin as an output
+    digitalWrite(irLedPin, LOW);
+    digitalWrite(ledPin, LOW); 
+    // Turn the LED off
     Serial.begin(115200);    // Start the Serial communication at 115200 baud rate
     Serial.print("SML Sensor ");
     Serial.println(version);
@@ -195,7 +200,7 @@ void setup() {
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
-    serialPort.begin(9600, SWSERIAL_8N1, irPhototransistorPin, irLedPin, false);
+    serialPort.begin(9600, SWSERIAL_8N1, irPhototransistorPin, 0, false);
     if (!serialPort) { // If the object did not initialize, then its configuration is invalid
         Serial.println("Invalid EspSoftwareSerial pin configuration, check config"); 
         while (1) { // Don't continue with invalid configuration
@@ -206,8 +211,6 @@ void setup() {
 }
 
 void loop() {
-    digitalWrite(irLedPin, LOW); // Turn the LED on
-
     // Read data from the serial port
     while (serialPort.available() > 0) {
         uint8_t data = serialPort.read();
@@ -288,6 +291,11 @@ void loop() {
                     serializeJson(jsonDoc, jsonString);
                     
                     mqttSuccess = mqttClientLib->publish((baseTopic + "/strom/M1/Zaehler").c_str(), jsonString, true, 0);
+                    if (mqttSuccess) {
+                      digitalWrite(ledPin, HIGH); 
+                      delay(5);
+                      digitalWrite(ledPin, LOW);// Turn on the LED if MQTT message was sent successfully
+                    }
                 } else {
                     //Serial.println("Parsing failed: No data returned");
                 }
