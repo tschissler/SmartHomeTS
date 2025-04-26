@@ -58,8 +58,8 @@ public class ChargingSessionService(IInfluxDBConnector influxConnector) : ICharg
                     SessionId: sessionId,
                     StartTime: startTime == DateTimeOffset.MinValue ? null : startTime,
                     EndTime: endTime == DateTimeOffset.MinValue ? null : endTime,
-                    TatalEnergyAtStart: (double)record.GetValueByKey("TatalEnergyAtStart") / 10000,
-                    EnergyOfChargingSession: (double)record.GetValueByKey("EnergyOfChargingSession") / 10000,
+                    TatalEnergyAtStart: (double)record.GetValueByKey("TatalEnergyAtStart") / 1000,
+                    EnergyOfChargingSession: (double)record.GetValueByKey("EnergyOfChargingSession") / 1000,
                     WallboxName: wallboxName,
                     ChargedCar: chargedCar
                 );
