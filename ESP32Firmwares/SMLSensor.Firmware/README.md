@@ -5,7 +5,7 @@ The code is designed to run on a ESP32 microcontroller. In my case, I use an ESP
 
 Here you can see the schematic für wiring the sensor:
 
-![Schematic](schematic.png)
+![Schematic](Schematic.png)
 
 The 3D models to print a case are available at [../../3DModels/SMLSensor](../../3DModels/SMLSensor).
 
