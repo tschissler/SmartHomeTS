@@ -118,12 +118,6 @@ void setup() {
   Serial.print("SML Sensor Version:");
   Serial.println(version);
 
-    // Get the high 2 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
-  chipID += String((uint16_t)(ESP.getEfuseMac() >> 32), HEX);
-  // Get the low 4 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
-  chipID += String((uint32_t)ESP.getEfuseMac(), HEX);
-  // Print the Chip ID
-  Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
 
   uint8_t mac[6];

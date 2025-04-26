@@ -21,6 +21,8 @@ samples, guidance on mobile development, and a full API reference.
 Create a new service account here https://console.cloud.google.com/projectselector2/iam-admin/serviceaccounts
 More information: https://damienaicheh.github.io/azure/devops/2021/10/25/configure-azure-devops-google-play-en.html
 
+The service account must be invited as a user in the Play Store Console https://play.google.com/console/ go to User & Permissions and invite service account
+
 ## Provide the service account JSON
 ``` Powershell
  [convert]::ToBase64String((Get-Content -path "smarthome-app-16d1b-cb8873d5fc10.json" -Encoding byte)) > service-account.json.base64  
@@ -39,4 +41,5 @@ Use the JSON in the workflow
         packageName: "dev.tschissler.smarthome_app"
         releaseFiles: ./${{ env.PROJECT_NAME }}/build/app/outputs/bundle/release/app-release.aab
         track: internal
+        status: draft
 ```
