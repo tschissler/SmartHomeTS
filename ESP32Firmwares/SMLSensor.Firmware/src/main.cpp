@@ -11,8 +11,8 @@
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
 
-const int ledPin = 19; // Define the pin for the internal LED
-const int irPin = 23;   // Define the pin for the IR sensor
+const int irLedPin = 19; // Define the pin for the IR LED
+const int irPhototransistorPin = 23;   // Define the pin for the IR sensor
 
 EspSoftwareSerial::UART serialPort;
 
@@ -153,8 +153,8 @@ void findWifi() {
 
 
 void setup() {
-    pinMode(ledPin, OUTPUT); // Initialize the LED pin as an output
-    pinMode(irPin, INPUT);   // Initialize the IR pin as an input
+    pinMode(irLedPin, OUTPUT); // Initialize the LED pin as an output
+    pinMode(irPhototransistorPin, INPUT);   // Initialize the IR pin as an input
     Serial.begin(115200);    // Start the Serial communication at 115200 baud rate
     Serial.print("SML Sensor ");
     Serial.println(version);
@@ -195,7 +195,7 @@ void setup() {
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
-    serialPort.begin(9600, SWSERIAL_8N1, irPin, ledPin, false);
+    serialPort.begin(9600, SWSERIAL_8N1, irPhototransistorPin, irLedPin, false);
     if (!serialPort) { // If the object did not initialize, then its configuration is invalid
         Serial.println("Invalid EspSoftwareSerial pin configuration, check config"); 
         while (1) { // Don't continue with invalid configuration
@@ -206,7 +206,7 @@ void setup() {
 }
 
 void loop() {
-    digitalWrite(ledPin, LOW); // Turn the LED on
+    digitalWrite(irLedPin, LOW); // Turn the LED on
 
     // Read data from the serial port
     while (serialPort.available() > 0) {
