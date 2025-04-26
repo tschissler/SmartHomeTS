@@ -8,6 +8,9 @@
 #include <memory>
 #include <ArduinoJson.h>
 
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
 #include "WifiLib.h"
@@ -107,52 +110,56 @@ void connectToMQTT() {
 }
 
 void setup() {
-    pinMode(irLedPin, OUTPUT); // Initialize the LED pin as an output
-    pinMode(irPhototransistorPin, INPUT);   // Initialize the IR pin as an input
-    pinMode(ledPin, OUTPUT); // Initialize the LED pin as an output
-    digitalWrite(irLedPin, LOW);
-    digitalWrite(ledPin, LOW); 
-    // Turn the LED off
-    Serial.begin(115200);    // Start the Serial communication at 115200 baud rate
-    Serial.print("SML Sensor ");
-    Serial.println(version);
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+  pinMode(irLedPin, OUTPUT); // Initialize the LED pin as an output
+  pinMode(irPhototransistorPin, INPUT);   // Initialize the IR pin as an input
+  pinMode(ledPin, OUTPUT); // Initialize the LED pin as an output
+  digitalWrite(irLedPin, LOW);
+  digitalWrite(ledPin, LOW); 
+  // Turn the LED off
+  Serial.begin(115200);    // Start the Serial communication at 115200 baud rate
+  Serial.print("SML Sensor Version:");
+  Serial.println(version);
 
-      // Get the high 2 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
-    chipID += String((uint16_t)(ESP.getEfuseMac() >> 32), HEX);
-    // Get the low 4 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
-    chipID += String((uint32_t)ESP.getEfuseMac(), HEX);
-    // Print the Chip ID
-    Serial.print("ESP32 Chip ID: ");
-    Serial.println(chipID);
+    // Get the high 2 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
+  chipID += String((uint16_t)(ESP.getEfuseMac() >> 32), HEX);
+  // Get the low 4 bytes of the EFUSE MAC address, convert to hexadecimal, and append to the chipID String
+  chipID += String((uint32_t)ESP.getEfuseMac(), HEX);
+  // Print the Chip ID
+  Serial.print("ESP32 Chip ID: ");
+  Serial.println(chipID);
 
-    mqtt_ConfigTopic += chipID;
+  mqtt_ConfigTopic += chipID;
 
-    // Connect to WiFi
-    Serial.print("Connecting to WiFi ");
-    wifiLib.scanAndSelectNetwork();
-    wifiLib.connect();
-    String ssid = wifiLib.getSSID();
-    
-    // Set up MQTT
-    String mqttClientID = "ESP32SMLSensorClient_" + chipID;
-    mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
-    connectToMQTT();
-    
-    // Print the IP address
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
+  // Connect to WiFi
+  Serial.print("Connecting to WiFi ");
+  wifiLib.scanAndSelectNetwork();
+  wifiLib.connect();
+  String ssid = wifiLib.getSSID();
+  
+  // Set up MQTT
+  String mqttClientID = "ESP32SMLSensorClient_" + chipID;
+  mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  connectToMQTT();
+  
+  // Print the IP address
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
 
-    serialPort.begin(9600, SWSERIAL_8N1, irPhototransistorPin, 0, false);
-    if (!serialPort) { // If the object did not initialize, then its configuration is invalid
-        Serial.println("Invalid EspSoftwareSerial pin configuration, check config"); 
-        while (1) { // Don't continue with invalid configuration
-            delay (1000);
-        }
-    } 
-    //serialPort.onReceive(receiveHandler);
+  serialPort.begin(9600, SWSERIAL_8N1, irPhototransistorPin, 0, false);
+  if (!serialPort) { // If the object did not initialize, then its configuration is invalid
+      Serial.println("Invalid EspSoftwareSerial pin configuration, check config"); 
+      while (1) { // Don't continue with invalid configuration
+          delay (1000);
+      }
+  } 
+  //serialPort.onReceive(receiveHandler);
 }
 
 void loop() {
+  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
+
+  if (!otaInProgress) {
     // Read data from the serial port
     while (serialPort.available() > 0) {
         uint8_t data = serialPort.read();
@@ -259,5 +266,12 @@ void loop() {
             // Remove the processed data from the buffer
             buffer.erase(buffer.begin(), buffer.begin() + endIndex + endSequencePrefix.size() + 3);
         }
+      }
+    }
+
+    if(!mqttClientLib->loop())
+    {
+      Serial.println("MQTT Client not connected, reconnecting in loop...");
+      connectToMQTT();
     }
 }
