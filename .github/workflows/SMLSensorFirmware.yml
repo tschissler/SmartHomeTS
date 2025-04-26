@@ -43,7 +43,7 @@ jobs:
         az storage blob upload --account-name smarthomestorageprod \
                                --container-name firmwareupdates \
                                --name SMLSensorFirmware_$version.bin \
-                               --file .pio/build/esp32dev/firmware.bin \
+                               --file .pio/build/seeed_xiao_esp32c6/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
     - name: Construct Blob URL
