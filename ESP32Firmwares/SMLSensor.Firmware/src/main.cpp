@@ -8,9 +8,6 @@
 #include <memory>
 #include <ArduinoJson.h>
 
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
 #include "WifiLib.h"
@@ -110,7 +107,6 @@ void connectToMQTT() {
 }
 
 void setup() {
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
   pinMode(irLedPin, OUTPUT); // Initialize the LED pin as an output
   pinMode(irPhototransistorPin, INPUT);   // Initialize the IR pin as an input
   pinMode(ledPin, OUTPUT); // Initialize the LED pin as an output
