@@ -264,17 +264,17 @@ void loop() {
 
             // Remove the processed data from the buffer
             buffer.erase(buffer.begin(), buffer.begin() + endIndex + endSequencePrefix.size() + 3);
+
+            if (counter > 60)
+            {
+                mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+                counter = 0;
+            }
+            counter++;
         }
       }
     }
 
-    if (counter > 60)
-    {
-        mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
-        counter = 0;
-    }
-    counter++;
-    
     if(!mqttClientLib->loop())
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
