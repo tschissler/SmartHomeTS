@@ -134,7 +134,7 @@ void connectToMQTT() {
     wifiLib.connect();
   }
   mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
-  Serial.println("Wifi is connected");
+  Serial.println("MQTT Client is connected");
 }
 
 void readSensorAndPublish() {
@@ -195,7 +195,6 @@ void setup() {
   wifiLib.scanAndSelectNetwork();
   wifiLib.connect();
   String ssid = wifiLib.getSSID();
-  String password = wifiLib.getPassword();
 
   // Initialize display
   tftDisplay.init();
