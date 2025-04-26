@@ -267,7 +267,7 @@ void loop() {
                 }
                 Serial.println();
 
-                mqttClientLib->publish(("error/" + sensorName + "/exception").c_str(), String(ex.what()), false, 0);
+                mqttClientLib->publish(("error/" + sensorName + "/exception").c_str(), String(ex.what()), true, 0);
             }
 
             // Remove the processed data from the buffer
