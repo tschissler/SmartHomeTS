@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/SMLSensorFirmware.yml
       - ESP32Firmwares/SMLSensor.Firmware/**
+  workflow_dispatch:
   
 jobs:
   build:
