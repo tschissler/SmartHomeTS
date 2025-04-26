@@ -5,6 +5,7 @@
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <ESP32Ping.h>
+#include <esp_mac.h> 
 #include <memory>
 #include <ArduinoJson.h>
 
@@ -127,9 +128,20 @@ void setup() {
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
 
+  uint8_t mac[6];
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
+
+  String chipID = "";
+  for (int i = 0; i < 6; ++i) {
+    if (mac[i] < 0x10) chipID += "0";  // Add leading zero if needed
+    chipID += String(mac[i], HEX);
+  }
+
+  Serial.print("ESP32 Chip ID: ");
+  Serial.println(chipID);
+
   mqtt_ConfigTopic += chipID;
 
-  Serial.println(WIFI_PASSWORDS);
   // Connect to WiFi
   Serial.print("Connecting to WiFi ");
   wifiLib.scanAndSelectNetwork();
