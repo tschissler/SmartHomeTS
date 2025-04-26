@@ -47,6 +47,8 @@ std::deque<uint8_t> buffer;
 const std::vector<uint8_t> startSequence = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const std::vector<uint8_t> endSequencePrefix = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
 
+int counter = 0;
+
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
     int lastDotIndex = url.lastIndexOf('.');
@@ -127,6 +129,7 @@ void setup() {
 
   mqtt_ConfigTopic += chipID;
 
+  Serial.println(WIFI_PASSWORDS);
   // Connect to WiFi
   Serial.print("Connecting to WiFi ");
   wifiLib.scanAndSelectNetwork();
@@ -265,6 +268,13 @@ void loop() {
       }
     }
 
+    if (counter > 60)
+    {
+        mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+        counter = 0;
+    }
+    counter++;
+    
     if(!mqttClientLib->loop())
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
