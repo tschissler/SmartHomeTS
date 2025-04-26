@@ -10,6 +10,7 @@
 
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
+#include "WifiLib.h"
 
 const int irLedPin = 19; // Define the pin for the IR LED
 const int irPhototransistorPin = 23;   // Define the pin for the IR sensor
@@ -24,9 +25,7 @@ String chipID = "";
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_PASSWORDS as environment variables on your dev-system following the pattern: WIFI_PASSWORDS="ssid1;password1|ssid2;password2"
-String ssid;
-String passwords = WIFI_PASSWORDS;
-String password;
+WifiLib wifiLib(WIFI_PASSWORDS);
 
 WiFiClient wifiClient;
 WiFiUDP ntpUDP;
@@ -37,7 +36,6 @@ static bool otaInProgress = false;
 static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
-static int lastMQTTSentMinute = 0;
 
 static String baseTopic = "daten";
 static String sensorName = "";
@@ -102,56 +100,11 @@ void mqttCallback(String &topic, String &payload) {
 
 void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(1000);
-      Serial.print("Reconnecting to WiFi ");
-      Serial.print(ssid);
-      Serial.println(" ...");
-    }
-    Serial.println("Reconnected to WiFi");
+    wifiLib.connect();
   }
   mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
-  Serial.println("Wifi is connected");
+  Serial.println("MQTT Client is connected");
 }
-
-void findWifi() {
-  Serial.println("Scanning for WiFi networks...");
-  int numberOfNetworks = WiFi.scanNetworks();
-  Serial.print("Found ");
-  Serial.print(numberOfNetworks);
-  Serial.println(" networks.");
-  for (int i = 0; i < numberOfNetworks; i++) {
-    Serial.print(WiFi.SSID(i));
-    Serial.print(" (");
-    Serial.print(WiFi.RSSI(i));
-    Serial.print(") ");
-    Serial.println(WiFi.encryptionType(i));
-    delay(10);
-  }
-
-  // Identify the strongest WiFi signal
-  int maxRSSI = -1000;
-  int maxRSSIIndex = -1;
-  Serial.print("Configured WiFi networks: ");
-  Serial.println(passwords.length());
-  for (int i = 0; i < numberOfNetworks; i++) {
-    if (WiFi.RSSI(i) > maxRSSI && passwords.indexOf(WiFi.SSID(i)) >=0) {
-      maxRSSI = WiFi.RSSI(i);
-      maxRSSIIndex = i;
-    }
-  }
-  if (maxRSSIIndex == -1) {
-    Serial.println("No WiFi network found");
-    return;
-  } else {
-    Serial.println("Strongest known WiFi network is " + WiFi.SSID(maxRSSIIndex) + " with RSSI " + WiFi.RSSI(maxRSSIIndex) + " dBm");
-    ssid = WiFi.SSID(maxRSSIIndex);
-    password = passwords.substring(passwords.indexOf(ssid) + ssid.length() + 1, passwords.indexOf('|', passwords.indexOf(ssid)));
-    return;
-  }
-}
-
 
 void setup() {
     pinMode(irLedPin, OUTPUT); // Initialize the LED pin as an output
@@ -174,22 +127,11 @@ void setup() {
 
     mqtt_ConfigTopic += chipID;
 
-    findWifi();
-    while (ssid == "" || password == "") {
-        Serial.println("No WiFi network found, retrying...");
-        delay(1000);
-        findWifi();
-    }
-
     // Connect to WiFi
     Serial.print("Connecting to WiFi ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-    }
-    Serial.println("Connected to WiFi");
+    wifiLib.scanAndSelectNetwork();
+    wifiLib.connect();
+    String ssid = wifiLib.getSSID();
     
     // Set up MQTT
     String mqttClientID = "ESP32SMLSensorClient_" + chipID;
