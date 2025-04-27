@@ -62,9 +62,10 @@ This project uses data-driven unit-tests based on Excel data.
 #### SMLSensor.Firmware
 - **Purpose**: Reading data from a digital energy meter using the SML (Smart Meter Language) protocol. This repro also features instructions how to build the hardware for the sensor.
 
-<video src='./Docs/images/SMLSensor_1.mp4'>
+https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030
 
 For more details see [Esp32Firmwares/SMLSensor.Firmware/README.md](Esp32Firmwares/SMLSensor.Firmware/README.md)
+
 
 ### MCPServer
 - **Purpose**: Provides a structured interface for AI tools to query and analyze InfluxDB time-series data through the Model Context Protocol (MCP).
