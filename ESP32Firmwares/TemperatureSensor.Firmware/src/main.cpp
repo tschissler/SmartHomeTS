@@ -160,7 +160,6 @@ void readSensorAndPublish() {
   {
     mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
     mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
-    mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
     
     if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
       switchTopStatus = digitalRead(SWITCH_TOP_PIN);
@@ -218,6 +217,8 @@ void setup() {
 
   // Update NTP client
   timeClient.update();
+
+  mqttClientLib->publish(("meta/" + sensorName + "/version/TemperaturSensor").c_str(), String(version), true, 2);
 
   printInformationOnTFT("-", "-", false);
 }

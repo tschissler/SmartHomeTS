@@ -157,7 +157,7 @@ void setup() {
       }
   } 
 
-  mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+  mqttClientLib->publish(("meta/" + sensorName + "/version/SMLSensor").c_str(), String(version), true, 2);
   //serialPort.onReceive(receiveHandler);
 }
 
