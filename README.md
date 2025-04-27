@@ -64,7 +64,7 @@ This project uses data-driven unit-tests based on Excel data.
 
 https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030
 
-For more details see [Esp32Firmwares/SMLSensor.Firmware/README.md](Esp32Firmwares/SMLSensor.Firmware/README.md)
+For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/SMLSensor.Firmware#readme)
 
 
 ### MCPServer
