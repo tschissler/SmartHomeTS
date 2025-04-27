@@ -59,6 +59,13 @@ This project uses data-driven unit-tests based on Excel data.
 - **Purpose**: Firmware for ESP32-based devices, including LED strips, temperature sensors, and more.
 - **Inspiration**: Learn how to program microcontrollers for IoT applications.
 
+#### SMLSensor.Firmware
+- **Purpose**: Reading data from a digital energy meter using the SML (Smart Meter Language) protocol. This repro also features instructions how to build the hardware for the sensor.
+
+![SMLSensor in action](./Docs/images/SMLSensor_1.mp4)
+
+For more details see [Esp32Firmwares/SMLSensor.Firmware/README.md](Esp32Firmwares/SMLSensor.Firmware/README.md)
+
 ### MCPServer
 - **Purpose**: Provides a structured interface for AI tools to query and analyze InfluxDB time-series data through the Model Context Protocol (MCP).
 - **Inspiration**: Learn how to build MCP servers in C# that enable AI assistants to work directly with time-series databases.

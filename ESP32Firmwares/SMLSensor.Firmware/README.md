@@ -11,3 +11,10 @@ Here you can see the schematic für wiring the sensor:
 
 The 3D models to print a case are available at [../../3DModels/SMLSensor](../../3DModels/SMLSensor).
 
+## Building the sensor hardware
+
+![IR receiver and IR sender](20250426_154017.jpg)
+
+![Shrink tubes](20250426_154614.jpg)
+
+![Mounting in the case](20250426_161152.jpg)
