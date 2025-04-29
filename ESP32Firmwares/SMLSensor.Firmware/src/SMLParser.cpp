@@ -114,8 +114,10 @@ int SMLParser::SMLElementToInteger(std::shared_ptr<SMLElement> byteData) {
         case 2:
             return *reinterpret_cast<const int8_t*>(tarif1Array.data());
         case 3:
+        case 4:
             return *reinterpret_cast<const int16_t*>(tarif1Array.data());
         case 5:
+        case 6:
             return *reinterpret_cast<const int32_t*>(tarif1Array.data());
         default:
             Serial.println("Error: Invalid signed integer length");
@@ -129,8 +131,10 @@ int SMLParser::SMLElementToInteger(std::shared_ptr<SMLElement> byteData) {
         case 2:
             return *reinterpret_cast<const uint8_t*>(tarif1Array.data());
         case 3:
+        case 4:
             return *reinterpret_cast<const uint16_t*>(tarif1Array.data());
         case 5:
+        case 6:
             return *reinterpret_cast<const uint32_t*>(tarif1Array.data());
         default:
             Serial.println("Error: Invalid unsigned integer length");
@@ -217,7 +221,18 @@ std::vector<std::shared_ptr<ISMLNode>> SMLParser::ExtractNodes(std::vector<uint8
             else {
                 elements.push_back(std::make_shared<SMLList>(element));
             }
-        } else {
+        }
+        else if (elementType == 0x08) {
+            elementLength = (elementLength << 4) + data.at(index + 1); 
+            if (index + elementLength > data.size()) {
+                throw std::out_of_range("Not enough data for the element");
+            }
+
+            std::vector<uint8_t> element(data.begin() + index, data.begin() + index + elementLength);
+            elements.push_back(std::make_shared<SMLElement>(element));
+            index += elementLength;
+            }
+         else {
             if (index + elementLength > data.size()) {
                 throw std::out_of_range("Not enough data for the element");
             }
