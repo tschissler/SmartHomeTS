@@ -258,16 +258,18 @@ void loop() {
                 Serial.print("Exception occurred: ");
                 Serial.println(ex.what());
                 Serial.println("Data: ");
+                String hexData;
                 for (uint8_t byte : bufferVector) {
-                    if (byte < 0x10) {
-                      Serial.print("0");
-                    }
-                    Serial.print(byte, HEX);
-                    Serial.print(" ");
+                  if (byte < 0x10) hexData += "0";
+                  hexData += String(byte, HEX);
+                  hexData += " ";
+                  Serial.print(byte < 0x10 ? "0" : "");
+                  Serial.print(byte, HEX);
+                  Serial.print(" ");
                 }
                 Serial.println();
-
-                mqttClientLib->publish(("error/" + sensorName + "/exception").c_str(), String(ex.what()), true, 0);
+                String errorPayload = String(ex.what()) + String(" | Data: ") + hexData;
+                mqttClientLib->publish(("error/" + sensorName + "/exception").c_str(), errorPayload, true, 0);
             }
 
             // Remove the processed data from the buffer
