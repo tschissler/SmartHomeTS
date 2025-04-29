@@ -218,14 +218,26 @@ void loop() {
 
         // If both start and end sequences are found, parse the data
         if (startFound && endFound) {
-            std::vector<uint8_t> bufferVector(buffer.begin() + startIndex, buffer.begin() + endIndex);
+            // Create a vector containing the full message (including start and end sequences + CRC bytes)
+            std::vector<uint8_t> bufferVector(buffer.begin() + startIndex - startSequence.size(), 
+                                              buffer.begin() + endIndex + endSequencePrefix.size() + 3);
+            
             try {
-                // Call the Parse method
+                // Verify CRC with the full message
                 if (!SMLParser::VerifyCRC16(bufferVector)) {
                     throw std::runtime_error("CRC verification failed");
                 }
-                // Parse the data
-                std::shared_ptr<SMLData> smlData = SMLParser::Parse(bufferVector);
+                
+                // Calculate payload start and end positions in the full buffer
+                size_t payloadStartOffset = startSequence.size();
+                size_t payloadEndOffset = bufferVector.size() - endSequencePrefix.size() - 3;
+                
+                // Create a new vector with just the payload portion
+                std::vector<uint8_t> payloadVector(bufferVector.begin() + payloadStartOffset, 
+                                                  bufferVector.begin() + payloadEndOffset);
+                
+                // Parse just the payload portion (excluding start/end sequences and CRC)
+                std::shared_ptr<SMLData> smlData = SMLParser::Parse(payloadVector);
 
                 // Check if the parsing was successful
                 if (smlData) {
@@ -261,7 +273,7 @@ void loop() {
                 // Handle any exceptions that occur during parsing
                 Serial.print("Exception occurred: ");
                 Serial.println(ex.what());
-                Serial.println("Data: ");
+                Serial.println("Full Data: ");
                 String hexData;
                 for (uint8_t byte : bufferVector) {
                   if (byte < 0x10) hexData += "0";
@@ -272,7 +284,7 @@ void loop() {
                   Serial.print(" ");
                 }
                 Serial.println();
-                String errorPayload = String(ex.what()) + String(" | Data: ") + hexData;
+                String errorPayload = String(ex.what()) + String(" | Full Data: ") + hexData;
                 mqttClientLib->publish(("error/" + sensorName + "/exception").c_str(), errorPayload, true, 0);
             }
 
