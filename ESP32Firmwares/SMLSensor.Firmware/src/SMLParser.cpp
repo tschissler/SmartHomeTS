@@ -209,7 +209,7 @@ std::vector<std::shared_ptr<ISMLNode>> SMLParser::ExtractNodes(std::vector<uint8
     while (index < data.size()) {
         int elementType = data.at(index) >> 4; // Extract the type from the start byte
         int elementLength = data.at(index) & 0x0F; // Extract the length from the start byte
-        if (elementType == 0x08) {
+        if (elementType == 0x08) 
             elementLength = (elementLength << 4) + data.at(index + 1); 
         if (elementLength == 0)
             elementLength = 1; // If the element is 0x00, the element is 1 byte long
