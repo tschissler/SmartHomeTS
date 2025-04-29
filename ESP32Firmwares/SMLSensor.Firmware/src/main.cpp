@@ -221,6 +221,10 @@ void loop() {
             std::vector<uint8_t> bufferVector(buffer.begin() + startIndex, buffer.begin() + endIndex);
             try {
                 // Call the Parse method
+                if (!SMLParser::VerifyCRC16(bufferVector)) {
+                    throw std::runtime_error("CRC verification failed");
+                }
+                // Parse the data
                 std::shared_ptr<SMLData> smlData = SMLParser::Parse(bufferVector);
 
                 // Check if the parsing was successful

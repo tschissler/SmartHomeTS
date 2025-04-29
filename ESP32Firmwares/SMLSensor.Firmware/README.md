@@ -5,7 +5,7 @@ The code is designed to run on a ESP32 microcontroller. In my case, I use an ESP
 
 The software reads the current meter reading and the current power consumption and sends these values as MQTT messages. For the meter reading, two separate counters are distinguished (typically consumption and feed-in).
 
-The software features an OTA (Over the air) update by subscribing to MQTT messages for new firmware versions.
+The software features an OTA (Over the air) update by subscribing to MQTT messages for new firmware versions. For more details also see [Patterns and practices](https://github.com/tschissler/SmartHomeTS#unique-patterns-and-practices)
 
 Here you can see the schematic für wiring the sensor:
 

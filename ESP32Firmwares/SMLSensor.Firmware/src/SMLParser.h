@@ -38,13 +38,15 @@ public:
 class SMLParser {
 public:
     static std::shared_ptr<SMLData> Parse(std::vector<uint8_t>& data);
-
+    static bool VerifyCRC16(const std::vector<uint8_t>& buffer);
+ 
 private:
     static int SMLElementToInteger(std::shared_ptr<SMLElement> byteData);
     static bool isLittleEndian();
     static std::vector<uint8_t> ExtractPackage(std::vector<uint8_t>& data);
     static std::vector<std::shared_ptr<ISMLNode>> ExtractNodes(std::vector<uint8_t>& data);
     static std::vector<std::shared_ptr<ISMLNode>> ExtractNodes(std::vector<uint8_t>& data, int& index, int listitems);
+    static uint16_t ComputeCRC16(const std::vector<uint8_t>& data, size_t offset, size_t length);
 };
 
 #endif // SMLPARSER_H
