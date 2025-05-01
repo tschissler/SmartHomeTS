@@ -243,19 +243,19 @@ void loop() {
                 if (smlData) {
                     // Output the parsed data
                     Serial.print("Tarif1: ");
-                    Serial.print(smlData->Tarif1);
+                    Serial.print(smlData->ConsumptionEnergyTotal);
                     Serial.print(" kWh\t");
                     Serial.print("Tarif2: ");
-                    Serial.print(smlData->Tarif2);
+                    Serial.print(smlData->FeedEnergyTotal);
                     Serial.print(" kWh\t");
                     Serial.print("Power: ");
-                    Serial.print(smlData->Power);
+                    Serial.print(smlData->EffectivePower);
                     Serial.println(" W");
 
                     StaticJsonDocument<200> jsonDoc;
-                    jsonDoc["Netzbezug"] = smlData->Tarif1;
-                    jsonDoc["Netzeinspeissung"] = smlData->Tarif2;
-                    jsonDoc["NetzanschlussMomentanleistung"] = smlData->Power;
+                    jsonDoc["Netzbezug"] = smlData->ConsumptionEnergyTotal;
+                    jsonDoc["Netzeinspeissung"] = smlData->FeedEnergyTotal;
+                    jsonDoc["NetzanschlussMomentanleistung"] = smlData->EffectivePower;
                     
                     String jsonString;
                     serializeJson(jsonDoc, jsonString);
