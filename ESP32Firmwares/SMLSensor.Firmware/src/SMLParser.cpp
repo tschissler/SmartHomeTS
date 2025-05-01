@@ -62,186 +62,78 @@ SMLElement::SMLElement(std::vector<uint8_t> d) : data(d) {}
 // SMLList Constructor
 SMLList::SMLList(std::vector<std::shared_ptr<ISMLNode>> e) : elements(e) {}
 
-
-// Convert SML element to string (HEX representation)
-std::string SMLParser::SMLElementToString(std::shared_ptr<SMLElement> element) {
-    std::string result;
-    for (const auto& b : element->data) {
-        char buffer[3];
-        sprintf(buffer, "%02X", b);
-        result += buffer;
-    }
-    return result;
-}
-
-// Compare two byte arrays for equality
-bool SMLParser::CompareArrays(const std::vector<uint8_t>& array1, const std::vector<uint8_t>& array2) {
-    if (array1.size() != array2.size()) {
-        return false;
-    }
-    return std::equal(array1.begin(), array1.end(), array2.begin());
-}
+// SMLData Constructor
+SMLData::SMLData(float t1, float t2, float p) : Tarif1(t1), Tarif2(t2), Power(p) {}
 
 // SMLParser Methods
 std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
-    while (data.size() > 0) {
-        auto package = ExtractPackage(data);
-        if (package.empty()) {
-            return nullptr;
-        }
+    std::vector<std::shared_ptr<ISMLNode>> elements = ExtractNodes(data);
+    
+    if (elements.empty()) {
+        throw std::runtime_error("Error while parsing SML package. No elements could be identified");
+    }
 
-        int index = 0;
-        auto smlMessages = ExtractNodes(package, index, 99);
-        
-        if (smlMessages.empty()) {
-            throw std::runtime_error("Error while parsing SML package. No SML messages could be identified");
-        }
+    if (elements.size() < 2) {
+        throw std::runtime_error("Error while parsing SML package. Expected 2 elements on root level, but found " + std::to_string(elements.size()));
+    }
 
-        if (smlMessages.size() < 2) {
-            throw std::runtime_error("Error while parsing SML package. Expected at least 2 SML messages, but found " + std::to_string(smlMessages.size()));
-        }
+    if (!elements.at(1)) {
+        throw std::runtime_error("Error while parsing SML package. Second element on root level is null");
+    }
 
-        if (smlMessages[1]->getType() != 2) {
-            throw std::runtime_error("Error while parsing SML package. Second message is not a list");
-        }
+    if (elements.at(1)->getType() != 2) {
+        throw std::runtime_error("Error while parsing SML package. Second element on root level is not a list");
+    }
 
-        // The whole data package delivers multiple SML messages but we are only interested in the second one
-        auto dataSMLMessage = std::static_pointer_cast<SMLList>(smlMessages[1]);
-        if (dataSMLMessage->elements.size() < 4) {
-            throw std::runtime_error("Error while parsing SML package. SML message with data does not contain enough elements");
-        }
+    auto dataRootElement = std::static_pointer_cast<SMLList>(elements.at(1));
 
-        if (dataSMLMessage->elements[3]->getType() != 2) {
-            throw std::runtime_error("Error while parsing SML package. Fourth element SML data message is not a list");
-        }
+    if (dataRootElement->elements.size() < 4) {
+        throw std::runtime_error("Error while parsing SML package. Second list does not contain enough elements");
+    }
 
-        // Find all list elements in the dataSMLMessage elements
-        std::vector<std::shared_ptr<ISMLNode>> dataList;
-        for (const auto& element : dataSMLMessage->elements) {
-            if (element->getType() == 2) {
-                dataList.push_back(element);
-            }
-        }
+    if (!dataRootElement->elements.at(3)) {
+        throw std::runtime_error("Error while parsing SML package. Fourth element on second level is null");
+    }
 
-        if (dataList.size() != 1) {
-            throw std::runtime_error("Error while parsing SML package. Expected exactly one list in the SML data message but found " + std::to_string(dataList.size()));
-        }
+    if (dataRootElement->elements.at(3)->getType() != 2) {
+        throw std::runtime_error("Error while parsing SML package. Fourth element on second level is not a list");
+    }
 
-        // In that list element we again select all sub-elements that are lists and continue by using the first list we find
-        auto dataListElements = std::static_pointer_cast<SMLList>(dataList[0])->elements;
-        std::vector<std::shared_ptr<ISMLNode>> subDataList;
-        for (const auto& element : dataListElements) {
-            if (element->getType() == 2) {
-                subDataList.push_back(element);
-            }
-        }
-        
-        if (subDataList.empty()) {
-            throw std::runtime_error("Error while parsing SML package. No sublists found in dataList");
-        }
-        
-        auto elements = std::static_pointer_cast<SMLList>(subDataList[0])->elements;
-        if (elements.size() < 2) {
-            throw std::runtime_error("Error while parsing SML package. Expected at least two lists in subDataList, but found " + std::to_string(elements.size()));
-        }
+    auto dataLevel2Element = std::static_pointer_cast<SMLList>(dataRootElement->elements.at(3));
 
-        // Find all lists in the elements
-        std::vector<std::shared_ptr<ISMLNode>> listsInElements;
-        for (const auto& element : elements) {
-            if (element->getType() == 2) {
-                listsInElements.push_back(element);
-            }
-        }
-        
-        if (listsInElements.size() < 2) {
-            throw std::runtime_error("Error while parsing SML package. Not enough list elements found");
-        }
+    if (dataLevel2Element->elements.size() < 2) {
+        throw std::runtime_error("Error while parsing SML package. Third list does not contain enough elements");
+    }
 
-        // Get the second list which contains the values
-        auto valuesList = std::static_pointer_cast<SMLList>(listsInElements[1])->elements;
-        std::vector<std::shared_ptr<SMLList>> valueLists;
-        for (const auto& element : valuesList) {
-            if (element->getType() == 2) {
-                valueLists.push_back(std::static_pointer_cast<SMLList>(element));
-            }
-        }
-        
-        if (valueLists.size() < 2) {
-            throw std::runtime_error("Error while parsing SML package. Values list does not contain enough elements");
-        }
+    if (!dataLevel2Element->elements.at(1) ||
+        !std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4) ||
+        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(2) ||
+        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5)) {
+        throw std::runtime_error("Error while parsing SML package. Elements are null");
+    }
 
-        try {
-            auto result = std::make_shared<SMLData>();
-            
-            // Look for manufacturer ID
-            std::vector<uint8_t> manufacturerId1 = {0x07, 0x81, 0x81, 0xC7, 0x82, 0x03, 0xFF};
-            std::vector<uint8_t> manufacturerId2 = {0x07, 0x01, 0x00, 0x60, 0x32, 0x01, 0x01};
-            
-            for (const auto& valueList : valueLists) {
-                if (valueList->elements.size() > 5 && valueList->elements[0]->getType() == 1) {
-                    auto elementData = std::static_pointer_cast<SMLElement>(valueList->elements[0])->data;
-                    
-                    // Check manufacturer ID
-                    if (CompareArrays(elementData, manufacturerId1) || CompareArrays(elementData, manufacturerId2)) {
-                        result->ManufacturerId = SMLElementToString(std::static_pointer_cast<SMLElement>(valueList->elements[5]));
-                    }
-                    
-                    // Check device ID
-                    std::vector<uint8_t> deviceId1 = {0x07, 0x01, 0x00, 0x00, 0x00, 0x09, 0xFF};
-                    std::vector<uint8_t> deviceId2 = {0x07, 0x01, 0x00, 0x60, 0x01, 0x00, 0xFF};
-                    if (CompareArrays(elementData, deviceId1) || CompareArrays(elementData, deviceId2)) {
-                        result->DeviceId = SMLElementToString(std::static_pointer_cast<SMLElement>(valueList->elements[5]));
-                    }
-                    
-                    // Check consumption energy total
-                    std::vector<uint8_t> consumptionEnergyTotal = {0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF};
-                    if (CompareArrays(elementData, consumptionEnergyTotal)) {
-                        result->ConsumptionEnergyTotal = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements[5])) / 10000.0f;
-                    }
-                    
-                    // Check consumption energy 1
-                    std::vector<uint8_t> consumptionEnergy1 = {0x07, 0x01, 0x00, 0x01, 0x08, 0x01, 0xFF};
-                    if (CompareArrays(elementData, consumptionEnergy1)) {
-                        result->ConsumptionEnergy1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements[5])) / 10000.0f;
-                    }
-                    
-                    // Check consumption energy 2
-                    std::vector<uint8_t> consumptionEnergy2 = {0x07, 0x01, 0x00, 0x01, 0x08, 0x02, 0xFF};
-                    if (CompareArrays(elementData, consumptionEnergy2)) {
-                        result->ConsumptionEnergy2 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements[5])) / 10000.0f;
-                    }
-                    
-                    // Check feed energy total
-                    std::vector<uint8_t> feedEnergyTotal = {0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF};
-                    if (CompareArrays(elementData, feedEnergyTotal)) {
-                        result->FeedEnergyTotal = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements[5])) / 10000.0f;
-                    }
-                    
-                    // Check feed energy 1
-                    std::vector<uint8_t> feedEnergy1 = {0x07, 0x01, 0x00, 0x02, 0x08, 0x01, 0xFF};
-                    if (CompareArrays(elementData, feedEnergy1)) {
-                        result->FeedEnergy1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements[5])) / 10000.0f;
-                    }
-                    
-                    // Check feed energy 2
-                    std::vector<uint8_t> feedEnergy2 = {0x07, 0x01, 0x00, 0x02, 0x08, 0x02, 0xFF};
-                    if (CompareArrays(elementData, feedEnergy2)) {
-                        result->FeedEnergy2 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements[5])) / 10000.0f;
-                    }
-                    
-                    // Check effective power
-                    std::vector<uint8_t> effectivePower = {0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF};
-                    if (CompareArrays(elementData, effectivePower)) {
-                        result->EffectivePower = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements[5])) / 1.0f;
-                    }
-                }
-            }
-            
-            return result;
-        }
-        catch (const std::exception& ex) {
-            throw std::runtime_error("Error while parsing SML package. " + std::string(ex.what()));
-        }
+    try {
+        auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
+        auto tarif2Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(3))->elements.at(5));
+        auto LeistungsElement = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements.at(5));
+
+        // Print the content of std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4)) as HEX values, all HEX values should have 2 digits
+        // for (size_t i = 0; i < std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements.size(); ++i) {
+        //     for (size_t j = 0; j < std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements[i])->data.size(); ++j) {
+        //         Serial.print(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements[i])->data[j], HEX);
+        //         Serial.print(" ");
+        //     }
+        // }
+        // Serial.println();
+
+        int tarif1 = SMLElementToInteger(tarif1Element);
+        int tarif2 = SMLElementToInteger(tarif2Element);
+        int Leistung = SMLElementToInteger(LeistungsElement);
+
+        return std::make_shared<SMLData>(tarif1 / 10000.0f, tarif2 / 10000.0f, Leistung);
+
+    } catch (const std::exception& ex) {
+        throw std::runtime_error("Error while parsing SML package. " + std::string(ex.what()));
     }
     return nullptr;
 }
