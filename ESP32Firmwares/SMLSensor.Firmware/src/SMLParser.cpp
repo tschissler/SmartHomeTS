@@ -122,15 +122,15 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
         } 
 
         std::vector<uint8_t> feedEnergyTotalId = {0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF};
-        auto feeEnergyTotalElement = SMLParser::FindElementByData(valuesList, feedEnergyTotalId);
-        if (feeEnergyTotalElement) {
-            tarif2 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(consumptionEnergyTotalElement)->elements.at(5)));
+        auto feedEnergyTotalElement = SMLParser::FindElementByData(valuesList, feedEnergyTotalId);
+        if (feedEnergyTotalElement) {
+            tarif2 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(feedEnergyTotalElement)->elements.at(5)));
         } 
 
         std::vector<uint8_t> powerId = {0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF};
         auto powerElement = SMLParser::FindElementByData(valuesList, powerId);
         if (powerElement) {
-            Leistung = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(consumptionEnergyTotalElement)->elements.at(5)));
+            Leistung = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(powerElement)->elements.at(5)));
         } 
 
         // auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
