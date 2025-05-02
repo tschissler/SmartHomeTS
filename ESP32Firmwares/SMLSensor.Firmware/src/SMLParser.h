@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <memory>
 #include <algorithm>
+#include <optional>
 
 class ISMLNode {
 public:
@@ -29,10 +30,9 @@ public:
 
 class SMLData {
 public:
-    float Tarif1;
-    float Tarif2;
-    float Power;
-    SMLData(float t1, float t2, float p);
+    std::optional<float> Tarif1;
+    std::optional<float> Tarif2;
+    std::optional<float> Power;
 };
 
 class SMLParser {

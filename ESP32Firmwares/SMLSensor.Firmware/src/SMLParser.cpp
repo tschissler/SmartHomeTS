@@ -62,9 +62,6 @@ SMLElement::SMLElement(std::vector<uint8_t> d) : data(d) {}
 // SMLList Constructor
 SMLList::SMLList(std::vector<std::shared_ptr<ISMLNode>> e) : elements(e) {}
 
-// SMLData Constructor
-SMLData::SMLData(float t1, float t2, float p) : Tarif1(t1), Tarif2(t2), Power(p) {}
-
 // SMLParser Methods
 std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
     std::vector<std::shared_ptr<ISMLNode>> elements = ExtractNodes(data);
@@ -143,13 +140,6 @@ int SMLParser::SMLElementToInteger(std::shared_ptr<SMLElement> byteData) {
         Serial.println("Error: byteData is null");
         throw std::runtime_error("byteData is null");
     }
-
-    // Print byteData as Hex values
-    // for (size_t i = 0; i < byteData->data.size(); ++i) {
-    //     Serial.print(byteData->data[i], HEX);
-    //     Serial.print(" ");
-    // }
-    // Serial.println();
 
     if (byteData->data.size() < 2) {
         Serial.println("Error: byteData size is too small");

@@ -242,20 +242,32 @@ void loop() {
                 // Check if the parsing was successful
                 if (smlData) {
                     // Output the parsed data
-                    Serial.print("Tarif1: ");
-                    Serial.print(smlData->Tarif1);
-                    Serial.print(" kWh\t");
-                    Serial.print("Tarif2: ");
-                    Serial.print(smlData->Tarif2);
-                    Serial.print(" kWh\t");
-                    Serial.print("Power: ");
-                    Serial.print(smlData->Power);
-                    Serial.println(" W");
+                    if (smlData->Tarif1.has_value()) {
+                        Serial.print("Tarif1: ");
+                        Serial.print(smlData->Tarif1.value());
+                        Serial.print(" kWh\t");
+                      } 
+                    if (smlData->Tarif2.has_value()) {
+                        Serial.print("Tarif2: ");
+                        Serial.print(smlData->Tarif2.value());
+                        Serial.print(" kWh\t");
+                      }
+                    if (smlData->Power.has_value()) {
+                        Serial.print("Power: ");
+                        Serial.print(smlData->Power.value());
+                        Serial.println(" W");
+                      }
 
                     StaticJsonDocument<200> jsonDoc;
-                    jsonDoc["Netzbezug"] = smlData->Tarif1;
-                    jsonDoc["Netzeinspeissung"] = smlData->Tarif2;
-                    jsonDoc["NetzanschlussMomentanleistung"] = smlData->Power;
+                    if (smlData->Tarif1.has_value()) {
+                      jsonDoc["Tarif1"] = smlData->Tarif1.value();
+                    }
+                    if (smlData->Tarif2.has_value()) {
+                      jsonDoc["Tarif2"] = smlData->Tarif2.value();
+                    }
+                    if (smlData->Power.has_value()) {
+                      jsonDoc["Power"] = smlData->Power.value();
+                    }
                     
                     String jsonString;
                     serializeJson(jsonDoc, jsonString);
