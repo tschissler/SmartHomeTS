@@ -8,24 +8,30 @@
 #include <algorithm>
 #include <optional>
 
+// Enum für die Knotentypen, um magische Zahlen zu vermeiden
+enum class SMLNodeType {
+    Element = 1,
+    List = 2
+};
+
 class ISMLNode {
 public:
     virtual ~ISMLNode() = default;
-    virtual int getType() const = 0;
+    virtual SMLNodeType getType() const = 0;
 };
 
 class SMLElement : public ISMLNode {
 public:
     std::vector<uint8_t> data;
     SMLElement(std::vector<uint8_t> d);
-    int getType() const override { return 1; }
+    SMLNodeType getType() const override { return SMLNodeType::Element; }
 };
 
 class SMLList : public ISMLNode {
 public:
     std::vector<std::shared_ptr<ISMLNode>> elements;
     SMLList(std::vector<std::shared_ptr<ISMLNode>> e);
-    int getType() const override { return 2; }
+    SMLNodeType getType() const override { return SMLNodeType::List; }
 };
 
 class SMLData {

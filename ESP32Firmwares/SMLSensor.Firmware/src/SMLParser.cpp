@@ -64,25 +64,21 @@ SMLList::SMLList(std::vector<std::shared_ptr<ISMLNode>> e) : elements(e) {}
 
 // SMLParser Methods
 std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
-    std::vector<std::shared_ptr<ISMLNode>> elements = ExtractNodes(data);
+    std::vector<std::shared_ptr<ISMLNode>> smlMessages = ExtractNodes(data);
     
-    if (elements.empty()) {
-        throw std::runtime_error("Error while parsing SML package. No elements could be identified");
+    if (smlMessages.empty()) {
+        throw std::runtime_error("Error while parsing SML package. No SML messages could be identified");
     }
 
-    if (elements.size() < 2) {
-        throw std::runtime_error("Error while parsing SML package. Expected 2 elements on root level, but found " + std::to_string(elements.size()));
+    if (smlMessages.size() < 2) {
+        throw std::runtime_error("Error while parsing SML package. Expected at least 2 SML messages, but found " + std::to_string(smlMessages.size()));
     }
 
-    if (!elements.at(1)) {
-        throw std::runtime_error("Error while parsing SML package. Second element on root level is null");
-    }
-
-    if (elements.at(1)->getType() != 2) {
+    if (smlMessages.at(1)->getType() != SMLNodeType::List) {
         throw std::runtime_error("Error while parsing SML package. Second element on root level is not a list");
     }
 
-    auto dataRootElement = std::static_pointer_cast<SMLList>(elements.at(1));
+    auto dataRootElement = std::static_pointer_cast<SMLList>(smlMessages.at(1));
 
     if (dataRootElement->elements.size() < 4) {
         throw std::runtime_error("Error while parsing SML package. Second list does not contain enough elements");
@@ -92,7 +88,7 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
         throw std::runtime_error("Error while parsing SML package. Fourth element on second level is null");
     }
 
-    if (dataRootElement->elements.at(3)->getType() != 2) {
+    if (dataRootElement->elements.at(3)->getType() != SMLNodeType::List) {
         throw std::runtime_error("Error while parsing SML package. Fourth element on second level is not a list");
     }
 
