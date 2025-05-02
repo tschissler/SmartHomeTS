@@ -88,24 +88,54 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
         throw std::runtime_error("Error while parsing SML package. Fourth element on second SML message is not a list");
     }
 
+    // That SML message should contain exactly one list element (72)
     auto dataList = FilterSMLLists(dataSMLMessage->elements).at(0);
     //std::static_pointer_cast<SMLList>(dataSMLMessage->elements.at(3));
-
-    if (dataList->elements.size() < 2) {
-        throw std::runtime_error("Error while parsing SML package. Third list does not contain enough elements");
+    if (dataList->elements.size() != 1) {
+        throw std::runtime_error("Error while parsing SML package. Expected exactly one list in the SML data message but found " + dataList->elements.size());
     }
 
-    if (!dataList->elements.at(1) ||
-        !std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4) ||
-        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2) ||
-        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5)) {
-        throw std::runtime_error("Error while parsing SML package. Elements are null");
+    // In that list element we again select all sub-elements that are lists and continue by using the first list we find (77)
+    auto subDataList = std::static_pointer_cast<SMLList>(FilterSMLLists(std::static_pointer_cast<SMLList>(dataList->elements.at(0))->elements).at(0))->elements;
+    if (subDataList.size() < 2) {
+        throw std::runtime_error("Error while parsing SML package. Expected at least two lists in subDataLIst, but found " + subDataList.size());
     }
+    
 
+    // In that list we again search for all list elements and take the second one (77).
+    // This is now the list that finally contains the data objects.
+    // The data objects themselves are again list elements containing an identifier at the first element and the value in the sixth element
+    auto valuesList = std::static_pointer_cast<SMLList>(FilterSMLLists(subDataList).at(1))->elements;
+    if (valuesList.size() < 2) {
+        throw std::runtime_error("Error while parsing SML package. Values list does not contain enough elements");
+    }
+        
     try {
-        auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
-        auto tarif2Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(3))->elements.at(5));
-        auto LeistungsElement = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(4))->elements.at(5));
+        int tarif1 = 0;
+        int tarif2 = 0;
+        int Leistung = 0;
+
+        std::vector<uint8_t> targetBytes = {0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF};
+        auto valueElement = SMLParser::FindElementByData(valuesList, targetBytes);
+        if (valueElement) {
+            tarif1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(valueElement)->elements.at(5)));
+        } 
+
+        std::vector<uint8_t> targetBytes2 = {0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF};
+        auto valueElement2 = SMLParser::FindElementByData(valuesList, targetBytes2);
+        if (valueElement2) {
+            tarif1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(valueElement)->elements.at(5)));
+        } 
+
+        std::vector<uint8_t> targetBytes3 = {0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF};
+        auto valueElement3 = SMLParser::FindElementByData(valuesList, targetBytes3);
+        if (valueElement3) {
+            tarif1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(valueElement)->elements.at(5)));
+        } 
+
+        // auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
+        // auto tarif2Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(3))->elements.at(5));
+        // auto LeistungsElement = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(4))->elements.at(5));
 
         // Print the content of std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4)) as HEX values, all HEX values should have 2 digits
         // for (size_t i = 0; i < std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements.size(); ++i) {
@@ -116,9 +146,9 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
         // }
         // Serial.println();
 
-        int tarif1 = SMLElementToInteger(tarif1Element);
-        int tarif2 = SMLElementToInteger(tarif2Element);
-        int Leistung = SMLElementToInteger(LeistungsElement);
+        // int tarif1 = SMLElementToInteger(tarif1Element);
+        // int tarif2 = SMLElementToInteger(tarif2Element);
+        // int Leistung = SMLElementToInteger(LeistungsElement);
 
         return std::make_shared<SMLData>(tarif1 / 10000.0f, tarif2 / 10000.0f, Leistung);
 
@@ -293,4 +323,28 @@ std::vector<std::shared_ptr<SMLList>> SMLParser::FilterSMLLists(const std::vecto
     }
     
     return result;
+}
+
+std::shared_ptr<SMLList> SMLParser::FindElementByData(
+    const std::vector<std::shared_ptr<ISMLNode>>& valuesList,
+    const std::vector<uint8_t>& targetData) {
+    
+    auto it = std::find_if(valuesList.begin(), valuesList.end(),
+        [&targetData](const std::shared_ptr<ISMLNode>& node) {
+            if (!node || node->getType() != SMLNodeType::List) {
+                return false;
+            }
+            
+            auto list = std::static_pointer_cast<SMLList>(node);
+            if (list->elements.empty() || 
+                !list->elements[0] || 
+                list->elements[0]->getType() != SMLNodeType::Element) {
+                return false;
+            }
+            
+            auto element = std::static_pointer_cast<SMLElement>(list->elements[0]);
+            return element->data == targetData;
+        });
+    
+    return (it != valuesList.end()) ? std::static_pointer_cast<SMLList>(*it) : nullptr;
 }
