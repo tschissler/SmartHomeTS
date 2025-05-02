@@ -260,13 +260,13 @@ void loop() {
 
                     StaticJsonDocument<200> jsonDoc;
                     if (smlData->Tarif1.has_value()) {
-                      jsonDoc["Tarif1"] = smlData->Tarif1.value();
+                      jsonDoc["Netzbezug"] = smlData->Tarif1.value();
                     }
                     if (smlData->Tarif2.has_value()) {
-                      jsonDoc["Tarif2"] = smlData->Tarif2.value();
+                      jsonDoc["Netzeinspeissung"] = smlData->Tarif2.value();
                     }
                     if (smlData->Power.has_value()) {
-                      jsonDoc["Power"] = smlData->Power.value();
+                      jsonDoc["NetzanschlussMomentanleistung"] = smlData->Power.value();
                     }
                     
                     String jsonString;
