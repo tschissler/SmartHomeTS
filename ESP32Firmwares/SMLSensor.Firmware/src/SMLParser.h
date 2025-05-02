@@ -45,6 +45,7 @@ class SMLParser {
 public:
     static std::shared_ptr<SMLData> Parse(std::vector<uint8_t>& data);
     static bool VerifyCRC16(const std::vector<uint8_t>& buffer);
+    static std::vector<std::shared_ptr<SMLList>> FilterSMLLists(const std::vector<std::shared_ptr<ISMLNode>>& nodes);
  
 private:
     static int SMLElementToInteger(std::shared_ptr<SMLElement> byteData);

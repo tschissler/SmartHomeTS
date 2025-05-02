@@ -69,46 +69,43 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
     if (smlMessages.empty()) {
         throw std::runtime_error("Error while parsing SML package. No SML messages could be identified");
     }
-
     if (smlMessages.size() < 2) {
         throw std::runtime_error("Error while parsing SML package. Expected at least 2 SML messages, but found " + std::to_string(smlMessages.size()));
     }
-
     if (smlMessages.at(1)->getType() != SMLNodeType::List) {
         throw std::runtime_error("Error while parsing SML package. Second element on root level is not a list");
     }
 
-    auto dataRootElement = std::static_pointer_cast<SMLList>(smlMessages.at(1));
-
-    if (dataRootElement->elements.size() < 4) {
+    // The whole data package delivers multiple SML messages but we are only interested in the second one
+    auto dataSMLMessage = std::static_pointer_cast<SMLList>(smlMessages.at(1));
+    if (dataSMLMessage->elements.size() < 4) {
         throw std::runtime_error("Error while parsing SML package. Second list does not contain enough elements");
     }
-
-    if (!dataRootElement->elements.at(3)) {
-        throw std::runtime_error("Error while parsing SML package. Fourth element on second level is null");
+    if (!dataSMLMessage->elements.at(3)) {
+        throw std::runtime_error("Error while parsing SML package. Fourth element on second SML message is null");
+    }
+    if (dataSMLMessage->elements.at(3)->getType() != SMLNodeType::List) {
+        throw std::runtime_error("Error while parsing SML package. Fourth element on second SML message is not a list");
     }
 
-    if (dataRootElement->elements.at(3)->getType() != SMLNodeType::List) {
-        throw std::runtime_error("Error while parsing SML package. Fourth element on second level is not a list");
-    }
+    auto dataList = FilterSMLLists(dataSMLMessage->elements).at(0);
+    //std::static_pointer_cast<SMLList>(dataSMLMessage->elements.at(3));
 
-    auto dataLevel2Element = std::static_pointer_cast<SMLList>(dataRootElement->elements.at(3));
-
-    if (dataLevel2Element->elements.size() < 2) {
+    if (dataList->elements.size() < 2) {
         throw std::runtime_error("Error while parsing SML package. Third list does not contain enough elements");
     }
 
-    if (!dataLevel2Element->elements.at(1) ||
-        !std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4) ||
-        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(2) ||
-        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5)) {
+    if (!dataList->elements.at(1) ||
+        !std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4) ||
+        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2) ||
+        !std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5)) {
         throw std::runtime_error("Error while parsing SML package. Elements are null");
     }
 
     try {
-        auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
-        auto tarif2Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(3))->elements.at(5));
-        auto LeistungsElement = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements.at(5));
+        auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
+        auto tarif2Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(3))->elements.at(5));
+        auto LeistungsElement = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(4))->elements.at(5));
 
         // Print the content of std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4)) as HEX values, all HEX values should have 2 digits
         // for (size_t i = 0; i < std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements.size(); ++i) {
@@ -280,4 +277,20 @@ std::vector<std::shared_ptr<ISMLNode>> SMLParser::ExtractNodes(std::vector<uint8
     }
 
     return elements;
+}
+
+// Filtert alle Elemente vom Typ SMLList aus einer Liste von ISMLNode-Elementen
+std::vector<std::shared_ptr<SMLList>> SMLParser::FilterSMLLists(const std::vector<std::shared_ptr<ISMLNode>>& nodes) {
+    std::vector<std::shared_ptr<SMLList>> result;
+    result.reserve(nodes.size()); // Reserviere Speicher für Effizienz
+    
+    // Für jedes Node-Element prüfen, ob es vom Typ SMLList ist
+    for (const auto& node : nodes) {
+        if (node && node->getType() == SMLNodeType::List) {
+            // Umwandeln und zum Ergebnisvektor hinzufügen
+            result.push_back(std::static_pointer_cast<SMLList>(node));
+        }
+    }
+    
+    return result;
 }
