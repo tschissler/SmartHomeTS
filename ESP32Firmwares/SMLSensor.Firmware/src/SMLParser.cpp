@@ -89,14 +89,14 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
     }
 
     // That SML message should contain exactly one list element (72)
-    auto dataList = FilterSMLLists(dataSMLMessage->elements).at(0);
+    auto dataList = FilterSMLLists(dataSMLMessage->elements);
     //std::static_pointer_cast<SMLList>(dataSMLMessage->elements.at(3));
-    if (dataList->elements.size() != 1) {
-        throw std::runtime_error("Error while parsing SML package. Expected exactly one list in the SML data message but found " + dataList->elements.size());
+    if (dataList.size() != 1) {
+        throw std::runtime_error("Error while parsing SML package. Expected exactly one list in the SML data message but found " + dataList.size());
     }
 
     // In that list element we again select all sub-elements that are lists and continue by using the first list we find (77)
-    auto subDataList = std::static_pointer_cast<SMLList>(FilterSMLLists(std::static_pointer_cast<SMLList>(dataList->elements.at(0))->elements).at(0))->elements;
+    auto subDataList = std::static_pointer_cast<SMLList>(FilterSMLLists(std::static_pointer_cast<SMLList>(dataList.at(0))->elements).at(0))->elements;
     if (subDataList.size() < 2) {
         throw std::runtime_error("Error while parsing SML package. Expected at least two lists in subDataLIst, but found " + subDataList.size());
     }
