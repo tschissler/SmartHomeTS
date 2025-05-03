@@ -55,6 +55,7 @@ private:
     static std::vector<std::shared_ptr<ISMLNode>> ExtractNodes(std::vector<uint8_t>& data, int& index, int listitems);
     static uint16_t ComputeCRC16(const std::vector<uint8_t>& data, size_t offset, size_t length);
     static std::shared_ptr<SMLList> FindElementByData(const std::vector<std::shared_ptr<ISMLNode>>& valuesList, const std::vector<uint8_t>& targetData);
+    static float GetScaledValueFromSMLList(const std::shared_ptr<SMLList> &valueList);
 };
 
 #endif // SMLPARSER_H

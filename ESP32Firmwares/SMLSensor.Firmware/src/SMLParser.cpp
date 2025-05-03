@@ -111,26 +111,29 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
     }
         
     try {
-        int tarif1 = 0;
-        int tarif2 = 0;
-        int Leistung = 0;
+        float tarif1 = 0;
+        float tarif2 = 0;
+        float Leistung = 0;
 
         std::vector<uint8_t> consumptionEnergyTotalId = {0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF};
         auto consumptionEnergyTotalElement = SMLParser::FindElementByData(valuesList, consumptionEnergyTotalId);
         if (consumptionEnergyTotalElement) {
-            tarif1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(consumptionEnergyTotalElement)->elements.at(5)));
+            tarif1 = SMLParser::GetScaledValueFromSMLList(consumptionEnergyTotalElement);
+            //tarif1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(consumptionEnergyTotalElement)->elements.at(5)));
         } 
 
         std::vector<uint8_t> feedEnergyTotalId = {0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF};
         auto feedEnergyTotalElement = SMLParser::FindElementByData(valuesList, feedEnergyTotalId);
         if (feedEnergyTotalElement) {
-            tarif2 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(feedEnergyTotalElement)->elements.at(5)));
+            tarif2 = SMLParser::GetScaledValueFromSMLList(feedEnergyTotalElement);
+          // tarif2 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(feedEnergyTotalElement)->elements.at(5)));
         } 
 
         std::vector<uint8_t> powerId = {0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF};
         auto powerElement = SMLParser::FindElementByData(valuesList, powerId);
         if (powerElement) {
-            Leistung = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(powerElement)->elements.at(5)));
+            Leistung = SMLParser::GetScaledValueFromSMLList(powerElement);
+            //Leistung = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(powerElement)->elements.at(5)));
         } 
 
         // auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
@@ -347,4 +350,20 @@ std::shared_ptr<SMLList> SMLParser::FindElementByData(
         });
     
     return (it != valuesList.end()) ? std::static_pointer_cast<SMLList>(*it) : nullptr;
+}
+
+float SMLParser::GetScaledValueFromSMLList(const std::shared_ptr<SMLList>& valueList) {
+    if (!valueList || valueList->elements.size() < 6) {
+        throw std::runtime_error("SML value list does not have enough elements for scaling");
+    }
+    // Scaler is usually at index 4
+    auto scalerElement = std::static_pointer_cast<SMLElement>(valueList->elements.at(4));
+    int scaler = 0;
+    if (scalerElement && scalerElement->data.size() >= 2) {
+        // Only 1-byte signed int expected for scaler
+        scaler = *reinterpret_cast<const int8_t*>(&scalerElement->data[1]);
+    }
+    // Value is at index 5
+    int value = SMLElementToInteger(std::static_pointer_cast<SMLElement>(valueList->elements.at(5)));
+    return static_cast<float>(value) * powf(10.0f, static_cast<float>(scaler));
 }
