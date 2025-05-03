@@ -153,7 +153,7 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
         // int tarif2 = SMLElementToInteger(tarif2Element);
         // int Leistung = SMLElementToInteger(LeistungsElement);
 
-        return std::make_shared<SMLData>(tarif1 / 10000.0f, tarif2 / 10000.0f, Leistung);
+        return std::make_shared<SMLData>(tarif1 / 1000.0f, tarif2 / 1000.0f, Leistung);
 
     } catch (const std::exception& ex) {
         throw std::runtime_error("Error while parsing SML package. " + std::string(ex.what()));
