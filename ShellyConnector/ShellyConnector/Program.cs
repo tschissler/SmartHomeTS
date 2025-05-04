@@ -63,7 +63,7 @@ timer.Elapsed += async (sender, e) =>
             return;
         }
         var jsonPayload = JsonConvert.SerializeObject(powerData);
-        await mqttClient.PublishAsync($"data/strom/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
+        await mqttClient.PublishAsync($"data/electricity/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
     });
 
     await Task.WhenAll(tasks);
