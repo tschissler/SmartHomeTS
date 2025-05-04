@@ -38,8 +38,9 @@ static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 
-static String baseTopic = "daten";
+static String baseTopic = "data/etectricity";
 static String sensorName = "";
+static String location = "";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/SMLSensor";
 static String mqtt_ConfigTopic = "config/SMLSensor/Sensorname/";
@@ -64,6 +65,8 @@ void mqttCallback(String &topic, String &payload) {
 
     if (topic == mqtt_ConfigTopic) {
       sensorName = payload;
+      location = payload;
+      location.replace("Smartmeter_", "");
       Serial.println("Sensor name set to: " + sensorName);
       return;
     } 
@@ -272,7 +275,7 @@ void loop() {
                     String jsonString;
                     serializeJson(jsonDoc, jsonString);
                     
-                    mqttSuccess = mqttClientLib->publish((baseTopic + "/strom/" + sensorName + "/Zaehler").c_str(), jsonString, true, 0);
+                    mqttSuccess = mqttClientLib->publish((baseTopic + "/" + location + "/Smartmeter").c_str(), jsonString, true, 0);
                     if (mqttSuccess) {
                       digitalWrite(ledPin, HIGH); 
                       delay(5);
