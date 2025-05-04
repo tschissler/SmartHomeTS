@@ -269,7 +269,7 @@ void loop() {
                       jsonDoc["Netzeinspeissung"] = smlData->Tarif2.value();
                     }
                     if (smlData->Power.has_value()) {
-                      jsonDoc["NetzanschlussMomentanleistung"] = smlData->Power.value();
+                      jsonDoc["NetzanschlussMomentanleistung"] = String(smlData->Power.value(), 1);
                     }
                     
                     String jsonString;
