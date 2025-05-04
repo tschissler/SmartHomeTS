@@ -62,7 +62,7 @@ namespace ShellyConnector
                     Location : Location.M1
                 ),
                 new ShellyDevice(
-                    DeviceName : "Wärmepumpe_M3",
+                    DeviceName : "Warmwasser_M3",
                     DeviceType : DeviceType.ShellyPlugS,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 165 }),
                     Location : Location.M3
