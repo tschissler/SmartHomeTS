@@ -275,7 +275,7 @@ void loop() {
                     String jsonString;
                     serializeJson(jsonDoc, jsonString);
                     
-                    mqttSuccess = mqttClientLib->publish((baseTopic + "/" + location + "/" + sensorName).c_str(), jsonString, true, 0);
+                    mqttSuccess = mqttClientLib->publish((baseTopic + "/" + location + "/Smartmeter/" + sensorName).c_str(), jsonString, true, 0);
                     if (mqttSuccess) {
                       digitalWrite(ledPin, HIGH); 
                       delay(5);
