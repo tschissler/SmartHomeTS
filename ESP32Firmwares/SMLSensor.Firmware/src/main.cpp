@@ -38,7 +38,7 @@ static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 
-static String baseTopic = "data/etectricity";
+static String baseTopic = "data/electricity";
 static String sensorName = "";
 static String location = "";
 const String mqtt_broker = "smarthomepi2";
