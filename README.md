@@ -12,6 +12,17 @@ The primary goal of this repository is to:
 
 While the code is tailored specifically to my equipment, devices, and needs, it is shared here to inspire others. Feel free to explore, copy, and adapt anything you find useful.
 
+## Currently implemented functionality
+The current state of my SmartHome system covers these capabilities:
+* Measuring water-level in cisterne.
+* Measuring energy consumption, grid feed and current power from digital meter.
+* Measuring temperatures and humidity at different locations.
+* Control charging of electric vehicles based on PV-production.
+* Visualize current charging situation and other data of electric vehicles (BMW, Mini, VW)
+* Read current PV production and battery level from Enphase systems.
+* Control RGB LED stribes.
+* Read energy consumption via Shelly devices.
+
 ## Technologies Used
 
 This repository showcases a variety of cutting-edge technologies, each solving specific problems and offering opportunities for learning:
