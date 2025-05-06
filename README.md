@@ -183,7 +183,6 @@ These workflows are designed to provide a robust and automated pipeline, reducin
 ## External Resources
 
 - [bimmer_connected Documentation](https://bimmer-connected.readthedocs.io/): For BMW/Mini integration.
-- [Home Assistant](https://www.home-assistant.io/): Smart home automation platform.
 - [Syncfusion Blazor Components](https://www.syncfusion.com/blazor-components): UI components for Blazor.
 - [InfluxDB Documentation](https://docs.influxdata.com/): For time-series data management.
 - [MQTT Protocol](https://mqtt.org/): Lightweight messaging protocol for IoT.
