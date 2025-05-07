@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "DataAggregatorFunctions": {
-      "commandName": "Project",
-      "commandLineArgs": "--port 7281",
-      "launchBrowser": false
-    }
-  }
-}

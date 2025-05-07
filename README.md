@@ -12,6 +12,17 @@ The primary goal of this repository is to:
 
 While the code is tailored specifically to my equipment, devices, and needs, it is shared here to inspire others. Feel free to explore, copy, and adapt anything you find useful.
 
+## Currently implemented functionality
+The current state of my SmartHome system covers these capabilities:
+* Measuring water-level in cisterne.
+* Measuring energy consumption, grid feed and current power from digital meter.
+* Measuring temperatures and humidity at different locations.
+* Control charging of electric vehicles based on PV-production.
+* Visualize current charging situation and other data of electric vehicles (BMW, Mini, VW)
+* Read current PV production and battery level from Enphase systems.
+* Control RGB LED stribes.
+* Read energy consumption via Shelly devices.
+
 ## Technologies Used
 
 This repository showcases a variety of cutting-edge technologies, each solving specific problems and offering opportunities for learning:
@@ -22,6 +33,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 - **PlatformIO**: A professional collaborative platform for embedded development fully integrated in VS Code. It is used in the ESP32Firmwares projects to simplify the development, deployment (flashing) of firmware for IoT devices. Learn more at [PlatformIO](https://platformio.org/).
 - **MQTT**: A lightweight messaging protocol ideal for IoT. It enables seamless communication between devices and services. Learn more at [MQTT.org](https://mqtt.org/). Switching from REST API calls to MQTT made the solution much more robust and resilient by reducing direct dependencies.
 ![Screenshot of MQTT Explorer demonstrating the basics of the MQTT messages](./Docs/images/image3.png)
+- **SML - Smart Meter Language Protocol**: A protocol that is used by smart meters to communicate data. Currently the SML protocol is used in the [SMLSensor project](https://github.com/tschissler/SmartHomeTS/tree/main/ESP32Firmwares/SMLSensor.Firmware) to read SML data via IR-Signals and send these values as MQTT messages.
 - **InfluxDB**: A time-series database optimized for storing and querying time-stamped data. This repository uses InfluxDB to manage energy consumption and climate metrics, showcasing its power in data analytics. Learn more at [InfluxDB Documentation](https://docs.influxdata.com/).
 - **Model Context Protocol (MCP)**: A protocol for AI tools that allows for structured retrieval and manipulation of data. This repository features a C# MCP server for InfluxDB, enabling AI assistants to directly query schema and sample data to allow better assitance in creating flux queries. Learn more at [Model Context Protocol](https://github.com/microsoft/node-model-context-protocol).
 - **Kubernetes**: A container orchestration platform that ensures scalability and reliability. Kubernetes is used across multiple projects to manage containerized applications, making it a must-learn for modern DevOps. Learn more at [Kubernetes.io](https://kubernetes.io/). In this project I uses [microk8s](https://microk8s.io/) to host a kubernetes cluster on a set of Raspberry Pis. 
@@ -171,7 +183,6 @@ These workflows are designed to provide a robust and automated pipeline, reducin
 ## External Resources
 
 - [bimmer_connected Documentation](https://bimmer-connected.readthedocs.io/): For BMW/Mini integration.
-- [Home Assistant](https://www.home-assistant.io/): Smart home automation platform.
 - [Syncfusion Blazor Components](https://www.syncfusion.com/blazor-components): UI components for Blazor.
 - [InfluxDB Documentation](https://docs.influxdata.com/): For time-series data management.
 - [MQTT Protocol](https://mqtt.org/): Lightweight messaging protocol for IoT.

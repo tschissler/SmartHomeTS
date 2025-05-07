@@ -1,30 +1,31 @@
 $fn = 100;
 
-Magnet_Outer_Diameter = 27.0; // mm
-Magnet_Inner_Diameter = 16.0; // mm
-Magnet_Height = 5.0; // mm
+Magnet_Outer_Diameter = 27.0;
+Magnet_Inner_Diameter = 16.0;
+Magnet_Height = 5.0;
 
-Border_Bottom = 1.0; // mm
-Border_Side = 2.0; // mm
+Border_Bottom = 1.0;
+Border_Side = 2.0;
 
-LED_Diameter = 5.0; // mm
-LED_Full_Distance = 12.0; // mm
-LED_Height = 8.0; // mm
-LED_Z_Offset = LED_Height - Magnet_Height; // mm
+LED_Diameter = 5.0;
+LED_Full_Distance = 12.0;
+LED_Height = 8.0;
+LED_Z_Offset = LED_Height - Magnet_Height;
+StatusLED_Diameter = 5; // This is the LED in the cap
 
-Corner_Radius = 2.0; // mm
-InnerWidth_X = 25.0; // mm
-InnerWidth_Y = 25.0; // mm
-InnerHeight = 19.0; // mm
+Corner_Radius = 2.0;
+InnerWidth_X = 25.0;
+InnerWidth_Y = 25.0;
+InnerHeight = 19.0;
 
-USBPort_Width = 13.0; // mm
-USBPort_Height = 6.0; // mm
-USBPort_Offset_Y = 11.5; // mm
-USBPort_Offset_Z = 13.5; // mm
+USBPort_Width = 14.0;
+USBPort_Height = 7.0;
+USBPort_Offset_Y = 11.5;
+USBPort_Offset_Z = 12.5;
 
 //MagnetRing();
-//ModuleBox();
-Cap();
+ModuleBox();
+//Cap();
 
 module Cap()
 {
@@ -33,7 +34,7 @@ module Cap()
         difference()
         {
             roundrect([InnerWidth_X + Border_Side, InnerWidth_Y + Border_Side], Corner_Radius, height=Border_Bottom);
-            cylinder(h=100, d=3, center = true);
+            cylinder(h=100, d=StatusLED_Diameter, center = true);
         }
     }
     translate([0, 0, 2*Border_Bottom])
@@ -56,9 +57,8 @@ module MagnetRing()
             translate([0, 0, Border_Bottom])
             {
                 Magnet(Magnet_Height + LED_Z_Offset);
-            }
-            LEDHole(1);
-            LEDHole(-1);
+            }            
+            cylinder(h = Magnet_Height + Border_Bottom +  LED_Z_Offset, d = Magnet_Inner_Diameter - Border_Side);
         }
     }
 }
@@ -77,7 +77,7 @@ module ModuleBox()
 
 module LEDHole(direction)
 {
-    translate([(LED_Full_Distance-LED_Diameter)/2*direction, 0, 0])
+    translate([0, (LED_Full_Distance-LED_Diameter)/2*direction, 0])
     {
         cylinder(h = 10.0, d = LED_Diameter);
     }
