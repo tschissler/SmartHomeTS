@@ -121,8 +121,6 @@ void setup() {
   Serial.print("SML Sensor Version:");
   Serial.println(version);
 
-  Serial.println(chipID);
-
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
 
