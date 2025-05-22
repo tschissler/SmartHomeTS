@@ -1,4 +1,4 @@
-name: TemperatureSensorFirmware2 CD
+name: TemperatureSensor2Firmware CD
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       blob_url: ${{ steps.construct_blob_url.outputs.blob_url }}
     defaults:
       run:
-        working-directory: ESP32Firmwares/TemperatureSensor.Firmware
+        working-directory: ESP32Firmwares/TemperatureSensor2.Firmware
   
     steps:
     - uses: actions/checkout@v3
