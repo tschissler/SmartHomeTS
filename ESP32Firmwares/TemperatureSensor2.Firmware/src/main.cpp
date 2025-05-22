@@ -48,6 +48,17 @@ const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
 static String mqtt_ConfigTopic = "config/TemperaturSensor2/Sensorname/";
 
+void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
+  pixels.setPixelColor(0, pixels.Color(r, g, b));
+  pixels.show();
+}
+
+void blinkLed(uint8_t r, uint8_t g, uint8_t b) {
+  setLedColor(r, g, b);
+  delay(BLINK_DURATION);
+  setLedColor(0, 0, 0);
+}
+
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
     int lastDotIndex = url.lastIndexOf('.');
@@ -106,17 +117,6 @@ void connectToMQTT() {
   }
   mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
-}
-
-void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
-  pixels.setPixelColor(0, pixels.Color(r, g, b));
-  pixels.show();
-}
-
-void blinkLed(uint8_t r, uint8_t g, uint8_t b) {
-  setLedColor(r, g, b);
-  delay(BLINK_DURATION);
-  setLedColor(0, 0, 0);
 }
 
 void readSensorAndPublish() {
