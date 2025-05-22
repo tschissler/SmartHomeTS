@@ -204,6 +204,6 @@ void loop() {
       connectToMQTT();
     }
     bool pingSuccess = Ping.ping(mqtt_broker.c_str());
-    blinkLed(pingSuccess ? 0 : 255, 0, pingSuccess ? 255 : 0);
+    blinkLed(pingSuccess ? 0 : 255, 0, pingSuccess ? 50 : 0);
   }
 }
