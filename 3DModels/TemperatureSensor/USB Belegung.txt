@@ -1,0 +1,10 @@
+USB Belegung
+
+----------
+A  B  C  D
+##########
+
+A = GND  gelb
+B = 
+C = 
+D = 5V   rot
