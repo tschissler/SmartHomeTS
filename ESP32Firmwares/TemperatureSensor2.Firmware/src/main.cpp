@@ -76,7 +76,8 @@ void mqttCallback(String &topic, String &payload) {
           Serial.println("OTA disabled, ignoring message");
         return;
       }
-  
+
+      setLedColor(255, 255, 0); // Set LED color to yellow indicating OTA update
       String updateVersion = extractVersionFromUrl(payload);
       Serial.println("Current firmware version is " + String(version));
       Serial.println("New firmware version is " + updateVersion);
