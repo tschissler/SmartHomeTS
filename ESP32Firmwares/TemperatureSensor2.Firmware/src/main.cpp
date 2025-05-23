@@ -35,7 +35,7 @@ Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_RGB + NEO_KHZ800);
 DHT dht(DHTPIN, DHTTYPE);
 
 static bool otaInProgress = false;
-static bool otaEnable = false;
+static bool otaEnable = OTA_ENABLED != "false";
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
