@@ -250,8 +250,7 @@ void loop() {
     }
 
     // Transmit data every minute
-    if (timeClient.getMinutes() != lastMQTTSentMinute) {
-      lastMQTTSentMinute = timeClient.getMinutes();
+    if (readingCount >= MAX_READINGS) {
       publishSensorData();
     }
 
