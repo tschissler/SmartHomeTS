@@ -42,7 +42,7 @@ static int lastMQTTSentMinute = 0;
 
 // Configuration for data collection
 static const int MAX_READINGS = 12;  // 5 seconds * 12 = 60 seconds (1 minute)
-static const unsigned long READING_INTERVAL = 5000;  // 5 seconds between readings
+static const unsigned long READING_INTERVAL = 1000;  // 5 seconds between readings
 static unsigned long lastReadingTime = 0;
 
 struct SensorData {
@@ -261,5 +261,5 @@ void loop() {
       connectToMQTT();
     }
   }
-  delay(500);
+  delay(100);
 }
