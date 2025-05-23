@@ -41,8 +41,8 @@ static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
 
 // Configuration for data collection
-static const int MAX_READINGS = 12;  // 5 seconds * 12 = 60 seconds (1 minute)
-static const unsigned long READING_INTERVAL = 1000;  // 5 seconds between readings
+static const int MAX_READINGS = 24;  // 2.5 seconds * 24 = 60 seconds (1 minute)
+static const unsigned long READING_INTERVAL = 2500;  // 5 seconds between readings
 static unsigned long lastReadingTime = 0;
 
 struct SensorData {
