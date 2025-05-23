@@ -10,8 +10,8 @@
 #include "WifiLib.h"
 #include "ESP32Helpers.h"
 #include <Adafruit_NeoPixel.h>
+#include "colors.h"
 #include "soc/soc.h"
-//#include "soc/rtc_cntl_reg.h"
 
 // Pin configuration
 #define NEOPIXEL_PIN 17       // WS2812 connected to GP8
@@ -22,25 +22,37 @@
 
 const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
-
-
  
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_PASSWORDS as environment variables on your dev-system following the pattern: WIFI_PASSWORDS="ssid1;password1|ssid2;password2"
 WifiLib wifiLib(WIFI_PASSWORDS);
-
 WiFiClient wifiClient;
 WiFiUDP ntpUDP;
+
 NTPClient timeClient(ntpUDP);
 MQTTClientLib* mqttClientLib = nullptr;
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_RGB + NEO_KHZ800);
 DHT dht(DHTPIN, DHTTYPE);
 
 static bool otaInProgress = false;
-static bool otaEnable = true;
+static bool otaEnable = false;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
+
+// Configuration for data collection
+static const int MAX_READINGS = 12;  // 5 seconds * 12 = 60 seconds (1 minute)
+static const unsigned long READING_INTERVAL = 5000;  // 5 seconds between readings
+static unsigned long lastReadingTime = 0;
+
+struct SensorData {
+  float temperature;
+  float humidity;
+  unsigned long timestamp;
+};
+
+static SensorData readings[MAX_READINGS];
+static int readingCount = 0;
 
 static String baseTopic = "daten";
 static String sensorName = "";
@@ -59,6 +71,10 @@ void blinkLed(uint8_t r, uint8_t g, uint8_t b) {
   setLedColor(0, 0, 0);
 }
 
+void blinkLed(Color color) {
+  blinkLed(color.r, color.g, color.b);
+}
+
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
     int lastDotIndex = url.lastIndexOf('.');
@@ -67,7 +83,7 @@ String extractVersionFromUrl(String url) {
         return url.substring(lastUnderscoreIndex + 1, lastDotIndex);
     }
 
-    return ""; // Return empty string if the pattern is not found
+    return "";
 }
 
 void mqttCallback(String &topic, String &payload) {
@@ -119,32 +135,68 @@ void connectToMQTT() {
   Serial.println("MQTT Client is connected");
 }
 
-void readSensorAndPublish() {
+void readSensorData() {
   if (sensorName == "") {
     Serial.println("Sensor name not set, skipping sensor reading");
+    blinkLed(RED);
     return;
   }
 
-  float humidity = dht.readHumidity();
-  float temperature = dht.readTemperature();
+  SensorData data = {NAN, NAN, 0};
 
-  if (isnan(humidity) || isnan(temperature)) {
-    Serial.println("Failed to read from DHT22 sensor!");
+  if (readingCount <= MAX_READINGS) {
+    data.humidity = dht.readHumidity();
+    data.temperature = dht.readTemperature();
+
+    if (isnan(data.humidity) || isnan(data.temperature)) {
+      Serial.println("Failed to read from DHT22 sensor!");
+      return;
+    }
+    data.timestamp = millis();
+    readings[readingCount] = data;
+    Serial.println("Sensor data read: " + String(data.temperature) + "°C, " + String(data.humidity) + "%");
+    lastReadingTime = data.timestamp;
+    readingCount++;
+    blinkLed(BLUE);
+  }
+  else {
+    Serial.println("Maximum readings reached, skipping sensor reading");
+    blinkLed(RED);
+    return;
+  }
+}
+
+void publishSensorData()
+{
+  if (readingCount == 0) {
+    Serial.println("No sensor data to publish");
     return;
   }
 
   char tempString[8];
   char humString[8];
-  dtostrf(temperature, 1, 2, tempString);
-  dtostrf(humidity, 1, 2, humString);
+
+  // Calculate average temperature and humidity
+  float avgTemperature = 0;
+  float avgHumidity = 0;
+  for (int i = 0; i < readingCount; i++) {
+    avgTemperature += readings[i].temperature;
+    avgHumidity += readings[i].humidity;
+  }
+  avgTemperature /= readingCount;
+  avgHumidity /= readingCount;
+  readingCount = 0; // Reset reading count after publishing
+
+  dtostrf(avgTemperature, 1, 2, tempString);
+  dtostrf(avgHumidity, 1, 2, humString);
 
   if (sendMQTTMessages)
   {
     mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
-    blinkLed(mqttSuccess ? 0 : 255, mqttSuccess ? 255 : 0, 0);
+    blinkLed(mqttSuccess ? GREEN : RED);
     mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
   }
-  Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
+  Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Version: " + version);
 }
 
 void setup() {
@@ -190,20 +242,24 @@ void loop() {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
   if (!otaInProgress) {
-    // Transmit data every minute
-    int currentMinute = timeClient.getMinutes();
-    if(currentMinute != lastMQTTSentMinute) {
-      lastMQTTSentMinute = currentMinute;
+    timeClient.update();
 
-      readSensorAndPublish();
-    } 
+    // Read sensor data every 5 seconds
+    if (millis() - lastReadingTime >= READING_INTERVAL) {
+      readSensorData();
+    }
+
+    // Transmit data every minute
+    if (timeClient.getMinutes() != lastMQTTSentMinute) {
+      lastMQTTSentMinute = timeClient.getMinutes();
+      publishSensorData();
+    }
 
     if(!mqttClientLib->loop())
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
     }
-    bool pingSuccess = Ping.ping(mqtt_broker.c_str());
-    blinkLed(pingSuccess ? 0 : 255, 0, pingSuccess ? 100 : 0);
   }
+  delay(500);
 }
