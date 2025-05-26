@@ -58,8 +58,8 @@ static String baseTopic = "daten";
 static String sensorName = "";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
-static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname/";
-static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness/";
+static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname";
+static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness";
 static int brightness = 255;
 
 void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
