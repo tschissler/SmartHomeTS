@@ -58,7 +58,8 @@ static String baseTopic = "daten";
 static String sensorName = "";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
-static String mqtt_ConfigTopic = "config/TemperaturSensor2/Sensorname/";
+static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname/";
+static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness/";
 
 void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
   pixels.setPixelColor(0, pixels.Color(r, g, b));
@@ -89,11 +90,23 @@ String extractVersionFromUrl(String url) {
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
-    if (topic == mqtt_ConfigTopic) {
+    if (topic == mqtt_SensorNameTopic) {
       sensorName = payload;
       Serial.println("Sensor name set to: " + sensorName);
       return;
     } 
+
+    if (topic == mqtt_BrightnessTopic) {
+      int brightness = payload.toInt();
+      if (brightness >= 0 && brightness <= 255) {
+        pixels.setBrightness(brightness);
+        pixels.show();
+        Serial.println("Brightness set to: " + String(brightness));
+      } else {
+        Serial.println("Invalid brightness value: " + payload);
+      }
+      return;
+    }
 
     if (topic == mqtt_OTAtopic) {
       if (otaInProgress || !otaEnable) {
@@ -131,7 +144,7 @@ void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
+  mqttClientLib->connect({mqtt_SensorNameTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
 }
 
@@ -214,7 +227,8 @@ void setup() {
   chipID = ESP32Helpers::getChipId();
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
-  mqtt_ConfigTopic += chipID;
+  mqtt_SensorNameTopic.replace("{ID}", chipID);
+  mqtt_BrightnessTopic.replace("{ID}", chipID);
 
   // Connect to WiFi
   Serial.print("Connecting to WiFi ");
