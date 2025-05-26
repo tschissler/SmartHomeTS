@@ -60,6 +60,7 @@ const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
 static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname/";
 static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness/";
+static int brightness = 255;
 
 void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
   pixels.setPixelColor(0, pixels.Color(r, g, b));
@@ -97,7 +98,7 @@ void mqttCallback(String &topic, String &payload) {
     } 
 
     if (topic == mqtt_BrightnessTopic) {
-      int brightness = payload.toInt();
+      brightness = payload.toInt();
       if (brightness >= 0 && brightness <= 255) {
         pixels.setBrightness(brightness);
         pixels.show();
@@ -151,7 +152,9 @@ void connectToMQTT() {
 void readSensorData() {
   if (sensorName == "") {
     Serial.println("Sensor name not set, skipping sensor reading");
+    pixels.setBrightness(255);
     blinkLed(RED);
+    pixels.setBrightness(brightness);
     return;
   }
 
