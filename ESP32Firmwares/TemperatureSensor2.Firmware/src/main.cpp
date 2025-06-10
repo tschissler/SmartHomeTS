@@ -258,7 +258,6 @@ void setup() {
 void loop() {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
-  Serial.println ("otaInProgress: " + String(otaInProgress));
   if (otaInProgress < 0) {
     blinkLed(RED);
   }
