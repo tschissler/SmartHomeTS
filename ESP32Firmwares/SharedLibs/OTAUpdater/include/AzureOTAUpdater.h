@@ -4,7 +4,7 @@
 class AzureOTAUpdater {
 public:
     static bool UpdateFirmwareFromUrl(const char* firmwareUrl);
-    static bool CheckUpdateStatus();
+    static int CheckUpdateStatus();
 };
 
 #endif // OTAUPDATER_H

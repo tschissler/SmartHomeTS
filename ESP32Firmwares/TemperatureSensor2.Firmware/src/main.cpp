@@ -34,7 +34,7 @@ MQTTClientLib* mqttClientLib = nullptr;
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_RGB + NEO_KHZ800);
 DHT dht(DHTPIN, DHTTYPE);
 
-static bool otaInProgress = false;
+static int otaInProgress = 0;
 static bool otaEnable = OTA_ENABLED != "false";
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
@@ -258,7 +258,12 @@ void setup() {
 void loop() {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
-  if (!otaInProgress) {
+  Serial.println ("otaInProgress: " + String(otaInProgress));
+  if (otaInProgress < 0) {
+    blinkLed(RED);
+  }
+
+  if (otaInProgress != 1) {
     timeClient.update();
 
     // Read sensor data every 5 seconds
