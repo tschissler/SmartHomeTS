@@ -41,5 +41,5 @@ jobs:
     - name: Update Kubernetes deployment
       run: |        
         microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUX_TOKEN="${{ secrets.INFLUX_TOKEN }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_TOKEN="${{ secrets.INFLUX_TOKEN }}"
         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_ORG="smarthome"
