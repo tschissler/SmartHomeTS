@@ -1,25 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: influximporter
+  name: smarthomedatahub
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: influximporter
+      app: smarthomedatahub
   template:
     metadata:
       labels:
-        app: influximporter
+        app: smarthomedatahub
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet 
       containers:
-        - name: influximporter
-          image: tschissler/influximporter:latest
+        - name: smarthomedatahub
+          image: tschissler/smarthomedatahub:latest
           env:
           - name: INFLUX_TOKEN
             value: "env:INFLUX_TOKEN"
+          - name: INFLUX_ORG
+            value: "env:INFLUX_ORG"
           # - name: EnphaseUserName
           #   value: "env:EnphaseUserName"
           # - name: EnphasePassword
@@ -28,7 +30,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: influximporter-service
+  name: smarthomedatahub-service
 spec:
   type: ClusterIP    
   ports:  
@@ -36,4 +38,4 @@ spec:
     port: 7090
     protocol: UDP
   selector:
-    app: influximporter
+    app: smarthomedatahub
