@@ -1,5 +1,5 @@
 # Set a default project name, can be overridden with --build-arg PROJECT_NAME=<new-name> at build time
-ARG PROJECT_NAME=InfluxImporter
+ARG PROJECT_NAME=SmartHome.DataHub
 
 # Base image
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
@@ -34,4 +34,4 @@ FROM build AS final
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app/publish .
-ENTRYPOINT ["./InfluxImporter"]
+ENTRYPOINT ["./SmartHome.DataHub"]
