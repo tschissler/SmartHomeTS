@@ -57,7 +57,7 @@ mqttClient.OnMessageReceived += (sender, e) =>
 
 ConsoleHelpers.PrintInformation(" ### Creating timer to read data from devices every second");
 ConsoleHelpers.PrintInformation("     and send the data as MQTT messages");
-var timerPowerDevices = new System.Timers.Timer(60000);
+var timerPowerDevices = new System.Timers.Timer(1000);
 timerPowerDevices.Elapsed += async (sender, e) =>
 {
     var tasks = powerDevices.Select(async device =>
@@ -81,7 +81,7 @@ timerPowerDevices.Elapsed += async (sender, e) =>
 };
 timerPowerDevices.Start();
 
-var timerThermostatDevices = new System.Timers.Timer(1000);
+var timerThermostatDevices = new System.Timers.Timer(10000);
 timerThermostatDevices.Elapsed += async (sender, e) =>
 {
     var tasks = thermostatDevices.Select(async device =>
