@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace ShellyConnector.DataContracts
 {
 
-    public class ShellyStatus
+    public class ShellyPowerStatus
     {
         public object name { get; set; }
         public string id { get; set; }

@@ -5,20 +5,39 @@ namespace ShellyConnector
 {
     public class ShellyConnector
     {
-        public static ShellyStatus? GetStaus(ShellyDevice device)
+        public static ShellyPowerStatus? GetPowerStaus(ShellyDevice device)
         {
-            ShellyStatus? status = null;
+            ShellyPowerStatus? status = null;
             try
             {
                 using (HttpClient Http = new HttpClient())
                 {
                     var jsonString = Http.GetStringAsync($"http://{device.IPAddress}/shelly").Result;
-                    status = JsonConvert.DeserializeObject<ShellyStatus>(jsonString);
+                    status = JsonConvert.DeserializeObject<ShellyPowerStatus>(jsonString);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to read data from Shelly device {device.IPAddress}, Error: " + ex.Message);
+            }
+
+            return status;
+        }
+
+        public static ShellyThermostatStatus? GetThermostatStaus(ShellyDevice device)
+        {
+            ShellyThermostatStatus? status = null;
+            try
+            {
+                using (HttpClient Http = new HttpClient())
+                {
+                    var jsonString = Http.GetStringAsync($"http://{device.IPAddress}/rpc/BluTrv.GetStatus?id={device.DeviceId}").Result;
+                    status = JsonConvert.DeserializeObject<ShellyThermostatStatus>(jsonString);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to read data from Shelly device {device.IPAddress}, device id {device.DeviceId}, Error: " + ex.Message);
             }
 
             return status;
@@ -82,6 +101,41 @@ namespace ShellyConnector
             }
 
             return powerData;
+        }
+
+        public static ShellyThermostatData? GetThermostatData(ShellyDevice device)
+        {
+            ShellyThermostatData? thermostatData = null;
+
+            try
+            {
+                using (HttpClient Http = new HttpClient())
+                {
+                    string jsonString;
+                    switch (device.DeviceType)
+                    {
+                        case DeviceType.ShellyBluTRV:
+                            var data = GetThermostatStaus(device);
+                            thermostatData = new ShellyThermostatData(
+                                TargetTemperature: data?.Target_C ?? 0,
+                                CurrentTemperature: data?.Current_C ?? 0,
+                                ValvePosition: data?.Pos ?? 0,
+                                BatteryLevel: data?.Battery ?? 0,
+                                IsConnected: data?.Connected ?? false,
+                                LastUpdated: DateTimeOffset.FromUnixTimeSeconds(data?.Last_updated_ts ?? 0)
+                                );
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to read meter data from Shelly device {device.IPAddress} type {device.DeviceType.ToString()}, Error: " + ex.Message);
+            }
+
+            return thermostatData;
         }
 
         public static void SetRelay(ShellyDevice device, string state)
