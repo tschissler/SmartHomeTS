@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smarthome_app/screens/chargingsettings_page.dart';
 import 'package:smarthome_app/screens/energychart_page.dart';
-import 'package:smarthome_app/screens/favorites_page.dart';
+import 'package:smarthome_app/screens/heizung/heizung_uebersicht.dart';
 
 class SmarthomeDrawer extends StatelessWidget {
   const SmarthomeDrawer({
@@ -21,11 +21,11 @@ class SmarthomeDrawer extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => ChargingSettingsPage()));
               }),
           ListTile(
-              leading: Icon(Icons.favorite),
-              title: Text('Favorites'),
+              leading: Icon(Icons.thermostat),
+              title: Text('Heizung'),
               onTap: () {
                 Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => FavoritesPage()));
+                    MaterialPageRoute(builder: (context) => HeizungsUebersichtPage()));
               }),
           ListTile(
               leading: Icon(Icons.power),

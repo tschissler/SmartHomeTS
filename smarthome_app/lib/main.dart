@@ -1,20 +1,19 @@
-import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:smarthome_app/screens/chargingsettings_page.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  runApp(SmartHomeApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SmartHomeApp extends StatelessWidget {
+  const SmartHomeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
+      create: (context) => SmartHomeAppState(),
       child: MaterialApp(
         title: 'SmartHomeTS App',
         theme: ThemeData(
@@ -27,22 +26,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
+class SmartHomeAppState extends ChangeNotifier {
 
-  void getNext() {
-    current = WordPair.random();
-    notifyListeners();
-  }
-
-  var favorites = <WordPair>[];
-
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
-    }
-    notifyListeners();
-  }
 }

@@ -32,16 +32,6 @@ class InfluxDBService {
         |> yield(name: "delta")
     ''';
 
-//     final query = '''
-//     from(bucket: "SmartHomeData")
-//   |> range(start: -1d, stop: now())
-//   |> filter(fn: (r) => r["_measurement"] == "strom")
-//   |> filter(fn: (r) => r["_field"] == "Netzbezug")
-//   |> filter(fn: (r) => r["location"] == "M1")
-//   |> aggregateWindow(every: 15m, fn: last, createEmpty: false)
-//   |> difference()
-//   |> yield(name: "delta")
-// ''';
 
     var queryService = client.getQueryService();
 
