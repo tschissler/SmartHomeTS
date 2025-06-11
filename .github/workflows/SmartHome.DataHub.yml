@@ -1,4 +1,4 @@
-name: InfluxImporter CD
+name: SmartHome.DataHub CD
 
 on:
   push:
