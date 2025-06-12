@@ -4,13 +4,15 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json.Linq;
 using SharedContracts;
 using SmartHomeHelpers.Logging;
+using System.Globalization;
 using System.Text.Json;
 
-// Update these with your InfluxDB connection details.
 const string influxUrl = "http://smarthomepi2:32086";
 
 const string chargingBucket = "Smarthome_ChargingData";
 const string electricityBucket = "Smarthome_ElectricityData";
+const string environmentDataBucket = "Smarthome_EnvironmentData";
+
 
 string? influxToken = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
 if (string.IsNullOrEmpty(influxToken))
@@ -42,13 +44,16 @@ var services = serviceScope.ServiceProvider;
 var influxConnector = services.GetRequiredService<InfluxDbConnector>();
 
 // Setup MQTT client options
-ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
+ConsoleHelpers.PrintInformation(" ### Subscribing to MQTT topics");
+
 var mqttClient = services.GetRequiredService<MQTTClient.MQTTClient>();
 await mqttClient.SubscribeToTopic("data/charging/#");
 await mqttClient.SubscribeToTopic("data/electricity/M1/#");
 await mqttClient.SubscribeToTopic("data/electricity/M3/#");
 await mqttClient.SubscribeToTopic("data/electricity/envoym1");
 await mqttClient.SubscribeToTopic("data/electricity/envoym3");
+await mqttClient.SubscribeToTopic("daten/temperatur/#");
+await mqttClient.SubscribeToTopic("daten/luftfeuchtigkeit/#");
 
 
 mqttClient.OnMessageReceived += async (sender, e) =>
@@ -99,6 +104,15 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("group", topicParts[3]);
             tags.Add("device", topicParts[4]);
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, topicParts[4], payload, tags, true);
+            return;
+        }
+
+        if (topic.StartsWith("daten/temperatur/") || topic.StartsWith("daten/luftfeuchtigkeit/"))
+        {
+            tags = new Dictionary<string, string>();
+            var topicParts = topic.Split('/');
+            tags.Add("device", topicParts[2]);
+            WriteFloatAsFields(environmentDataBucket, influxConnector, topic, topicParts[1], payload, tags);
             return;
         }
     }
@@ -198,6 +212,22 @@ static void WriteJsonPropertiesAsFields(string chargingBucket, InfluxDbConnector
         }
     }
 
+    tags.Add("topic", topic);
+
+    influxConnector.WritePointDataToInfluxDb(
+        chargingBucket,
+        measurementName,
+        fields,
+        tags);
+}
+
+static void WriteFloatAsFields(string chargingBucket, InfluxDbConnector influxConnector, string topic, string measurementName, string payload, Dictionary<string, string> tags)
+{
+    var fields = new Dictionary<string, object>
+    {
+        { "value", Convert.ToDouble(payload, CultureInfo.InvariantCulture) }
+    };
+ 
     tags.Add("topic", topic);
 
     influxConnector.WritePointDataToInfluxDb(
