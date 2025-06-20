@@ -19,7 +19,7 @@
 
 CanFrame rxFrame;
 
-const char* version = "0.0.1"; // Initial version
+const char* version = CANBUSGATEWAY_VERSION;
 String chipID = "";
  
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
