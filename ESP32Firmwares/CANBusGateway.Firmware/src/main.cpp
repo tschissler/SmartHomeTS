@@ -167,7 +167,7 @@ void publishHovalData() {
   serializeJson(jsonDoc, jsonString);
   
   // Publish to MQTT
-  String topic = baseTopic + "/hoval/data/" + sensorName;
+  String topic = baseTopic + "/hoval/" + sensorName + "/data";
   mqttClientLib->publish(topic.c_str(), jsonString, true, 0); // Retained message with QoS 0
     
   Serial.println("Published Hoval data to MQTT");
@@ -195,7 +195,7 @@ void processCanMessages() {
       }
       Serial.println();
 
-      String rawTopic = baseTopic + "/hoval/raw/" + String(rxFrame.identifier, HEX);
+      String rawTopic = baseTopic + "/hoval/" + sensorName + "/raw/" + String(rxFrame.identifier, HEX);
       
       // Create a more descriptive payload with ID name
       StaticJsonDocument<256> jsonDoc;
