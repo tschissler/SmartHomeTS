@@ -142,15 +142,62 @@ float decodeHovalValue(const uint8_t *data, int startByte, float factor = 1.0) {
 
 // Function to decode Hoval heat pump data from CAN frames
 void decodeHovalData(const CanFrame &frame) {
-  // Based on Hoval TopTronic E datapoints spreadsheet
-  
-  switch(frame.identifier) {
-    // Group 1: Basic system temperatures (typically 0x180 + node ID)
-    case 0x181: // Outside temperature
-      if (frame.data_length_code >= 2) {
-        hovalData.outsideTemp = decodeHovalValue(frame.data, 0, 0.1);
+  // Parse CAN ID to determine message type
+  uint32_t id = frame.identifier;
+  uint16_t msgType = id >> 16;
+  uint8_t deviceType = (id >> 8) & 0xFF;
+  uint8_t deviceId = id & 0xFF;
+
+  // Debug information
+  if (debugMode) {
+    Serial.print("Parsed CAN ID: msgType=0x");
+    Serial.print(msgType, HEX);
+    Serial.print(" deviceType=0x");
+    Serial.print(deviceType, HEX);
+    Serial.print(" deviceId=0x");
+    Serial.println(deviceId, HEX);
+  }
+
+  // Check if this is a standard temperature frame
+  if (frame.identifier == 0x181) { // Standard outside temp identifier 
+    if (frame.data_length_code >= 2) {
+      hovalData.outsideTemp = decodeHovalValue(frame.data, 0, 0.1);
+      Serial.print("Outside temperature (standard frame): ");
+      Serial.println(hovalData.outsideTemp);
+    }
+    return;
+  }
+
+  // Check for messages in Hoval protocol format (0x1F0 prefix)
+  if (msgType >> 8 == 0x1F) {
+    // This is a message in the Hoval protocol format
+    
+    // Check if this is the start of a message (first byte contains message length)
+    if (frame.data_length_code >= 2) {
+      uint8_t msgLen = frame.data[0] >> 3; // Number of CAN messages needed
+      
+      if (msgLen == 0) {
+        // This is a complete message in a single frame
+        // Look for ANSWER (0x42) messages that might contain outside temperature
+        if (frame.data[1] == 0x42 && frame.data_length_code >= 7) { // ANSWER code
+          uint8_t functionGroup = frame.data[2];
+          uint8_t functionNumber = frame.data[3];
+          uint16_t datapoint = (frame.data[4] << 8) | frame.data[5];
+          
+          // Check if this is the outside temperature (0,0,0)
+          if (functionGroup == 0 && functionNumber == 0 && datapoint == 0) {
+            // Extract the temperature value (2 bytes starting at position 6)
+            if (frame.data_length_code >= 8) {
+              int16_t rawValue = (frame.data[6] << 8) | frame.data[7];
+              hovalData.outsideTemp = (float)rawValue * 0.1; // Scale factor for temperature
+              
+              Serial.print("Outside temperature (Hoval protocol): ");
+              Serial.println(hovalData.outsideTemp);
+            }
+          }
+        }
       }
-      break;
+    }
   }
 }
 
@@ -174,7 +221,6 @@ void publishHovalData() {
 
 // Update the processCanMessages function
 void processCanMessages() {
-  
   // Check if CAN messages are available
   if (ESP32Can.readFrame(rxFrame, 1000)) {
     // Decode the Hoval heat pump data
@@ -201,7 +247,7 @@ void processCanMessages() {
       
       // Add raw data bytes
       JsonArray dataArray = jsonDoc.createNestedArray("data");
-      for (int i = 0; i < rxFrame.identifier; i++) {
+      for (int i = 0; i < rxFrame.data_length_code; i++) { // Fixed loop condition to correctly iterate through data
         dataArray.add(rxFrame.data[i]);
       }
       
@@ -217,8 +263,46 @@ void processCanMessages() {
     }
   }
   
-  // Periodically publish aggregated heat pump data
+  // Check if it's time to poll for outside temperature data
+  static unsigned long lastPollingTime = 0;
+  static const unsigned long POLLING_INTERVAL = 30000; // Poll every 30 seconds
   unsigned long currentMillis = millis();
+  
+  if (currentMillis - lastPollingTime >= POLLING_INTERVAL) {
+    // Send a query for outside temperature (function group 0, function number 0, datapoint 0)
+    Serial.println("Polling for outside temperature data...");
+    
+    // Format according to Hoval protocol
+    uint8_t data[8] = {
+      0x01,           // Length byte
+      0x40,           // REQUEST code (0x40)
+      0x00,           // Function group 0
+      0x00,           // Function number 0
+      0x00, 0x00,     // Datapoint 0 (16-bit, MSB first)
+      0x00, 0x00      // Padding
+    };
+      // Set up CAN frame
+    CanFrame txFrame;
+    txFrame.identifier = (0x1F0 << 16) | 0x0801; // Format from Python code
+    txFrame.flags = TWAI_MSG_FLAG_EXTD; // Set extended ID flag
+    txFrame.data_length_code = 8;
+    
+    // Copy data to frame
+    for (int i = 0; i < 8; i++) {
+      txFrame.data[i] = data[i];
+    }
+    
+    // Send the frame
+    if (ESP32Can.writeFrame(txFrame)) {
+      Serial.println("Outside temperature poll request sent");
+    } else {
+      Serial.println("Failed to send temperature poll request");
+    }
+    
+    lastPollingTime = currentMillis;
+  }
+  
+  // Periodically publish aggregated heat pump data
   if (currentMillis - lastDataPublishTime >= DATA_PUBLISH_INTERVAL) {
     publishHovalData();
     lastDataPublishTime = currentMillis;
