@@ -157,9 +157,7 @@ void decodeHovalData(const CanFrame &frame) {
 // Function to publish heat pump data to MQTT
 void publishHovalData() {
   // Create a JSON document for the data
-  StaticJsonDocument<1024> jsonDoc;
-  
-  // Basic system temperatures
+  JsonDocument jsonDoc;
   jsonDoc["outside_temp"] = hovalData.outsideTemp;
   
   // Serialize JSON to string
@@ -198,7 +196,7 @@ void processCanMessages() {
       String rawTopic = baseTopic + "/hoval/" + sensorName + "/raw/" + String(rxFrame.identifier, HEX);
       
       // Create a more descriptive payload with ID name
-      StaticJsonDocument<256> jsonDoc;
+      JsonDocument jsonDoc;
       jsonDoc["id"] = "0x" + String(rxFrame.identifier, HEX);
       
       // Add raw data bytes
