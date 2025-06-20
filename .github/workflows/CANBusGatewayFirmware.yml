@@ -34,8 +34,7 @@ jobs:
     - name: Build with PlatformIO  
       env:
         WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
-        TEMPSENSORFW_VERSION: ${{ env.version }}
-        OTA_ENABLED: true
+        CANBUSGATEWAY_VERSION: ${{ env.version }}
       run: |
         pio run
 
