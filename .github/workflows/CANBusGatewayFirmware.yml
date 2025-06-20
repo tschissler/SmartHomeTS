@@ -35,6 +35,7 @@ jobs:
       env:
         WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
         TEMPSENSORFW_VERSION: ${{ env.version }}
+        OTA_ENABLED: true
       run: |
         pio run
 
