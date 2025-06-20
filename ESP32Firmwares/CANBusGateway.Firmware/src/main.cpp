@@ -39,8 +39,8 @@ static bool mqttSuccess = false;
 static String baseTopic = "data";
 static String sensorName = "HovalWP_M3";
 const String mqtt_broker = "smarthomepi2";
-static String mqtt_OTAtopic = "OTAUpdate/CanBusGateway";
-static String mqtt_ConfigTopic = "config/CanBusGateway/{ID}/DeviceName";
+static String mqtt_OTAtopic = "OTAUpdate/CANBusGateway";
+static String mqtt_ConfigTopic = "config/CANBusGateway/{ID}/DeviceName";
 
 unsigned long lastDataPublishTime = 0;
 const unsigned long DATA_PUBLISH_INTERVAL = 60000; // Publish data every minute
