@@ -135,14 +135,33 @@ void setupCanBus()
 
   // Configure CAN bus
   ESP32Can.setPins(CAN_TX_PIN, CAN_RX_PIN);
-  ESP32Can.setSpeed(TWAI_SPEED_250KBPS); // Set to 250 kbps, common for HVAC systems
-  if (ESP32Can.begin())
+
+    // build a 50 kbps timing config (tweak brp/tseg values if your oscillator is different)
+  twai_timing_config_t timing50kb = {
+    .brp            = 80,   // baud‐rate prescaler
+    .tseg_1         = 14,   // time segment 1
+    .tseg_2         = 5,    // time segment 2
+    .sjw            = 3,    // synchronization jump width
+    .triple_sampling = false
+  };
+  
+  // begin with custom timing instead of a TwaiSpeed enum
+  if (ESP32Can.begin(
+        TWAI_SPEED_SIZE,   // bypass built-in enum
+        CAN_TX_PIN,
+        CAN_RX_PIN,
+        0xFFFF,            // default tx queue
+        0xFFFF,            // default rx queue
+        nullptr,           // no custom filter
+        nullptr,           // default general config
+        &timing50kb        // your 50 kbps timing
+      ))
   {
-    Serial.println("CAN Bus initialized at 250 kbps");
+    Serial.println("CAN Bus initialized at 50 kbps");
   }
   else
   {
-    Serial.println("Failed to initialize CAN Bus");
+    Serial.println("Failed to initialize CAN Bus at 50 kbps");
     return;
   }
 
