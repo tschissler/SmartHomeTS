@@ -195,8 +195,8 @@ void sendHovalPollFrame()
 
   // Build extended identifier: (0x1F0 << 16) | 0x0801 (fixed address)
   CanFrame pollFrame;
-  pollFrame.identifier = 0x600;// (0x1F0 << 16) | 0x0801;
-  pollFrame.extd = false;
+  pollFrame.identifier = (0x1FE << 16) | 0x0801;
+  pollFrame.extd = true;
   pollFrame.rtr = false;
   pollFrame.data_length_code = 6;
   memcpy(pollFrame.data, payload, 6);
