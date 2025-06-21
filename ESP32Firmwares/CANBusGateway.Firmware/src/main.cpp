@@ -177,6 +177,7 @@ void setupCanBus()
 
 void sendHovalPollFrame()
 {
+  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "Sending poll frame", true, 0);
   // Poll outside temperature sensor (function_group=0,function_number=0,datapoint=0)
   const uint8_t function_group = 0;
   const uint8_t function_number = 0;
@@ -253,7 +254,7 @@ void publishHovalData()
 // Update the processCanMessages function
 void processCanMessages()
 {
-  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "Trying to read CAN bus messages", false, 0);
+  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "Trying to read CAN bus messages", true, 0);
 
   // Check if CAN messages are available
   if (ESP32Can.readFrame(rxFrame, 1000))
@@ -317,7 +318,7 @@ void processCanMessages()
     // No CAN messages received, you can handle this case if needed
     if (debugMode)
     {
-      mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "No CAN messages received", false, 0);
+      mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "No CAN messages received", true, 0);
     }
   }
 }
