@@ -38,7 +38,7 @@ NTPClient timeClient(ntpUDP);
 MQTTClientLib *mqttClientLib = nullptr;
 
 static int otaInProgress = 0;
-static bool otaEnable = true;
+static bool otaEnable = OTA_ENABLED != "false";;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 
