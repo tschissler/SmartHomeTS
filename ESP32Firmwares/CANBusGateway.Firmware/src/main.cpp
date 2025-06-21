@@ -253,6 +253,7 @@ void publishHovalData()
 // Update the processCanMessages function
 void processCanMessages()
 {
+  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "Trying to read CAN bus messages", false, 0);
 
   // Check if CAN messages are available
   if (ESP32Can.readFrame(rxFrame, 1000))
