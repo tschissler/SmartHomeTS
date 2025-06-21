@@ -177,21 +177,32 @@ void setupCanBus()
 
 void sendHovalPollFrame()
 {
-  CanFrame pollFrame;
-  pollFrame.identifier = 0x600; // Beispiel: 0x600 + Node ID 0
-  pollFrame.data_length_code = 2;
-  pollFrame.extd = false;
-  pollFrame.rtr = false;
-  pollFrame.data[0] = 0x01; // Command/Index (Beispiel)
-  pollFrame.data[1] = 0x00; // Subindex oder DataPoint-ID
+  // Poll outside temperature sensor (function_group=0,function_number=0,datapoint=0)
+  const uint8_t function_group = 0;
+  const uint8_t function_number = 0;
+  const uint16_t datapoint = 0;
 
-  if (ESP32Can.writeFrame(pollFrame))
-  {
-    Serial.println("Poll-Frame gesendet");
-  }
-  else
-  {
-    Serial.println("Fehler beim Senden des Poll-Frames");
+  // Build payload: [counter=0x01, REQUEST, group, number, datapoint high, datapoint low]
+  uint8_t payload[6];
+  payload[0] = 0x01;
+  payload[1] = REQUEST;
+  payload[2] = function_group;
+  payload[3] = function_number;
+  payload[4] = (uint8_t)(datapoint >> 8);
+  payload[5] = (uint8_t)(datapoint & 0xFF);
+
+  // Build extended identifier: (0x1F0 << 16) | 0x0801 (fixed address)
+  CanFrame pollFrame;
+  pollFrame.identifier = (0x1F0 << 16) | 0x0801;
+  pollFrame.extd = true;
+  pollFrame.rtr = false;
+  pollFrame.data_length_code = 6;
+  memcpy(pollFrame.data, payload, 6);
+
+  if (ESP32Can.writeFrame(pollFrame)) {
+    Serial.println("Poll-Frame sent for outside temperature");
+  } else {
+    Serial.println("Error sending Poll-Frame for outside temperature");
   }
 }
 
