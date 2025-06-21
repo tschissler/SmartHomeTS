@@ -38,7 +38,7 @@ NTPClient timeClient(ntpUDP);
 MQTTClientLib *mqttClientLib = nullptr;
 
 static int otaInProgress = 0;
-static bool otaEnable = false;
+static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 
@@ -177,7 +177,8 @@ void setupCanBus()
 
 void sendHovalPollFrame()
 {
-  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "Sending poll frame", true, 0);
+  Serial.println("Sending Hoval poll frame...");
+  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status/polling").c_str(), "Sending poll frame", true, 0);
   // Poll outside temperature sensor (function_group=0,function_number=0,datapoint=0)
   const uint8_t function_group = 0;
   const uint8_t function_number = 0;
@@ -254,8 +255,6 @@ void publishHovalData()
 // Update the processCanMessages function
 void processCanMessages()
 {
-  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "Trying to read CAN bus messages", true, 0);
-
   // Check if CAN messages are available
   if (ESP32Can.readFrame(rxFrame, 1000))
   {
