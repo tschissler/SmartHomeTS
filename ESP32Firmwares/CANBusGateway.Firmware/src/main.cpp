@@ -205,6 +205,7 @@ void sendHovalPollFrame()
     Serial.println("Poll-Frame sent for outside temperature");
   } else {
     Serial.println("Error sending Poll-Frame for outside temperature");
+    mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status/error").c_str(), "Error sending Poll-Frame", true, 0);
   }
 }
 
