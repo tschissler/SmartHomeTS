@@ -377,7 +377,7 @@ void loop()
 
         // Nur alle 5 Sekunden einen Poll senden
     static unsigned long lastPoll = 0;
-    if (millis() - lastPoll > 5000)
+    if (millis() - lastPoll > 20000)
     {
       sendHovalPollFrame();
       lastPoll = millis();
