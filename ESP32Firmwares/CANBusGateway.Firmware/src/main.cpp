@@ -253,7 +253,7 @@ void publishHovalData()
 // Update the processCanMessages function
 void processCanMessages()
 {
-  mqttClientLib->publish((baseTopic + "hoval/" + sensorName + "/status").c_str(), "Trying to read CAN bus messages", false, 0);
+  mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "Trying to read CAN bus messages", false, 0);
 
   // Check if CAN messages are available
   if (ESP32Can.readFrame(rxFrame, 1000))
@@ -317,7 +317,7 @@ void processCanMessages()
     // No CAN messages received, you can handle this case if needed
     if (debugMode)
     {
-      mqttClientLib->publish((baseTopic + "hoval/" + sensorName + "/status").c_str(), "No CAN messages received", false, 0);
+      mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "No CAN messages received", false, 0);
     }
   }
 }
