@@ -175,6 +175,26 @@ void setupCanBus()
   // Common speeds for HVAC systems: 125kbps, 250kbps, 500kbps
 }
 
+void sendHovalPollFrame()
+{
+  CanFrame pollFrame;
+  pollFrame.identifier = 0x600; // Beispiel: 0x600 + Node ID 0
+  pollFrame.data_length_code = 2;
+  pollFrame.extd = false;
+  pollFrame.rtr = false;
+  pollFrame.data[0] = 0x01; // Command/Index (Beispiel)
+  pollFrame.data[1] = 0x00; // Subindex oder DataPoint-ID
+
+  if (ESP32Can.writeFrame(pollFrame))
+  {
+    Serial.println("Poll-Frame gesendet");
+  }
+  else
+  {
+    Serial.println("Fehler beim Senden des Poll-Frames");
+  }
+}
+
 // Function to decode a Hoval value from CAN data
 float decodeHovalValue(const uint8_t *data, int startByte, float factor = 1.0)
 {
@@ -341,6 +361,14 @@ void loop()
   if (otaInProgress != 1)
   {
     timeClient.update();
+
+        // Nur alle 5 Sekunden einen Poll senden
+    static unsigned long lastPoll = 0;
+    if (millis() - lastPoll > 5000)
+    {
+      sendHovalPollFrame();
+      lastPoll = millis();
+    }
 
     // Process CAN messages
     processCanMessages();
