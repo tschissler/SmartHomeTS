@@ -21,8 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DataContracts\DataContracts.csproj" />
-    <ProjectReference Include="..\..\InfluxImporter\InfluxConnector\InfluxConnector.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
+    <ProjectReference Include="..\..\SmartHome.DataHub\InfluxConnector\InfluxConnector.csproj" />
     <ProjectReference Include="..\..\SmartHomeHelpers\SmartHomeHelpers.csproj" />
     <ProjectReference Include="..\SmartHomeWebManagers\SmartHomeWebManagers.csproj" />
     <ProjectReference Include="..\UIComponentsLib\UIComponentsLib.csproj" />
