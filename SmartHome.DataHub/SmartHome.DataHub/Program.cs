@@ -13,6 +13,12 @@ const string chargingBucket = "Smarthome_ChargingData";
 const string electricityBucket = "Smarthome_ElectricityData";
 const string environmentDataBucket = "Smarthome_EnvironmentData";
 
+GeoPosition positionChargingStationStellplatz = new GeoPosition(Latitude: 48.412758, Longitude: 9.875185);
+GeoPosition positionChargingStationGarage = new GeoPosition(Latitude: 48.412750277777775, Longitude: 9.875374444444445);
+GeoPosition? bmwPosition = null;
+GeoPosition? miniPosition = null;
+GeoPosition? vwPosition = null;
+string[] cars = new string[] { "BMW", "Mini", "VW" };
 
 string? influxToken = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
 if (string.IsNullOrEmpty(influxToken))
@@ -67,13 +73,31 @@ mqttClient.OnMessageReceived += async (sender, e) =>
 
         if (topic == "data/charging/KebaGarage_ChargingSessionEnded")
         {
-            WriteChargingSessionEndedData(chargingBucket, influxConnector, "Garage", payload);
+            var car = cars[positionChargingStationGarage.GetClosestNearby([bmwPosition, miniPosition, vwPosition])??0];
+            var json = JObject.Parse(payload);
+            json["car"] = car;
+            WriteChargingSessionEndedData(chargingBucket, influxConnector, "Garage", json.ToString());
             return;
         }
         if (topic == "data/charging/KebaOutside_ChargingSessionEnded")
         {
-            WriteChargingSessionEndedData(chargingBucket, influxConnector, "Stellplatz", payload);
+            var car = cars[positionChargingStationStellplatz.GetClosestNearby([bmwPosition, miniPosition, vwPosition]) ?? 2];
+            var json = JObject.Parse(payload);
+            json["car"] = car;
+            WriteChargingSessionEndedData(chargingBucket, influxConnector, "Stellplatz", json.ToString());
             return;
+        }
+        if (topic.StartsWith("data/charging/BMW"))
+        {
+            bmwPosition = ExtractPositionFromPayload(payload) ?? bmwPosition;
+        }
+        if (topic.StartsWith("data/charging/Mini"))
+        {
+            miniPosition = ExtractPositionFromPayload(payload) ?? miniPosition;
+        }
+        if (topic.StartsWith("data/charging/VW"))
+        {
+            vwPosition = ExtractPositionFromPayload(payload) ?? vwPosition;
         }
         if (topic.StartsWith("data/charging"))
         {
@@ -86,6 +110,7 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("location", "M1");
             tags.Add("device", "EnvoyM1");
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM1", payload, tags, true);
+            return;
         }
         if (topic == "data/electricity/envoym3")
         {
@@ -236,3 +261,72 @@ static void WriteFloatAsFields(string chargingBucket, InfluxDbConnector influxCo
         fields,
         tags);
 }
+
+static GeoPosition? ExtractPositionFromPayload(string payload)
+{
+    var json = JObject.Parse(payload);
+    var position = json["position"];
+    if (position != null)
+    {
+        var latitude = position.Value<double?>("latitude");
+        var longitude = position.Value<double?>("longitude");
+        if (latitude.HasValue && longitude.HasValue)
+        {
+            return new GeoPosition(longitude.Value, latitude.Value);
+        }
+        else
+        {
+            ConsoleHelpers.PrintErrorMessage("Latitude or longitude missing in position payload.");
+        }
+    }
+    else
+    {
+        ConsoleHelpers.PrintErrorMessage("Position object missing in payload.");
+    }
+
+    return null;
+}
+
+public record GeoPosition(double Longitude, double Latitude)
+{
+    public int? GetClosestNearby(List<GeoPosition?> positions)
+    {
+        positions = positions.Where(p => p is GeoPosition).ToList();
+        if (positions == null || positions.Count == 0)
+            return null;
+
+        GeoPosition? closest = null;
+        double minDistance = double.MaxValue;
+
+        foreach (var pos in positions)
+        {
+            double distance = GetDistanceInMeters(this.Latitude, this.Longitude, pos.Latitude, pos.Longitude);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closest = pos;
+            }
+        }
+
+        return positions.IndexOf(closest!);
+    }
+
+    public static double GetDistanceInMeters(double lat1, double lon1, double lat2, double lon2)
+    {
+        // Convert to radians
+        double dLat1 = lat1 * Math.PI / 180.0;
+        double dLon1 = lon1 * Math.PI / 180.0;
+        double dLat2 = lat2 * Math.PI / 180.0;
+        double dLon2 = lon2 * Math.PI / 180.0;
+
+        // Haversine formula
+        double dLat = dLat2 - dLat1;
+        double dLon = dLon2 - dLon1;
+        double a = Math.Pow(Math.Sin(dLat / 2), 2) +
+                   Math.Cos(dLat1) * Math.Cos(dLat2) *
+                   Math.Pow(Math.Sin(dLon / 2), 2);
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        double earthRadius = 6371000; // meters
+        return earthRadius * c;
+    }
+};
