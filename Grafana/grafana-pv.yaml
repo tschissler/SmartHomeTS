@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: grafana-pv
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: influxdb-storage
+  hostPath:
+    path: /mnt/ssd/grafana
+    type: DirectoryOrCreate

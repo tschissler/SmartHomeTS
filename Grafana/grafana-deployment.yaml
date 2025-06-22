@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+      annotations:
+        checksum/config: "{{ .Values.configmap | toYaml | sha256sum }}"
+    spec:
+      securityContext:
+        fsGroup: 472
+      initContainers:
+        - name: init-chown-grafana
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 472:472 /var/lib/grafana && \
+              chmod -R 0777 /var/lib/grafana
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+      containers:
+        - name: grafana
+          image: grafana/grafana:9.5.5
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secret
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secret
+                  key: admin-password
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+            - name: influxdb-token
+              mountPath: /etc/grafana/provisioning/datasources/secrets
+              readOnly: true
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: influxdb-token
+          secret:
+            secretName: influxdb-token
