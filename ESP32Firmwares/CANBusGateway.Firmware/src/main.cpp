@@ -315,7 +315,7 @@ void processCanMessages()
       jsonDoc["value"] = "0x" + String(rxFrame.data, HEX); // Example, replace with actual decoding logic
       String jsonString;
       serializeJson(jsonDoc, jsonString);
-      mqttClientLib->publish(rawTopic.c_str(), jsonString, false, 0);
+      mqttClientLib->publish(rawTopic.c_str(), jsonString, false, 0, false);
     }
 
 

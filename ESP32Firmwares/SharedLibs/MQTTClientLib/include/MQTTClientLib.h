@@ -16,7 +16,7 @@ public:
     MQTTClientLib(const String& mqtt_broker, const String& clientId, WiFiClient& wifiClient, MQTTClientCallbackSimple callback);
     void connect(std::vector<String> subscriptionTopics);
     bool loop();
-    bool publish(const String& topic, const String& payload, bool retained, int qos);
+    bool publish(const String &topic, const String &payload, bool retained, int qos, bool printLogMessages = true);
     bool subscribe(const String& topic);
     int lastError();
 
