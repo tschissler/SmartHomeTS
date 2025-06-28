@@ -228,6 +228,7 @@ void decodeHovalData(const CanFrame &frame)
     uint8_t functionGroup = frame.data[2];
     uint8_t functionNumber = frame.data[3];
     uint16_t dataPointId = (frame.data[4] << 8) | frame.data[5];
+    int16_t rawValue = (frame.data[6] << 8) | frame.data[7];
 
     Serial.print("Function Group: ");
     Serial.print(functionGroup, HEX);
@@ -235,18 +236,19 @@ void decodeHovalData(const CanFrame &frame)
     Serial.print(functionNumber, HEX);
     Serial.print(", Data Point ID: ");
     Serial.print(dataPointId, HEX);
-    // Check if this is the outside temperature data point
-    if (functionGroup == 0 && functionNumber == 0)
-    {
-      // Decode the outside temperature value
-      hovalData.outsideTemp = decodeHovalValue(frame.data, 4, 0.1); // Assuming value is in tenths of degrees
-      hovalData.outsideTemp = round(hovalData.outsideTemp * 10.0) / 10.0; // Round to one decimal place
+    Serial.print(", Raw Value: ");
+    Serial.println(rawValue);
 
-      Serial.print("Decoded Outside Temperature: ");
-      Serial.println(hovalData.outsideTemp);
-      
-      // Publish the data to MQTT
-      //publishHovalData();
+    auto it = std::find_if(std::begin(dataPointDefs),
+                           std::end(dataPointDefs),
+                           [&](auto &dp) {
+                             return dp.functionGroup == functionGroup &&
+                                    dp.functionNumber == functionNumber &&
+                                    dp.dataPointId   == dataPointId;
+                           });
+    if (it != std::end(dataPointDefs)) {
+      it->value       = rawValue;
+      it->lastUpdated = time(nullptr);
     }
   }
 }
