@@ -55,6 +55,25 @@ const unsigned long DATA_PUBLISH_INTERVAL = 60000; // Publish data every minute
 bool debugMode = true;
 
 // Heat pump data structure based on Hoval datapoints
+struct DataPointDefinition {
+  uint8_t  id;
+  uint8_t  functionGroup;
+  uint8_t  functionNumber;
+  int16_t  dataPointId;
+  String   dataPointName;
+  uint8_t  type;
+  uint8_t  decimals;
+  String   unit;
+  uint16_t refreshRateInSeconds;
+  uint32_t value;
+  time_t   lastUpdated;
+};
+
+DataPointDefinition dataPointDefs[] = {
+  // { FG,   FN,   DP-ID,     "Name",       Type, Dec, "Unit" }
+  {  1, 0x00, 0x00, 0x0000,    "Aussenfühler Temperatur", 1,   1,   "°C", 60   },
+  {  2, 0x00, 0x00, 0x0002,    "Vorlauf-Ist Temp."      , 1,   1,   "°C", 60   },
+};
 struct HovalData
 {
   // System temperatures
@@ -202,17 +221,33 @@ float decodeHovalValue(const uint8_t *data, int startByte, float factor = 1.0)
 // Function to decode Hoval heat pump data from CAN frames
 void decodeHovalData(const CanFrame &frame)
 {
-  // Based on Hoval TopTronic E datapoints spreadsheet
-
-  switch (frame.identifier)
+  if (frame.data[0] == 01 && frame.data[1] == ANSWER)
   {
-  // Group 1: Basic system temperatures (typically 0x180 + node ID)
-  case 0x181: // Outside temperature
-    if (frame.data_length_code >= 2)
+    Serial.println("Hoval heat pump data received");
+    // Extract the function group and number
+    uint8_t functionGroup = frame.data[2];
+    uint8_t functionNumber = frame.data[3];
+    uint16_t dataPointId = (frame.data[4] << 8) | frame.data[5];
+
+    Serial.print("Function Group: ");
+    Serial.print(functionGroup, HEX);
+    Serial.print(", Function Number: ");
+    Serial.print(functionNumber, HEX);
+    Serial.print(", Data Point ID: ");
+    Serial.print(dataPointId, HEX);
+    // Check if this is the outside temperature data point
+    if (functionGroup == 0 && functionNumber == 0)
     {
-      hovalData.outsideTemp = decodeHovalValue(frame.data, 0, 0.1);
+      // Decode the outside temperature value
+      hovalData.outsideTemp = decodeHovalValue(frame.data, 4, 0.1); // Assuming value is in tenths of degrees
+      hovalData.outsideTemp = round(hovalData.outsideTemp * 10.0) / 10.0; // Round to one decimal place
+
+      Serial.print("Decoded Outside Temperature: ");
+      Serial.println(hovalData.outsideTemp);
+      
+      // Publish the data to MQTT
+      //publishHovalData();
     }
-    break;
   }
 }
 
@@ -283,8 +318,9 @@ void processCanMessages()
       mqttClientLib->publish(rawTopic.c_str(), jsonString, false, 0);
     }
 
+
     // Decode the Hoval heat pump data
-    // decodeHovalData(rxFrame);
+    decodeHovalData(rxFrame);
 
     // // Periodically publish aggregated heat pump data
     // unsigned long currentMillis = millis();
