@@ -271,19 +271,19 @@ void processCanMessages()
         dataArray.add(rxFrame.data[i]);
       }
 
-      // Add decoded value if possible
-      if (rxFrame.data_length_code >= 2)
-      {
-        float value = decodeHovalValue(rxFrame.data, 0, 0.1);
-        jsonDoc["value"] = value;
-      }
-
+      // // Add decoded value if possible
+      // if (rxFrame.data_length_code >= 2)
+      // {
+      //   float value = decodeHovalValue(rxFrame.data, 0, 0.1);
+      //   jsonDoc["value"] = value;
+      // }
+      jsonDoc["value"] = "0x" + String(rxFrame.data, HEX); // Example, replace with actual decoding logic
       String jsonString;
       serializeJson(jsonDoc, jsonString);
       mqttClientLib->publish(rawTopic.c_str(), jsonString, false, 0);
     }
 
-    // // Decode the Hoval heat pump data
+    // Decode the Hoval heat pump data
     // decodeHovalData(rxFrame);
 
     // // Periodically publish aggregated heat pump data
