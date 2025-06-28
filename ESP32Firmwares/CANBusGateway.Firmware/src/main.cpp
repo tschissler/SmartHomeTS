@@ -14,8 +14,8 @@
 #include "soc/rtc_cntl_reg.h"
 
 // Pin configuration - define your CAN bus pins here
-#define CAN_RX_PIN 22
-#define CAN_TX_PIN 23
+#define CAN_RX_PIN 35
+#define CAN_TX_PIN 5
 
 // Hoval protocol constants based on panel settings
 #define HOVAL_NODE_ID 113  // From PROT_PORT "3 113"
@@ -141,27 +141,9 @@ void setupCanBus()
 
   // Configure CAN bus
   ESP32Can.setPins(CAN_TX_PIN, CAN_RX_PIN);
-
-    // build a 50 kbps timing config (tweak brp/tseg values if your oscillator is different)
-  twai_timing_config_t timing50kb = {
-    .brp            = 80,   // baud‐rate prescaler
-    .tseg_1         = 14,   // time segment 1
-    .tseg_2         = 5,    // time segment 2
-    .sjw            = 3,    // synchronization jump width
-    .triple_sampling = false
-  };
   
   // begin with custom timing instead of a TwaiSpeed enum
-  if (ESP32Can.begin(
-        TWAI_SPEED_SIZE,   // bypass built-in enum
-        CAN_TX_PIN,
-        CAN_RX_PIN,
-        0xFFFF,            // default tx queue
-        0xFFFF,            // default rx queue
-        nullptr,           // no custom filter
-        nullptr,           // default general config
-        &timing50kb        // your 50 kbps timing
-      ))
+  if (ESP32Can.begin(TWAI_SPEED_50KBPS))
   {
     Serial.println("CAN Bus initialized at 50 kbps");
   }
@@ -318,7 +300,7 @@ void processCanMessages()
     // No CAN messages received, you can handle this case if needed
     if (debugMode)
     {
-      mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status").c_str(), "No CAN messages received", true, 0);
+      Serial.println("No CAN messages received");
     }
   }
 }
@@ -376,12 +358,12 @@ void loop()
     timeClient.update();
 
         // Nur alle 5 Sekunden einen Poll senden
-    static unsigned long lastPoll = 0;
-    if (millis() - lastPoll > 20000)
-    {
-      sendHovalPollFrame();
-      lastPoll = millis();
-    }
+    // static unsigned long lastPoll = 0;
+    // if (millis() - lastPoll > 20000)
+    // {
+    //   sendHovalPollFrame();
+    //   lastPoll = millis();
+    // }
 
     // Process CAN messages
     processCanMessages();
