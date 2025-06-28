@@ -266,7 +266,7 @@ void processCanMessages()
 
       // Add raw data bytes
       JsonArray dataArray = jsonDoc.createNestedArray("data");
-      for (int i = 0; i < rxFrame.identifier; i++)
+      for (int i = 0; i < rxFrame.data_length_code; i++)
       {
         dataArray.add(rxFrame.data[i]);
       }
