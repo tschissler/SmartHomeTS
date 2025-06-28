@@ -414,5 +414,5 @@ void loop()
     }
   }
 
-  delay(1000); // Small delay to prevent CPU overload
+  delay(100); // Small delay to prevent CPU overload
 }
