@@ -258,41 +258,41 @@ void processCanMessages()
       }
       Serial.println();
 
-      String rawTopic = baseTopic + "/hoval/" + sensorName + "/raw/" + String(rxFrame.identifier, HEX);
+      // String rawTopic = baseTopic + "/hoval/" + sensorName + "/raw/" + String(rxFrame.identifier, HEX);
 
-      // Create a more descriptive payload with ID name
-      JsonDocument jsonDoc;
-      jsonDoc["id"] = "0x" + String(rxFrame.identifier, HEX);
+      // // Create a more descriptive payload with ID name
+      // JsonDocument jsonDoc;
+      // jsonDoc["id"] = "0x" + String(rxFrame.identifier, HEX);
 
-      // Add raw data bytes
-      JsonArray dataArray = jsonDoc.createNestedArray("data");
-      for (int i = 0; i < rxFrame.identifier; i++)
-      {
-        dataArray.add(rxFrame.data[i]);
-      }
+      // // Add raw data bytes
+      // JsonArray dataArray = jsonDoc.createNestedArray("data");
+      // for (int i = 0; i < rxFrame.identifier; i++)
+      // {
+      //   dataArray.add(rxFrame.data[i]);
+      // }
 
-      // Add decoded value if possible
-      if (rxFrame.data_length_code >= 2)
-      {
-        float value = decodeHovalValue(rxFrame.data, 0, 0.1);
-        jsonDoc["value"] = value;
-      }
+      // // Add decoded value if possible
+      // if (rxFrame.data_length_code >= 2)
+      // {
+      //   float value = decodeHovalValue(rxFrame.data, 0, 0.1);
+      //   jsonDoc["value"] = value;
+      // }
 
-      String jsonString;
-      serializeJson(jsonDoc, jsonString);
-      mqttClientLib->publish(rawTopic.c_str(), jsonString, false, 0);
+      // String jsonString;
+      // serializeJson(jsonDoc, jsonString);
+      // mqttClientLib->publish(rawTopic.c_str(), jsonString, false, 0);
     }
 
-    // Decode the Hoval heat pump data
-    decodeHovalData(rxFrame);
+    // // Decode the Hoval heat pump data
+    // decodeHovalData(rxFrame);
 
-    // Periodically publish aggregated heat pump data
-    unsigned long currentMillis = millis();
-    if (currentMillis - lastDataPublishTime >= DATA_PUBLISH_INTERVAL)
-    {
-      publishHovalData();
-      lastDataPublishTime = currentMillis;
-    }
+    // // Periodically publish aggregated heat pump data
+    // unsigned long currentMillis = millis();
+    // if (currentMillis - lastDataPublishTime >= DATA_PUBLISH_INTERVAL)
+    // {
+    //   publishHovalData();
+    //   lastDataPublishTime = currentMillis;
+    // }
   }
 
   else
