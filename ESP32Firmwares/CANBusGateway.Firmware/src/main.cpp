@@ -241,7 +241,7 @@ void decodeHovalData(const CanFrame &frame)
 
     auto it = std::find_if(std::begin(dataPointDefs),
                            std::end(dataPointDefs),
-                           [&](auto &dp) {
+                           [&](DataPointDefinition &dp) {
                              return dp.functionGroup == functionGroup &&
                                     dp.functionNumber == functionNumber &&
                                     dp.dataPointId   == dataPointId;
