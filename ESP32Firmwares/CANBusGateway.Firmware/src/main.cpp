@@ -52,7 +52,7 @@ unsigned long lastDataPublishTime = 0;
 const unsigned long DATA_PUBLISH_INTERVAL = 60000; // Publish data every minute
 
 // Debug mode - set to true to log all CAN messages
-bool debugMode = false;
+bool debugMode = true;
 
 // Heat pump data structure based on Hoval datapoints
 struct DataPointDefinition {
