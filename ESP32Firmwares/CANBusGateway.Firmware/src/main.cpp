@@ -261,7 +261,6 @@ void publishHovalData()
 {
   // Create a JSON document for the data
   JsonDocument jsonDoc;
-  jsonDoc["outside_temp"] = hovalData.outsideTemp;
 
   // Serialize JSON to string
   String jsonString;
