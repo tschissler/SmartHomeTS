@@ -225,14 +225,17 @@ void decodeHovalData(const CanFrame &frame)
     uint16_t dataPointId = (frame.data[4] << 8) | frame.data[5];
     int16_t rawValue = (frame.data[6] << 8) | frame.data[7];
 
-    Serial.print("Function Group: ");
-    Serial.print(functionGroup, HEX);
-    Serial.print(", Function Number: ");
-    Serial.print(functionNumber, HEX);
-    Serial.print(", Data Point ID: ");
-    Serial.print(dataPointId, HEX);
-    Serial.print(", Raw Value: ");
-    Serial.println(rawValue);
+    if (debugMode)
+    {
+      Serial.print("Function Group: ");
+      Serial.print(functionGroup, HEX);
+      Serial.print(", Function Number: ");
+      Serial.print(functionNumber, HEX);
+      Serial.print(", Data Point ID: ");
+      Serial.print(dataPointId, HEX);
+      Serial.print(", Raw Value: ");
+      Serial.println(rawValue);
+    }
 
     auto it = std::find_if(std::begin(dataPointDefs),
                            std::end(dataPointDefs),
@@ -247,10 +250,10 @@ void decodeHovalData(const CanFrame &frame)
 
       Serial.print(it->dataPointName);
       Serial.print(": ");
-      Serial.println(it->value / pow(10, it->decimals));
+      Serial.print(it->value / pow(10, it->decimals));
       Serial.print(" ");
       Serial.println(it->unit);
-    } else {
+    } else if (debugMode) {
       Serial.println("Received data for unknown data point, skipping print.");
     }
   }
