@@ -218,7 +218,6 @@ void decodeHovalData(const CanFrame &frame)
 {
   if (frame.data[0] == 01 && frame.data[1] == ANSWER)
   {
-    Serial.println("Hoval heat pump data received");
     // Extract the function group and number
     uint8_t functionGroup = frame.data[2];
     uint8_t functionNumber = frame.data[3];
@@ -227,6 +226,7 @@ void decodeHovalData(const CanFrame &frame)
 
     if (debugMode)
     {
+      Serial.println("Hoval heat pump data received");
       Serial.print("Function Group: ");
       Serial.print(functionGroup, HEX);
       Serial.print(", Function Number: ");
@@ -265,13 +265,27 @@ void publishHovalData()
   // Create a JSON document for the data
   JsonDocument jsonDoc;
 
+  time_t now = time(nullptr);
+  for (DataPointDefinition &dp : dataPointDefs) {
+    if (now - dp.lastPublished >= dp.refreshRateInSeconds) {
+      JsonObject obj = jsonDoc.createNestedObject(dp.dataPointName);
+      obj["value"] = dp.value / pow(10, dp.decimals);
+      obj["unit"] = dp.unit;
+      obj["datapoint"] = dp.dataPointName;
+    }
+  }
+
+  if (jsonDoc.size() == 0) {
+    Serial.println("No data to publish, skipping MQTT publish");
+    return; // No data to publish
+  }
   // Serialize JSON to string
   String jsonString;
   serializeJson(jsonDoc, jsonString);
 
   // Publish to MQTT
   String topic = baseTopic + "/hoval/" + sensorName + "/data";
-  mqttClientLib->publish(topic.c_str(), jsonString, true, 0); // Retained message with QoS 0
+  mqttClientLib->publish(topic.c_str(), jsonString, true, 0); 
 
   Serial.println("Published Hoval data to MQTT");
   Serial.println(jsonString);
