@@ -61,6 +61,8 @@ static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
 static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname";
 static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness";
 static int brightness = 255;
+static int blinkCount = 0;
+static const int MAX_BLINK_COUNT = 20;
 
 void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
   pixels.setPixelColor(0, pixels.Color(r, g, b));
@@ -73,7 +75,13 @@ void blinkLed(uint8_t r, uint8_t g, uint8_t b) {
   setLedColor(0, 0, 0);
 }
 
-void blinkLed(Color color) {
+void blinkLed(Color color, bool fullBrightness = false) {
+  if (fullBrightness) {
+    pixels.setBrightness(255);
+  }
+  else {
+    pixels.setBrightness(brightness);
+  }
   blinkLed(color.r, color.g, color.b);
 }
 
@@ -152,9 +160,7 @@ void connectToMQTT() {
 void readSensorData() {
   if (sensorName == "") {
     Serial.println("Sensor name not set, skipping sensor reading");
-    pixels.setBrightness(255);
-    blinkLed(RED);
-    pixels.setBrightness(brightness);
+    blinkLed(RED, true);
     return;
   }
 
@@ -173,11 +179,17 @@ void readSensorData() {
     Serial.println("Sensor data read: " + String(data.temperature) + "°C, " + String(data.humidity) + "%");
     lastReadingTime = data.timestamp;
     readingCount++;
-    blinkLed(BLUE);
+    if (blinkCount < MAX_BLINK_COUNT) {
+      blinkCount++;
+      blinkLed(BLUE, true);
+    }    
+    else {
+      blinkLed(BLUE);
+    }
   }
   else {
     Serial.println("Maximum readings reached, skipping sensor reading");
-    blinkLed(RED);
+    blinkLed(RED, true);
     return;
   }
 }
@@ -209,7 +221,7 @@ void publishSensorData()
   if (sendMQTTMessages)
   {
     mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
-    blinkLed(mqttSuccess ? GREEN : RED);
+    mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
     mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
   }
   Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Version: " + version);
@@ -259,7 +271,7 @@ void loop() {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
   if (otaInProgress < 0) {
-    blinkLed(RED);
+    blinkLed(RED, true);
   }
 
   if (otaInProgress != 1) {
