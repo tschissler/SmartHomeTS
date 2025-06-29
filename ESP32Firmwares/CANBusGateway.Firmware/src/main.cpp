@@ -52,7 +52,7 @@ unsigned long lastDataPublishTime = 0;
 const unsigned long DATA_PUBLISH_INTERVAL = 60000; // Publish data every minute
 
 // Debug mode - set to true to log all CAN messages
-bool debugMode = true;
+bool debugMode = false;
 
 // Heat pump data structure based on Hoval datapoints
 struct DataPointDefinition {
@@ -276,7 +276,7 @@ void publishHovalData()
   if (jsonDoc.size() == 0) {
     if (debugMode)
     {
-      //Serial.println("No data to publish, skipping MQTT publish");
+      Serial.println("No data to publish, skipping MQTT publish");
     }
     return; // No data to publish
   }
