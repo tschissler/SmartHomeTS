@@ -52,7 +52,7 @@ unsigned long lastDataPublishTime = 0;
 const unsigned long DATA_PUBLISH_INTERVAL = 60000; // Publish data every minute
 
 // Debug mode - set to true to log all CAN messages
-bool debugMode = true;
+bool debugMode = false;
 
 // Heat pump data structure based on Hoval datapoints
 struct DataPointDefinition {
@@ -160,6 +160,7 @@ void setupCanBus()
 
   // Configure CAN bus
   ESP32Can.setPins(CAN_TX_PIN, CAN_RX_PIN);
+  ESP32Can.setRxQueueSize(100);
   
   // begin with custom timing instead of a TwaiSpeed enum
   if (ESP32Can.begin(TWAI_SPEED_50KBPS))
@@ -414,5 +415,5 @@ void loop()
     }
   }
 
-  delay(100); // Small delay to prevent CPU overload
+  delay(10); // Small delay to prevent CPU overload
 }
