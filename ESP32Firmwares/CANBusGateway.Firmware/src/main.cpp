@@ -424,6 +424,7 @@ void loop()
 
     // Process CAN messages
     processCanMessages();
+    publishHovalData();
 
     // Check MQTT connection
     if (!mqttClientLib->loop())
