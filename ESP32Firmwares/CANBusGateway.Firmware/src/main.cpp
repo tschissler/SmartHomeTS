@@ -276,7 +276,7 @@ void publishHovalData()
   if (jsonDoc.size() == 0) {
     if (debugMode)
     {
-      Serial.println("No data to publish, skipping MQTT publish");
+      //Serial.println("No data to publish, skipping MQTT publish");
     }
     return; // No data to publish
   }
