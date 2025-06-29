@@ -75,13 +75,6 @@ DataPointDefinition dataPointDefs[] = {
   {  1, 0x00, 0x00, 0x0000,    "Aussenfühler Temperatur", 1,   1,   "°C", 60   },
   {  2, 0x00, 0x00, 0x0002,    "Vorlauf-Ist Temp."      , 1,   1,   "°C", 60   },
 };
-struct HovalData
-{
-  // System temperatures
-  float outsideTemp = 0; // Outside temperature (°C)
-};
-
-HovalData hovalData;
 
 String extractVersionFromUrl(String url)
 {
@@ -251,13 +244,15 @@ void decodeHovalData(const CanFrame &frame)
     if (it != std::end(dataPointDefs)) {
       it->value       = rawValue;
       it->lastUpdated = time(nullptr);
-    }
 
-    Serial.print(it->dataPointName);
-    Serial.print(": ");
-    Serial.println(it->value / pow(10, it->decimals));
-    Serial.print(" ");
-    Serial.println(it->unit);
+      Serial.print(it->dataPointName);
+      Serial.print(": ");
+      Serial.println(it->value / pow(10, it->decimals));
+      Serial.print(" ");
+      Serial.println(it->unit);
+    } else {
+      Serial.println("Received data for unknown data point, skipping print.");
+    }
   }
 }
 
