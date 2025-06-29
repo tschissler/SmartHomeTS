@@ -268,15 +268,16 @@ void publishHovalData()
   time_t now = time(nullptr);
   for (DataPointDefinition &dp : dataPointDefs) {
     if (now - dp.lastPublished >= dp.refreshRateInSeconds) {
-      JsonObject obj = jsonDoc.createNestedObject(dp.dataPointName);
-      obj["value"] = dp.value / pow(10, dp.decimals);
-      obj["unit"] = dp.unit;
+      jsonDoc[dp.dataPointName] = dp.value / pow(10, dp.decimals);
       dp.lastPublished = now;
     }
   }
 
   if (jsonDoc.size() == 0) {
-    Serial.println("No data to publish, skipping MQTT publish");
+    if (debugMode)
+    {
+      Serial.println("No data to publish, skipping MQTT publish");
+    }
     return; // No data to publish
   }
   // Serialize JSON to string
@@ -287,8 +288,10 @@ void publishHovalData()
   String topic = baseTopic + "/hoval/" + sensorName + "/data";
   mqttClientLib->publish(topic.c_str(), jsonString, true, 0); 
 
-  Serial.println("Published Hoval data to MQTT");
-
+  if (debugMode)
+  {
+    Serial.println("Published Hoval data to MQTT");
+  }
 }
 
 // Update the processCanMessages function
