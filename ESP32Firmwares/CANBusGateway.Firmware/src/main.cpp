@@ -200,7 +200,6 @@ void sendHovalPollFrame()
         Serial.println("Poll-Frame sent for " + dp.dataPointName);
       } else {
         Serial.println("Error sending Poll-Frame for " + dp.dataPointName);
-        mqttClientLib->publish((baseTopic + "/hoval/" + sensorName + "/status/error").c_str(), "Error sending Poll-Frame", true, 0);
       }
     }
   }
@@ -317,30 +316,6 @@ void processCanMessages()
         Serial.print(" ");
       }
       Serial.println();
-
-      String rawTopic = baseTopic + "/hoval/" + sensorName + "/raw/" + String(rxFrame.identifier, HEX);
-
-      // Create a more descriptive payload with ID name
-      JsonDocument jsonDoc;
-      jsonDoc["id"] = "0x" + String(rxFrame.identifier, HEX);
-
-      // Add raw data bytes
-      JsonArray dataArray = jsonDoc.createNestedArray("data");
-      for (int i = 0; i < rxFrame.data_length_code; i++)
-      {
-        dataArray.add(rxFrame.data[i]);
-      }
-
-      // Add decoded value if possible
-      if (rxFrame.data_length_code >= 2)
-      {
-        float value = decodeHovalValue(rxFrame.data, 0, 0.1);
-        jsonDoc["value"] = value;
-      }
-      jsonDoc["value"] = "0x" + String(rxFrame.data, HEX); // Example, replace with actual decoding logic
-      String jsonString;
-      serializeJson(jsonDoc, jsonString);
-      mqttClientLib->publish(rawTopic.c_str(), jsonString, false, 0, false);
     }
 
 
