@@ -74,6 +74,7 @@ DataPointDefinition dataPointDefs[] = {
   //    FG,   FN,   DP-ID,     "Name",                   Type, Dec, "Unit", Refresh }
   {  1, 0x00, 0x00, 0x0000,    "Aussenfühler Temperatur", 1,   1,   "°C", 60   },
   {  2, 0x01, 0x00, 0x0002,    "Vorlauf-Ist Temperatur" , 1,   1,   "°C", 60   },
+  {  3, 0x0A, 0x01, 0x4E52,    "Wasserdruck"            , 1,   1,   "bar", 60   },
 };
 
 String extractVersionFromUrl(String url)
