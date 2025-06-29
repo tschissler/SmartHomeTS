@@ -272,6 +272,7 @@ void publishHovalData()
       obj["value"] = dp.value / pow(10, dp.decimals);
       obj["unit"] = dp.unit;
       obj["datapoint"] = dp.dataPointName;
+      dp.lastPublished = now;
     }
   }
 
@@ -288,7 +289,7 @@ void publishHovalData()
   mqttClientLib->publish(topic.c_str(), jsonString, true, 0); 
 
   Serial.println("Published Hoval data to MQTT");
-  Serial.println(jsonString);
+
 }
 
 // Update the processCanMessages function
