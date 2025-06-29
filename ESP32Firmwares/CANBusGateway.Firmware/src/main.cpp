@@ -73,7 +73,7 @@ struct DataPointDefinition {
 DataPointDefinition dataPointDefs[] = {
   //    FG,   FN,   DP-ID,     "Name",                   Type, Dec, "Unit", Refresh }
   {  1, 0x00, 0x00, 0x0000,    "Aussenfühler Temperatur", 1,   1,   "°C", 60   },
-  {  2, 0x00, 0x00, 0x5243,    "Vorlauf-Ist Temperatur" , 1,   1,   "°C", 60   },
+  {  2, 0x01, 0x00, 0x0002,    "Vorlauf-Ist Temperatur" , 1,   1,   "°C", 60   },
 };
 
 String extractVersionFromUrl(String url)
