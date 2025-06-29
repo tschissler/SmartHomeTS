@@ -394,12 +394,12 @@ void loop()
     timeClient.update();
 
     // Nur alle 5 Sekunden einen Poll senden
-    static unsigned long lastPoll = 0;
-    if (millis() - lastPoll > 5000)
-    {
-      sendHovalPollFrame();
-      lastPoll = millis();
-    }
+    // static unsigned long lastPoll = 0;
+    // if (millis() - lastPoll > 5000)
+    // {
+    //   sendHovalPollFrame();
+    //   lastPoll = millis();
+    // }
 
     // Process CAN messages
     processCanMessages();
