@@ -271,7 +271,6 @@ void publishHovalData()
       JsonObject obj = jsonDoc.createNestedObject(dp.dataPointName);
       obj["value"] = dp.value / pow(10, dp.decimals);
       obj["unit"] = dp.unit;
-      obj["datapoint"] = dp.dataPointName;
       dp.lastPublished = now;
     }
   }
