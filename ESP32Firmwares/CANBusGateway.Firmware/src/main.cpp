@@ -67,6 +67,7 @@ struct DataPointDefinition {
   uint16_t refreshRateInSeconds;
   uint32_t value;
   time_t   lastUpdated;
+  time_t   lastPublished;
 };
 
 DataPointDefinition dataPointDefs[] = {
@@ -251,6 +252,12 @@ void decodeHovalData(const CanFrame &frame)
       it->value       = rawValue;
       it->lastUpdated = time(nullptr);
     }
+
+    Serial.print(it->dataPointName);
+    Serial.print(": ");
+    Serial.println(it->value / pow(10, it->decimals));
+    Serial.print(" ");
+    Serial.println(it->unit);
   }
 }
 
