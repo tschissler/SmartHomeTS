@@ -233,9 +233,7 @@ void decodeHovalData(const CanFrame &frame)
    
     if (debugMode)
     {
-          // Log raw CAN frame for debugging
-    if (debugMode)
-    {
+      // Log raw CAN frame for debugging
       Serial.print("CAN frame: 0x");
       Serial.print(rxFrame.identifier, HEX);
       Serial.print(" Ext: ");
