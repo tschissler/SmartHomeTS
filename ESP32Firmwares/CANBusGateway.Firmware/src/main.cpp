@@ -57,6 +57,7 @@ bool debugMode = false;
 // Heat pump data structure based on Hoval datapoints
 struct DataPointDefinition {
   uint8_t  id;
+  uint8_t  unitId;
   uint8_t  functionGroup;
   uint8_t  functionNumber;
   int16_t  dataPointId;
@@ -71,11 +72,11 @@ struct DataPointDefinition {
 };
 
 DataPointDefinition dataPointDefs[] = {
-  //    FG,   FN,   DP-ID,     "Name",                   Type, Dec, "Unit", Refresh }
-  {  1, 0x00, 0x00, 0x0000,    "Aussenfühler Temperatur", 1,   1,   "°C", 60   },
-  {  2, 0x01, 0x00, 0x0002,    "Vorlauf-Ist Temperatur" , 1,   1,   "°C", 60   },
-  {  3, 0x0A, 0x01, 0x4E52,    "Wasserdruck"            , 1,   1,   "bar", 60   },
-  {  4, 0x14, 0x01, 0x000C,    "Spannung"               , 1,   1,   "V", 60   },
+  //    Unit, FG,   FN,   DP-ID,     "Name",                   Type, Dec, "Unit", Refresh }
+  {  1, 0x01, 0x00, 0x00, 0x0000,    "Aussenfühler Temperatur", 1,   1,   "°C", 60   },
+  {  2, 0x01, 0x01, 0x00, 0x0002,    "Vorlauf-Ist Temperatur" , 1,   1,   "°C", 60   },
+  {  3, 0x01, 0x0A, 0x01, 0x4E52,    "Wasserdruck"            , 1,   1,   "bar", 60   },
+  {  4, 0x81, 0x15, 0x00, 0x000F,    "Puffer PF"              , 1,   1,   "°C", 60   },
 };
 
 String extractVersionFromUrl(String url)
@@ -220,12 +221,22 @@ void decodeHovalData(const CanFrame &frame)
 {
   if (frame.data[0] == 01 && frame.data[1] == ANSWER)
   {
+    
+    // First 2 bytes, messages prio & offsets
+    // Last 2 bytes device type and device ID??
+    uint8_t deviceId = frame.identifier & 0xff; 
+    uint8_t deviceType = (frame.identifier >> 8) & 0xFF;
     // Extract the function group and number
     uint8_t functionGroup = frame.data[2];
     uint8_t functionNumber = frame.data[3];
     uint16_t dataPointId = (frame.data[4] << 8) | frame.data[5];
     int16_t rawValue = (frame.data[6] << 8) | frame.data[7];
 
+    Serial.print("DeviceId: ");
+    Serial.println(deviceId, HEX);
+    Serial.print("DeviceType: ");
+    Serial.println(deviceType, HEX);
+    
     if (debugMode)
     {
       Serial.println("Hoval heat pump data received");
@@ -242,7 +253,8 @@ void decodeHovalData(const CanFrame &frame)
     auto it = std::find_if(std::begin(dataPointDefs),
                            std::end(dataPointDefs),
                            [&](DataPointDefinition &dp) {
-                             return dp.functionGroup == functionGroup &&
+                             return dp.unitId = deviceId &&
+                                    dp.functionGroup == functionGroup &&
                                     dp.functionNumber == functionNumber &&
                                     dp.dataPointId   == dataPointId;
                            });
