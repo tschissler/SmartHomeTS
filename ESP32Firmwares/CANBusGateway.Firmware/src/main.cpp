@@ -320,6 +320,10 @@ void processCanMessages()
     {
       Serial.print("CAN frame: 0x");
       Serial.print(rxFrame.identifier, HEX);
+      Serial.print(" Ext: ");
+      Serial.print(rxFrame.extd, HEX);
+      Serial.print(" Flags: ");
+      Serial.print(rxFrame.flags, HEX);
       Serial.print(" Data: ");
 
       for (int i = 0; i < rxFrame.data_length_code; i++)
