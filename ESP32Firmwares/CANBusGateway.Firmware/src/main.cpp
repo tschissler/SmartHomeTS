@@ -273,10 +273,8 @@ void decodeHovalData(const CanFrame &frame)
   }
 }
 
-// Function to publish heat pump data to MQTT
 void publishHovalData()
 {
-  // Create a JSON document for the data
   JsonDocument jsonDoc;
 
   time_t now = time(nullptr);
@@ -290,15 +288,14 @@ void publishHovalData()
   if (jsonDoc.size() == 0) {
     if (debugMode)
     {
-      Serial.println("No data to publish, skipping MQTT publish");
+      //Serial.println("No data to publish, skipping MQTT publish");
     }
-    return; // No data to publish
+    return; 
   }
-  // Serialize JSON to string
+
   String jsonString;
   serializeJson(jsonDoc, jsonString);
 
-  // Publish to MQTT
   String topic = baseTopic + "/hoval/" + sensorName + "/data";
   mqttClientLib->publish(topic.c_str(), jsonString, true, 0); 
 
@@ -308,7 +305,6 @@ void publishHovalData()
   }
 }
 
-// Update the processCanMessages function
 void processCanMessages()
 {
   // Check if CAN messages are available
