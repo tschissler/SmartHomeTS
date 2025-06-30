@@ -230,12 +230,31 @@ void decodeHovalData(const CanFrame &frame)
     uint8_t functionNumber = frame.data[3];
     uint16_t dataPointId = (frame.data[4] << 8) | frame.data[5];
     int16_t rawValue = (frame.data[6] << 8) | frame.data[7];
-
-    Serial.print("DeviceId: ");
-    Serial.println(deviceId, HEX);
-    
+   
     if (debugMode)
     {
+          // Log raw CAN frame for debugging
+    if (debugMode)
+    {
+      Serial.print("CAN frame: 0x");
+      Serial.print(rxFrame.identifier, HEX);
+      Serial.print(" Ext: ");
+      Serial.print(rxFrame.extd, HEX);
+      Serial.print(" Flags: ");
+      Serial.print(rxFrame.flags, HEX);
+      Serial.print(" Data: ");
+
+      for (int i = 0; i < rxFrame.data_length_code; i++)
+      {
+        if (rxFrame.data[i] < 16)
+          Serial.print("0");
+        Serial.print(rxFrame.data[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+
+      Serial.print("DeviceId: ");
+      Serial.println(deviceId, HEX);
       Serial.print("Function Group: ");
       Serial.print(functionGroup, HEX);
       Serial.print(", Function Number: ");
@@ -306,44 +325,12 @@ void processCanMessages()
   // Check if CAN messages are available
   if (ESP32Can.readFrame(rxFrame, 1000))
   {
-
-    // Log raw CAN frame for debugging
-    if (debugMode)
-    {
-      Serial.print("CAN frame: 0x");
-      Serial.print(rxFrame.identifier, HEX);
-      Serial.print(" Ext: ");
-      Serial.print(rxFrame.extd, HEX);
-      Serial.print(" Flags: ");
-      Serial.print(rxFrame.flags, HEX);
-      Serial.print(" Data: ");
-
-      for (int i = 0; i < rxFrame.data_length_code; i++)
-      {
-        if (rxFrame.data[i] < 16)
-          Serial.print("0");
-        Serial.print(rxFrame.data[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-    }
-
-
     // Decode the Hoval heat pump data
     decodeHovalData(rxFrame);
-
-    // // Periodically publish aggregated heat pump data
-    // unsigned long currentMillis = millis();
-    // if (currentMillis - lastDataPublishTime >= DATA_PUBLISH_INTERVAL)
-    // {
-    //   publishHovalData();
-    //   lastDataPublishTime = currentMillis;
-    // }
   }
 
   else
   {
-    // No CAN messages received, you can handle this case if needed
     if (debugMode)
     {
       Serial.println("No CAN messages received");
