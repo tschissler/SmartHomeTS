@@ -72,7 +72,7 @@ struct DataPointDefinition {
 };
 
 DataPointDefinition dataPointDefs[] = {
-  //    Unit, FG,   FN,   DP-ID,     "Name",                   Type, Dec, "Unit", Refresh }
+  //Id, Unit, FG,   FN,   DP-ID,     "Name",                   Type, Dec, "Unit", Refresh }
   {  1, 0x01, 0x00, 0x00, 0x0000,    "Aussenfühler Temperatur", 1,   1,   "°C", 60   },
   {  2, 0x01, 0x01, 0x00, 0x0002,    "Vorlauf-Ist Temperatur" , 1,   1,   "°C", 60   },
   {  3, 0x01, 0x0A, 0x01, 0x4E52,    "Wasserdruck"            , 1,   1,   "bar", 60   },
@@ -185,7 +185,7 @@ void sendHovalPollFrame()
       Serial.println(dp.dataPointName);
 
       uint8_t payload[6];
-      payload[0] = 0x01;
+      payload[0] = dp.unitId; 
       payload[1] = REQUEST;
       payload[2] = dp.functionGroup;
       payload[3] = dp.functionNumber;
@@ -219,13 +219,12 @@ float decodeHovalValue(const uint8_t *data, int startByte, float factor = 1.0)
 // Function to decode Hoval heat pump data from CAN frames
 void decodeHovalData(const CanFrame &frame)
 {
-  if (frame.data[0] == 01 && frame.data[1] == ANSWER)
+  if (frame.data[1] == ANSWER)
   {
     
     // First 2 bytes, messages prio & offsets
     // Last 2 bytes device type and device ID??
-    uint8_t deviceId = frame.identifier & 0xff; 
-    uint8_t deviceType = (frame.identifier >> 8) & 0xFF;
+    uint8_t deviceId = frame.data[0];
     // Extract the function group and number
     uint8_t functionGroup = frame.data[2];
     uint8_t functionNumber = frame.data[3];
@@ -234,12 +233,9 @@ void decodeHovalData(const CanFrame &frame)
 
     Serial.print("DeviceId: ");
     Serial.println(deviceId, HEX);
-    Serial.print("DeviceType: ");
-    Serial.println(deviceType, HEX);
     
     if (debugMode)
     {
-      Serial.println("Hoval heat pump data received");
       Serial.print("Function Group: ");
       Serial.print(functionGroup, HEX);
       Serial.print(", Function Number: ");
