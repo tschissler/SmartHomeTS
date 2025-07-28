@@ -6,7 +6,8 @@ on:
     paths:
       - .github/workflows/KellerdeviceFirmware.yml
       - ESP32Firmwares/Kellerdevice.Firmware/**
-  
+  workflow_dispatch:
+    
 jobs:
   build:
     runs-on: ubuntu-latest
