@@ -126,17 +126,17 @@ namespace SmartHome.Web.Services
                         IluminationSituation = JsonSerializer.Deserialize<IluminationSituation>(payload);
                         break;
                     }
-                case "data/keller/temperature":
+                case "daten/temperatur/Keller":
                     {
                         ClimateData.BasementTemperature = CreateDataPoint(payload) ?? ClimateData.BasementTemperature;
                         break;
                     }
-                case "data/keller/humidity":
+                case "daten/luftfeuchtigkeit/Keller":
                     {
                         ClimateData.BasementHumidity = CreateDataPoint(payload) ?? ClimateData.BasementHumidity;
                         break;
                     }
-                case "data/keller/cisternFillLevel":
+                case "daten/zisterneFuellstand/Keller":
                     {
                         ClimateData.CisternFillLevel = CreateDataPoint(payload) ?? ClimateData.CisternFillLevel;
                         break;
