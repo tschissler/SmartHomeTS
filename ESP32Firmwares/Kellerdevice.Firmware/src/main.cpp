@@ -327,40 +327,4 @@ void loop() {
     }
   }
   delay(100);
-
-  // sensors_event_t humidity, temp;
-
-  // unsigned long currentMillis = millis();
-
-  // // Check if it's time to blink the LED
-  // if (currentMillis - previousMillisLED >= intervalLED) {
-  //   previousMillisLED = currentMillis;
-  //   // Blink the LED
-  //   digitalWrite(Green_LED_Pin, HIGH);
-  //   delay(100);
-  //   digitalWrite(Green_LED_Pin, LOW);
-  // }
-
-  // // Check if it's time to read the sensor
-  // if (currentMillis - previousMillisSensor >= intervalSensor) {
-  //   previousMillisSensor = currentMillis;
-  //   // Read the sensor data
-  //   sensors_event_t humidity, temp;
-  //   shtc3.getEvent(&humidity, &temp);
-  //   Serial.print("Humidity: ");
-  //   Serial.print(humidity.relative_humidity);
-  //   Serial.print(" %\t");
-  //   Serial.print("Temperature: ");
-  //   Serial.print(temp.temperature);
-  //   Serial.println(" *C");
-
-  //   double distance = 100 - distanceSensor.measureDistanceCm();
-  //   Serial.print("Distance: ");
-  //   Serial.print(distance);
-  //   Serial.println(" cm");
-
-  //   mqttClient.publish("data/keller/temperature", String(temp.temperature).c_str());
-  //   mqttClient.publish("data/keller/humidity", String(humidity.relative_humidity).c_str());
-  //   mqttClient.publish("data/keller/cisternFillLevel", String(distance).c_str());
-  // }
 }
