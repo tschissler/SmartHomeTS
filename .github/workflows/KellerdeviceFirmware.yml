@@ -6,7 +6,8 @@ on:
     paths:
       - .github/workflows/KellerdeviceFirmware.yml
       - ESP32Firmwares/Kellerdevice.Firmware/**
-  
+  workflow_dispatch:
+    
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,8 +34,8 @@ jobs:
 
     - name: Build with PlatformIO  
       env:
-        WIFI_SSID: ${{ secrets.WIFI_SSID_BASEMENT }}
-        WIFI_PASSWORD: ${{ secrets.WIFI_PASSWORD_BASEMENT }}
+        WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
+        FIRMWARE_VERSION: ${{ env.version }}
       run: |
         pio run
 
@@ -48,7 +49,7 @@ jobs:
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "blob_url=https://smarthomestorageprod.blob.core.windows.net/firmwareupdates/Kellerdevicefirmware_$version.bin.bin" >> $GITHUB_OUTPUT
+      run: echo "blob_url=https://smarthomestorageprod.blob.core.windows.net/firmwareupdates/Kellerdevicefirmware_$version.bin" >> $GITHUB_OUTPUT
                            
   triggerupdate:
     needs: build
