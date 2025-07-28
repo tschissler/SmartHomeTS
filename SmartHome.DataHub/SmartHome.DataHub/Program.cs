@@ -12,6 +12,7 @@ const string influxUrl = "http://smarthomepi2:32086";
 const string chargingBucket = "Smarthome_ChargingData";
 const string electricityBucket = "Smarthome_ElectricityData";
 const string environmentDataBucket = "Smarthome_EnvironmentData";
+const string heatingDataBucket = "Smarthome_HeatingData";
 
 GeoPosition positionChargingStationStellplatz = new GeoPosition(Latitude: 48.412758, Longitude: 9.875185);
 GeoPosition positionChargingStationGarage = new GeoPosition(Latitude: 48.412750277777775, Longitude: 9.875374444444445);
@@ -60,6 +61,7 @@ await mqttClient.SubscribeToTopic("data/electricity/envoym1");
 await mqttClient.SubscribeToTopic("data/electricity/envoym3");
 await mqttClient.SubscribeToTopic("daten/temperatur/#");
 await mqttClient.SubscribeToTopic("daten/luftfeuchtigkeit/#");
+await mqttClient.SubscribeToTopic("cangateway/M3/#");
 
 
 mqttClient.OnMessageReceived += async (sender, e) =>
@@ -138,6 +140,15 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             var topicParts = topic.Split('/');
             tags.Add("device", topicParts[2]);
             WriteFloatAsFields(environmentDataBucket, influxConnector, topic, topicParts[1], payload, tags);
+            return;
+        }
+        
+        if (topic.StartsWith("cangateway"))
+        {
+            tags = new Dictionary<string, string>();
+            var topicParts = topic.Split('/');
+            tags.Add("location", topicParts[2]);
+            WriteFloatAsFields(heatingDataBucket, influxConnector, topic, topicParts[1], payload, tags);
             return;
         }
     }
