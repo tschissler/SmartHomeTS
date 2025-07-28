@@ -18,6 +18,8 @@ jobs:
   
     steps:
     - uses: actions/checkout@v3
+    - name: Generating version 
+      run: echo "version=0.0.$(( ${{ github.run_number }} ))" >> $GITHUB_ENV
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -38,9 +40,9 @@ jobs:
 
     - name: Upload Firmware to Azure Blob Storage
       run: |
-        az storage blob upload --account-name iotstoragem1 \
+        az storage blob upload --account-name smarthomestorageprod \
                                --container-name firmwareupdates \
-                               --name Kellerdevicefirmware_${{ github.run_id }}.bin \
+                               --name Kellerdevicefirmware_$version.bin \
                                --file .pio/build/esp32dev/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
@@ -57,4 +59,4 @@ jobs:
 
     - name: Trigger MQTT Update Message
       run: |
-        mosquitto_pub -h smarthomepi2 -p 32004 -t OTAUpdateKellerdeviceTopic -m ${{ needs.build.outputs.blob_url }} -i buildrunner
+        mosquitto_pub -h smarthomepi2 -p 32004 -t OTAUpdate/Kellerdevice -m ${{ needs.build.outputs.blob_url }} -i buildrunner -r

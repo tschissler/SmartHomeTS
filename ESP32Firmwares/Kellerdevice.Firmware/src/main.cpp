@@ -1,142 +1,256 @@
+// Default libraries
 #include <Arduino.h>
 #include <WiFi.h>
-#include <PubSubClient.h>
-#include <time.h>
-#include <ESP32httpUpdate.h>
-#include <AzureRootCert.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <ESP32Ping.h>
+#include "ESP32Helpers.h"
+
+// Shared libaries
+#include "AzureOTAUpdater.h"
+#include "MQTTClientLib.h"
+#include "WifiLib.h"
+
+// Project specific libraries
 #include <SPI.h>
 #include <Wire.h>
 #include "Adafruit_SHTC3.h"
 #include <HCSR04.h>
+#include "colors.h"
 
-const char* appName = "KellerDevice";
-const char* version = "0.0.5";
+const char* version = FIRMWARE_VERSION;
+String chipID = "";
+String appName = "KellerDevice";
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_SSID and WIFI_PASSWORD as environment variables on your dev-system
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+WifiLib wifiLib(WIFI_PASSWORDS);
+WiFiClient wifiClient;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+MQTTClientLib* mqttClientLib = nullptr;
 
-// MQTT Broker settings
-const char* mqtt_broker = "smarthomepi2";
-const int mqtt_port = 32004;
-const char* mqtt_update_topic = "OTAUpdateKellerdeviceTopic";
+static int otaInProgress = 0;
+static bool otaEnable = OTA_ENABLED != "false";
+static bool sendMQTTMessages = true;
+static bool mqttSuccess = false;
+static int lastMQTTSentMinute = 0;
 
-WiFiClient espClient;
-PubSubClient mqttClient(espClient);
+static String baseTopic = "daten";
+static String sensorName = "";
+const String mqtt_broker = "smarthomepi2";
+static String mqtt_OTAtopic = "OTAUpdate/KellerDevice";
+static String mqtt_SensorNameTopic = "config/KellerDevice/{ID}/Sensorname";
+static String mqtt_BrightnessTopic = "config/KellerDevice/{ID}/Brightness";
+static int brightness = 255;
+static int blinkCount = 0;
+static const int MAX_BLINK_COUNT = 20;
 
 const int Red_LED_Pin = 13;
 const int Green_LED_Pin = 12;
 const int Blue_LED_Pin = 27;
+#define BLINK_DURATION 100       // Blink duration in milliseconds
+
 const int I2CDataPin = 32;
 const int I2CClockPin = 33;
 const int DistanceSensor_Trigger_Pin = 15;
 const int DistanceSensor_Echo_Pin = 2;
 
+// Configuration for data collection
+static const int MAX_READINGS = 24;  // 2.5 seconds * 24 = 60 seconds (1 minute)
+static const unsigned long READING_INTERVAL = 2500;  // 5 seconds between readings
+static unsigned long lastReadingTime = 0;
+
+struct SensorData {
+  float temperature;
+  float humidity;
+  float cisterneFillLevel; 
+  unsigned long timestamp;
+};
+
+static SensorData readings[MAX_READINGS];
+static int readingCount = 0;
+
 Adafruit_SHTC3 shtc3 = Adafruit_SHTC3();
 UltraSonicDistanceSensor distanceSensor(DistanceSensor_Trigger_Pin, DistanceSensor_Echo_Pin, 200, 20000);
 
-void setupTime() {
- // Set timezone to Central European Time (CET) with daylight saving time (CEST)
-  // CET is UTC+1, CEST is UTC+2
-  // The timezone string format is: "TZ=std offset dst offset, start[/time], end[/time]"
-  // For CET/CEST: "CET-1CEST,M3.5.0/2,M10.5.0/3"
-  // This means:
-  // - Standard time is CET (UTC+1)
-  // - Daylight saving time is CEST (UTC+2)
-  // - DST starts on the last Sunday of March at 2:00 AM
-  // - DST ends on the last Sunday of October at 3:00 AM
-  configTzTime("CET-1CEST,M3.5.0/2,M10.5.0/3", "pool.ntp.org", "time.nist.gov");
-
-  // Wait until time is set
-  time_t now = time(nullptr);
-  while (now < 8 * 3600 * 2) {
-    delay(500);
-    now = time(nullptr);
-  }
-
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    Serial.println("Failed to obtain time");
-    return;
-  }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
+  analogWrite(Red_LED_Pin, r*brightness/255);
+  analogWrite(Green_LED_Pin, g*brightness/255);
+  analogWrite(Blue_LED_Pin, b*brightness/255);
 }
 
-void updateFirmwareFromUrl(const String &firmwareUrl) {
-    Serial.print("Downloading new firmware from: ");
-    Serial.println(firmwareUrl);
+void setLedColor(uint8_t r, uint8_t g, uint8_t b, uint8_t overrideBrightness) {
+  analogWrite(Red_LED_Pin, r*overrideBrightness/255);
+  analogWrite(Green_LED_Pin, g*overrideBrightness/255);
+  analogWrite(Blue_LED_Pin, b*overrideBrightness/255);
+}
 
-    digitalWrite(Red_LED_Pin, HIGH);
-    digitalWrite(Blue_LED_Pin, HIGH);
-    
-    t_httpUpdate_return ret = ESPhttpUpdate.update(firmwareUrl);
-    Serial.println("Firmware update process completed.");
-    Serial.print("HTTP Update result: ");
-    Serial.println(ret);
-    
-    switch(ret) {
-        case HTTP_UPDATE_FAILED:
-            Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            break;
+void blinkLed(uint8_t r, uint8_t g, uint8_t b) {
+  setLedColor(r, g, b);
+  delay(BLINK_DURATION);
+  setLedColor(0, 0, 0);
+}
 
-        case HTTP_UPDATE_NO_UPDATES:
-            Serial.println("HTTP_UPDATE_NO_UPDATES");
-            break;
+void blinkLed(Color color, bool fullBrightness = false) {
+  if (fullBrightness) {
+    brightness = 255; 
+  }
+  blinkLed(color.r, color.g, color.b);
+}
 
-        case HTTP_UPDATE_OK:
-            Serial.println("HTTP_UPDATE_OK");
-            Serial.println("Update done");
-            break;
+String extractVersionFromUrl(String url) {
+    int lastUnderscoreIndex = url.lastIndexOf('_');
+    int lastDotIndex = url.lastIndexOf('.');
 
-        default:
-            Serial.println("Unknown response");
-            Serial.println(ret);
-            break;
+    if (lastUnderscoreIndex != -1 && lastDotIndex != -1 && lastDotIndex > lastUnderscoreIndex) {
+        return url.substring(lastUnderscoreIndex + 1, lastDotIndex);
     }
-    Serial.println();
 
-    digitalWrite(Red_LED_Pin, LOW);
-    digitalWrite(Blue_LED_Pin, LOW);
+    return "";
+}
+
+void mqttCallback(String &topic, String &payload) {
+    Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
+
+    if (topic == mqtt_SensorNameTopic) {
+      sensorName = payload;
+      Serial.println("Sensor name set to: " + sensorName);
+      return;
+    } 
+
+    if (topic == mqtt_BrightnessTopic) {
+      brightness = payload.toInt();
+      if (brightness >= 0 && brightness <= 255) {
+        Serial.println("Brightness set to: " + String(brightness));
+      } else {
+        Serial.println("Invalid brightness value: " + payload);
+      }
+      return;
+    }
+
+    if (topic == mqtt_OTAtopic) {
+      if (otaInProgress || !otaEnable) {
+        if (otaInProgress)
+          Serial.println("OTA in progress, ignoring message");
+        if (!otaEnable)
+          Serial.println("OTA disabled, ignoring message");
+        return;
+      }
+
+      setLedColor(255, 255, 0, 255); // Set LED color to yellow indicating OTA update
+      String updateVersion = extractVersionFromUrl(payload);
+      Serial.println("Current firmware version is " + String(version));
+      Serial.println("New firmware version is " + updateVersion);
+      if(strcmp(version, updateVersion.c_str())) {
+          // Trigger OTA Update
+          const char *firmwareUrl = payload.c_str();
+          Serial.println("New firmware available, starting OTA Update from " + String(firmwareUrl));
+          otaInProgress = true;
+          bool result =  AzureOTAUpdater::UpdateFirmwareFromUrl(firmwareUrl);
+          if (result) {
+            Serial.println("OTA Update successful initiated, waiting to be finished");
+          }
+      }
+      else {
+        Serial.println("Firmware is up to date");
+      }
+    }
+    else {
+      Serial.println("Unknown topic, ignoring message");
+    }
 }
 
 void connectToMQTT() {
-    mqttClient.setServer(mqtt_broker, mqtt_port);
-    while (!mqttClient.connected()) {
-        if (mqttClient.connect("ESP32KellerdeviceClient")) {
-            mqttClient.subscribe(mqtt_update_topic);
-            Serial.println("Connected to MQTT Broker");
-        } else {
-            Serial.print("Failed to connect to MQTT Broker: ");
-            Serial.println(mqtt_broker);
-            delay(5000);
-        }
-    }
+  if (WiFi.status() != WL_CONNECTED) {
+    wifiLib.connect();
+  }
+  mqttClientLib->connect({mqtt_SensorNameTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
+  Serial.println("MQTT Client is connected");
 }
 
-void mqttCallback(char* topic, byte* message, unsigned int length) {
-    Serial.print("Message arrived on topic: ");
-    Serial.print(topic);
-    Serial.print(". Message: ");
+void readSensorData() {
+  if (sensorName == "") {
+    Serial.println("Sensor name not set, skipping sensor reading");
+    blinkLed(RED, true);
+    return;
+  }
 
-    String messageTemp;
+  SensorData data = {NAN, NAN, NAN, 0};
 
-    for (int i = 0; i < length; i++) {
-        messageTemp += (char)message[i];
+  if (readingCount <= MAX_READINGS) {
+    sensors_event_t humidity, temp;
+    shtc3.getEvent(&humidity, &temp);
+    data.humidity = humidity.relative_humidity;
+    data.temperature = temp.temperature;
+
+    data.cisterneFillLevel = 100 - distanceSensor.measureDistanceCm();
+
+    if (isnan(data.humidity) || isnan(data.temperature)) {
+      Serial.println("Failed to read from SHTC3 sensor!");
+      return;
     }
-
-    Serial.println(messageTemp);
-
-    if (String(topic) == mqtt_update_topic) {
-      // Trigger OTA Update
-      Serial.println("OTA Update Triggered");
-      String firmwareUrl = messageTemp;
-      updateFirmwareFromUrl(firmwareUrl);
+    data.timestamp = millis();
+    readings[readingCount] = data;
+    Serial.println("Sensor data read: " + String(data.temperature) + "°C, " + String(data.humidity) + "% " + String(data.cisterneFillLevel) + "%");
+    lastReadingTime = data.timestamp;
+    readingCount++;
+    if (blinkCount < MAX_BLINK_COUNT) {
+      blinkCount++;
+      blinkLed(BLUE, true);
+    }    
+    else {
+      blinkLed(BLUE);
     }
+  }
+  else {
+    Serial.println("Maximum readings reached, skipping sensor reading");
+    blinkLed(RED, true);
+    return;
+  }
+}
+
+void publishSensorData()
+{
+  if (readingCount == 0) {
+    Serial.println("No sensor data to publish");
+    return;
+  }
+
+  char tempString[8];
+  char humString[8];
+  char cisternFillString[8];
+
+  // Calculate average temperature and humidity
+  float avgTemperature = 0;
+  float avgHumidity = 0;
+  float avgCisternFillLevel = 0;
+  for (int i = 0; i < readingCount; i++) {
+    avgTemperature += readings[i].temperature;
+    avgHumidity += readings[i].humidity;
+    avgCisternFillLevel += readings[i].cisterneFillLevel;
+  }
+  avgTemperature /= readingCount;
+  avgHumidity /= readingCount;
+  avgCisternFillLevel /= readingCount;
+  readingCount = 0; // Reset reading count after publishing
+
+  dtostrf(avgTemperature, 1, 2, tempString);
+  dtostrf(avgHumidity, 1, 2, humString);
+  dtostrf(avgCisternFillLevel, 1, 2, cisternFillString);
+
+  if (sendMQTTMessages)
+  {
+    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
+    mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
+    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
+    mqttClientLib->publish((baseTopic + "/zisterneFuellstand/" + sensorName).c_str(), String(cisternFillString), true, 2);
+  }
+  Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Cistern Fill Level: " + String(avgCisternFillLevel) + "%, Version: " + version);
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println(String(appName) + " " + String(version));  
   
   // Set LED pins as output
@@ -145,94 +259,108 @@ void setup() {
   pinMode(Blue_LED_Pin, OUTPUT);
 
   // Turn off all LEDs, turn on blue LED to indicate connecting to WiFi
-  digitalWrite(Red_LED_Pin, LOW);
-  digitalWrite(Green_LED_Pin, LOW);
-  digitalWrite(Blue_LED_Pin, HIGH);
+  setLedColor(0, 0, 255);
+
+  chipID = ESP32Helpers::getChipId();
+  Serial.print("ESP32 Chip ID: ");
+  Serial.println(chipID);
+  mqtt_SensorNameTopic.replace("{ID}", chipID);
+  mqtt_BrightnessTopic.replace("{ID}", chipID);
 
   // Connect to WiFi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi " + String(ssid) + " with password " + String(password) + "...");
-  }
-  Serial.println("Connected to WiFi");
+  Serial.print("Connecting to WiFi ");
+  wifiLib.scanAndSelectNetwork();
+  wifiLib.connect();
+  String ssid = wifiLib.getSSID();
 
-  setupTime();
-  
-  WiFiClientSecure client;
-  client.setCACert(azure_root_cert);
+  // Set up MQTT
+  String mqttClientID = "ESP32TemperatureSensorClient_" + chipID;
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  connectToMQTT();
 
-  if (!client.connect("iotstoragem1.blob.core.windows.net", 443)) {
-    Serial.println("Connection failed!");
-  }
+  timeClient.begin();
+  timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
+  timeClient.update();
   
   // Print the IP address
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
-  // Set up MQTT
-  mqttClient.setCallback(mqttCallback);
-  connectToMQTT();
-  digitalWrite(Blue_LED_Pin, LOW);
-
   Serial.println("Connecting SHTC3");
   Wire.begin(I2CDataPin, I2CClockPin);
   if (! shtc3.begin(&Wire)) {
     Serial.println("Couldn't find SHTC3");
-    digitalWrite(Red_LED_Pin, HIGH);
+    setLedColor(255, 0, 0, 255); 
     while (1) delay(1);
   }
-  digitalWrite(Red_LED_Pin, LOW);
   Serial.println("Found SHTC3 sensor");
-  
-  digitalWrite(Green_LED_Pin, HIGH);
 
+  setLedColor(0, 255, 0, 255);
+
+  mqttClientLib->publish(("meta/" + sensorName + "/version/KellerDevice").c_str(), String(version), true, 2);
 }
 
-unsigned long previousMillisLED = 0;
-unsigned long previousMillisSensor = 0;
-const long intervalLED = 2000; // Interval for LED blinking (2 seconds)
-const long intervalSensor = 10000; // Interval for sensor reading (10 seconds)
-
 void loop() {
-  if (!mqttClient.connected()) {
-    connectToMQTT();
-  }
-  mqttClient.loop();
+  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
-  sensors_event_t humidity, temp;
-
-  unsigned long currentMillis = millis();
-
-  // Check if it's time to blink the LED
-  if (currentMillis - previousMillisLED >= intervalLED) {
-    previousMillisLED = currentMillis;
-    // Blink the LED
-    digitalWrite(Green_LED_Pin, HIGH);
-    delay(100);
-    digitalWrite(Green_LED_Pin, LOW);
+  if (otaInProgress < 0) {
+    blinkLed(RED, true);
   }
 
-  // Check if it's time to read the sensor
-  if (currentMillis - previousMillisSensor >= intervalSensor) {
-    previousMillisSensor = currentMillis;
-    // Read the sensor data
-    sensors_event_t humidity, temp;
-    shtc3.getEvent(&humidity, &temp);
-    Serial.print("Humidity: ");
-    Serial.print(humidity.relative_humidity);
-    Serial.print(" %\t");
-    Serial.print("Temperature: ");
-    Serial.print(temp.temperature);
-    Serial.println(" *C");
+  if (otaInProgress != 1) {
+    timeClient.update();
 
-    double distance = 100 - distanceSensor.measureDistanceCm();
-    Serial.print("Distance: ");
-    Serial.print(distance);
-    Serial.println(" cm");
+    // Read sensor data every 5 seconds
+    if (millis() - lastReadingTime >= READING_INTERVAL) {
+      readSensorData();
+    }
 
-    mqttClient.publish("data/keller/temperature", String(temp.temperature).c_str());
-    mqttClient.publish("data/keller/humidity", String(humidity.relative_humidity).c_str());
-    mqttClient.publish("data/keller/cisternFillLevel", String(distance).c_str());
+    // Transmit data every minute
+    if (readingCount >= MAX_READINGS) {
+      publishSensorData();
+    }
+
+    if(!mqttClientLib->loop())
+    {
+      Serial.println("MQTT Client not connected, reconnecting in loop...");
+      connectToMQTT();
+    }
   }
+  delay(100);
+
+  // sensors_event_t humidity, temp;
+
+  // unsigned long currentMillis = millis();
+
+  // // Check if it's time to blink the LED
+  // if (currentMillis - previousMillisLED >= intervalLED) {
+  //   previousMillisLED = currentMillis;
+  //   // Blink the LED
+  //   digitalWrite(Green_LED_Pin, HIGH);
+  //   delay(100);
+  //   digitalWrite(Green_LED_Pin, LOW);
+  // }
+
+  // // Check if it's time to read the sensor
+  // if (currentMillis - previousMillisSensor >= intervalSensor) {
+  //   previousMillisSensor = currentMillis;
+  //   // Read the sensor data
+  //   sensors_event_t humidity, temp;
+  //   shtc3.getEvent(&humidity, &temp);
+  //   Serial.print("Humidity: ");
+  //   Serial.print(humidity.relative_humidity);
+  //   Serial.print(" %\t");
+  //   Serial.print("Temperature: ");
+  //   Serial.print(temp.temperature);
+  //   Serial.println(" *C");
+
+  //   double distance = 100 - distanceSensor.measureDistanceCm();
+  //   Serial.print("Distance: ");
+  //   Serial.print(distance);
+  //   Serial.println(" cm");
+
+  //   mqttClient.publish("data/keller/temperature", String(temp.temperature).c_str());
+  //   mqttClient.publish("data/keller/humidity", String(humidity.relative_humidity).c_str());
+  //   mqttClient.publish("data/keller/cisternFillLevel", String(distance).c_str());
+  // }
 }

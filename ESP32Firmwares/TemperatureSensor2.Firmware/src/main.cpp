@@ -1,17 +1,20 @@
+// Default libraries
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <ESP32Ping.h>
-#include "DHT.h"
+#include "ESP32Helpers.h"
 
+// Shared libaries
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
 #include "WifiLib.h"
-#include "ESP32Helpers.h"
+
+// Project specific libraries
+#include "DHT.h"
 #include <Adafruit_NeoPixel.h>
 #include "colors.h"
-#include "soc/soc.h"
 
 // Pin configuration
 #define NEOPIXEL_PIN 17       // WS2812 connected to GP8
