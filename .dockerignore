@@ -1,0 +1,71 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# IDE files
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+**/Dockerfile*
+**/docker-compose*
+**/.dockerignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+**/logs/
+**/*.log
+
+# Node modules (if any)
+**/node_modules/
+
+# Other
+**/.env
+**/README.md
+**/*.md
+
+# Exclude other projects not needed for the web build
+3DModels/
+BMWConnector/
+ChargingController/
+DataAggregator/
+Docs/
+EnphaseConnector/
+ESP32Firmwares/
+ESP32NF/
+Grafana/
+Graphana/
+InfluxDB/
+InfluxImporter/
+KebaConnector/
+Libs/
+MCPServer/
+MQTTBroker/
+MQTTClient/
+PowerDogConnector/
+ShellyConnector/
+Smarthome.App.MAUI/
+smarthome_app/
+StorageConnector/
+StorageController/
+Thermostat/
+VWConnector/
