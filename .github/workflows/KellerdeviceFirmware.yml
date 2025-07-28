@@ -34,8 +34,8 @@ jobs:
 
     - name: Build with PlatformIO  
       env:
-        WIFI_SSID: ${{ secrets.WIFI_SSID_BASEMENT }}
-        WIFI_PASSWORD: ${{ secrets.WIFI_PASSWORD_BASEMENT }}
+        WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
+        FIRMWARE_VERSION: ${{ env.version }}
       run: |
         pio run
 
