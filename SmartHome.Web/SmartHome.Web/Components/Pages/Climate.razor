@@ -52,6 +52,24 @@
             </DataValueTextControl>
         </div>
         <div class="col-md-3 col-6">
+            <DataValueTextControl Value="@data.BathRoomM1Temperature.value"
+                                  Unit="°C"
+                                  Value2="@data.BathRoomM1Humidity.value"
+                                  Unit2="%"
+                                  LastUpdated="@data.BathRoomM1Temperature.LastUpdated"
+                                  title="Bad M1">
+            </DataValueTextControl>
+        </div>
+        <div class="col-md-3 col-6">
+            <DataValueTextControl Value="@data.ChildRoomTemperature.value"
+                                  Unit="°C"
+                                  Value2="@data.ChildRoomHumidity.value"
+                                  Unit2="%"
+                                  LastUpdated="@data.ChildRoomTemperature.LastUpdated"
+                                  title="Kinderzimmer">
+            </DataValueTextControl>
+        </div>
+        <div class="col-md-3 col-6">
             <DataValueTextControl Value="@data.CisternFillLevel.value"
                                   Unit="cm"
                                   LastUpdated="@data.CisternFillLevel.LastUpdated"

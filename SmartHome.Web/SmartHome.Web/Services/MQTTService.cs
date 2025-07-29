@@ -151,6 +151,26 @@ namespace SmartHome.Web.Services
                         ClimateData.OutsideHumidity = CreateDataPoint(payload) ?? ClimateData.OutsideHumidity;
                         break;
                     }
+                case "daten/temperatur/Kinderzimmer_M1":
+                {
+                    ClimateData.ChildRoomTemperature = CreateDataPoint(payload) ?? ClimateData.ChildRoomTemperature;
+                    break;
+                }
+                case "daten/luftfeuchtigkeit/Kinderzimmer_M1":
+                {
+                    ClimateData.ChildRoomHumidity = CreateDataPoint(payload) ?? ClimateData.ChildRoomHumidity;
+                    break;
+                }
+                case "daten/temperatur/Bad_M1":
+                {
+                    ClimateData.BathRoomM1Temperature = CreateDataPoint(payload) ?? ClimateData.BathRoomM1Temperature;
+                    break;
+                }
+                case "daten/luftfeuchtigkeit/Bad_M1":
+                {
+                    ClimateData.BathRoomM1Humidity = CreateDataPoint(payload) ?? ClimateData.BathRoomM1Humidity;
+                    break;
+                }
                 case "daten/temperatur/Wohnzimmer":
                     {
                         ClimateData.LivingRoomTemperature = CreateDataPoint(payload) ?? ClimateData.LivingRoomTemperature;
