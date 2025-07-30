@@ -20,7 +20,7 @@ The current state of my SmartHome system covers these capabilities:
 * Control charging of electric vehicles based on PV-production.
 * Visualize current charging situation and other data of electric vehicles (BMW, Mini, VW)
 * Read current PV production and battery level from Enphase systems.
-* Control RGB LED stribes.
+* Control RGB LED stripes.
 * Read energy consumption via Shelly devices.
 
 ## Technologies Used
