@@ -1,9 +1,13 @@
 using InfluxConnector;
+using Microsoft.AspNetCore.DataProtection;
 using SmartHome.Web.Components;
 using SmartHome.Web.Services;
 using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add console logging
+builder.Logging.AddConsole();
 
 try
 {
@@ -16,8 +20,7 @@ catch (Exception ex)
 }
 
 // Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddLocalization();
 builder.Services.AddSyncfusionBlazor();
 builder.Services.AddControllers();
@@ -35,6 +38,8 @@ builder.Services.AddScoped<IInfluxDBConnector>(provider =>
     }
     return new InfluxDbConnector(influxUrl, org, token);
 });
+
+builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
 
 var app = builder.Build();
 app.UseRequestLocalization(new RequestLocalizationOptions()
