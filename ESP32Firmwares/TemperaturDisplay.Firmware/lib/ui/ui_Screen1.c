@@ -9,6 +9,10 @@ lv_obj_t * ui_Screen1 = NULL;
 lv_obj_t * ui_Button2 = NULL;
 lv_obj_t * ui_Label3 = NULL;
 lv_obj_t * ui_Arc1 = NULL;
+lv_obj_t * ui_Label2 = NULL;
+lv_obj_t * ui_Label4 = NULL;
+lv_obj_t * ui_Label1 = NULL;
+lv_obj_t * ui_Label5 = NULL;
 // event funtions
 
 // build funtions
@@ -17,12 +21,14 @@ void ui_Screen1_screen_init(void)
 {
     ui_Screen1 = lv_obj_create(NULL);
     lv_obj_remove_flag(ui_Screen1, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_Screen1, lv_color_hex(0x232323), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_Screen1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_Button2 = lv_button_create(ui_Screen1);
     lv_obj_set_width(ui_Button2, 253);
-    lv_obj_set_height(ui_Button2, 150);
-    lv_obj_set_x(ui_Button2, 273);
-    lv_obj_set_y(ui_Button2, -164);
+    lv_obj_set_height(ui_Button2, 92);
+    lv_obj_set_x(ui_Button2, 270);
+    lv_obj_set_y(ui_Button2, -193);
     lv_obj_set_align(ui_Button2, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_Button2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_remove_flag(ui_Button2, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -36,12 +42,56 @@ void ui_Screen1_screen_init(void)
     lv_label_set_text(ui_Label3, "text");
 
     ui_Arc1 = lv_arc_create(ui_Screen1);
-    lv_obj_set_width(ui_Arc1, 306);
-    lv_obj_set_height(ui_Arc1, 373);
-    lv_obj_set_x(ui_Arc1, -199);
-    lv_obj_set_y(ui_Arc1, 34);
+    lv_obj_set_width(ui_Arc1, 460);
+    lv_obj_set_height(ui_Arc1, 417);
+    lv_obj_set_x(ui_Arc1, -122);
+    lv_obj_set_y(ui_Arc1, -4);
     lv_obj_set_align(ui_Arc1, LV_ALIGN_CENTER);
     lv_arc_set_value(ui_Arc1, 50);
+
+    ui_Label2 = lv_label_create(ui_Screen1);
+    lv_obj_set_width(ui_Label2, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label2, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label2, -134);
+    lv_obj_set_y(ui_Label2, -34);
+    lv_obj_set_align(ui_Label2, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label2, "20,6°C");
+    lv_obj_set_style_text_color(ui_Label2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label2, &ui_font_Quantico_80, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Label4 = lv_label_create(ui_Screen1);
+    lv_obj_set_width(ui_Label4, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label4, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label4, -139);
+    lv_obj_set_y(ui_Label4, -103);
+    lv_obj_set_align(ui_Label4, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label4, "Soll");
+    lv_obj_set_style_text_color(ui_Label4, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label4, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label4, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Label1 = lv_label_create(ui_Screen1);
+    lv_obj_set_width(ui_Label1, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label1, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label1, -230);
+    lv_obj_set_y(ui_Label1, 47);
+    lv_obj_set_align(ui_Label1, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label1, "Ist:");
+    lv_obj_set_style_text_color(ui_Label1, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label1, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Label5 = lv_label_create(ui_Screen1);
+    lv_obj_set_width(ui_Label5, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label5, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label5, -107);
+    lv_obj_set_y(ui_Label5, 49);
+    lv_obj_set_align(ui_Label5, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label5, "20,6°C");
+    lv_obj_set_style_text_color(ui_Label5, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label5, &ui_font_Quantico_40, LV_PART_MAIN | LV_STATE_DEFAULT);
 
 }
 
@@ -54,5 +104,9 @@ void ui_Screen1_screen_destroy(void)
     ui_Button2 = NULL;
     ui_Label3 = NULL;
     ui_Arc1 = NULL;
+    ui_Label2 = NULL;
+    ui_Label4 = NULL;
+    ui_Label1 = NULL;
+    ui_Label5 = NULL;
 
 }

@@ -17,6 +17,10 @@ extern lv_obj_t * ui_Screen1;
 extern lv_obj_t * ui_Button2;
 extern lv_obj_t * ui_Label3;
 extern lv_obj_t * ui_Arc1;
+extern lv_obj_t * ui_Label2;
+extern lv_obj_t * ui_Label4;
+extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_Label5;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus

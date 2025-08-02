@@ -27,6 +27,14 @@ extern "C" {
 
 extern lv_obj_t * ui____initial_actions0;
 
+// FONTS
+LV_FONT_DECLARE(ui_font_Quantico_20);
+LV_FONT_DECLARE(ui_font_Quantico_32);
+LV_FONT_DECLARE(ui_font_Quantico_40);
+LV_FONT_DECLARE(ui_font_Quantico_60);
+LV_FONT_DECLARE(ui_font_Quantico_80);
+LV_FONT_DECLARE(ui_font_Quantico_100);
+
 // UI INIT
 void ui_init(void);
 void ui_destroy(void);
