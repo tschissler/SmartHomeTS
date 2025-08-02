@@ -3,8 +3,10 @@
 #include <lvgl.h>
 #include "lvgl_v9_port.h"
 #include "ui.h"
+#include <esp_display_panel.hpp>
 
 using namespace esp_panel::drivers;
+using namespace esp_panel::board;
 
 static LCD *create_lcd_without_config(void)
 {
@@ -129,38 +131,57 @@ IRAM_ATTR bool onLCD_DrawFinishCallback(void *user_data)
 
 void waveshare_display_init(void)
 {
+    Serial.println("Initializing WaveShare ESP32-S3 Touch LCD 7\" board");
+    
+    // Create board instance with supported configuration
+    Board *board = new Board();
+    
+    // Initialize the board - this will load the WaveShare ESP32-S3 Touch LCD 7" configuration
+    if (!board->init()) {
+        Serial.println("ERROR: Failed to initialize board");
+        return;
+    }
+    
+    // Start the board - this initializes all devices (LCD, Touch, etc.)
+    if (!board->begin()) {
+        Serial.println("ERROR: Failed to start board");
+        return;
+    }
+    
+    auto lcd = board->getLCD();
+    auto touch = board->getTouch();
+    
+    if (lcd == nullptr) {
+        Serial.println("ERROR: LCD device not available");
+        return;
+    }
+    
+    Serial.println("Board initialized successfully");
+    Serial.printf("LCD: %dx%d\n", lcd->getFrameWidth(), lcd->getFrameHeight());
+    
+    if (touch != nullptr) {
+        Serial.println("Touch controller detected and initialized");
+    } else {
+        Serial.println("No touch controller available");
+    }
 
-#if EXAMPLE_LCD_ENABLE_CREATE_WITH_CONFIG
-    Serial.println("Initializing \"RGB\" LCD with config");
-    auto lcd = create_lcd_with_config();
-#else
-    Serial.println("Initializing \"RGB\" LCD without config");
-    auto lcd = create_lcd_without_config();
-#endif
+// #if EXAMPLE_LCD_ENABLE_CREATE_WITH_CONFIG
+//     Serial.println("Initializing \"RGB\" LCD with config");
+//     auto lcd = create_lcd_with_config();
+// #else
+//     Serial.println("Initializing \"RGB\" LCD without config");
+//     auto lcd = create_lcd_without_config();
+// #endif
 
     // Configure bounce buffer to avoid screen drift
     auto bus = static_cast<BusRGB *>(lcd->getBus());
     bus->configRGB_BounceBufferSize(EXAMPLE_LCD_RGB_BOUNCE_BUFFER_SIZE); // Set bounce buffer to avoid screen drift
 
-    lcd->init();
-// #if EXAMPLE_LCD_ENABLE_PRINT_FPS
-//     // Attach a callback function which will be called when the Vsync signal is detected
-//     lcd->attachRefreshFinishCallback(onLCD_RefreshFinishCallback);
-// #endif
-// #if EXAMPLE_LCD_ENABLE_DRAW_FINISH_CALLBACK
-//     // Attach a callback function which will be called when every bitmap drawing is completed
-//     lcd->attachDrawBitmapFinishCallback(onLCD_DrawFinishCallback);
-// #endif
-    lcd->reset();
-    assert(lcd->begin());
-    if (lcd->getBasicAttributes().basic_bus_spec.isFunctionValid(LCD::BasicBusSpecification::FUNC_DISPLAY_ON_OFF)) {
-        lcd->setDisplayOnOff(true);
-    }
+    // Note: lcd->init(), lcd->reset(), and lcd->begin() are already called by board->begin()
+    // No need to call them again
 
-    //Serial.println("Draw color bar from top left to bottom right, the order is B - G - R");
-    //lcd->colorBarTest();
-
-    lvgl_port_init(lcd, nullptr);
+    // Initialize LVGL with LCD and Touch
+    lvgl_port_init(lcd, touch);
 
     Serial.println("Creating UI");
     /* Lock the mutex due to the LVGL APIs are not thread-safe */

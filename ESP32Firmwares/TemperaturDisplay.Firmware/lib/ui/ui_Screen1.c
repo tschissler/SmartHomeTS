@@ -19,10 +19,10 @@ void ui_Screen1_screen_init(void)
     lv_obj_remove_flag(ui_Screen1, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
     ui_Button2 = lv_button_create(ui_Screen1);
-    lv_obj_set_width(ui_Button2, 100);
-    lv_obj_set_height(ui_Button2, 50);
-    lv_obj_set_x(ui_Button2, 36);
-    lv_obj_set_y(ui_Button2, -82);
+    lv_obj_set_width(ui_Button2, 253);
+    lv_obj_set_height(ui_Button2, 150);
+    lv_obj_set_x(ui_Button2, 273);
+    lv_obj_set_y(ui_Button2, -164);
     lv_obj_set_align(ui_Button2, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_Button2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_remove_flag(ui_Button2, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -36,10 +36,10 @@ void ui_Screen1_screen_init(void)
     lv_label_set_text(ui_Label3, "text");
 
     ui_Arc1 = lv_arc_create(ui_Screen1);
-    lv_obj_set_width(ui_Arc1, 150);
-    lv_obj_set_height(ui_Arc1, 150);
-    lv_obj_set_x(ui_Arc1, -274);
-    lv_obj_set_y(ui_Arc1, -126);
+    lv_obj_set_width(ui_Arc1, 306);
+    lv_obj_set_height(ui_Arc1, 373);
+    lv_obj_set_x(ui_Arc1, -199);
+    lv_obj_set_y(ui_Arc1, 34);
     lv_obj_set_align(ui_Arc1, LV_ALIGN_CENTER);
     lv_arc_set_value(ui_Arc1, 50);
 
