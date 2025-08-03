@@ -32,8 +32,9 @@ static String mqtt_DeviceNameTopic = "config/TemperaturDisplay/{ID}/DeviceName";
 static String mqtt_OutsideTempTopic = "daten/temperatur/Aussen";
 static String mqtt_ThermostatWohnzimmerTopic = "data/thermostat/M3/shelly/Wohnzimmer";
 static String mqtt_ThermostatEsszimmerTopic = "data/thermostat/M3/shelly/Esszimmer";
+static String mqtt_ThermostatKuecheTopic = "data/thermostat/M3/shelly/Kueche";
 static String mqtt_ThermostatGaestezimmerTopic = "data/thermostat/M3/shelly/Gaestezimmer";
-static String mqtt_ThermostatBueroTopic = "data/thermostat/M3/shelly/BBuero";
+static String mqtt_ThermostatBueroTopic = "data/thermostat/M3/shelly/Buero";
 
 const char* version = FIRMWARE_VERSION;
 String chipID = "";
@@ -173,7 +174,14 @@ void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_DeviceNameTopic, mqtt_OTAtopic});
+  mqttClientLib->connect({
+    mqtt_DeviceNameTopic, 
+    mqtt_OTAtopic, 
+    mqtt_ThermostatBueroTopic, 
+    mqtt_ThermostatEsszimmerTopic, 
+    mqtt_ThermostatKuecheTopic, 
+    mqtt_ThermostatWohnzimmerTopic, 
+    mqtt_ThermostatGaestezimmerTopic});
   Serial.println("MQTT Client is connected");
 }
 

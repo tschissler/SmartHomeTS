@@ -94,7 +94,8 @@ public:
     void updateGaestezimmer(float gaestezimmerTemp);
     void updateBuero(float bueroTemp);
     void updateEsszimmer(float esszimmerTemp);
-    
+    void updateKitchen(float kitchenTemp);
+
     // Time management
     void configureTimezone(const char* timezone = "CET-1CEST,M3.5.0,M10.5.0/3");
     

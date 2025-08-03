@@ -77,12 +77,10 @@ void TemperatureDisplay::setupUI()
 
     // Add event handlers
     lv_obj_add_event_cb(ui_arcTargetTemp, arc_event_handler_static, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_add_event_cb(ui_btnWohnzimmer, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Wohnzimmer);
-    lv_obj_add_event_cb(ui_btnEsszimmer, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Esszimmer);
-    lv_obj_add_event_cb(ui_btnGaestezimmer, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Gaestezimmer);
-    lv_obj_add_event_cb(ui_btnBuero, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
-    lv_obj_add_event_cb(ui_btnSchlafzimmer, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Schlafzimmer);
-    lv_obj_add_event_cb(ui_btnBad, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Bad);
+    lv_obj_add_event_cb(ui_btnLivingroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Wohnzimmer);
+    lv_obj_add_event_cb(ui_btnDiningroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Esszimmer);
+    lv_obj_add_event_cb(ui_btnGuestroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Gaestezimmer);
+    lv_obj_add_event_cb(ui_btnStudy, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
 
     // Set initial values
     setTargetTemperature(targetTemperature);
@@ -167,7 +165,7 @@ void TemperatureDisplay::updateTemperatureDisplay()
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", currentTemperature);
 
     lock();
-    lv_label_set_text(ui_lblcurrentTemp, temp_str);
+    lv_label_set_text(ui_lblCurrentTemp, temp_str);
     unlock();
 }
 
@@ -176,34 +174,27 @@ void TemperatureDisplay::updateAllButtonStates()
     lock();
 
     // Clear all button states first
-    lv_obj_clear_state(ui_btnWohnzimmer, LV_STATE_CHECKED);
-    lv_obj_clear_state(ui_btnEsszimmer, LV_STATE_CHECKED);
-    lv_obj_clear_state(ui_btnGaestezimmer, LV_STATE_CHECKED);
-    lv_obj_clear_state(ui_btnBuero, LV_STATE_CHECKED);
-    lv_obj_clear_state(ui_btnSchlafzimmer, LV_STATE_CHECKED);
-    lv_obj_clear_state(ui_btnBad, LV_STATE_CHECKED);
+    lv_obj_clear_state(ui_btnLivingroom, LV_STATE_CHECKED);
+    lv_obj_clear_state(ui_btnDiningroom, LV_STATE_CHECKED);
+    lv_obj_clear_state(ui_btnKitchen, LV_STATE_CHECKED);
+    lv_obj_clear_state(ui_btnStudy, LV_STATE_CHECKED);
+    lv_obj_clear_state(ui_btnGuestroom, LV_STATE_CHECKED);
 
     // Set the current room button as checked
     lv_obj_t *currentBtn = nullptr;
     switch (currentRoom)
     {
     case Room::Wohnzimmer:
-        currentBtn = ui_btnWohnzimmer;
+        currentBtn = ui_btnLivingroom;
         break;
     case Room::Esszimmer:
-        currentBtn = ui_btnEsszimmer;
+        currentBtn = ui_btnDiningroom;
         break;
     case Room::Gaestezimmer:
-        currentBtn = ui_btnGaestezimmer;
+        currentBtn = ui_btnGuestroom;
         break;
     case Room::Buero:
-        currentBtn = ui_btnBuero;
-        break;
-    case Room::Schlafzimmer:
-        currentBtn = ui_btnSchlafzimmer;
-        break;
-    case Room::Bad:
-        currentBtn = ui_btnBad;
+        currentBtn = ui_btnStudy;
         break;
     }
 
@@ -226,7 +217,7 @@ void TemperatureDisplay::updateOutsideTemperature(float outsideTemp)
 {
     char temp_str[20];
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", outsideTemp);
-    lv_label_set_text(ui_lblAussentemp, temp_str);
+    lv_label_set_text(ui_lblTempOutside, temp_str);
     Serial.printf("Outside temperature updated to: %.1f°C\n", outsideTemp);
 }
 
@@ -234,7 +225,7 @@ void TemperatureDisplay::updateWohnzimmer(float wohnzimmerTemp)
 {
     char temp_str[20];
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", wohnzimmerTemp);
-    lv_label_set_text(ui_lblWohnzimmerIst, temp_str);
+    lv_label_set_text(ui_lblCurrentTempLivingroom, temp_str);
     Serial.printf("Wohnzimmer temperature updated to: %.1f°C\n", wohnzimmerTemp);
 }
 
@@ -242,7 +233,7 @@ void TemperatureDisplay::updateGaestezimmer(float gaestezimmerTemp)
 {
     char temp_str[20];
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", gaestezimmerTemp);
-    lv_label_set_text(ui_lblGaestezimmerIst, temp_str);
+    lv_label_set_text(ui_lblCurrentTempGuestroom, temp_str);
     Serial.printf("Gästezimmer temperature updated to: %.1f°C\n", gaestezimmerTemp);
 }
 
@@ -250,7 +241,7 @@ void TemperatureDisplay::updateBuero(float bueroTemp)
 {
     char temp_str[20];
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", bueroTemp);
-    lv_label_set_text(ui_lblBueroIst, temp_str);
+    lv_label_set_text(ui_lblCurrentTempStudy, temp_str);
     Serial.printf("Büro temperature updated to: %.1f°C\n", bueroTemp);
 }
 
@@ -258,8 +249,16 @@ void TemperatureDisplay::updateEsszimmer(float esszimmerTemp)
 {
     char temp_str[20];
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", esszimmerTemp);
-    lv_label_set_text(ui_lblEsszimmerIst, temp_str);
+    lv_label_set_text(ui_lblCurrentTempDiningroom, temp_str);
     Serial.printf("Esszimmer temperature updated to: %.1f°C\n", esszimmerTemp);
+}
+
+void TemperatureDisplay::updateKitchen(float kitchenTemp)
+{
+    char temp_str[20];
+    snprintf(temp_str, sizeof(temp_str), "%.1f°C", kitchenTemp);
+    lv_label_set_text(ui_lblCurrentTempKitchen, temp_str);
+    Serial.printf("Küche temperature updated to: %.1f°C\n", kitchenTemp);
 }
 
 void TemperatureDisplay::updateIsConnected(bool isConnected)
@@ -279,7 +278,7 @@ void TemperatureDisplay::updateTime(long currentTime)
     struct tm timeinfo;
     localtime_r(&t, &timeinfo); // Thread-safe version of localtime
     strftime(timeStr, sizeof(timeStr), "%H:%M", &timeinfo);
-    lv_label_set_text(ui_lblZeit, timeStr);
+    lv_label_set_text(ui_lblTime, timeStr);
     unlock();
 }
 

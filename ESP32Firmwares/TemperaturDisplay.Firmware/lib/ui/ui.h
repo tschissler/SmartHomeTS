@@ -10,13 +10,22 @@
 extern "C" {
 #endif
 
+#if defined __has_include
+#if __has_include("lvgl.h")
 #include "lvgl.h"
+#elif __has_include("lvgl/lvgl.h")
+#include "lvgl/lvgl.h"
+#else
+#include "lvgl.h"
+#endif
+#else
+#include "lvgl.h"
+#endif
 
 #include "ui_helpers.h"
 #include "ui_events.h"
 #include "ui_theme_manager.h"
 #include "ui_themes.h"
-
 
 ///////////////////// SCREENS ////////////////////
 
@@ -30,12 +39,16 @@ extern "C" {
 extern lv_obj_t * ui____initial_actions0;
 
 // IMAGES AND IMAGE SETS
-LV_IMG_DECLARE(ui_img_1385145727);    // assets/House-03.png
 LV_IMG_DECLARE(ui_img_456559396);    // assets/Wifi-WF.png
 LV_IMG_DECLARE(ui_img_308378252);    // assets/Fan-WF.png
+LV_IMG_DECLARE(ui_img_1385145727);    // assets/House-03.png
+LV_IMG_DECLARE(ui_img_859317218);    // assets/Battery - 03.png
+LV_IMG_DECLARE(ui_img_valve_png);    // assets/valve.png
 
 // FONTS
 LV_FONT_DECLARE(ui_font_Quantico_100);
+LV_FONT_DECLARE(ui_font_Quantico_14);
+LV_FONT_DECLARE(ui_font_Quantico_16);
 LV_FONT_DECLARE(ui_font_Quantico_20);
 LV_FONT_DECLARE(ui_font_Quantico_32);
 LV_FONT_DECLARE(ui_font_Quantico_40);

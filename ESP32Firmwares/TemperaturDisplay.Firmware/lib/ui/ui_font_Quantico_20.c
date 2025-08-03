@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 20 px
  * Bpp: 4
- * Opts: --bpp 4 --size 20 --font C:/Users/ThomasSchissler/source/repos/GitHub/tschissler/SmartHomeTS/ESP32Firmwares/TemperaturDisplay.Firmware/lib/ui/assets/Quantico-Regular.ttf -o C:/Users/ThomasSchissler/source/repos/GitHub/tschissler/SmartHomeTS/ESP32Firmwares/TemperaturDisplay.Firmware/lib/ui/assets\ui_font_Quantico_20.c --format lvgl -r 0x20-0x7f --symbols 0123456789°Cüä --no-compress --no-prefilter
+ * Opts: --bpp 4 --size 20 --font C:/Users/ThomasSchissler/source/repos/GitHub/tschissler/SmartHomeTS/ESP32Firmwares/TemperaturDisplay.Firmware/squareline/assets/Quantico-Regular.ttf -o C:/Users/ThomasSchissler/source/repos/GitHub/tschissler/SmartHomeTS/ESP32Firmwares/TemperaturDisplay.Firmware/squareline/assets\ui_font_Quantico_20.c --format lvgl -r 0x20-0x7f --symbols 0123456789°Cüä --no-compress --no-prefilter
  ******************************************************************************/
 
 #include "ui.h"
