@@ -14,13 +14,42 @@ extern "C" {
 extern void ui_Screen1_screen_init(void);
 extern void ui_Screen1_screen_destroy(void);
 extern lv_obj_t * ui_Screen1;
-extern lv_obj_t * ui_Button2;
-extern lv_obj_t * ui_Label3;
-extern lv_obj_t * ui_Arc1;
-extern lv_obj_t * ui_Label2;
+extern lv_obj_t * ui_arcTargetTemp;
+extern lv_obj_t * ui_lblTargetTemp;
 extern lv_obj_t * ui_Label4;
 extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_lblcurrentTemp;
+extern lv_obj_t * ui_Panel6;
+extern lv_obj_t * ui_lblZeit;
+extern lv_obj_t * ui_Image3;
+extern lv_obj_t * ui_iconWifi;
+extern lv_obj_t * ui_lblAussentemp;
+extern lv_obj_t * ui_iconWaermepumpe;
+extern lv_obj_t * ui_Container1;
+extern lv_obj_t * ui_btnWohnzimmer;
 extern lv_obj_t * ui_Label5;
+extern lv_obj_t * ui_lblWohnzimmerIst;
+extern lv_obj_t * ui_lblWohnzimmerSoll;
+extern lv_obj_t * ui_btnEsszimmer;
+extern lv_obj_t * ui_Label6;
+extern lv_obj_t * ui_lblEsszimmerIst;
+extern lv_obj_t * ui_lblEsszimmerSoll;
+extern lv_obj_t * ui_btnGaestezimmer;
+extern lv_obj_t * ui_Label9;
+extern lv_obj_t * ui_lblGaestezimmerIst;
+extern lv_obj_t * ui_lblGaestezimmerSoll;
+extern lv_obj_t * ui_btnBuero;
+extern lv_obj_t * ui_Label12;
+extern lv_obj_t * ui_lblBueroIst;
+extern lv_obj_t * ui_lblBueroSoll;
+extern lv_obj_t * ui_btnSchlafzimmer;
+extern lv_obj_t * ui_Label15;
+extern lv_obj_t * ui_lblSchlafzimmerIst;
+extern lv_obj_t * ui_lblSchlafzimmerSoll;
+extern lv_obj_t * ui_btnBad;
+extern lv_obj_t * ui_Label2;
+extern lv_obj_t * ui_lblBadIst;
+extern lv_obj_t * ui_lblBadSoll;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus

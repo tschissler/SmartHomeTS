@@ -14,6 +14,8 @@ extern "C" {
 
 #include "ui_helpers.h"
 #include "ui_events.h"
+#include "ui_theme_manager.h"
+#include "ui_themes.h"
 
 
 ///////////////////// SCREENS ////////////////////
@@ -27,13 +29,18 @@ extern "C" {
 
 extern lv_obj_t * ui____initial_actions0;
 
+// IMAGES AND IMAGE SETS
+LV_IMG_DECLARE(ui_img_1385145727);    // assets/House-03.png
+LV_IMG_DECLARE(ui_img_456559396);    // assets/Wifi-WF.png
+LV_IMG_DECLARE(ui_img_308378252);    // assets/Fan-WF.png
+
 // FONTS
+LV_FONT_DECLARE(ui_font_Quantico_100);
 LV_FONT_DECLARE(ui_font_Quantico_20);
 LV_FONT_DECLARE(ui_font_Quantico_32);
 LV_FONT_DECLARE(ui_font_Quantico_40);
 LV_FONT_DECLARE(ui_font_Quantico_60);
 LV_FONT_DECLARE(ui_font_Quantico_80);
-LV_FONT_DECLARE(ui_font_Quantico_100);
 
 // UI INIT
 void ui_init(void);
