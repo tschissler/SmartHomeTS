@@ -30,7 +30,7 @@ FROM build AS publish
 RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # Final image
-FROM build AS final
+FROM base AS final
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app/publish .
