@@ -1,0 +1,22 @@
+{
+  "name": "TemperatureDisplay",
+  "version": "1.0.0",
+  "description": "LVGL-based temperature display library for ESP32 devices",
+  "keywords": ["esp32", "lvgl", "temperature", "display", "gui"],
+  "authors": [
+    {
+      "name": "Temperature Display Library",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"],
+  "dependencies": {
+    "lvgl": "*"
+  },
+  "build": {
+    "includeDir": ".",
+    "srcDir": "."
+  }
+}
