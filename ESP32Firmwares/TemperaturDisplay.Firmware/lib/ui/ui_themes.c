@@ -6,11 +6,11 @@
 #include "ui.h"
 
 
-const ui_theme_variable_t _ui_theme_color_ButtonBackground[1] = {0x2095F6};
-const ui_theme_variable_t _ui_theme_alpha_ButtonBackground[1] = {40};
+const ui_theme_variable_t _ui_theme_color_PanelBackground[1] = {0xFFFFFF};
+const ui_theme_variable_t _ui_theme_alpha_PanelBackground[1] = {30};
 
-const ui_theme_variable_t _ui_theme_color_ButtonShadow[1] = {0x2095F6};
-const ui_theme_variable_t _ui_theme_alpha_ButtonShadow[1] = {100};
+const ui_theme_variable_t _ui_theme_color_PanelSelected[1] = {0x349EF9};
+const ui_theme_variable_t _ui_theme_alpha_PanelSelected[1] = {50};
 uint8_t ui_theme_idx = UI_THEME_DEFAULT;
 
 

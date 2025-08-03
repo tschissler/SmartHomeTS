@@ -1,0 +1,16 @@
+{
+  "codename": "Quantico_60",
+  "ttf_path": "/assets/Quantico-Regular.ttf",
+  "bin_path": "/assets\\ui_font_Quantico_60.bin",
+  "c_path": "/assets\\ui_font_Quantico_60.c",
+  "cfg_path": "/assets\\ui_font_Quantico_60.fcfg",
+  "size": 60,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7f"
+  ],
+  "symbols": "0123456789°C",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}
