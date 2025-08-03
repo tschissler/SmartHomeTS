@@ -20,7 +20,7 @@ The current state of my SmartHome system covers these capabilities:
 * Control charging of electric vehicles based on PV-production.
 * Visualize current charging situation and other data of electric vehicles (BMW, Mini, VW)
 * Read current PV production and battery level from Enphase systems.
-* Control RGB LED stribes.
+* Control RGB LED stripes.
 * Read energy consumption via Shelly devices.
 
 ## Technologies Used
@@ -182,7 +182,8 @@ These workflows are designed to provide a robust and automated pipeline, reducin
 
 ## External Resources
 
-- [bimmer_connected Documentation](https://bimmer-connected.readthedocs.io/): For BMW/Mini integration.
+- [bimmer_connected Documentation](https://bimmer-connected.readthedocs.io/): For BMW/Mini car integration.
+- [CarConnect](https://github.com/tillsteinbach/CarConnectivity): For VW car integration
 - [Syncfusion Blazor Components](https://www.syncfusion.com/blazor-components): UI components for Blazor.
 - [InfluxDB Documentation](https://docs.influxdata.com/): For time-series data management.
 - [MQTT Protocol](https://mqtt.org/): Lightweight messaging protocol for IoT.
