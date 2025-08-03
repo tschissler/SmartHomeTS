@@ -227,6 +227,39 @@ void TemperatureDisplay::updateOutsideTemperature(float outsideTemp)
     char temp_str[20];
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", outsideTemp);
     lv_label_set_text(ui_lblAussentemp, temp_str);
+    Serial.printf("Outside temperature updated to: %.1f°C\n", outsideTemp);
+}
+
+void TemperatureDisplay::updateWohnzimmer(float wohnzimmerTemp)
+{
+    char temp_str[20];
+    snprintf(temp_str, sizeof(temp_str), "%.1f°C", wohnzimmerTemp);
+    lv_label_set_text(ui_lblWohnzimmerIst, temp_str);
+    Serial.printf("Wohnzimmer temperature updated to: %.1f°C\n", wohnzimmerTemp);
+}
+
+void TemperatureDisplay::updateGaestezimmer(float gaestezimmerTemp)
+{
+    char temp_str[20];
+    snprintf(temp_str, sizeof(temp_str), "%.1f°C", gaestezimmerTemp);
+    lv_label_set_text(ui_lblGaestezimmerIst, temp_str);
+    Serial.printf("Gästezimmer temperature updated to: %.1f°C\n", gaestezimmerTemp);
+}
+
+void TemperatureDisplay::updateBuero(float bueroTemp)
+{
+    char temp_str[20];
+    snprintf(temp_str, sizeof(temp_str), "%.1f°C", bueroTemp);
+    lv_label_set_text(ui_lblBueroIst, temp_str);
+    Serial.printf("Büro temperature updated to: %.1f°C\n", bueroTemp);
+}
+
+void TemperatureDisplay::updateEsszimmer(float esszimmerTemp)
+{
+    char temp_str[20];
+    snprintf(temp_str, sizeof(temp_str), "%.1f°C", esszimmerTemp);
+    lv_label_set_text(ui_lblEsszimmerIst, temp_str);
+    Serial.printf("Esszimmer temperature updated to: %.1f°C\n", esszimmerTemp);
 }
 
 void TemperatureDisplay::updateIsConnected(bool isConnected)

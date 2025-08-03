@@ -5,6 +5,7 @@
 #include <NTPClient.h>
 #include <ESP32Ping.h>
 #include "ESP32Helpers.h"
+#include <ArduinoJson.h>
 
 // Shared libaries
 #include "AzureOTAUpdater.h"
@@ -29,6 +30,11 @@ const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturDisplay";
 static String mqtt_DeviceNameTopic = "config/TemperaturDisplay/{ID}/DeviceName";
 static String mqtt_OutsideTempTopic = "daten/temperatur/Aussen";
+static String mqtt_ThermostatWohnzimmerTopic = "data/thermostat/M3/shelly/Wohnzimmer";
+static String mqtt_ThermostatEsszimmerTopic = "data/thermostat/M3/shelly/Esszimmer";
+static String mqtt_ThermostatGaestezimmerTopic = "data/thermostat/M3/shelly/Gaestezimmer";
+static String mqtt_ThermostatBueroTopic = "data/thermostat/M3/shelly/BBuero";
+
 const char* version = FIRMWARE_VERSION;
 String chipID = "";
 NTPClient timeClient(ntpUDP);
@@ -73,6 +79,62 @@ void mqttCallback(String &topic, String &payload) {
     if (topic == mqtt_OutsideTempTopic) {
       float outsideTemp = payload.toFloat();
       display.updateOutsideTemperature(outsideTemp);
+      return;
+    }
+    
+    if (topic == mqtt_ThermostatWohnzimmerTopic) {
+      // Parse JSON payload to extract CurrentTemperature
+      StaticJsonDocument<256> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (!error && doc.containsKey("CurrentTemperature")) {
+          float currentTemp = doc["CurrentTemperature"];
+          display.setCurrentTemperature(currentTemp);
+          display.updateWohnzimmer(currentTemp);
+      } else {
+          Serial.println("Failed to parse CurrentTemperature from payload");
+      }
+      return;
+    }
+
+    if (topic == mqtt_ThermostatEsszimmerTopic) {
+      // Parse JSON payload to extract CurrentTemperature
+      StaticJsonDocument<256> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (!error && doc.containsKey("CurrentTemperature")) {
+          float currentTemp = doc["CurrentTemperature"];
+          display.setCurrentTemperature(currentTemp);
+          display.updateEsszimmer(currentTemp);
+      } else {
+          Serial.println("Failed to parse CurrentTemperature from payload");
+      }
+      return;
+    }
+
+    if (topic == mqtt_ThermostatGaestezimmerTopic) {
+      // Parse JSON payload to extract CurrentTemperature
+      StaticJsonDocument<256> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (!error && doc.containsKey("CurrentTemperature")) {
+          float currentTemp = doc["CurrentTemperature"];
+          display.setCurrentTemperature(currentTemp);
+          display.updateGaestezimmer(currentTemp);
+      } else {
+          Serial.println("Failed to parse CurrentTemperature from payload");
+      }
+      return;
+    }
+
+    if (topic == mqtt_ThermostatBueroTopic) {
+      // Parse JSON payload to extract CurrentTemperature
+      StaticJsonDocument<256> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (!error && doc.containsKey("CurrentTemperature")) {
+          float currentTemp = doc["CurrentTemperature"];
+          display.setCurrentTemperature(currentTemp);
+          display.updateBuero(currentTemp);
+      } else {
+          Serial.println("Failed to parse CurrentTemperature from payload");
+      }
       return;
     }
 

@@ -90,6 +90,10 @@ public:
     void updateTime(long currentTime);
     void updateIsConnected(bool isConnected);
     void updateOutsideTemperature(float outsideTemp);
+    void updateWohnzimmer(float wohnzimmerTemp);
+    void updateGaestezimmer(float gaestezimmerTemp);
+    void updateBuero(float bueroTemp);
+    void updateEsszimmer(float esszimmerTemp);
     
     // Time management
     void configureTimezone(const char* timezone = "CET-1CEST,M3.5.0,M10.5.0/3");
