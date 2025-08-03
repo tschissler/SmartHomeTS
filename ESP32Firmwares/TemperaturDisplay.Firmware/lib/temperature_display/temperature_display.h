@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <esp_display_panel.hpp>
 #include <lvgl.h>
+#include <time.h>
+#include <sys/time.h>
 #include "lvgl_v9_port.h"
 #include "ui.h"
 
@@ -85,6 +87,12 @@ public:
     // Update methods
     void update();
     void simulateTemperatureSensor();
+    void updateTime(long currentTime);
+    void updateIsConnected(bool isConnected);
+    void updateOutsideTemperature(float outsideTemp);
+    
+    // Time management
+    void configureTimezone(const char* timezone = "CET-1CEST,M3.5.0,M10.5.0/3");
     
     // Utility methods
     void lock() { lvgl_port_lock(-1); }

@@ -129,7 +129,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblZeit, 344);
     lv_obj_set_y(ui_lblZeit, 0);
     lv_obj_set_align(ui_lblZeit, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblZeit, "16:36");
+    lv_label_set_text(ui_lblZeit, "--:--");
     lv_obj_set_style_text_color(ui_lblZeit, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblZeit, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblZeit, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -152,6 +152,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_iconWifi, -369);
     lv_obj_set_y(ui_iconWifi, 1);
     lv_obj_set_align(ui_iconWifi, LV_ALIGN_CENTER);
+    lv_obj_add_state(ui_iconWifi, LV_STATE_DISABLED);       /// States
     lv_obj_add_flag(ui_iconWifi, LV_OBJ_FLAG_CLICKABLE);     /// Flags
     lv_obj_remove_flag(ui_iconWifi, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_image_recolor(ui_iconWifi, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DISABLED);
@@ -163,7 +164,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblAussentemp, 16);
     lv_obj_set_y(ui_lblAussentemp, 0);
     lv_obj_set_align(ui_lblAussentemp, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblAussentemp, "14,8°C");
+    lv_label_set_text(ui_lblAussentemp, "--,-°C");
     lv_obj_set_style_text_color(ui_lblAussentemp, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblAussentemp, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblAussentemp, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -175,6 +176,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_iconWaermepumpe, -307);
     lv_obj_set_y(ui_iconWaermepumpe, 0);
     lv_obj_set_align(ui_iconWaermepumpe, LV_ALIGN_CENTER);
+    lv_obj_add_state(ui_iconWaermepumpe, LV_STATE_DISABLED);       /// States
     lv_obj_add_flag(ui_iconWaermepumpe, LV_OBJ_FLAG_CLICKABLE);     /// Flags
     lv_obj_remove_flag(ui_iconWaermepumpe, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_image_set_scale(ui_iconWaermepumpe, 230);
