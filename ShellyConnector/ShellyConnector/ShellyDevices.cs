@@ -16,7 +16,7 @@ namespace ShellyConnector
                 new ShellyDevice(
                     DeviceName : "Geschirrspüler",
                     DeviceType : DeviceType.ShellyPlus1PM,
-                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 120 }),
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 134 }),
                     Location : Location.M1
                 ),
                 new ShellyDevice(
@@ -58,7 +58,7 @@ namespace ShellyConnector
                 new ShellyDevice(
                     DeviceName : "Trockner",
                     DeviceType : DeviceType.ShellyPlusPlugS,
-                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 114 }),
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 142 }),
                     Location : Location.M1
                 ),
                 new ShellyDevice(
@@ -80,12 +80,6 @@ namespace ShellyConnector
                     Location : Location.M1
                 ),
                 new ShellyDevice(
-                    DeviceName : "WLAN-Router",
-                    DeviceType : DeviceType.ShellyPlusPlugS,
-                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 23 }),
-                    Location : Location.M1
-                ),
-                new ShellyDevice(
                     DeviceName : "Fernseher",
                     DeviceType : DeviceType.ShellyPlusPlugS,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 57 }),
@@ -104,15 +98,18 @@ namespace ShellyConnector
         {
             return new List<ShellyDevice>()
             {
+                // M1
                 new ShellyDevice(
-                    DeviceName : "Thermostat Bad",
+                    DeviceName : "Bad",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 74 }),
                     Location : Location.M1,
                     DeviceId : "200"
                 ),
+
+                //M3
                 new ShellyDevice(
-                    DeviceName : "Thermostat Wohnzimmer M3",
+                    DeviceName : "Wohnzimmer",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
                     Location : Location.M3,
@@ -120,35 +117,35 @@ namespace ShellyConnector
 
                 ),
                 new ShellyDevice(
-                    DeviceName : "Thermostat Büro",
+                    DeviceName : "Buero",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
                     Location : Location.M3,
                     DeviceId : "201"
                 ),
                 new ShellyDevice(
-                    DeviceName : "Thermostat Gästezimmer",
+                    DeviceName : "Gaestezimmer",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
                     Location : Location.M3,
                     DeviceId : "202"
                 ),
                 new ShellyDevice(
-                    DeviceName : "Thermostat Esszimmer M3",
+                    DeviceName : "Esszimmer",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
                     Location : Location.M3,
                     DeviceId : "203"
                 ),
                 new ShellyDevice(
-                    DeviceName : "Thermostat Büro Thomas",
+                    DeviceName : "Buero_Thomas",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
                     Location : Location.M3,
                     DeviceId : "204"
                 ),
                 new ShellyDevice(
-                    DeviceName : "Thermostat Küche",
+                    DeviceName : "Kueche",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
                     Location : Location.M3,

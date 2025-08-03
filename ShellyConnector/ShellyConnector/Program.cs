@@ -81,7 +81,7 @@ timerPowerDevices.Elapsed += async (sender, e) =>
 };
 timerPowerDevices.Start();
 
-var timerThermostatDevices = new System.Timers.Timer(60000);
+var timerThermostatDevices = new System.Timers.Timer(10000);
 timerThermostatDevices.Elapsed += async (sender, e) =>
 {
     var tasks = thermostatDevices.Select(async device =>
