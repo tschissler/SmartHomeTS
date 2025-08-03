@@ -120,6 +120,20 @@ namespace ShellyConnector
 
                 ),
                 new ShellyDevice(
+                    DeviceName : "Thermostat Büro",
+                    DeviceType : DeviceType.ShellyBluTRV,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
+                    Location : Location.M3,
+                    DeviceId : "201"
+                ),
+                new ShellyDevice(
+                    DeviceName : "Thermostat Gästezimmer",
+                    DeviceType : DeviceType.ShellyBluTRV,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
+                    Location : Location.M3,
+                    DeviceId : "202"
+                ),
+                new ShellyDevice(
                     DeviceName : "Thermostat Esszimmer M3",
                     DeviceType : DeviceType.ShellyBluTRV,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
@@ -132,6 +146,13 @@ namespace ShellyConnector
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
                     Location : Location.M3,
                     DeviceId : "204"
+                ),
+                new ShellyDevice(
+                    DeviceName : "Thermostat Küche",
+                    DeviceType : DeviceType.ShellyBluTRV,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 156 }),
+                    Location : Location.M3,
+                    DeviceId : "205"
                 )
             };
         }
