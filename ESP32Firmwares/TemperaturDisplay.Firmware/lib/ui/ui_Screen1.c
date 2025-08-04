@@ -118,7 +118,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTempOutside, 13);
     lv_obj_set_y(ui_lblTempOutside, 0);
     lv_obj_set_align(ui_lblTempOutside, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTempOutside, "17.9°C / 17.1°C");
+    lv_label_set_text(ui_lblTempOutside, "--.-°C / --.-°C");
     lv_obj_set_style_text_color(ui_lblTempOutside, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTempOutside, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTempOutside, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -129,7 +129,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTime, 349);
     lv_obj_set_y(ui_lblTime, 0);
     lv_obj_set_align(ui_lblTime, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTime, "18:15");
+    lv_label_set_text(ui_lblTime, "--:--");
     lv_obj_set_style_text_color(ui_lblTime, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTime, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTime, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -207,7 +207,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblBatteryLivingroom, 107);
     lv_obj_set_y(ui_lblBatteryLivingroom, -33);
     lv_obj_set_align(ui_lblBatteryLivingroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblBatteryLivingroom, "100%");
+    lv_label_set_text(ui_lblBatteryLivingroom, "--%");
     lv_obj_set_style_text_color(ui_lblBatteryLivingroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryLivingroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryLivingroom, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -220,7 +220,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblCurrentTempLivingroom, -51);
     lv_obj_set_y(ui_lblCurrentTempLivingroom, 25);
     lv_obj_set_align(ui_lblCurrentTempLivingroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblCurrentTempLivingroom, "18.7°C");
+    lv_label_set_text(ui_lblCurrentTempLivingroom, "--.-°C");
     lv_obj_set_style_text_color(ui_lblCurrentTempLivingroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblCurrentTempLivingroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblCurrentTempLivingroom, &ui_font_Quantico_40, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -231,7 +231,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTargetTempLivingroom, 71);
     lv_obj_set_y(ui_lblTargetTempLivingroom, 29);
     lv_obj_set_align(ui_lblTargetTempLivingroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTargetTempLivingroom, "/ 20.5°C");
+    lv_label_set_text(ui_lblTargetTempLivingroom, "/ --.-°C");
     lv_obj_set_style_text_color(ui_lblTargetTempLivingroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTargetTempLivingroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTargetTempLivingroom, &ui_font_Quantico_20, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -290,7 +290,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblBatteryDiningroom, 107);
     lv_obj_set_y(ui_lblBatteryDiningroom, -33);
     lv_obj_set_align(ui_lblBatteryDiningroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblBatteryDiningroom, "100%");
+    lv_label_set_text(ui_lblBatteryDiningroom, "--%");
     lv_obj_set_style_text_color(ui_lblBatteryDiningroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryDiningroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryDiningroom, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -303,7 +303,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblCurrentTempDiningroom, -51);
     lv_obj_set_y(ui_lblCurrentTempDiningroom, 25);
     lv_obj_set_align(ui_lblCurrentTempDiningroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblCurrentTempDiningroom, "18.7°C");
+    lv_label_set_text(ui_lblCurrentTempDiningroom, "--.-°C");
     lv_obj_set_style_text_color(ui_lblCurrentTempDiningroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblCurrentTempDiningroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblCurrentTempDiningroom, &ui_font_Quantico_40, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -314,7 +314,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTargetTempDiningroom, 71);
     lv_obj_set_y(ui_lblTargetTempDiningroom, 29);
     lv_obj_set_align(ui_lblTargetTempDiningroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTargetTempDiningroom, "/ 20.5°C");
+    lv_label_set_text(ui_lblTargetTempDiningroom, "/ --.-°C");
     lv_obj_set_style_text_color(ui_lblTargetTempDiningroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTargetTempDiningroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTargetTempDiningroom, &ui_font_Quantico_20, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -373,7 +373,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblBatteryKitchen, 107);
     lv_obj_set_y(ui_lblBatteryKitchen, -33);
     lv_obj_set_align(ui_lblBatteryKitchen, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblBatteryKitchen, "100%");
+    lv_label_set_text(ui_lblBatteryKitchen, "--%");
     lv_obj_set_style_text_color(ui_lblBatteryKitchen, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryKitchen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryKitchen, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -386,7 +386,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblCurrentTempKitchen, -51);
     lv_obj_set_y(ui_lblCurrentTempKitchen, 25);
     lv_obj_set_align(ui_lblCurrentTempKitchen, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblCurrentTempKitchen, "18.7°C");
+    lv_label_set_text(ui_lblCurrentTempKitchen, "--.-°C");
     lv_obj_set_style_text_color(ui_lblCurrentTempKitchen, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblCurrentTempKitchen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblCurrentTempKitchen, &ui_font_Quantico_40, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -397,7 +397,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTargetTempKitchen, 71);
     lv_obj_set_y(ui_lblTargetTempKitchen, 29);
     lv_obj_set_align(ui_lblTargetTempKitchen, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTargetTempKitchen, "/ 20.5°C");
+    lv_label_set_text(ui_lblTargetTempKitchen, "/ --.-°C");
     lv_obj_set_style_text_color(ui_lblTargetTempKitchen, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTargetTempKitchen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTargetTempKitchen, &ui_font_Quantico_20, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -456,7 +456,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblBatteryStudy, 107);
     lv_obj_set_y(ui_lblBatteryStudy, -33);
     lv_obj_set_align(ui_lblBatteryStudy, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblBatteryStudy, "100%");
+    lv_label_set_text(ui_lblBatteryStudy, "--%");
     lv_obj_set_style_text_color(ui_lblBatteryStudy, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryStudy, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryStudy, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -469,7 +469,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblCurrentTempStudy, -51);
     lv_obj_set_y(ui_lblCurrentTempStudy, 25);
     lv_obj_set_align(ui_lblCurrentTempStudy, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblCurrentTempStudy, "18.7°C");
+    lv_label_set_text(ui_lblCurrentTempStudy, "--.-°C");
     lv_obj_set_style_text_color(ui_lblCurrentTempStudy, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblCurrentTempStudy, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblCurrentTempStudy, &ui_font_Quantico_40, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -480,7 +480,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTargetTempStudy, 71);
     lv_obj_set_y(ui_lblTargetTempStudy, 29);
     lv_obj_set_align(ui_lblTargetTempStudy, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTargetTempStudy, "/ 20.5°C");
+    lv_label_set_text(ui_lblTargetTempStudy, "/ --.-°C");
     lv_obj_set_style_text_color(ui_lblTargetTempStudy, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTargetTempStudy, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTargetTempStudy, &ui_font_Quantico_20, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -539,7 +539,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblBatteryGuestroom, 107);
     lv_obj_set_y(ui_lblBatteryGuestroom, -33);
     lv_obj_set_align(ui_lblBatteryGuestroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblBatteryGuestroom, "100%");
+    lv_label_set_text(ui_lblBatteryGuestroom, "--%");
     lv_obj_set_style_text_color(ui_lblBatteryGuestroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryGuestroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryGuestroom, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -552,7 +552,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblCurrentTempGuestroom, -51);
     lv_obj_set_y(ui_lblCurrentTempGuestroom, 25);
     lv_obj_set_align(ui_lblCurrentTempGuestroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblCurrentTempGuestroom, "18.7°C");
+    lv_label_set_text(ui_lblCurrentTempGuestroom, "--.-°C");
     lv_obj_set_style_text_color(ui_lblCurrentTempGuestroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblCurrentTempGuestroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblCurrentTempGuestroom, &ui_font_Quantico_40, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -563,7 +563,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTargetTempGuestroom, 71);
     lv_obj_set_y(ui_lblTargetTempGuestroom, 29);
     lv_obj_set_align(ui_lblTargetTempGuestroom, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTargetTempGuestroom, "/ 20.5°C");
+    lv_label_set_text(ui_lblTargetTempGuestroom, "/ --.-°C");
     lv_obj_set_style_text_color(ui_lblTargetTempGuestroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTargetTempGuestroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTargetTempGuestroom, &ui_font_Quantico_20, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -594,7 +594,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblValveOpen, 31);
     lv_obj_set_y(ui_lblValveOpen, 130);
     lv_obj_set_align(ui_lblValveOpen, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblValveOpen, "100%");
+    lv_label_set_text(ui_lblValveOpen, "--%");
     lv_obj_set_style_text_color(ui_lblValveOpen, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblValveOpen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblValveOpen, &ui_font_Quantico_20, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -605,7 +605,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblTargetTemp, -1);
     lv_obj_set_y(ui_lblTargetTemp, -15);
     lv_obj_set_align(ui_lblTargetTemp, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTargetTemp, "22.0°C");
+    lv_label_set_text(ui_lblTargetTemp, "--.-°C");
     lv_obj_set_style_text_color(ui_lblTargetTemp, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTargetTemp, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTargetTemp, &ui_font_Quantico_80, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -627,7 +627,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_x(ui_lblCurrentTemp, 41);
     lv_obj_set_y(ui_lblCurrentTemp, 64);
     lv_obj_set_align(ui_lblCurrentTemp, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblCurrentTemp, "18.2°C");
+    lv_label_set_text(ui_lblCurrentTemp, "--.-°C");
     lv_obj_set_style_text_color(ui_lblCurrentTemp, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblCurrentTemp, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblCurrentTemp, &ui_font_Quantico_40, LV_PART_MAIN | LV_STATE_DEFAULT);

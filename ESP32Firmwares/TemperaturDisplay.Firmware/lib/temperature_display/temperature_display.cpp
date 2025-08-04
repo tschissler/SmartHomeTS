@@ -85,8 +85,6 @@ void TemperatureDisplay::setupUI()
     lv_obj_add_event_cb(ui_btnStudy, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
 
     // Set initial values
-    setTargetTemperature(targetTemperature);
-    setCurrentTemperature(currentTemperature);
     setCurrentRoom(currentRoom);
 
     unlock();
@@ -102,6 +100,8 @@ const char *TemperatureDisplay::roomToString(Room room) const
         return "Wohnzimmer";
     case Room::Esszimmer:
         return "Esszimmer";
+    case Room::Kueche:
+        return "Küche";
     case Room::Gaestezimmer:
         return "Gästezimmer";
     case Room::Buero:
@@ -115,13 +115,18 @@ const char *TemperatureDisplay::roomToString(Room room) const
     }
 }
 
+int TemperatureDisplay::roomToIndex(Room room) const
+{
+    return static_cast<int>(room);
+}
+
 void TemperatureDisplay::setCurrentRoom(Room room)
 {
     Room oldRoom = currentRoom;
     currentRoom = room;
 
     updateAllButtonStates();
-    updateRoomDisplay();
+    updateSelectedRoomData();
 
     // Call callback if set
     if (onRoomChange)
@@ -130,45 +135,6 @@ void TemperatureDisplay::setCurrentRoom(Room room)
     }
 
     Serial.printf("Room changed to: %s\n", roomToString(currentRoom));
-}
-
-void TemperatureDisplay::setCurrentTemperature(float temp)
-{
-    currentTemperature = temp;
-    updateTemperatureDisplay();
-
-    Serial.printf("Current temperature updated to: %.1f°C\n", currentTemperature);
-}
-
-void TemperatureDisplay::setTargetTemperature(float temp)
-{
-    targetTemperature = temp;
-
-    lock();
-    lv_arc_set_value(ui_arcTargetTemp, (int)(temp * 2)); // Convert to arc value
-
-    char temp_str[20];
-    snprintf(temp_str, sizeof(temp_str), "%.1f°C", temp);
-    lv_label_set_text(ui_lblTargetTemp, temp_str);
-    unlock();
-
-    // Call callback if set
-    if (onTemperatureChange)
-    {
-        onTemperatureChange(temp, currentRoom);
-    }
-
-    Serial.printf("Target temperature set to: %.1f°C for room: %s\n", temp, roomToString(currentRoom));
-}
-
-void TemperatureDisplay::updateTemperatureDisplay()
-{
-    char temp_str[20];
-    snprintf(temp_str, sizeof(temp_str), "%.1f°C", currentTemperature);
-
-    lock();
-    lv_label_set_text(ui_lblCurrentTemp, temp_str);
-    unlock();
 }
 
 void TemperatureDisplay::updateAllButtonStates()
@@ -207,15 +173,9 @@ void TemperatureDisplay::updateAllButtonStates()
     {
         lv_obj_add_state(currentBtn, LV_STATE_CHECKED);
     }
+    
 
     unlock();
-}
-
-void TemperatureDisplay::updateRoomDisplay()
-{
-    // This method can be extended if you have a room label on the display
-    // For now, it just updates the button states
-    updateAllButtonStates();
 }
 
 void TemperatureDisplay::updateOutsideTemperature(float outsideTemp)
@@ -231,6 +191,13 @@ void TemperatureDisplay::updateRoomData(const ThermostatData& thermostatData, Ro
     lv_obj_t *currentTempLabel = nullptr;
     lv_obj_t *targetTempLabel = nullptr;
     lv_obj_t *batteryLabel = nullptr;
+
+    storeThermostatData(room, thermostatData);
+    if (room == currentRoom)
+    {
+        updateSelectedRoomData();
+    }
+
     switch (room)
     {
     case Room::Wohnzimmer:
@@ -269,13 +236,33 @@ void TemperatureDisplay::updateRoomData(const ThermostatData& thermostatData, Ro
 
     float targetTemp = thermostatData.getTargetTemperature();
     char targetTemp_str[20];
-    snprintf(targetTemp_str, sizeof(targetTemp_str), "%.1f°C", targetTemp);
+    snprintf(targetTemp_str, sizeof(targetTemp_str), "/ %.1f°C", targetTemp);
     lv_label_set_text(targetTempLabel, targetTemp_str);
 
     float batteryLevel = thermostatData.getBatteryLevel();
     char battery_str[20];
     snprintf(battery_str, sizeof(battery_str), "%d%%", (int)batteryLevel);
     lv_label_set_text(batteryLabel, battery_str);
+}
+
+void TemperatureDisplay::updateSelectedRoomData()
+{
+    // Update the current room's thermostat data display
+    const ThermostatData& data = getThermostatData(currentRoom);
+    
+    char currentTempStr[20];
+    snprintf(currentTempStr, sizeof(currentTempStr), "%.1f°C", data.getCurrentTemperature());
+    lv_label_set_text(ui_lblCurrentTemp, currentTempStr);
+
+    char targetTempStr[20];
+    snprintf(targetTempStr, sizeof(targetTempStr), "%.1f°C", data.getTargetTemperature());
+    lv_label_set_text(ui_lblTargetTemp, targetTempStr);
+    lv_arc_set_value(ui_arcTargetTemp, static_cast<int>(data.getTargetTemperature() * 2)); // Assuming arc value is in 0.5°C steps
+
+    char valveOpenStr[20];
+    snprintf(valveOpenStr, sizeof(valveOpenStr), "%d%%", (int)data.getValvePosition());
+    lv_label_set_text(ui_lblValveOpen, valveOpenStr);
+
 }
 
 void TemperatureDisplay::updateIsConnected(bool isConnected)
@@ -305,13 +292,6 @@ void TemperatureDisplay::configureTimezone(const char *timezone)
     setenv("TZ", timezone, 1);
     tzset();
     Serial.println("Timezone configured");
-}
-
-void TemperatureDisplay::update()
-{
-    // This method can be called regularly to update the display
-    // Currently, LVGL handles most updates automatically
-    delay(10); // Small delay to prevent excessive CPU usage
 }
 
 // Static event handlers for LVGL callbacks
@@ -365,3 +345,34 @@ void TemperatureDisplay::handleButtonClick(lv_event_t *e)
 
     setCurrentRoom(room);
 }
+
+// Thermostat data management methods
+void TemperatureDisplay::storeThermostatData(Room room, const ThermostatData& data)
+{
+    int index = roomToIndex(room);
+    if (index >= 0 && index < ROOM_COUNT) {
+        roomThermostatData[index] = data;
+        Serial.printf("Stored thermostat data for %s\n", roomToString(room));
+    } else {
+        Serial.printf("Invalid room index: %d for room %s\n", index, roomToString(room));
+    }
+}
+
+const ThermostatData& TemperatureDisplay::getThermostatData(Room room) const
+{
+    int index = roomToIndex(room);
+    if (index >= 0 && index < ROOM_COUNT) {
+        return roomThermostatData[index];
+    } else {
+        Serial.printf("Invalid room index: %d for room %s, returning default data\n", index, roomToString(room));
+        static ThermostatData defaultData; // Return a default invalid object
+        return defaultData;
+    }
+}
+
+bool TemperatureDisplay::hasValidThermostatData(Room room) const
+{
+    const ThermostatData& data = getThermostatData(room);
+    return data.getIsValid();
+}
+

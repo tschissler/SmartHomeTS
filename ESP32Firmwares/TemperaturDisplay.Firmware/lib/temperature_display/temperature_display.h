@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include "lvgl_v9_port.h"
 #include "ui.h"
+#include "thermostat_data.h"
 
 // Forward declaration
 class ThermostatData;
@@ -37,6 +38,10 @@ private:
     float currentTemperature;
     float targetTemperature;
     
+    // Thermostat data storage (indexed by Room enum)
+    static const int ROOM_COUNT = 7; // Total number of rooms in enum
+    ThermostatData roomThermostatData[ROOM_COUNT];
+    
     // Callback functions
     TemperatureChangeCallback onTemperatureChange;
     RoomChangeCallback onRoomChange;
@@ -56,6 +61,9 @@ private:
     void updateAllButtonStates();
     void updateTemperatureDisplay();
     void updateRoomDisplay();
+    
+    // Array index conversion
+    int roomToIndex(Room room) const;
 
 public:
     // Constructor
@@ -89,11 +97,16 @@ public:
     }
     
     // Update methods
-    void update();
     void updateTime(long currentTime);
     void updateIsConnected(bool isConnected);
     void updateOutsideTemperature(float outsideTemp);
     void updateRoomData(const ThermostatData& thermostatData, Room room);
+    
+    // Thermostat data management
+    void storeThermostatData(Room room, const ThermostatData& data);
+    const ThermostatData& getThermostatData(Room room) const;
+    bool hasValidThermostatData(Room room) const;
+    void updateSelectedRoomData();
 
     // Time management
     void configureTimezone(const char* timezone = "CET-1CEST,M3.5.0,M10.5.0/3");

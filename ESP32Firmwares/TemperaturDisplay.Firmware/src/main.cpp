@@ -236,7 +236,6 @@ void setup()
 void loop()
 {
   display.lock();
-  display.update();
   display.updateTime(timeClient.getEpochTime());
   display.unlock();
 
