@@ -11,5 +11,9 @@ namespace ShellyConnector.DataContracts
         IPAddress IPAddress,
         Location Location,
         string? DeviceId = null
-    );
+    )
+    {
+        public bool IsConnected { get; set; }
+    }
+
 }

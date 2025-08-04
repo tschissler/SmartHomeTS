@@ -21,38 +21,47 @@ var services = serviceScope.ServiceProvider;
 
 var mqttClient = services.GetRequiredService<MQTTClient.MQTTClient>();
 
-ConsoleHelpers.PrintInformation(" ### Testing connection to all Power-Devices");
+List<ShellyConnector.DataContracts.ShellyDevice> powerDevices, thermostatDevices;
 
-var powerDevices = ShellyDevices.GetPowerDevices();
-foreach (var powerDevice in powerDevices)
-{
-    var status = ShellyConnector.ShellyConnector.GetPowerStaus(powerDevice);
-    if (status is null)
-        ConsoleHelpers.PrintInformation($"  --- Could not connect to powerDevice {powerDevice.DeviceName}");
-    else
-        ConsoleHelpers.PrintInformation($"  - {powerDevice.DeviceName,-30} {"(" + powerDevice.IPAddress + ")",-20} {status.app + status.type,20} => success");
-}
+powerDevices = ShellyDevices.GetPowerDevices();
+thermostatDevices = ShellyDevices.GetThermostatDevices();
 
-ConsoleHelpers.PrintInformation(" ### Testing connection to all Thermostat-Devices");
-
-var thermostatDevices = ShellyDevices.GetThermostatDevices();
-foreach (var thermostatDevice in thermostatDevices)
-{
-    var status = ShellyConnector.ShellyConnector.GetThermostatStaus(thermostatDevice);
-    if (status is null)
-        ConsoleHelpers.PrintInformation($"  --- Could not connect to thermostatDevice {thermostatDevice.DeviceName}");
-    else
-        ConsoleHelpers.PrintInformation($"  - {thermostatDevice.DeviceName,-30} {"(" + thermostatDevice.IPAddress + ")",-20} => success");
-}
+await TestDeviceConnection(powerDevices, thermostatDevices);
 
 ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
 await mqttClient.SubscribeToTopic("commands/shelly/#");
 mqttClient.OnMessageReceived += (sender, e) =>
 {
     ConsoleHelpers.PrintInformation($"  - Message received: {e.Topic}");
-    var deviceName = e.Topic.Split("/")[2];
-    var state = e.Payload;
-    ShellyConnector.ShellyConnector.SetRelay(powerDevices.First(i => i.DeviceName == deviceName), state);
+    if (string.IsNullOrEmpty(e.Payload))
+    {
+        ConsoleHelpers.PrintErrorMessage($"Empty payload for message on topic {e.Topic}");
+        return;
+    }
+
+    var topicParts = e.Topic.Split("/");
+    if (topicParts.Length < 2) return;
+    var deviceName = topicParts[2];
+    var device = powerDevices.FirstOrDefault(x =>
+        string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase));
+    if (device != null)
+    {
+        var state = e.Payload;
+        ShellyConnector.ShellyConnector.SetRelay(device, state);
+        return;
+    }
+
+    if (topicParts.Length < 3) return;
+    var location = topicParts[2];
+    deviceName = topicParts[3];
+    device = thermostatDevices.FirstOrDefault(x =>
+        string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
+    if (device != null)
+    {
+        ShellyConnector.ShellyConnector.SetTargetTemp(device, e.Payload);
+        return;
+    }
 };
 
 ConsoleHelpers.PrintInformation(" ### Creating timer to read data from devices every second");
@@ -60,9 +69,9 @@ ConsoleHelpers.PrintInformation("     and send the data as MQTT messages");
 var timerPowerDevices = new System.Timers.Timer(1000);
 timerPowerDevices.Elapsed += async (sender, e) =>
 {
-    var tasks = powerDevices.Select(async device =>
+    var tasks = powerDevices.Where(i => i.IsConnected).Select(async device =>
     {
-        var powerData = ShellyConnector.ShellyConnector.GetPowerData(device);
+        var powerData = await ShellyConnector.ShellyConnector.GetPowerData(device);
         if (powerData is null)
         {
             ConsoleHelpers.PrintInformation($"  --- Could not read meter data from device {device.DeviceName}");
@@ -84,9 +93,9 @@ timerPowerDevices.Start();
 var timerThermostatDevices = new System.Timers.Timer(60000);
 timerThermostatDevices.Elapsed += async (sender, e) =>
 {
-    var tasks = thermostatDevices.Select(async device =>
+    var tasks = thermostatDevices.Where(i => i.IsConnected).Select(async device =>
     {
-        var thermostatData = ShellyConnector.ShellyConnector.GetThermostatData(device);
+        var thermostatData = await ShellyConnector.ShellyConnector.GetThermostatData(device);
         if (thermostatData is null)
         {
             ConsoleHelpers.PrintInformation($"  --- Could not read meter data from device {device.DeviceName}");
@@ -100,8 +109,46 @@ timerThermostatDevices.Elapsed += async (sender, e) =>
 };
 timerThermostatDevices.Start();
 
+var timerTestDeviceConnection = new System.Timers.Timer(300000);
+timerTestDeviceConnection.Elapsed += async (sender, e) =>
+{
+    await TestDeviceConnection(powerDevices, thermostatDevices);
+};
+timerTestDeviceConnection.Start();
+
 ConsoleHelpers.PrintInformation("");
 ConsoleHelpers.PrintInformation(" ### Done");
 
 // Run the host to keep the application running and processing events
 await host.RunAsync();
+
+static async Task TestDeviceConnection(List<ShellyConnector.DataContracts.ShellyDevice> powerDevices, List<ShellyConnector.DataContracts.ShellyDevice> thermostatDevices)
+{
+    ConsoleHelpers.PrintInformation(" ### Testing connection to all Power-Devices");
+
+    foreach (var powerDevice in powerDevices)
+    {
+        var status = await ShellyConnector.ShellyConnector.GetPowerStaus(powerDevice);
+        if (status is null)
+            ConsoleHelpers.PrintInformation($"  --- Could not connect to powerDevice {powerDevice.DeviceName}");
+        else
+        {
+            powerDevice.IsConnected = true;
+            ConsoleHelpers.PrintInformation($"  - {powerDevice.DeviceName,-30} {"(" + powerDevice.IPAddress + ")",-20} {status.app + status.type,20} => success");
+        }
+    }
+
+    ConsoleHelpers.PrintInformation(" ### Testing connection to all Thermostat-Devices");
+
+    foreach (var thermostatDevice in thermostatDevices)
+    {
+        var status = await ShellyConnector.ShellyConnector.GetThermostatStaus(thermostatDevice);
+        if (status is null)
+            ConsoleHelpers.PrintInformation($"  --- Could not connect to thermostatDevice {thermostatDevice.DeviceName}");
+        else
+        {
+            thermostatDevice.IsConnected = true;
+            ConsoleHelpers.PrintInformation($"  - {thermostatDevice.DeviceName,-30} {"(" + thermostatDevice.IPAddress + ")",-20} => success");
+        }
+    }
+}

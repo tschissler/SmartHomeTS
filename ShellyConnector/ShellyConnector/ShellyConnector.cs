@@ -1,18 +1,19 @@
 ﻿using Newtonsoft.Json;
 using ShellyConnector.DataContracts;
+using SmartHomeHelpers.Logging;
 
 namespace ShellyConnector
 {
     public class ShellyConnector
     {
-        public static ShellyPowerStatus? GetPowerStaus(ShellyDevice device)
+        public static async Task<ShellyPowerStatus?> GetPowerStaus(ShellyDevice device)
         {
             ShellyPowerStatus? status = null;
             try
             {
                 using (HttpClient Http = new HttpClient())
                 {
-                    var jsonString = Http.GetStringAsync($"http://{device.IPAddress}/shelly").Result;
+                    var jsonString = await Http.GetStringAsync($"http://{device.IPAddress}/shelly");
                     status = JsonConvert.DeserializeObject<ShellyPowerStatus>(jsonString);
                 }
             }
@@ -24,14 +25,14 @@ namespace ShellyConnector
             return status;
         }
 
-        public static ShellyThermostatStatus? GetThermostatStaus(ShellyDevice device)
+        public static async Task<ShellyThermostatStatus?> GetThermostatStaus(ShellyDevice device)
         {
             ShellyThermostatStatus? status = null;
             try
             {
                 using (HttpClient Http = new HttpClient())
                 {
-                    var jsonString = Http.GetStringAsync($"http://{device.IPAddress}/rpc/BluTrv.GetStatus?id={device.DeviceId}").Result;
+                    var jsonString = await Http.GetStringAsync($"http://{device.IPAddress}/rpc/BluTrv.GetStatus?id={device.DeviceId}");
                     status = JsonConvert.DeserializeObject<ShellyThermostatStatus>(jsonString);
                 }
             }
@@ -43,7 +44,7 @@ namespace ShellyConnector
             return status;
         }
 
-        public static ShellyPowerData? GetPowerData(ShellyDevice device)
+        public static async Task<ShellyPowerData?> GetPowerData(ShellyDevice device)
         {
             ShellyPowerData? powerData = null;
             try
@@ -54,7 +55,7 @@ namespace ShellyConnector
                     switch (device.DeviceType)
                     {
                         case DeviceType.Shelly3EM:
-                            jsonString = Http.GetStringAsync($"http://{device.IPAddress}/status").Result;
+                            jsonString = await Http.GetStringAsync($"http://{device.IPAddress}/status");
                             var jsonObject = JsonConvert.DeserializeObject<dynamic>(jsonString);
                             var emetersJson = jsonObject.emeters.ToString();
                             var emeterData = JsonConvert.DeserializeObject<ShellyEmeterData>($"{{\"Emeters\": {emetersJson}}}");
@@ -103,7 +104,7 @@ namespace ShellyConnector
             return powerData;
         }
 
-        public static ShellyThermostatData? GetThermostatData(ShellyDevice device)
+        public static async Task<ShellyThermostatData?> GetThermostatData(ShellyDevice device)
         {
             ShellyThermostatData? thermostatData = null;
 
@@ -115,7 +116,7 @@ namespace ShellyConnector
                     switch (device.DeviceType)
                     {
                         case DeviceType.ShellyBluTRV:
-                            var data = GetThermostatStaus(device);
+                            var data = await GetThermostatStaus(device);
                             thermostatData = new ShellyThermostatData(
                                 TargetTemperature: data?.Target_C ?? 0,
                                 CurrentTemperature: data?.Current_C ?? 0,
@@ -143,7 +144,7 @@ namespace ShellyConnector
             state = state.ToLower();
             if (state != "on" && state != "off" && state != "toggle")
             {
-                Console.WriteLine($"Invalid state {state} for relay on device {device.IPAddress}");
+                ConsoleHelpers.PrintErrorMessage($"Invalid state {state} for relay on device {device.IPAddress}");
                 return;
             }
             try
@@ -155,7 +156,32 @@ namespace ShellyConnector
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to set relay on device {device.IPAddress}, Error: " + ex.Message);
+                ConsoleHelpers.PrintErrorMessage($"Failed to set relay on device {device.IPAddress}, Error: " + ex.Message);
+            }
+        }
+
+        internal static void SetTargetTemp(ShellyDevice device, string? payload)
+        {
+            decimal targetTemp;
+            if (!decimal.TryParse(payload, out targetTemp))
+            {
+                ConsoleHelpers.PrintErrorMessage($"Invalid value for target temperature {payload}");
+                return;
+            }
+            try
+            {
+                using (HttpClient Http = new HttpClient())
+                {
+                    var result = Http.GetStringAsync($"http://{device.IPAddress}/rpc/BluTrv.Call?id={device.DeviceId}&method=\"TRV.SetTarget\"&params={{\"id\":0, \"target_C\":{payload}}}").Result;
+                    if (result != "null")
+                    {
+                        ConsoleHelpers.PrintErrorMessage($"Error setting target temperature: {result}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ConsoleHelpers.PrintErrorMessage($"Failed to set target temp on device {device.IPAddress}, Error: " + ex.Message);
             }
         }
     }
