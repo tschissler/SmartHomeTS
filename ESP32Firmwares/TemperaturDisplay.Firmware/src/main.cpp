@@ -182,6 +182,15 @@ void connectToMQTT() {
   Serial.println("MQTT Client is connected");
 }
 
+void targetTemperatureSet(float temperature, Room room) {
+  Serial.printf("Target temperature changed to %.1f°C in %s\n", 
+                temperature, display.roomToString(room));
+  
+  // Publish the new target temperature to MQTT
+  String topic = "commands/shelly/M3/" + String(display.roomToString(room));
+  mqttClientLib->publish(topic, String(temperature), true, 2);
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -227,6 +236,7 @@ void setup()
   display.setTemperatureChangeCallback(onTemperatureChanged);
   display.setRoomChangeCallback(onRoomChanged);
   display.updateIsConnected(WiFi.status() == WL_CONNECTED);
+  display.setTemperatureSetCallback(targetTemperatureSet);
 
   mqttClientLib->publish(("meta/" + deviceName + "/version/TemperatureDisplay").c_str(), String(version), true, 2);
 

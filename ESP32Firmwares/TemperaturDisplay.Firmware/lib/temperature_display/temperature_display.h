@@ -29,6 +29,7 @@ enum class Room : int {
 
 // Callback function types for events
 typedef void (*TemperatureChangeCallback)(float temperature, Room room);
+typedef void (*TemperatureSetCallback)(float temperature, Room room);
 typedef void (*RoomChangeCallback)(Room oldRoom, Room newRoom);
 
 class TemperatureDisplay {
@@ -44,10 +45,12 @@ private:
     
     // Callback functions
     TemperatureChangeCallback onTemperatureChange;
+    TemperatureSetCallback onTemperatureSet;
     RoomChangeCallback onRoomChange;
     
     // Static event handlers (required for LVGL callbacks)
     static void arc_event_handler_static(lv_event_t * e);
+    static void arc_release_event_handler_static(lv_event_t * e);
     static void btn_event_handler_static(lv_event_t * e);
     
     // Instance pointer for static callbacks
@@ -55,6 +58,7 @@ private:
     
     // Internal event handlers
     void handleArcValueChange(lv_event_t * e);
+    void handleArcRelease(lv_event_t * e);
     void handleButtonClick(lv_event_t * e);
     
     // Helper methods
@@ -91,6 +95,9 @@ public:
     // Callback setters
     void setTemperatureChangeCallback(TemperatureChangeCallback callback) { 
         onTemperatureChange = callback; 
+    }
+    void setTemperatureSetCallback(TemperatureSetCallback callback) { 
+        onTemperatureSet = callback; 
     }
     void setRoomChangeCallback(RoomChangeCallback callback) { 
         onRoomChange = callback; 

@@ -10,6 +10,7 @@ TemperatureDisplay::TemperatureDisplay()
       currentTemperature(18.6f),
       targetTemperature(22.0f),
       onTemperatureChange(nullptr),
+      onTemperatureSet(nullptr),
       onRoomChange(nullptr)
 {
 
@@ -78,6 +79,7 @@ void TemperatureDisplay::setupUI()
 
     // Add event handlers
     lv_obj_add_event_cb(ui_arcTargetTemp, arc_event_handler_static, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(ui_arcTargetTemp, arc_release_event_handler_static, LV_EVENT_RELEASED, NULL);
     lv_obj_add_event_cb(ui_btnLivingroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Wohnzimmer);
     lv_obj_add_event_cb(ui_btnDiningroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Esszimmer);
     lv_obj_add_event_cb(ui_btnKitchen, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Kueche);
@@ -303,6 +305,14 @@ void TemperatureDisplay::arc_event_handler_static(lv_event_t *e)
     }
 }
 
+void TemperatureDisplay::arc_release_event_handler_static(lv_event_t *e)
+{
+    if (instance)
+    {
+        instance->handleArcRelease(e);
+    }
+}
+
 void TemperatureDisplay::btn_event_handler_static(lv_event_t *e)
 {
     if (instance)
@@ -336,6 +346,23 @@ void TemperatureDisplay::handleArcValueChange(lv_event_t *e)
     }
 
     Serial.printf("Arc value changed to: %.1f°C for room: %s\n", temp, roomToString(currentRoom));
+}
+
+void TemperatureDisplay::handleArcRelease(lv_event_t *e)
+{
+    lv_obj_t *arc = (lv_obj_t *)lv_event_get_target(e);
+    int32_t value = lv_arc_get_value(arc);
+
+    // Convert arc value to temperature
+    float temp = value / 2.0f;
+
+    // Call callback if set - this fires when user finishes touching the arc
+    if (onTemperatureSet)
+    {
+        onTemperatureSet(temp, currentRoom);
+    }
+
+    Serial.printf("Arc released at: %.1f°C for room: %s\n", temp, roomToString(currentRoom));
 }
 
 void TemperatureDisplay::handleButtonClick(lv_event_t *e)
