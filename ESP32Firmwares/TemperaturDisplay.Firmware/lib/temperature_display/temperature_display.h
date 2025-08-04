@@ -9,17 +9,21 @@
 #include "lvgl_v9_port.h"
 #include "ui.h"
 
+// Forward declaration
+class ThermostatData;
+
 using namespace esp_panel::drivers;
 using namespace esp_panel::board;
 
 // Enum for room selection
 enum class Room : int {
-    Wohnzimmer = 0,
-    Esszimmer = 1,
-    Gaestezimmer = 2,
-    Buero = 3,
-    Schlafzimmer = 4,
-    Bad = 5
+    Wohnzimmer,
+    Esszimmer,
+    Kueche,
+    Gaestezimmer,
+    Buero,
+    Schlafzimmer,
+    Bad
 };
 
 // Callback function types for events
@@ -86,15 +90,10 @@ public:
     
     // Update methods
     void update();
-    void simulateTemperatureSensor();
     void updateTime(long currentTime);
     void updateIsConnected(bool isConnected);
     void updateOutsideTemperature(float outsideTemp);
-    void updateWohnzimmer(float wohnzimmerTemp);
-    void updateGaestezimmer(float gaestezimmerTemp);
-    void updateBuero(float bueroTemp);
-    void updateEsszimmer(float esszimmerTemp);
-    void updateKitchen(float kitchenTemp);
+    void updateRoomData(const ThermostatData& thermostatData, Room room);
 
     // Time management
     void configureTimezone(const char* timezone = "CET-1CEST,M3.5.0,M10.5.0/3");

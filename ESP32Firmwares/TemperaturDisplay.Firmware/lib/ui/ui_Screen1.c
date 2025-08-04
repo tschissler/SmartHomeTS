@@ -198,6 +198,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_add_flag(ui_Image5, LV_OBJ_FLAG_CLICKABLE);     /// Flags
     lv_obj_remove_flag(ui_Image5, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_image_set_scale(ui_Image5, 100);
+    lv_obj_set_style_image_recolor(ui_Image5, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_image_recolor_opa(ui_Image5, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblBatteryLivingroom = lv_label_create(ui_btnLivingroom);
     lv_obj_set_width(ui_lblBatteryLivingroom, LV_SIZE_CONTENT);   /// 1
@@ -209,6 +211,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_color(ui_lblBatteryLivingroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryLivingroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryLivingroom, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_lblBatteryLivingroom, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_text_opa(ui_lblBatteryLivingroom, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblCurrentTempLivingroom = lv_label_create(ui_btnLivingroom);
     lv_obj_set_width(ui_lblCurrentTempLivingroom, LV_SIZE_CONTENT);   /// 1
@@ -277,6 +281,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_add_flag(ui_Image6, LV_OBJ_FLAG_CLICKABLE);     /// Flags
     lv_obj_remove_flag(ui_Image6, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_image_set_scale(ui_Image6, 100);
+    lv_obj_set_style_image_recolor(ui_Image6, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_image_recolor_opa(ui_Image6, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblBatteryDiningroom = lv_label_create(ui_btnDiningroom);
     lv_obj_set_width(ui_lblBatteryDiningroom, LV_SIZE_CONTENT);   /// 1
@@ -288,6 +294,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_color(ui_lblBatteryDiningroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryDiningroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryDiningroom, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_lblBatteryDiningroom, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_text_opa(ui_lblBatteryDiningroom, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblCurrentTempDiningroom = lv_label_create(ui_btnDiningroom);
     lv_obj_set_width(ui_lblCurrentTempDiningroom, LV_SIZE_CONTENT);   /// 1
@@ -356,6 +364,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_add_flag(ui_Image7, LV_OBJ_FLAG_CLICKABLE);     /// Flags
     lv_obj_remove_flag(ui_Image7, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_image_set_scale(ui_Image7, 100);
+    lv_obj_set_style_image_recolor(ui_Image7, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_image_recolor_opa(ui_Image7, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblBatteryKitchen = lv_label_create(ui_btnKitchen);
     lv_obj_set_width(ui_lblBatteryKitchen, LV_SIZE_CONTENT);   /// 1
@@ -367,6 +377,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_color(ui_lblBatteryKitchen, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryKitchen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryKitchen, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_lblBatteryKitchen, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_text_opa(ui_lblBatteryKitchen, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblCurrentTempKitchen = lv_label_create(ui_btnKitchen);
     lv_obj_set_width(ui_lblCurrentTempKitchen, LV_SIZE_CONTENT);   /// 1
@@ -435,6 +447,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_add_flag(ui_Image8, LV_OBJ_FLAG_CLICKABLE);     /// Flags
     lv_obj_remove_flag(ui_Image8, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_image_set_scale(ui_Image8, 100);
+    lv_obj_set_style_image_recolor(ui_Image8, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_image_recolor_opa(ui_Image8, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblBatteryStudy = lv_label_create(ui_btnStudy);
     lv_obj_set_width(ui_lblBatteryStudy, LV_SIZE_CONTENT);   /// 1
@@ -446,6 +460,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_color(ui_lblBatteryStudy, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryStudy, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryStudy, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_lblBatteryStudy, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_text_opa(ui_lblBatteryStudy, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblCurrentTempStudy = lv_label_create(ui_btnStudy);
     lv_obj_set_width(ui_lblCurrentTempStudy, LV_SIZE_CONTENT);   /// 1
@@ -514,6 +530,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_add_flag(ui_Image9, LV_OBJ_FLAG_CLICKABLE);     /// Flags
     lv_obj_remove_flag(ui_Image9, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_image_set_scale(ui_Image9, 100);
+    lv_obj_set_style_image_recolor(ui_Image9, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_image_recolor_opa(ui_Image9, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblBatteryGuestroom = lv_label_create(ui_btnGuestroom);
     lv_obj_set_width(ui_lblBatteryGuestroom, LV_SIZE_CONTENT);   /// 1
@@ -525,6 +543,8 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_color(ui_lblBatteryGuestroom, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblBatteryGuestroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblBatteryGuestroom, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_lblBatteryGuestroom, lv_color_hex(0xFA5555), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_text_opa(ui_lblBatteryGuestroom, 255, LV_PART_MAIN | LV_STATE_CHECKED);
 
     ui_lblCurrentTempGuestroom = lv_label_create(ui_btnGuestroom);
     lv_obj_set_width(ui_lblCurrentTempGuestroom, LV_SIZE_CONTENT);   /// 1

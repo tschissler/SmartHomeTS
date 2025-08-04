@@ -6,6 +6,7 @@
 #include <ESP32Ping.h>
 #include "ESP32Helpers.h"
 #include <ArduinoJson.h>
+using ArduinoJson::JsonDocument;
 
 // Shared libaries
 #include "AzureOTAUpdater.h"
@@ -14,6 +15,7 @@
 
 // Project specific libraries
 #include "temperature_display.h"
+#include "thermostat_data.h"
 
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_PASSWORDS as environment variables on your dev-system following the pattern: WIFI_PASSWORDS="ssid1;password1|ssid2;password2"
@@ -84,57 +86,52 @@ void mqttCallback(String &topic, String &payload) {
     }
     
     if (topic == mqtt_ThermostatWohnzimmerTopic) {
-      // Parse JSON payload to extract CurrentTemperature
-      StaticJsonDocument<256> doc;
-      DeserializationError error = deserializeJson(doc, payload);
-      if (!error && doc.containsKey("CurrentTemperature")) {
-          float currentTemp = doc["CurrentTemperature"];
-          display.setCurrentTemperature(currentTemp);
-          display.updateWohnzimmer(currentTemp);
+      ThermostatData thermostatData;
+      if (thermostatData.parseFromJson(payload)) {
+          // Pass the full thermostat data object
+          display.updateRoomData(thermostatData, Room::Wohnzimmer);
       } else {
-          Serial.println("Failed to parse CurrentTemperature from payload");
+          Serial.println("Failed to parse thermostat data for Wohnzimmer");
       }
       return;
     }
 
     if (topic == mqtt_ThermostatEsszimmerTopic) {
-      // Parse JSON payload to extract CurrentTemperature
-      StaticJsonDocument<256> doc;
-      DeserializationError error = deserializeJson(doc, payload);
-      if (!error && doc.containsKey("CurrentTemperature")) {
-          float currentTemp = doc["CurrentTemperature"];
-          display.setCurrentTemperature(currentTemp);
-          display.updateEsszimmer(currentTemp);
+      ThermostatData thermostatData;
+      if (thermostatData.parseFromJson(payload)) {
+          display.updateRoomData(thermostatData, Room::Esszimmer);
       } else {
-          Serial.println("Failed to parse CurrentTemperature from payload");
+          Serial.println("Failed to parse thermostat data for Esszimmer");
+      }
+      return;
+    }
+
+    if (topic == mqtt_ThermostatKuecheTopic) {
+      ThermostatData thermostatData;
+      if (thermostatData.parseFromJson(payload)) {
+          display.updateRoomData(thermostatData, Room::Kueche);
+      } else {
+          Serial.println("Failed to parse thermostat data for Küche");
       }
       return;
     }
 
     if (topic == mqtt_ThermostatGaestezimmerTopic) {
-      // Parse JSON payload to extract CurrentTemperature
-      StaticJsonDocument<256> doc;
-      DeserializationError error = deserializeJson(doc, payload);
-      if (!error && doc.containsKey("CurrentTemperature")) {
-          float currentTemp = doc["CurrentTemperature"];
-          display.setCurrentTemperature(currentTemp);
-          display.updateGaestezimmer(currentTemp);
+      ThermostatData thermostatData;
+      if (thermostatData.parseFromJson(payload)) {
+          display.updateRoomData(thermostatData, Room::Gaestezimmer);
       } else {
-          Serial.println("Failed to parse CurrentTemperature from payload");
+          Serial.println("Failed to parse thermostat data for Gaestezimmer");
       }
       return;
     }
 
     if (topic == mqtt_ThermostatBueroTopic) {
-      // Parse JSON payload to extract CurrentTemperature
-      StaticJsonDocument<256> doc;
-      DeserializationError error = deserializeJson(doc, payload);
-      if (!error && doc.containsKey("CurrentTemperature")) {
-          float currentTemp = doc["CurrentTemperature"];
-          display.setCurrentTemperature(currentTemp);
-          display.updateBuero(currentTemp);
+      ThermostatData thermostatData;
+      if (thermostatData.parseFromJson(payload)) {
+          display.updateRoomData(thermostatData, Room::Buero);
       } else {
-          Serial.println("Failed to parse CurrentTemperature from payload");
+          Serial.println("Failed to parse thermostat data for Buero");
       }
       return;
     }
@@ -241,9 +238,6 @@ void loop()
   display.lock();
   display.update();
   display.updateTime(timeClient.getEpochTime());
-  
-  // Simulate temperature sensor readings
-  display.simulateTemperatureSensor();
   display.unlock();
 
   if(!mqttClientLib->loop())

@@ -1236,6 +1236,7 @@
                       },
                       {
                         "nid": 40,
+                        "flags": 1048576,
                         "strtype": "OBJECT/Transform",
                         "InheritedType": 1
                       },
@@ -1309,7 +1310,6 @@
                       },
                       {
                         "nid": 320,
-                        "flags": 1048576,
                         "strtype": "OBJECT/States",
                         "InheritedType": 1
                       },
@@ -1352,7 +1352,27 @@
                       },
                       {
                         "part": "lv.PART.MAIN",
-                        "childs": [],
+                        "childs": [
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 21210,
+                                "strtype": "_style/Image_reColor",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
+                              }
+                            ],
+                            "InheritedType": 1
+                          }
+                        ],
                         "nid": 1070,
                         "strtype": "IMAGE/Style_main",
                         "strval": "lv.PART.MAIN, Rectangle, Image, Transform",
@@ -1466,7 +1486,6 @@
                       },
                       {
                         "nid": 320,
-                        "flags": 1048576,
                         "strtype": "OBJECT/States",
                         "InheritedType": 1
                       },
@@ -1511,6 +1530,25 @@
                                 "strtype": "_style/Text_Font",
                                 "strval": "Quantico_14",
                                 "InheritedType": 3
+                              }
+                            ],
+                            "InheritedType": 1
+                          },
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 20410,
+                                "strtype": "_style/Text_Color",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
                               }
                             ],
                             "InheritedType": 1
@@ -2330,7 +2368,6 @@
                       },
                       {
                         "nid": 320,
-                        "flags": 1048576,
                         "strtype": "OBJECT/States",
                         "InheritedType": 1
                       },
@@ -2373,7 +2410,27 @@
                       },
                       {
                         "part": "lv.PART.MAIN",
-                        "childs": [],
+                        "childs": [
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 21210,
+                                "strtype": "_style/Image_reColor",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
+                              }
+                            ],
+                            "InheritedType": 1
+                          }
+                        ],
                         "nid": 1070,
                         "strtype": "IMAGE/Style_main",
                         "strval": "lv.PART.MAIN, Rectangle, Image, Transform",
@@ -2487,7 +2544,6 @@
                       },
                       {
                         "nid": 320,
-                        "flags": 1048576,
                         "strtype": "OBJECT/States",
                         "InheritedType": 1
                       },
@@ -2532,6 +2588,25 @@
                                 "strtype": "_style/Text_Font",
                                 "strval": "Quantico_14",
                                 "InheritedType": 3
+                              }
+                            ],
+                            "InheritedType": 1
+                          },
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 20410,
+                                "strtype": "_style/Text_Color",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
                               }
                             ],
                             "InheritedType": 1
@@ -3388,7 +3463,27 @@
                       },
                       {
                         "part": "lv.PART.MAIN",
-                        "childs": [],
+                        "childs": [
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 21210,
+                                "strtype": "_style/Image_reColor",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
+                              }
+                            ],
+                            "InheritedType": 1
+                          }
+                        ],
                         "nid": 1070,
                         "strtype": "IMAGE/Style_main",
                         "strval": "lv.PART.MAIN, Rectangle, Image, Transform",
@@ -3547,6 +3642,25 @@
                                 "strtype": "_style/Text_Font",
                                 "strval": "Quantico_14",
                                 "InheritedType": 3
+                              }
+                            ],
+                            "InheritedType": 1
+                          },
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 20410,
+                                "strtype": "_style/Text_Color",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
                               }
                             ],
                             "InheritedType": 1
@@ -4403,7 +4517,27 @@
                       },
                       {
                         "part": "lv.PART.MAIN",
-                        "childs": [],
+                        "childs": [
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 21210,
+                                "strtype": "_style/Image_reColor",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
+                              }
+                            ],
+                            "InheritedType": 1
+                          }
+                        ],
                         "nid": 1070,
                         "strtype": "IMAGE/Style_main",
                         "strval": "lv.PART.MAIN, Rectangle, Image, Transform",
@@ -4562,6 +4696,25 @@
                                 "strtype": "_style/Text_Font",
                                 "strval": "Quantico_14",
                                 "InheritedType": 3
+                              }
+                            ],
+                            "InheritedType": 1
+                          },
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 20410,
+                                "strtype": "_style/Text_Color",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
                               }
                             ],
                             "InheritedType": 1
@@ -5418,7 +5571,27 @@
                       },
                       {
                         "part": "lv.PART.MAIN",
-                        "childs": [],
+                        "childs": [
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 21210,
+                                "strtype": "_style/Image_reColor",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
+                              }
+                            ],
+                            "InheritedType": 1
+                          }
+                        ],
                         "nid": 1070,
                         "strtype": "IMAGE/Style_main",
                         "strval": "lv.PART.MAIN, Rectangle, Image, Transform",
@@ -5577,6 +5750,25 @@
                                 "strtype": "_style/Text_Font",
                                 "strval": "Quantico_14",
                                 "InheritedType": 3
+                              }
+                            ],
+                            "InheritedType": 1
+                          },
+                          {
+                            "nid": 20000,
+                            "strtype": "_style/StyleState",
+                            "strval": "CHECKED",
+                            "childs": [
+                              {
+                                "nid": 20410,
+                                "strtype": "_style/Text_Color",
+                                "intarray": [
+                                  250,
+                                  85,
+                                  85,
+                                  255
+                                ],
+                                "InheritedType": 7
                               }
                             ],
                             "InheritedType": 1

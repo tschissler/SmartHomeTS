@@ -1,4 +1,5 @@
 #include "temperature_display.h"
+#include "thermostat_data.h"
 
 // Static member initialization
 TemperatureDisplay *TemperatureDisplay::instance = nullptr;
@@ -79,6 +80,7 @@ void TemperatureDisplay::setupUI()
     lv_obj_add_event_cb(ui_arcTargetTemp, arc_event_handler_static, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(ui_btnLivingroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Wohnzimmer);
     lv_obj_add_event_cb(ui_btnDiningroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Esszimmer);
+    lv_obj_add_event_cb(ui_btnKitchen, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Kueche);
     lv_obj_add_event_cb(ui_btnGuestroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Gaestezimmer);
     lv_obj_add_event_cb(ui_btnStudy, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
 
@@ -190,6 +192,9 @@ void TemperatureDisplay::updateAllButtonStates()
     case Room::Esszimmer:
         currentBtn = ui_btnDiningroom;
         break;
+    case Room::Kueche:
+        currentBtn = ui_btnKitchen;
+        break;
     case Room::Gaestezimmer:
         currentBtn = ui_btnGuestroom;
         break;
@@ -221,44 +226,56 @@ void TemperatureDisplay::updateOutsideTemperature(float outsideTemp)
     Serial.printf("Outside temperature updated to: %.1f°C\n", outsideTemp);
 }
 
-void TemperatureDisplay::updateWohnzimmer(float wohnzimmerTemp)
+void TemperatureDisplay::updateRoomData(const ThermostatData& thermostatData, Room room)
 {
-    char temp_str[20];
-    snprintf(temp_str, sizeof(temp_str), "%.1f°C", wohnzimmerTemp);
-    lv_label_set_text(ui_lblCurrentTempLivingroom, temp_str);
-    Serial.printf("Wohnzimmer temperature updated to: %.1f°C\n", wohnzimmerTemp);
-}
+    lv_obj_t *currentTempLabel = nullptr;
+    lv_obj_t *targetTempLabel = nullptr;
+    lv_obj_t *batteryLabel = nullptr;
+    switch (room)
+    {
+    case Room::Wohnzimmer:
+        currentTempLabel = ui_lblCurrentTempLivingroom;
+        targetTempLabel = ui_lblTargetTempLivingroom;
+        batteryLabel = ui_lblBatteryLivingroom;
+        break;
+    case Room::Gaestezimmer:
+        currentTempLabel = ui_lblCurrentTempGuestroom;
+        targetTempLabel = ui_lblTargetTempGuestroom;
+        batteryLabel = ui_lblBatteryGuestroom;
+        break;
+    case Room::Buero:
+        currentTempLabel = ui_lblCurrentTempStudy;
+        targetTempLabel = ui_lblTargetTempStudy;
+        batteryLabel = ui_lblBatteryStudy;
+        break;
+    case Room::Esszimmer:
+        currentTempLabel = ui_lblCurrentTempDiningroom;
+        targetTempLabel = ui_lblTargetTempDiningroom;
+        batteryLabel = ui_lblBatteryDiningroom;
+        break;
+    case Room::Kueche:
+        currentTempLabel = ui_lblCurrentTempKitchen;
+        targetTempLabel = ui_lblTargetTempKitchen;
+        batteryLabel = ui_lblBatteryKitchen;
+        break;
+    default:
+        Serial.printf("Unknown room: %d\n", static_cast<int>(room));
+    }
 
-void TemperatureDisplay::updateGaestezimmer(float gaestezimmerTemp)
-{
+    float currentTemp = thermostatData.getCurrentTemperature();
     char temp_str[20];
-    snprintf(temp_str, sizeof(temp_str), "%.1f°C", gaestezimmerTemp);
-    lv_label_set_text(ui_lblCurrentTempGuestroom, temp_str);
-    Serial.printf("Gästezimmer temperature updated to: %.1f°C\n", gaestezimmerTemp);
-}
+    snprintf(temp_str, sizeof(temp_str), "%.1f°C", currentTemp);
+    lv_label_set_text(currentTempLabel, temp_str);
 
-void TemperatureDisplay::updateBuero(float bueroTemp)
-{
-    char temp_str[20];
-    snprintf(temp_str, sizeof(temp_str), "%.1f°C", bueroTemp);
-    lv_label_set_text(ui_lblCurrentTempStudy, temp_str);
-    Serial.printf("Büro temperature updated to: %.1f°C\n", bueroTemp);
-}
+    float targetTemp = thermostatData.getTargetTemperature();
+    char targetTemp_str[20];
+    snprintf(targetTemp_str, sizeof(targetTemp_str), "%.1f°C", targetTemp);
+    lv_label_set_text(targetTempLabel, targetTemp_str);
 
-void TemperatureDisplay::updateEsszimmer(float esszimmerTemp)
-{
-    char temp_str[20];
-    snprintf(temp_str, sizeof(temp_str), "%.1f°C", esszimmerTemp);
-    lv_label_set_text(ui_lblCurrentTempDiningroom, temp_str);
-    Serial.printf("Esszimmer temperature updated to: %.1f°C\n", esszimmerTemp);
-}
-
-void TemperatureDisplay::updateKitchen(float kitchenTemp)
-{
-    char temp_str[20];
-    snprintf(temp_str, sizeof(temp_str), "%.1f°C", kitchenTemp);
-    lv_label_set_text(ui_lblCurrentTempKitchen, temp_str);
-    Serial.printf("Küche temperature updated to: %.1f°C\n", kitchenTemp);
+    float batteryLevel = thermostatData.getBatteryLevel();
+    char battery_str[20];
+    snprintf(battery_str, sizeof(battery_str), "%d%%", (int)batteryLevel);
+    lv_label_set_text(batteryLabel, battery_str);
 }
 
 void TemperatureDisplay::updateIsConnected(bool isConnected)
@@ -295,27 +312,6 @@ void TemperatureDisplay::update()
     // This method can be called regularly to update the display
     // Currently, LVGL handles most updates automatically
     delay(10); // Small delay to prevent excessive CPU usage
-}
-
-void TemperatureDisplay::simulateTemperatureSensor()
-{
-    static unsigned long last_update = 0;
-
-    // Update current temperature every 5 seconds
-    if (millis() - last_update > 5000)
-    {
-        float temp_change = (random(-10, 11) / 10.0f); // Simulate temperature fluctuation
-        float new_temp = currentTemperature + temp_change;
-
-        // Clamp temperature to reasonable range
-        if (new_temp < 5)
-            new_temp = 5;
-        if (new_temp > 35)
-            new_temp = 35;
-
-        setCurrentTemperature(new_temp);
-        last_update = millis();
-    }
 }
 
 // Static event handlers for LVGL callbacks
