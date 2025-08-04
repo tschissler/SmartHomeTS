@@ -139,7 +139,7 @@ namespace ShellyConnector
             return thermostatData;
         }
 
-        public static void SetRelay(ShellyDevice device, string state)
+        public static async Task SetRelay(ShellyDevice device, string state)
         {
             state = state.ToLower();
             if (state != "on" && state != "off" && state != "toggle")
@@ -151,7 +151,7 @@ namespace ShellyConnector
             {
                 using (HttpClient Http = new HttpClient())
                 {
-                    var jsonString = Http.GetStringAsync($"http://{device.IPAddress}/relay/0?turn={state}").Result;
+                    var jsonString = await Http.GetStringAsync($"http://{device.IPAddress}/relay/0?turn={state}");
                 }
             }
             catch (Exception ex)
@@ -160,7 +160,7 @@ namespace ShellyConnector
             }
         }
 
-        internal static void SetTargetTemp(ShellyDevice device, string? payload)
+        internal static async Task SetTargetTemp(ShellyDevice device, string? payload)
         {
             decimal targetTemp;
             if (!decimal.TryParse(payload, out targetTemp))
@@ -172,7 +172,7 @@ namespace ShellyConnector
             {
                 using (HttpClient Http = new HttpClient())
                 {
-                    var result = Http.GetStringAsync($"http://{device.IPAddress}/rpc/BluTrv.Call?id={device.DeviceId}&method=\"TRV.SetTarget\"&params={{\"id\":0, \"target_C\":{payload}}}").Result;
+                    var result = await Http.GetStringAsync($"http://{device.IPAddress}/rpc/BluTrv.Call?id={device.DeviceId}&method=\"TRV.SetTarget\"&params={{\"id\":0, \"target_C\":{payload}}}");
                     if (result != "null")
                     {
                         ConsoleHelpers.PrintErrorMessage($"Error setting target temperature: {result}");

@@ -30,7 +30,7 @@ await TestDeviceConnection(powerDevices, thermostatDevices);
 
 ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
 await mqttClient.SubscribeToTopic("commands/shelly/#");
-mqttClient.OnMessageReceived += (sender, e) =>
+mqttClient.OnMessageReceived += async (sender, e) =>
 {
     ConsoleHelpers.PrintInformation($"  - Message received: {e.Topic}");
     if (string.IsNullOrEmpty(e.Payload))
@@ -47,7 +47,7 @@ mqttClient.OnMessageReceived += (sender, e) =>
     if (device != null)
     {
         var state = e.Payload;
-        ShellyConnector.ShellyConnector.SetRelay(device, state);
+        await ShellyConnector.ShellyConnector.SetRelay(device, state);
         return;
     }
 
@@ -59,7 +59,9 @@ mqttClient.OnMessageReceived += (sender, e) =>
         string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
     if (device != null)
     {
-        ShellyConnector.ShellyConnector.SetTargetTemp(device, e.Payload);
+        await ShellyConnector.ShellyConnector.SetTargetTemp(device, e.Payload);
+        await Task.Delay(1000);
+        await SendUpdatedThermostatData(mqttClient, thermostatDevices);
         return;
     }
 };
@@ -93,19 +95,7 @@ timerPowerDevices.Start();
 var timerThermostatDevices = new System.Timers.Timer(60000);
 timerThermostatDevices.Elapsed += async (sender, e) =>
 {
-    var tasks = thermostatDevices.Where(i => i.IsConnected).Select(async device =>
-    {
-        var thermostatData = await ShellyConnector.ShellyConnector.GetThermostatData(device);
-        if (thermostatData is null)
-        {
-            ConsoleHelpers.PrintInformation($"  --- Could not read meter data from device {device.DeviceName}");
-            return;
-        }
-        var jsonPayload = JsonConvert.SerializeObject(thermostatData);
-        await mqttClient.PublishAsync($"data/thermostat/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
-    });
-
-    await Task.WhenAll(tasks);
+    await SendUpdatedThermostatData(mqttClient, thermostatDevices);
 };
 timerThermostatDevices.Start();
 
@@ -151,4 +141,21 @@ static async Task TestDeviceConnection(List<ShellyConnector.DataContracts.Shelly
             ConsoleHelpers.PrintInformation($"  - {thermostatDevice.DeviceName,-30} {"(" + thermostatDevice.IPAddress + ")",-20} => success");
         }
     }
+}
+
+static async Task SendUpdatedThermostatData(MQTTClient.MQTTClient mqttClient, List<ShellyConnector.DataContracts.ShellyDevice> thermostatDevices)
+{
+    var tasks = thermostatDevices.Where(i => i.IsConnected).Select(async device =>
+    {
+        var thermostatData = await ShellyConnector.ShellyConnector.GetThermostatData(device);
+        if (thermostatData is null)
+        {
+            ConsoleHelpers.PrintInformation($"  --- Could not read meter data from device {device.DeviceName}");
+            return;
+        }
+        var jsonPayload = JsonConvert.SerializeObject(thermostatData);
+        await mqttClient.PublishAsync($"data/thermostat/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
+    });
+
+    await Task.WhenAll(tasks);
 }
