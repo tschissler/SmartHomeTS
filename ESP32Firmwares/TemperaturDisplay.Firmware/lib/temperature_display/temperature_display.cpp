@@ -117,6 +117,31 @@ const char *TemperatureDisplay::roomToString(Room room) const
     }
 }
 
+void TemperatureDisplay::updateStatusPanel(Status status)
+{
+    // Update the status panel based on the current status
+    switch (status)
+    {
+    case Status::NONE:
+        lv_obj_set_flag(ui_pnlTransferData, LV_OBJ_FLAG_HIDDEN, true);
+        break;
+    case Status::TRANSFER:
+        lv_obj_set_flag(ui_pnlTransferData, LV_OBJ_FLAG_HIDDEN, false);
+        break;
+    case Status::ERROR:
+        Serial.println("Status: ERROR");
+        break;
+    default:
+        Serial.println("Status: UNKNOWN");
+        break;
+    }
+}
+
+void TemperatureDisplay::updateTransferProgress(uint8_t progress)
+{
+    lv_bar_set_value(ui_pgbTransferData, progress, LV_ANIM_ON);
+}
+
 int TemperatureDisplay::roomToIndex(Room room) const
 {
     return static_cast<int>(room);

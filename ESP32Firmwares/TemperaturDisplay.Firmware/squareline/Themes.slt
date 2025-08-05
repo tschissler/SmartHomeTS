@@ -25,6 +25,18 @@
           50
         ],
         "InheritedType": 0
+      },
+      {
+        "nid": 1000414,
+        "strtype": "THEME_COLOR",
+        "strval": "Success",
+        "intarray": [
+          45,
+          160,
+          65,
+          255
+        ],
+        "InheritedType": 0
       }
     ]
   },

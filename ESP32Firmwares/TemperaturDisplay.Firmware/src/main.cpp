@@ -26,6 +26,8 @@ static int otaInProgress = 0;
 static bool otaEnable = OTA_ENABLED != "false";
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
+static bool transferInProgress = false;
+static uint8_t transferProgress = 0;
 static String baseTopic = "daten";
 static String deviceName = "";
 const String mqtt_broker = "smarthomepi2";
@@ -186,9 +188,19 @@ void targetTemperatureSet(float temperature, Room room) {
   Serial.printf("Target temperature changed to %.1f°C in %s\n", 
                 temperature, display.roomToString(room));
   
+  display.updateStatusPanel(Status::TRANSFER);
+  transferInProgress = true;
+  transferProgress = 100;
+  display.updateTransferProgress(transferProgress);
+
   // Publish the new target temperature to MQTT
   String topic = "commands/shelly/M3/" + String(display.roomToString(room));
   mqttClientLib->publish(topic, String(temperature), true, 2);
+}
+
+void updateTransferProgress()
+{
+
 }
 
 void setup()
@@ -255,6 +267,16 @@ void loop()
     connectToMQTT();
   }
 
-  Serial.println("Loop iteration complete");
-  delay(1000);
+  if (transferInProgress) {
+    transferProgress--;
+    if (transferProgress == 0) {
+      transferInProgress = false;
+      display.updateStatusPanel(Status::NONE);
+      Serial.println("Transfer completed");
+    } else {
+      display.updateTransferProgress(transferProgress);
+    }
+  }
+
+  delay(500);
 }

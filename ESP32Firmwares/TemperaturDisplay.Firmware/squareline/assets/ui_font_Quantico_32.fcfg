@@ -10,7 +10,7 @@
   "ranges": [
     "0x20-0x7f"
   ],
-  "symbols": "0123456789°C",
+  "symbols": "0123456789°Cäüö",
   "customparams": "--no-compress --no-prefilter",
   "uploaded": false
 }

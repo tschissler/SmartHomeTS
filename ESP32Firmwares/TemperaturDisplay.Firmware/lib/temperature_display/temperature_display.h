@@ -27,6 +27,12 @@ enum class Room : int {
     Bad
 };
 
+enum class Status : uint8_t {
+    NONE = 0,   
+    TRANSFER,         
+    ERROR,       
+};
+
 // Callback function types for events
 typedef void (*TemperatureChangeCallback)(float temperature, Room room);
 typedef void (*TemperatureSetCallback)(float temperature, Room room);
@@ -108,6 +114,10 @@ public:
     void updateIsConnected(bool isConnected);
     void updateOutsideTemperature(float outsideTemp);
     void updateRoomData(const ThermostatData& thermostatData, Room room);
+
+    // Status panel methods
+    void updateStatusPanel(Status status = Status::NONE);
+    void updateTransferProgress(uint8_t progress);
     
     // Thermostat data management
     void storeThermostatData(Room room, const ThermostatData& data);

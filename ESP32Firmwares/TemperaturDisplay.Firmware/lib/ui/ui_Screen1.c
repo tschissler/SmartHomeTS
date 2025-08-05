@@ -50,6 +50,9 @@ lv_obj_t * ui_lblTargetTemp = NULL;
 lv_obj_t * ui_Label9 = NULL;
 lv_obj_t * ui_lblCurrentTemp = NULL;
 lv_obj_t * ui_Label11 = NULL;
+lv_obj_t * ui_pnlTransferData = NULL;
+lv_obj_t * ui_Label1 = NULL;
+lv_obj_t * ui_pgbTransferData = NULL;
 // event funtions
 
 // build funtions
@@ -643,6 +646,66 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_opa(ui_Label11, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label11, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    ui_pnlTransferData = lv_obj_create(ui_Screen1);
+    lv_obj_set_width(ui_pnlTransferData, 766);
+    lv_obj_set_height(ui_pnlTransferData, 98);
+    lv_obj_set_x(ui_pnlTransferData, 2);
+    lv_obj_set_y(ui_pnlTransferData, 179);
+    lv_obj_set_align(ui_pnlTransferData, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_pnlTransferData, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_remove_flag(ui_pnlTransferData, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_pnlTransferData, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_pnlTransferData, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    ui_object_set_themeable_style_property(ui_pnlTransferData, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BORDER_COLOR,
+                                           _ui_theme_color_Success);
+    ui_object_set_themeable_style_property(ui_pnlTransferData, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BORDER_OPA,
+                                           _ui_theme_alpha_Success);
+    ui_object_set_themeable_style_property(ui_pnlTransferData, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_SHADOW_COLOR,
+                                           _ui_theme_color_Success);
+    ui_object_set_themeable_style_property(ui_pnlTransferData, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_SHADOW_OPA,
+                                           _ui_theme_alpha_Success);
+    lv_obj_set_style_shadow_width(ui_pnlTransferData, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(ui_pnlTransferData, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_pnlTransferData, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(ui_pnlTransferData, 255, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_shadow_color(ui_pnlTransferData, lv_color_hex(0x2DA041), LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_shadow_opa(ui_pnlTransferData, 255, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_shadow_width(ui_pnlTransferData, 5, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_shadow_spread(ui_pnlTransferData, 5, LV_PART_MAIN | LV_STATE_CHECKED);
+
+    ui_Label1 = lv_label_create(ui_pnlTransferData);
+    lv_obj_set_width(ui_Label1, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label1, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label1, 3);
+    lv_obj_set_y(ui_Label1, -13);
+    lv_obj_set_align(ui_Label1, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label1, "Einstellungen werden an das Gerät übertragen");
+    ui_object_set_themeable_style_property(ui_Label1, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+                                           _ui_theme_color_Success);
+    ui_object_set_themeable_style_property(ui_Label1, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+                                           _ui_theme_alpha_Success);
+    lv_obj_set_style_text_font(ui_Label1, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_pgbTransferData = lv_bar_create(ui_pnlTransferData);
+    lv_bar_set_value(ui_pgbTransferData, 25, LV_ANIM_OFF);
+    lv_bar_set_start_value(ui_pgbTransferData, 0, LV_ANIM_OFF);
+    lv_obj_set_width(ui_pgbTransferData, 687);
+    lv_obj_set_height(ui_pgbTransferData, 10);
+    lv_obj_set_x(ui_pgbTransferData, -2);
+    lv_obj_set_y(ui_pgbTransferData, 28);
+    lv_obj_set_align(ui_pgbTransferData, LV_ALIGN_CENTER);
+    lv_obj_set_style_bg_color(ui_pgbTransferData, lv_color_hex(0x00EC13), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_pgbTransferData, 50, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_object_set_themeable_style_property(ui_pgbTransferData, LV_PART_INDICATOR | LV_STATE_DEFAULT, LV_STYLE_BG_COLOR,
+                                           _ui_theme_color_Success);
+    ui_object_set_themeable_style_property(ui_pgbTransferData, LV_PART_INDICATOR | LV_STATE_DEFAULT, LV_STYLE_BG_OPA,
+                                           _ui_theme_alpha_Success);
+
+    //Compensating for LVGL9.1 draw crash with bar/slider max value when top-padding is nonzero and right-padding is 0
+    if(lv_obj_get_style_pad_top(ui_pgbTransferData, LV_PART_MAIN) > 0) lv_obj_set_style_pad_right(ui_pgbTransferData,
+                                                                                                      lv_obj_get_style_pad_right(ui_pgbTransferData, LV_PART_MAIN) + 1, LV_PART_MAIN);
+
 }
 
 void ui_Screen1_screen_destroy(void)
@@ -695,5 +758,8 @@ void ui_Screen1_screen_destroy(void)
     ui_Label9 = NULL;
     ui_lblCurrentTemp = NULL;
     ui_Label11 = NULL;
+    ui_pnlTransferData = NULL;
+    ui_Label1 = NULL;
+    ui_pgbTransferData = NULL;
 
 }

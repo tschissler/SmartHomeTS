@@ -11,6 +11,9 @@ const ui_theme_variable_t _ui_theme_alpha_PanelBackground[1] = {30};
 
 const ui_theme_variable_t _ui_theme_color_PanelSelected[1] = {0x349EF9};
 const ui_theme_variable_t _ui_theme_alpha_PanelSelected[1] = {50};
+
+const ui_theme_variable_t _ui_theme_color_Success[1] = {0x2DA041};
+const ui_theme_variable_t _ui_theme_alpha_Success[1] = {255};
 uint8_t ui_theme_idx = UI_THEME_DEFAULT;
 
 

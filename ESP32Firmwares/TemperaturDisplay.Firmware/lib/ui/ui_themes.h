@@ -12,6 +12,7 @@ extern "C" {
 
 #define UI_THEME_COLOR_PANELBACKGROUND 0
 #define UI_THEME_COLOR_PANELSELECTED 1
+#define UI_THEME_COLOR_SUCCESS 2
 
 #define UI_THEME_DEFAULT 0
 
@@ -20,6 +21,9 @@ extern const ui_theme_variable_t _ui_theme_alpha_PanelBackground[1];
 
 extern const ui_theme_variable_t _ui_theme_color_PanelSelected[1];
 extern const ui_theme_variable_t _ui_theme_alpha_PanelSelected[1];
+
+extern const ui_theme_variable_t _ui_theme_color_Success[1];
+extern const ui_theme_variable_t _ui_theme_alpha_Success[1];
 
 extern const uint32_t * ui_theme_colors[1];
 extern const uint8_t * ui_theme_alphas[1];

@@ -58,6 +58,9 @@ extern lv_obj_t * ui_lblTargetTemp;
 extern lv_obj_t * ui_Label9;
 extern lv_obj_t * ui_lblCurrentTemp;
 extern lv_obj_t * ui_Label11;
+extern lv_obj_t * ui_pnlTransferData;
+extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_pgbTransferData;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus
