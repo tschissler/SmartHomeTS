@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using MQTTClient;
 using Newtonsoft.Json;
 using ShellyConnector;
+using ShellyConnector.DataContracts;
 using SmartHomeHelpers.Logging;
 
 ConsoleHelpers.PrintInformation("ShellyConnector started");
@@ -59,9 +60,25 @@ mqttClient.OnMessageReceived += async (sender, e) =>
         string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
     if (device != null)
     {
-        await ShellyConnector.ShellyConnector.SetTargetTemp(device, e.Payload);
-        await Task.Delay(1000);
-        await SendUpdatedThermostatData(mqttClient, thermostatDevices);
+        ShellyThermostatData? currentData = null;
+        var targetTemp = await ShellyConnector.ShellyConnector.SetTargetTemp(device, e.Payload);
+        if (targetTemp is null) return;
+        
+        var timeout = TimeSpan.FromSeconds(30);
+        var startTime = DateTime.Now;
+        
+        while (currentData is null || currentData.TargetTemperature != targetTemp)
+        {
+            if (DateTime.Now - startTime > timeout)
+            {
+                ConsoleHelpers.PrintErrorMessage($"Timeout waiting for target temperature confirmation on device {device.DeviceName}");
+                break;
+            }
+            
+            await Task.Delay(1000);
+            currentData = await ShellyConnector.ShellyConnector.GetThermostatData(device);
+            await SendUpdatedThermostatData(mqttClient, [device]);
+        }
         return;
     }
 };

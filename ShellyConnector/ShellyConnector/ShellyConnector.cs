@@ -160,13 +160,13 @@ namespace ShellyConnector
             }
         }
 
-        internal static async Task SetTargetTemp(ShellyDevice device, string? payload)
+        internal static async Task<decimal?> SetTargetTemp(ShellyDevice device, string? payload)
         {
             decimal targetTemp;
             if (!decimal.TryParse(payload, out targetTemp))
             {
                 ConsoleHelpers.PrintErrorMessage($"Invalid value for target temperature {payload}");
-                return;
+                return null;
             }
             try
             {
@@ -183,6 +183,7 @@ namespace ShellyConnector
             {
                 ConsoleHelpers.PrintErrorMessage($"Failed to set target temp on device {device.IPAddress}, Error: " + ex.Message);
             }
+            return targetTemp;
         }
     }
 }
