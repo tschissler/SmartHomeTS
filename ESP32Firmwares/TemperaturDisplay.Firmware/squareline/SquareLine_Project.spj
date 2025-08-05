@@ -8379,7 +8379,7 @@
     "uiExportFolderPath": "C:\\Users\\ThomasSchissler\\source\\repos\\GitHub\\tschissler\\SmartHomeTS\\ESP32Firmwares\\TemperaturDisplay.Firmware\\lib\\ui",
     "projectExportFolderPath": "C:\\Users\\ThomasSchissler\\source\\repos\\GitHub\\tschissler\\SmartHomeTS\\ESP32Firmwares\\TemperaturDisplay.Firmware\\lib\\ui\\project",
     "custom_variable_prefix": "uic",
-    "backup_cnt": 17,
+    "backup_cnt": 18,
     "autosave_cnt": 0,
     "group_color_cnt": 0,
     "lvgl_version": "9.1.0",

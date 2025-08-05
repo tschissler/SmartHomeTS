@@ -97,7 +97,12 @@ public:
     float getTargetTemperature() const { return targetTemperature; }
     void setCurrentTemperature(float temp);
     void setTargetTemperature(float temp);
-    
+
+    // Transfer progress management
+    bool transferInProgress = false;
+    float targetTempSet = 0.0f;
+    uint8_t transferProgress = 0;
+
     // Callback setters
     void setTemperatureChangeCallback(TemperatureChangeCallback callback) { 
         onTemperatureChange = callback; 
@@ -117,7 +122,7 @@ public:
 
     // Status panel methods
     void updateStatusPanel(Status status = Status::NONE);
-    void updateTransferProgress(uint8_t progress);
+    void updateTransferProgress();
     
     // Thermostat data management
     void storeThermostatData(Room room, const ThermostatData& data);

@@ -137,9 +137,15 @@ void TemperatureDisplay::updateStatusPanel(Status status)
     }
 }
 
-void TemperatureDisplay::updateTransferProgress(uint8_t progress)
+void TemperatureDisplay::updateTransferProgress()
 {
-    lv_bar_set_value(ui_pgbTransferData, progress, LV_ANIM_ON);
+    if (!transferInProgress) return;
+    transferProgress--;
+    if (transferProgress == 0) {
+      transferProgress = 100; 
+    } else {
+        lv_bar_set_value(ui_pgbTransferData, transferProgress, LV_ANIM_ON);
+    }
 }
 
 int TemperatureDisplay::roomToIndex(Room room) const
@@ -223,6 +229,11 @@ void TemperatureDisplay::updateRoomData(const ThermostatData& thermostatData, Ro
     if (room == currentRoom)
     {
         updateSelectedRoomData();
+        if (thermostatData.getTargetTemperature() == targetTempSet)
+        {
+            transferInProgress = false;
+            updateStatusPanel(Status::NONE);
+        }
     }
 
     switch (room)
@@ -380,6 +391,12 @@ void TemperatureDisplay::handleArcRelease(lv_event_t *e)
 
     // Convert arc value to temperature
     float temp = value / 2.0f;
+
+    updateStatusPanel(Status::TRANSFER);
+    transferInProgress = true;
+    transferProgress = 100;
+    targetTempSet = temp;
+    updateTransferProgress();
 
     // Call callback if set - this fires when user finishes touching the arc
     if (onTemperatureSet)
