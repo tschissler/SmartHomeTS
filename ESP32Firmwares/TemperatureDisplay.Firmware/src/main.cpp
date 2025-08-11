@@ -29,7 +29,7 @@ static bool mqttSuccess = false;
 static String baseTopic = "daten";
 static String deviceName = "";
 const String mqtt_broker = "smarthomepi2";
-static String mqtt_OTAtopic = "OTAUpdate/TemperaturDisplay";
+static String mqtt_OTAtopic = "OTAUpdate/TemperatureDisplay";
 static String mqtt_DeviceNameTopic = "config/TemperaturDisplay/{ID}/DeviceName";
 static String mqtt_OutsideTempTopic = "daten/temperatur/Aussen";
 static String mqtt_ThermostatWohnzimmerTopic = "data/thermostat/M3/shelly/Wohnzimmer";
@@ -197,7 +197,9 @@ void setup()
   Serial.println("------------------  Temperature Display Firmware  ------------------");
   Serial.print("Version: ");
   Serial.println(version);
-  
+  Serial.printf("Flash size: %d MB\n", ESP.getFlashChipSize() / (1024 * 1024));
+  Serial.printf("PSRAM size: %d MB\n", ESP.getPsramSize() / (1024 * 1024));
+
   chipID = ESP32Helpers::getChipId();
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
@@ -245,24 +247,31 @@ void setup()
 
 void loop()
 {
-  display.lock();
-  display.updateTime(timeClient.getEpochTime());
-  display.unlock();
+  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
-  if(!mqttClientLib->loop())
-  {
-    Serial.println("MQTT Client not connected, reconnecting in loop...");
-    connectToMQTT();
+  if (otaInProgress < 0) {
+    Serial.println("Error during OTA update, stopping process");
   }
 
-  display.updateTransferProgress();
+  if (otaInProgress != 1) {
+    display.lock();
+    display.updateTime(timeClient.getEpochTime());
+    display.unlock();
 
-  if (display.isDisplayOn && display.isDisplayTimeoutExceeded()) {
-    display.turnDisplayOff();
-  }
-  if (!display.isDisplayOn && !display.isDisplayTimeoutExceeded()) {
-    display.turnDisplayOn();
-  }
+    if(!mqttClientLib->loop())
+    {
+      Serial.println("MQTT Client not connected, reconnecting in loop...");
+      connectToMQTT();
+    }
 
+    display.updateTransferProgress();
+
+    if (display.isDisplayOn && display.isDisplayTimeoutExceeded()) {
+      display.turnDisplayOff();
+    }
+    if (!display.isDisplayOn && !display.isDisplayTimeoutExceeded()) {
+      display.turnDisplayOn();
+    }
+  }
   delay(200);
 }
