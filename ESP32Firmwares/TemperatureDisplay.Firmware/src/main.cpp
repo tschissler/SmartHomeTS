@@ -233,6 +233,7 @@ void setup()
   
   // Setup UI
   display.setupUI(30000);
+  display.updateVersion(version);
   
   // Set callback functions
   display.setTemperatureChangeCallback(onTemperatureChanged);

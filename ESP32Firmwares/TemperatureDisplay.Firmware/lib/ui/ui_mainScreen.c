@@ -6,6 +6,7 @@
 #include "ui.h"
 
 lv_obj_t * ui_mainScreen = NULL;
+lv_obj_t * ui_lblVersion = NULL;
 lv_obj_t * ui_Container1 = NULL;
 lv_obj_t * ui_iconWifi = NULL;
 lv_obj_t * ui_iconHeatpump = NULL;
@@ -63,6 +64,17 @@ void ui_mainScreen_screen_init(void)
     lv_obj_remove_flag(ui_mainScreen, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_mainScreen, lv_color_hex(0x272727), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_mainScreen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_lblVersion = lv_label_create(ui_mainScreen);
+    lv_obj_set_width(ui_lblVersion, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_lblVersion, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_lblVersion, -370);
+    lv_obj_set_y(ui_lblVersion, 224);
+    lv_obj_set_align(ui_lblVersion, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_lblVersion, "v-.-.-");
+    lv_obj_set_style_text_color(ui_lblVersion, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_lblVersion, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_lblVersion, &ui_font_Quantico_14, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_Container1 = lv_obj_create(ui_mainScreen);
     lv_obj_remove_style_all(ui_Container1);
@@ -714,6 +726,7 @@ void ui_mainScreen_screen_destroy(void)
 
     // NULL screen variables
     ui_mainScreen = NULL;
+    ui_lblVersion = NULL;
     ui_Container1 = NULL;
     ui_iconWifi = NULL;
     ui_iconHeatpump = NULL;

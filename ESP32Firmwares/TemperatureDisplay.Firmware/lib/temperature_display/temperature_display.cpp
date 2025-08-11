@@ -334,6 +334,13 @@ void TemperatureDisplay::updateTime(long currentTime)
     unlock();
 }
 
+void TemperatureDisplay::updateVersion(String version)
+{
+    lock();
+    lv_label_set_text(ui_lblVersion, version.c_str());
+    unlock();
+}
+
 void TemperatureDisplay::configureTimezone(const char *timezone)
 {
     Serial.printf("Setting timezone to: %s\n", timezone);

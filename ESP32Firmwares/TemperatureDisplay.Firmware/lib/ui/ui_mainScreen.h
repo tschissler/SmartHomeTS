@@ -14,6 +14,7 @@ extern "C" {
 extern void ui_mainScreen_screen_init(void);
 extern void ui_mainScreen_screen_destroy(void);
 extern lv_obj_t * ui_mainScreen;
+extern lv_obj_t * ui_lblVersion;
 extern lv_obj_t * ui_Container1;
 extern lv_obj_t * ui_iconWifi;
 extern lv_obj_t * ui_iconHeatpump;

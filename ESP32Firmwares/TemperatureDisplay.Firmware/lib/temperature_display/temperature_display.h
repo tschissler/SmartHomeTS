@@ -133,6 +133,7 @@ public:
     
     // Update methods
     void updateTime(long currentTime);
+    void updateVersion(String version);
     void updateIsConnected(bool isConnected);
     void updateOutsideTemperature(float outsideTemp);
     void updateRoomData(const ThermostatData& thermostatData, Room room);
