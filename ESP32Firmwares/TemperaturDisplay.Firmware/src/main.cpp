@@ -230,7 +230,7 @@ void setup()
   }
   
   // Setup UI
-  display.setupUI();
+  display.setupUI(30000);
   
   // Set callback functions
   display.setTemperatureChangeCallback(onTemperatureChanged);
@@ -256,6 +256,13 @@ void loop()
   }
 
   display.updateTransferProgress();
+
+  if (display.isDisplayOn && display.isDisplayTimeoutExceeded()) {
+    display.turnDisplayOff();
+  }
+  if (!display.isDisplayOn && !display.isDisplayTimeoutExceeded()) {
+    display.turnDisplayOn();
+  }
 
   delay(200);
 }

@@ -65,12 +65,16 @@ bool TemperatureDisplay::begin()
     // Configure timezone for Berlin (Central European Time)
     configureTimezone();
 
+    board->getLCD()->setDisplayOnOff(true);
     return true;
 }
 
-void TemperatureDisplay::setupUI()
+void TemperatureDisplay::setupUI(unsigned long displayTimeoutMs = 30000)
 {
     Serial.println("Setting up UI");
+
+    displayTimeout = displayTimeoutMs;
+    lastActivityTime = millis();
 
     lock();
 
@@ -78,6 +82,7 @@ void TemperatureDisplay::setupUI()
     ui_init();
 
     // Add event handlers
+    lv_obj_add_event_cb(ui_mainScreen, scr_event_handler_static, LV_EVENT_CLICKED, NULL);
     lv_obj_add_event_cb(ui_arcTargetTemp, arc_event_handler_static, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(ui_arcTargetTemp, arc_release_event_handler_static, LV_EVENT_RELEASED, NULL);
     lv_obj_add_event_cb(ui_btnLivingroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Wohnzimmer);
@@ -103,11 +108,11 @@ const char *TemperatureDisplay::roomToString(Room room) const
     case Room::Esszimmer:
         return "Esszimmer";
     case Room::Kueche:
-        return "Küche";
+        return "Kueche";
     case Room::Gaestezimmer:
-        return "Gästezimmer";
+        return "Gaestzimmer";
     case Room::Buero:
-        return "Büro";
+        return "Buero";
     case Room::Schlafzimmer:
         return "Schlafzimmer";
     case Room::Bad:
@@ -115,6 +120,11 @@ const char *TemperatureDisplay::roomToString(Room room) const
     default:
         return "Unknown";
     }
+}
+
+bool TemperatureDisplay::isDisplayTimeoutExceeded() const
+{
+    return (millis() - lastActivityTime) > displayTimeout;
 }
 
 void TemperatureDisplay::updateStatusPanel(Status status)
@@ -335,25 +345,41 @@ void TemperatureDisplay::configureTimezone(const char *timezone)
 // Static event handlers for LVGL callbacks
 void TemperatureDisplay::arc_event_handler_static(lv_event_t *e)
 {
-    if (instance)
-    {
-        instance->handleArcValueChange(e);
+    if (instance) {
+        instance->lastActivityTime = millis();
+        if(instance->isDisplayOn) {
+           instance->handleArcValueChange(e);
+        }
     }
 }
 
 void TemperatureDisplay::arc_release_event_handler_static(lv_event_t *e)
 {
-    if (instance)
-    {
-        instance->handleArcRelease(e);
+    if (instance) {
+        instance->lastActivityTime = millis();
+        if(instance->isDisplayOn) {
+           instance->handleArcRelease(e);
+        }
     }
 }
 
 void TemperatureDisplay::btn_event_handler_static(lv_event_t *e)
 {
-    if (instance)
-    {
-        instance->handleButtonClick(e);
+    if (instance) {
+        instance->lastActivityTime = millis();
+        if(instance->isDisplayOn) {
+           instance->handleButtonClick(e);
+        } 
+    }
+}
+
+void TemperatureDisplay::scr_event_handler_static(lv_event_t *e)
+{
+    if (instance) {
+        instance->lastActivityTime = millis();
+        if(instance->isDisplayOn) {
+           instance->handleScreenEvent(e);
+        }
     }
 }
 
@@ -407,12 +433,32 @@ void TemperatureDisplay::handleArcRelease(lv_event_t *e)
     Serial.printf("Arc released at: %.1f°C for room: %s\n", temp, roomToString(currentRoom));
 }
 
+void TemperatureDisplay::handleScreenEvent(lv_event_t *e)
+{
+    board->getBacklight()->on(); 
+    isDisplayOn = true;
+}
+
 void TemperatureDisplay::handleButtonClick(lv_event_t *e)
 {
     lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
     Room room = static_cast<Room>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e)));
 
     setCurrentRoom(room);
+}
+
+void TemperatureDisplay::turnDisplayOn()
+{
+    isDisplayOn = true;
+    Serial.println("Display turned on");
+    board->getBacklight()->on();
+}
+
+void TemperatureDisplay::turnDisplayOff()
+{
+    isDisplayOn = false;
+    Serial.println("Display turned off");
+    board->getBacklight()->off();
 }
 
 // Thermostat data management methods

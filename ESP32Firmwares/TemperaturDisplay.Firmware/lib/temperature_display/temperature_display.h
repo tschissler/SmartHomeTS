@@ -3,12 +3,25 @@
 
 #include <Arduino.h>
 #include <esp_display_panel.hpp>
+#include <esp_io_expander.hpp>
 #include <lvgl.h>
 #include <time.h>
 #include <sys/time.h>
 #include "lvgl_v9_port.h"
 #include "ui.h"
 #include "thermostat_data.h"
+
+// Extension IO pin definition
+#define TP_RST 1      // Touch screen reset pin
+#define LCD_BL 2      // LCD backlight pinout
+#define LCD_RST 3     // LCD reset pin
+#define SD_CS 4       // SD card select pin
+#define USB_SEL 5     // USB select pin
+
+// I2C Pin define 
+#define I2C_MASTER_NUM I2C_NUM_0 // I2C master number
+#define I2C_MASTER_SDA_IO 8       // I2C data line
+#define I2C_MASTER_SCL_IO 9     
 
 // Forward declaration
 class ThermostatData;
@@ -44,7 +57,9 @@ private:
     Room currentRoom;
     float currentTemperature;
     float targetTemperature;
-    
+    unsigned long lastActivityTime = 0;
+    unsigned long displayTimeout = 0; // 5 minutes in milliseconds
+
     // Thermostat data storage (indexed by Room enum)
     static const int ROOM_COUNT = 7; // Total number of rooms in enum
     ThermostatData roomThermostatData[ROOM_COUNT];
@@ -55,6 +70,7 @@ private:
     RoomChangeCallback onRoomChange;
     
     // Static event handlers (required for LVGL callbacks)
+    static void scr_event_handler_static(lv_event_t * e);
     static void arc_event_handler_static(lv_event_t * e);
     static void arc_release_event_handler_static(lv_event_t * e);
     static void btn_event_handler_static(lv_event_t * e);
@@ -63,6 +79,7 @@ private:
     static TemperatureDisplay* instance;
     
     // Internal event handlers
+    void handleScreenEvent(lv_event_t * e);
     void handleArcValueChange(lv_event_t * e);
     void handleArcRelease(lv_event_t * e);
     void handleButtonClick(lv_event_t * e);
@@ -71,7 +88,7 @@ private:
     void updateAllButtonStates();
     void updateTemperatureDisplay();
     void updateRoomDisplay();
-    
+
     // Array index conversion
     int roomToIndex(Room room) const;
 
@@ -85,7 +102,7 @@ public:
     // Initialization methods
     bool init();
     bool begin();
-    void setupUI();
+    void setupUI(unsigned long displayTimeoutMs);
     
     // Room management
     Room getCurrentRoom() const { return currentRoom; }
@@ -134,8 +151,12 @@ public:
     void configureTimezone(const char* timezone = "CET-1CEST,M3.5.0,M10.5.0/3");
     
     // Utility methods
+    bool isDisplayOn = true;
     void lock() { lvgl_port_lock(-1); }
     void unlock() { lvgl_port_unlock(); }
+    void turnDisplayOn();
+    void turnDisplayOff();
+    bool isDisplayTimeoutExceeded() const;
 };
 
 #endif // TEMPERATURE_DISPLAY_H

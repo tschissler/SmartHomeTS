@@ -5,7 +5,7 @@
 
 #include "ui.h"
 
-lv_obj_t * ui_Screen1 = NULL;
+lv_obj_t * ui_mainScreen = NULL;
 lv_obj_t * ui_Container1 = NULL;
 lv_obj_t * ui_iconWifi = NULL;
 lv_obj_t * ui_iconHeatpump = NULL;
@@ -57,14 +57,14 @@ lv_obj_t * ui_pgbTransferData = NULL;
 
 // build funtions
 
-void ui_Screen1_screen_init(void)
+void ui_mainScreen_screen_init(void)
 {
-    ui_Screen1 = lv_obj_create(NULL);
-    lv_obj_remove_flag(ui_Screen1, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
-    lv_obj_set_style_bg_color(ui_Screen1, lv_color_hex(0x272727), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(ui_Screen1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    ui_mainScreen = lv_obj_create(NULL);
+    lv_obj_remove_flag(ui_mainScreen, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_mainScreen, lv_color_hex(0x272727), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_mainScreen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_Container1 = lv_obj_create(ui_Screen1);
+    ui_Container1 = lv_obj_create(ui_mainScreen);
     lv_obj_remove_style_all(ui_Container1);
     lv_obj_set_width(ui_Container1, 832);
     lv_obj_set_height(ui_Container1, 55);
@@ -137,7 +137,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_opa(ui_lblTime, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTime, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_Container2 = lv_obj_create(ui_Screen1);
+    ui_Container2 = lv_obj_create(ui_mainScreen);
     lv_obj_remove_style_all(ui_Container2);
     lv_obj_set_width(ui_Container2, 290);
     lv_obj_set_height(ui_Container2, 402);
@@ -571,7 +571,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_opa(ui_lblTargetTempGuestroom, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTargetTempGuestroom, &ui_font_Quantico_20, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_arcTargetTemp = lv_arc_create(ui_Screen1);
+    ui_arcTargetTemp = lv_arc_create(ui_mainScreen);
     lv_obj_set_width(ui_arcTargetTemp, 400);
     lv_obj_set_height(ui_arcTargetTemp, 400);
     lv_obj_set_x(ui_arcTargetTemp, -151);
@@ -646,7 +646,7 @@ void ui_Screen1_screen_init(void)
     lv_obj_set_style_text_opa(ui_Label11, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label11, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_pnlTransferData = lv_obj_create(ui_Screen1);
+    ui_pnlTransferData = lv_obj_create(ui_mainScreen);
     lv_obj_set_width(ui_pnlTransferData, 766);
     lv_obj_set_height(ui_pnlTransferData, 98);
     lv_obj_set_x(ui_pnlTransferData, 2);
@@ -708,12 +708,12 @@ void ui_Screen1_screen_init(void)
 
 }
 
-void ui_Screen1_screen_destroy(void)
+void ui_mainScreen_screen_destroy(void)
 {
-    if(ui_Screen1) lv_obj_del(ui_Screen1);
+    if(ui_mainScreen) lv_obj_del(ui_mainScreen);
 
     // NULL screen variables
-    ui_Screen1 = NULL;
+    ui_mainScreen = NULL;
     ui_Container1 = NULL;
     ui_iconWifi = NULL;
     ui_iconHeatpump = NULL;
