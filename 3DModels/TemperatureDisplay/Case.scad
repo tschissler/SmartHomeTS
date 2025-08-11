@@ -54,7 +54,7 @@ module Holder() {
     translate([0,0, -WallThickness])
         cube([OuterWidth, OuterDepth, WallThickness]);
 
-    DoveTail(0.5);
+    DoveTail(0.2);
 }
 
 module Case()
@@ -63,7 +63,7 @@ module Case()
     {
         CaseMain();
         Holes();
-        DoveTail();    
+        DoveTail(0);    
     }
 }
 
