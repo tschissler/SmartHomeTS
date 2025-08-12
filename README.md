@@ -100,8 +100,7 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
   - The display is built with this device: [WaveShare ESP32-S3-Touch-LCD-7](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-7).
   - It uses the [LVGL library](https://github.com/lvgl/lvgl). The UI is designed by using [SquareLine Studio](https://squareline.io/).
 
-
-
+![TemperatureDisplay](https://github.com/user-attachments/assets/1d667af0-d9ec-42c1-a91c-68037762102b)
 
 ### MCPServer
 
