@@ -138,6 +138,7 @@ public:
     void updateTime(long currentTime);
     void updateVersion(String version);
     void updateIsConnected(bool isConnected);
+    void updateIsHeatPumpActive(bool isActive);
     void updateOutsideTemperature(float outsideTemp);
     void updateOutsideGardenTemperature(float outsideTemp);
     void updateRoomData(const ThermostatData &thermostatData, Room room);

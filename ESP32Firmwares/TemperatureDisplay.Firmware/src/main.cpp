@@ -38,6 +38,7 @@ static String mqtt_ThermostatEsszimmerTopic = "data/thermostat/M3/shelly/Esszimm
 static String mqtt_ThermostatKuecheTopic = "data/thermostat/M3/shelly/Kueche";
 static String mqtt_ThermostatGaestezimmerTopic = "data/thermostat/M3/shelly/Gaestezimmer";
 static String mqtt_ThermostatBueroTopic = "data/thermostat/M3/shelly/Buero";
+static String mqtt_HeatPumpCurrentPower = "cangateway/M3/Aktuelle_Leistung_Heizen_kW";
 
 const char* version = FIRMWARE_VERSION;
 String chipID = "";
@@ -89,6 +90,13 @@ void mqttCallback(String &topic, String &payload) {
     if (topic == mqtt_OutsideTempGardenTopic) {
       float outsideTemp = payload.toFloat();
       display.updateOutsideGardenTemperature(outsideTemp);
+      return;
+    }
+
+    if (topic == mqtt_HeatPumpCurrentPower) {
+      float currentPower = payload.toFloat();
+      display.updateIsHeatPumpActive(currentPower > 0);
+      Serial.printf("Heat pump current power: %.2f kW\n", currentPower);
       return;
     }
     
@@ -187,7 +195,8 @@ void connectToMQTT() {
     mqtt_ThermostatWohnzimmerTopic, 
     mqtt_ThermostatGaestezimmerTopic,
     mqtt_OutsideTempTopic,
-    mqtt_OutsideTempGardenTopic
+    mqtt_OutsideTempGardenTopic,
+    mqtt_HeatPumpCurrentPower
   });
   Serial.println("MQTT Client is connected");
 }

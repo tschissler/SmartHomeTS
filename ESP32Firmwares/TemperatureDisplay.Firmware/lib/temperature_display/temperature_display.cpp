@@ -333,6 +333,14 @@ void TemperatureDisplay::updateIsConnected(bool isConnected)
          lv_obj_add_state(ui_iconWifi, LV_STATE_DISABLED);
 }
 
+void TemperatureDisplay::updateIsHeatPumpActive(bool isActive)
+{
+    if (isActive)
+         lv_obj_clear_state(ui_iconHeatpump, LV_STATE_DISABLED);
+    else
+         lv_obj_add_state(ui_iconHeatpump, LV_STATE_DISABLED);
+}
+
 void TemperatureDisplay::updateTime(long currentTime)
 {
     char timeStr[20];
