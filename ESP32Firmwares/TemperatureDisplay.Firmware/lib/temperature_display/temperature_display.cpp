@@ -437,7 +437,7 @@ void TemperatureDisplay::handleArcRelease(lv_event_t *e)
     updatedTargetTemperature = value / 2.0f;
     lv_obj_set_flag(ui_btnTransfer, LV_OBJ_FLAG_HIDDEN, false);
 
-    Serial.printf("Arc released at: %.1f°C for room: %s\n", temp, roomToString(currentRoom));
+    Serial.printf("Arc released at: %.1f°C for room: %s\n", updatedTargetTemperature, roomToString(currentRoom));
 }
 
 void TemperatureDisplay::handleScreenEvent(lv_event_t *e)
