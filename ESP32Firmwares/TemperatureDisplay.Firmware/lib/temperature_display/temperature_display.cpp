@@ -90,6 +90,7 @@ void TemperatureDisplay::setupUI(unsigned long displayTimeoutSec = 60)
     lv_obj_add_event_cb(ui_btnKitchen, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Kueche);
     lv_obj_add_event_cb(ui_btnGuestroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Gaestezimmer);
     lv_obj_add_event_cb(ui_btnStudy, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
+    lv_obj_add_event_cb(ui_btnTransfer, btn_transfer_event_handler_static, LV_EVENT_CLICKED, NULL);
 
     // Set initial values
     setCurrentRoom(currentRoom);
@@ -391,6 +392,16 @@ void TemperatureDisplay::btn_event_handler_static(lv_event_t *e)
     }
 }
 
+void TemperatureDisplay::btn_transfer_event_handler_static(lv_event_t *e)
+{
+    if (instance) {
+        instance->lastActivityTime = millis();
+        if(instance->isDisplayOn) {
+           instance->handleTransferButtonClick(e);
+        } 
+    }
+}
+
 void TemperatureDisplay::scr_event_handler_static(lv_event_t *e)
 {
     if (instance) {
@@ -458,6 +469,7 @@ void TemperatureDisplay::handleTransferButtonClick(lv_event_t *e)
     {
         onTemperatureSet(updatedTargetTemperature, currentRoom);
     }
+    lv_obj_set_flag(ui_btnTransfer, LV_OBJ_FLAG_HIDDEN, true);
 }
 
 void TemperatureDisplay::handleRoomButtonClick(lv_event_t *e)

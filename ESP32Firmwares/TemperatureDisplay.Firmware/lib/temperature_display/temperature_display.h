@@ -75,7 +75,8 @@ private:
     static void arc_event_handler_static(lv_event_t * e);
     static void arc_release_event_handler_static(lv_event_t * e);
     static void btn_event_handler_static(lv_event_t * e);
-    
+    static void btn_transfer_event_handler_static(lv_event_t *e);
+
     // Instance pointer for static callbacks
     static TemperatureDisplay* instance;
     
