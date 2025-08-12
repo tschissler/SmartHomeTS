@@ -239,7 +239,7 @@ void setup()
   }
   
   // Setup UI
-  display.setupUI(30000);
+  display.setupUI(120000);
   display.updateVersion(version);
 
   // Set callback functions
@@ -260,7 +260,7 @@ void loop()
   if (otaInProgress == 1) {
     display.updateStatusPanel(Status::UPDATE);
   }
-  
+
   if (otaInProgress < 0) {
     Serial.println("Error during OTA update, stopping process");
   }
