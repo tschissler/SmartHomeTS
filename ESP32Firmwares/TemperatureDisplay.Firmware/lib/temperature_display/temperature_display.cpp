@@ -69,11 +69,11 @@ bool TemperatureDisplay::begin()
     return true;
 }
 
-void TemperatureDisplay::setupUI(unsigned long displayTimeoutMs = 30000)
+void TemperatureDisplay::setupUI(unsigned long displayTimeoutSec = 60)
 {
     Serial.println("Setting up UI");
 
-    displayTimeout = displayTimeoutMs;
+    displayTimeout = displayTimeoutSec * 1000; 
     lastActivityTime = millis();
 
     lock();

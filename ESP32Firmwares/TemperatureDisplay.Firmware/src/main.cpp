@@ -242,7 +242,7 @@ void setup()
   }
   
   // Setup UI
-  display.setupUI(120000);
+  display.setupUI(600);
   display.updateVersion(version);
 
   // Set callback functions
