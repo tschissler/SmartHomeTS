@@ -21,6 +21,8 @@ extern lv_obj_t * ui_iconHeatpump;
 extern lv_obj_t * ui_Image3;
 extern lv_obj_t * ui_lblTempOutside;
 extern lv_obj_t * ui_lblTime;
+extern lv_obj_t * ui_lblTempOutsideGarden;
+extern lv_obj_t * ui_Separator;
 extern lv_obj_t * ui_Container2;
 extern lv_obj_t * ui_btnLivingroom;
 extern lv_obj_t * ui_Label3;
@@ -60,7 +62,7 @@ extern lv_obj_t * ui_Label9;
 extern lv_obj_t * ui_lblCurrentTemp;
 extern lv_obj_t * ui_Label11;
 extern lv_obj_t * ui_pnlTransferData;
-extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_lblActivity;
 extern lv_obj_t * ui_pgbTransferData;
 // CUSTOM VARIABLES
 

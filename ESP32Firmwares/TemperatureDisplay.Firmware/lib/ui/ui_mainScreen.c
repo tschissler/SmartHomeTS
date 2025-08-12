@@ -13,6 +13,8 @@ lv_obj_t * ui_iconHeatpump = NULL;
 lv_obj_t * ui_Image3 = NULL;
 lv_obj_t * ui_lblTempOutside = NULL;
 lv_obj_t * ui_lblTime = NULL;
+lv_obj_t * ui_lblTempOutsideGarden = NULL;
+lv_obj_t * ui_Separator = NULL;
 lv_obj_t * ui_Container2 = NULL;
 lv_obj_t * ui_btnLivingroom = NULL;
 lv_obj_t * ui_Label3 = NULL;
@@ -52,7 +54,7 @@ lv_obj_t * ui_Label9 = NULL;
 lv_obj_t * ui_lblCurrentTemp = NULL;
 lv_obj_t * ui_Label11 = NULL;
 lv_obj_t * ui_pnlTransferData = NULL;
-lv_obj_t * ui_Label1 = NULL;
+lv_obj_t * ui_lblActivity = NULL;
 lv_obj_t * ui_pgbTransferData = NULL;
 // event funtions
 
@@ -130,10 +132,10 @@ void ui_mainScreen_screen_init(void)
     ui_lblTempOutside = lv_label_create(ui_Container1);
     lv_obj_set_width(ui_lblTempOutside, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_lblTempOutside, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_lblTempOutside, 13);
+    lv_obj_set_x(ui_lblTempOutside, -46);
     lv_obj_set_y(ui_lblTempOutside, 0);
     lv_obj_set_align(ui_lblTempOutside, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_lblTempOutside, "--.-°C / --.-°C");
+    lv_label_set_text(ui_lblTempOutside, "--.-°C");
     lv_obj_set_style_text_color(ui_lblTempOutside, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTempOutside, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTempOutside, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -148,6 +150,28 @@ void ui_mainScreen_screen_init(void)
     lv_obj_set_style_text_color(ui_lblTime, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblTime, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblTime, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_lblTempOutsideGarden = lv_label_create(ui_Container1);
+    lv_obj_set_width(ui_lblTempOutsideGarden, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_lblTempOutsideGarden, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_lblTempOutsideGarden, 111);
+    lv_obj_set_y(ui_lblTempOutsideGarden, 0);
+    lv_obj_set_align(ui_lblTempOutsideGarden, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_lblTempOutsideGarden, "--.-°C");
+    lv_obj_set_style_text_color(ui_lblTempOutsideGarden, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_lblTempOutsideGarden, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_lblTempOutsideGarden, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Separator = lv_label_create(ui_Container1);
+    lv_obj_set_width(ui_Separator, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Separator, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Separator, 35);
+    lv_obj_set_y(ui_Separator, 0);
+    lv_obj_set_align(ui_Separator, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Separator, "/");
+    lv_obj_set_style_text_color(ui_Separator, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Separator, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Separator, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_Container2 = lv_obj_create(ui_mainScreen);
     lv_obj_remove_style_all(ui_Container2);
@@ -685,18 +709,18 @@ void ui_mainScreen_screen_init(void)
     lv_obj_set_style_shadow_width(ui_pnlTransferData, 5, LV_PART_MAIN | LV_STATE_CHECKED);
     lv_obj_set_style_shadow_spread(ui_pnlTransferData, 5, LV_PART_MAIN | LV_STATE_CHECKED);
 
-    ui_Label1 = lv_label_create(ui_pnlTransferData);
-    lv_obj_set_width(ui_Label1, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_Label1, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_Label1, 3);
-    lv_obj_set_y(ui_Label1, -13);
-    lv_obj_set_align(ui_Label1, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_Label1, "Einstellungen werden an das Gerät übertragen");
-    ui_object_set_themeable_style_property(ui_Label1, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+    ui_lblActivity = lv_label_create(ui_pnlTransferData);
+    lv_obj_set_width(ui_lblActivity, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_lblActivity, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_lblActivity, 3);
+    lv_obj_set_y(ui_lblActivity, -13);
+    lv_obj_set_align(ui_lblActivity, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_lblActivity, "Einstellungen werden an das Gerät übertragen");
+    ui_object_set_themeable_style_property(ui_lblActivity, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
                                            _ui_theme_color_Success);
-    ui_object_set_themeable_style_property(ui_Label1, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+    ui_object_set_themeable_style_property(ui_lblActivity, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
                                            _ui_theme_alpha_Success);
-    lv_obj_set_style_text_font(ui_Label1, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_lblActivity, &ui_font_Quantico_32, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_pgbTransferData = lv_bar_create(ui_pnlTransferData);
     lv_bar_set_value(ui_pgbTransferData, 25, LV_ANIM_OFF);
@@ -733,6 +757,8 @@ void ui_mainScreen_screen_destroy(void)
     ui_Image3 = NULL;
     ui_lblTempOutside = NULL;
     ui_lblTime = NULL;
+    ui_lblTempOutsideGarden = NULL;
+    ui_Separator = NULL;
     ui_Container2 = NULL;
     ui_btnLivingroom = NULL;
     ui_Label3 = NULL;
@@ -772,7 +798,7 @@ void ui_mainScreen_screen_destroy(void)
     ui_lblCurrentTemp = NULL;
     ui_Label11 = NULL;
     ui_pnlTransferData = NULL;
-    ui_Label1 = NULL;
+    ui_lblActivity = NULL;
     ui_pgbTransferData = NULL;
 
 }

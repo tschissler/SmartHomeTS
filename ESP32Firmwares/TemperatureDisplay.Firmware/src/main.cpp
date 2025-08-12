@@ -31,7 +31,8 @@ static String deviceName = "";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperatureDisplay";
 static String mqtt_DeviceNameTopic = "config/TemperaturDisplay/{ID}/DeviceName";
-static String mqtt_OutsideTempTopic = "daten/temperatur/Aussen";
+static String mqtt_OutsideTempTopic = "cangateway/M3/AF1_Aussenfuehler_Temp";
+static String mqtt_OutsideTempGardenTopic = "daten/temperatur/Aussen";
 static String mqtt_ThermostatWohnzimmerTopic = "data/thermostat/M3/shelly/Wohnzimmer";
 static String mqtt_ThermostatEsszimmerTopic = "data/thermostat/M3/shelly/Esszimmer";
 static String mqtt_ThermostatKuecheTopic = "data/thermostat/M3/shelly/Kueche";
@@ -82,6 +83,12 @@ void mqttCallback(String &topic, String &payload) {
     if (topic == mqtt_OutsideTempTopic) {
       float outsideTemp = payload.toFloat();
       display.updateOutsideTemperature(outsideTemp);
+      return;
+    }
+
+    if (topic == mqtt_OutsideTempGardenTopic) {
+      float outsideTemp = payload.toFloat();
+      display.updateOutsideGardenTemperature(outsideTemp);
       return;
     }
     
@@ -234,7 +241,7 @@ void setup()
   // Setup UI
   display.setupUI(30000);
   display.updateVersion(version);
-  
+
   // Set callback functions
   display.setTemperatureChangeCallback(onTemperatureChanged);
   display.setRoomChangeCallback(onRoomChanged);
@@ -250,6 +257,10 @@ void loop()
 {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
+  if (otaInProgress == 1) {
+    display.updateStatusPanel(Status::UPDATE);
+  }
+  
   if (otaInProgress < 0) {
     Serial.println("Error during OTA update, stopping process");
   }

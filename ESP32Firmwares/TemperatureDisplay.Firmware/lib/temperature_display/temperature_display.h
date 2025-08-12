@@ -43,7 +43,8 @@ enum class Room : int {
 enum class Status : uint8_t {
     NONE = 0,   
     TRANSFER,         
-    ERROR,       
+    ERROR,     
+    UPDATE,  
 };
 
 // Callback function types for events
@@ -136,7 +137,8 @@ public:
     void updateVersion(String version);
     void updateIsConnected(bool isConnected);
     void updateOutsideTemperature(float outsideTemp);
-    void updateRoomData(const ThermostatData& thermostatData, Room room);
+    void updateOutsideGardenTemperature(float outsideTemp);
+    void updateRoomData(const ThermostatData &thermostatData, Room room);
 
     // Status panel methods
     void updateStatusPanel(Status status = Status::NONE);

@@ -136,10 +136,15 @@ void TemperatureDisplay::updateStatusPanel(Status status)
         lv_obj_set_flag(ui_pnlTransferData, LV_OBJ_FLAG_HIDDEN, true);
         break;
     case Status::TRANSFER:
+        lv_label_set_text(ui_lblActivity, "Einstellungen werden an das Gerät übertragen");
         lv_obj_set_flag(ui_pnlTransferData, LV_OBJ_FLAG_HIDDEN, false);
         break;
     case Status::ERROR:
         Serial.println("Status: ERROR");
+        break;
+    case Status::UPDATE:
+        lv_obj_set_flag(ui_pnlTransferData, LV_OBJ_FLAG_HIDDEN, false);
+        lv_label_set_text(ui_lblActivity, "Update wird durchgeführt");
         break;
     default:
         Serial.println("Status: UNKNOWN");
@@ -216,8 +221,6 @@ void TemperatureDisplay::updateAllButtonStates()
     {
         lv_obj_add_state(currentBtn, LV_STATE_CHECKED);
     }
-    
-
     unlock();
 }
 
@@ -227,6 +230,14 @@ void TemperatureDisplay::updateOutsideTemperature(float outsideTemp)
     snprintf(temp_str, sizeof(temp_str), "%.1f°C", outsideTemp);
     lv_label_set_text(ui_lblTempOutside, temp_str);
     Serial.printf("Outside temperature updated to: %.1f°C\n", outsideTemp);
+}
+
+void TemperatureDisplay::updateOutsideGardenTemperature(float outsideTemp)
+{
+    char temp_str[20];
+    snprintf(temp_str, sizeof(temp_str), "%.1f°C", outsideTemp);
+    lv_label_set_text(ui_lblTempOutsideGarden, temp_str);
+    Serial.printf("Outside garden temperature updated to: %.1f°C\n", outsideTemp);
 }
 
 void TemperatureDisplay::updateRoomData(const ThermostatData& thermostatData, Room room)
