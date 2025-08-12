@@ -185,7 +185,10 @@ void connectToMQTT() {
     mqtt_ThermostatEsszimmerTopic, 
     mqtt_ThermostatKuecheTopic, 
     mqtt_ThermostatWohnzimmerTopic, 
-    mqtt_ThermostatGaestezimmerTopic});
+    mqtt_ThermostatGaestezimmerTopic,
+    mqtt_OutsideTempTopic,
+    mqtt_OutsideTempGardenTopic
+  });
   Serial.println("MQTT Client is connected");
 }
 
