@@ -58,11 +58,11 @@ private:
     Room currentRoom;
     float currentTemperature;
     float targetTemperature;
+    float updatedTargetTemperature;
     unsigned long lastActivityTime = 0;
-    unsigned long displayTimeout = 0; // 5 minutes in milliseconds
+    unsigned long displayTimeout = 0;
 
-    // Thermostat data storage (indexed by Room enum)
-    static const int ROOM_COUNT = 7; // Total number of rooms in enum
+    static const int ROOM_COUNT = 7;
     ThermostatData roomThermostatData[ROOM_COUNT];
     
     // Callback functions
@@ -81,9 +81,10 @@ private:
     
     // Internal event handlers
     void handleScreenEvent(lv_event_t * e);
-    void handleArcValueChange(lv_event_t * e);
+    void handleTransferButtonClick(lv_event_t *e);
+    void handleArcValueChange(lv_event_t *e);
     void handleArcRelease(lv_event_t * e);
-    void handleButtonClick(lv_event_t * e);
+    void handleRoomButtonClick(lv_event_t * e);
     
     // Helper methods
     void updateAllButtonStates();

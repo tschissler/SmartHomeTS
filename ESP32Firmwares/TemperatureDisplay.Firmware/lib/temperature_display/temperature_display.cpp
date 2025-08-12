@@ -386,7 +386,7 @@ void TemperatureDisplay::btn_event_handler_static(lv_event_t *e)
     if (instance) {
         instance->lastActivityTime = millis();
         if(instance->isDisplayOn) {
-           instance->handleButtonClick(e);
+           instance->handleRoomButtonClick(e);
         } 
     }
 }
@@ -434,19 +434,8 @@ void TemperatureDisplay::handleArcRelease(lv_event_t *e)
     int32_t value = lv_arc_get_value(arc);
 
     // Convert arc value to temperature
-    float temp = value / 2.0f;
-
-    updateStatusPanel(Status::TRANSFER);
-    transferInProgress = true;
-    transferProgress = 100;
-    targetTempSet = temp;
-    updateTransferProgress();
-
-    // Call callback if set - this fires when user finishes touching the arc
-    if (onTemperatureSet)
-    {
-        onTemperatureSet(temp, currentRoom);
-    }
+    updatedTargetTemperature = value / 2.0f;
+    lv_obj_set_flag(ui_btnTransfer, LV_OBJ_FLAG_HIDDEN, false);
 
     Serial.printf("Arc released at: %.1f°C for room: %s\n", temp, roomToString(currentRoom));
 }
@@ -457,7 +446,21 @@ void TemperatureDisplay::handleScreenEvent(lv_event_t *e)
     isDisplayOn = true;
 }
 
-void TemperatureDisplay::handleButtonClick(lv_event_t *e)
+void TemperatureDisplay::handleTransferButtonClick(lv_event_t *e)
+{
+    updateStatusPanel(Status::TRANSFER);
+    transferInProgress = true;
+    transferProgress = 100;
+    targetTempSet = updatedTargetTemperature;
+    updateTransferProgress();
+
+    if (onTemperatureSet)
+    {
+        onTemperatureSet(updatedTargetTemperature, currentRoom);
+    }
+}
+
+void TemperatureDisplay::handleRoomButtonClick(lv_event_t *e)
 {
     lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
     Room room = static_cast<Room>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e)));

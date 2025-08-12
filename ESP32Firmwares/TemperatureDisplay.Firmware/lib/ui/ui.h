@@ -44,6 +44,7 @@ LV_IMG_DECLARE(ui_img_308378252);    // assets/Fan-WF.png
 LV_IMG_DECLARE(ui_img_1385145727);    // assets/House-03.png
 LV_IMG_DECLARE(ui_img_859317218);    // assets/Battery - 03.png
 LV_IMG_DECLARE(ui_img_valve_png);    // assets/valve.png
+LV_IMG_DECLARE(ui_img_export_png);    // assets/Export.png
 
 // FONTS
 LV_FONT_DECLARE(ui_font_Quantico_100);

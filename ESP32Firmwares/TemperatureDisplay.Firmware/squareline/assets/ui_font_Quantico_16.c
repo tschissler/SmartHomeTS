@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 16 px
  * Bpp: 1
- * Opts: --bpp 1 --size 16 --font C:/Users/ThomasSchissler/SquareLine/assets/Quantico-Bold.ttf -o C:/Users/ThomasSchissler/SquareLine/assets\ui_font_Quantico_16.c --format lvgl -r 0x20-0x7f --no-compress --no-prefilter
+ * Opts: --bpp 1 --size 16 --font C:/Users/ThomasSchissler/source/repos/GitHub/tschissler/SmartHomeTS/ESP32Firmwares/TemperatureDisplay.Firmware/squareline/assets/Quantico-Bold.ttf -o C:/Users/ThomasSchissler/source/repos/GitHub/tschissler/SmartHomeTS/ESP32Firmwares/TemperatureDisplay.Firmware/squareline/assets\ui_font_Quantico_16.c --format lvgl -r 0x20-0x7f --symbols üÜ --no-compress --no-prefilter
  ******************************************************************************/
 
 #include "ui.h"
@@ -363,7 +363,16 @@ static LV_ATTRIBUTE_LARGE_CONST const uint8_t glyph_bitmap[] = {
     0xc, 0x33, 0xce, 0x0,
 
     /* U+007E "~" */
-    0x79, 0xff, 0xf3, 0xc0
+    0x79, 0xff, 0xf3, 0xc0,
+
+    /* U+00DC "Ü" */
+    0x36, 0x1b, 0x0, 0x0, 0xc, 0x1e, 0xf, 0x7,
+    0x83, 0xc1, 0xe0, 0xf0, 0x78, 0x3c, 0x1f, 0xfd,
+    0xfc,
+
+    /* U+00FC "ü" */
+    0x66, 0xcc, 0x0, 0xc, 0x78, 0xf1, 0xe3, 0xc7,
+    0x8f, 0xfb, 0xf0
 };
 
 
@@ -467,14 +476,18 @@ static const lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {
     {.bitmap_index = 877, .adv_w = 104, .box_w = 6, .box_h = 15, .ofs_x = 0, .ofs_y = -3},
     {.bitmap_index = 889, .adv_w = 92, .box_w = 2, .box_h = 15, .ofs_x = 2, .ofs_y = -3},
     {.bitmap_index = 893, .adv_w = 104, .box_w = 6, .box_h = 15, .ofs_x = 0, .ofs_y = -3},
-    {.bitmap_index = 905, .adv_w = 172, .box_w = 9, .box_h = 3, .ofs_x = 1, .ofs_y = 3}
+    {.bitmap_index = 905, .adv_w = 172, .box_w = 9, .box_h = 3, .ofs_x = 1, .ofs_y = 3},
+    {.bitmap_index = 909, .adv_w = 183, .box_w = 9, .box_h = 15, .ofs_x = 1, .ofs_y = 0},
+    {.bitmap_index = 926, .adv_w = 152, .box_w = 7, .box_h = 12, .ofs_x = 1, .ofs_y = 0}
 };
 
 /*---------------------
  *  CHARACTER MAPPING
  *--------------------*/
 
-
+static const uint16_t unicode_list_1[] = {
+    0x0, 0x20
+};
 
 /*Collect the unicode lists and glyph_id offsets*/
 static const lv_font_fmt_txt_cmap_t cmaps[] =
@@ -482,6 +495,10 @@ static const lv_font_fmt_txt_cmap_t cmaps[] =
     {
         .range_start = 32, .range_length = 95, .glyph_id_start = 1,
         .unicode_list = NULL, .glyph_id_ofs_list = NULL, .list_length = 0, .type = LV_FONT_FMT_TXT_CMAP_FORMAT0_TINY
+    },
+    {
+        .range_start = 220, .range_length = 33, .glyph_id_start = 96,
+        .unicode_list = unicode_list_1, .glyph_id_ofs_list = NULL, .list_length = 2, .type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY
     }
 };
 
@@ -546,7 +563,7 @@ static lv_font_fmt_txt_dsc_t font_dsc = {
     .cmaps = cmaps,
     .kern_dsc = &kern_pairs,
     .kern_scale = 16,
-    .cmap_num = 1,
+    .cmap_num = 2,
     .bpp = 1,
     .kern_classes = 0,
     .bitmap_format = 0,
@@ -569,7 +586,7 @@ lv_font_t ui_font_Quantico_16 = {
 #endif
     .get_glyph_dsc = lv_font_get_glyph_dsc_fmt_txt,    /*Function pointer to get glyph's data*/
     .get_glyph_bitmap = lv_font_get_bitmap_fmt_txt,    /*Function pointer to get glyph's bitmap*/
-    .line_height = 17,          /*The maximum line height required by the font*/
+    .line_height = 18,          /*The maximum line height required by the font*/
     .base_line = 3,             /*Baseline measured from the bottom of the line*/
 #if !(LVGL_VERSION_MAJOR == 6 && LVGL_VERSION_MINOR == 0)
     .subpx = LV_FONT_SUBPX_NONE,

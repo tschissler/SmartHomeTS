@@ -19,9 +19,9 @@ extern lv_obj_t * ui_Container1;
 extern lv_obj_t * ui_iconWifi;
 extern lv_obj_t * ui_iconHeatpump;
 extern lv_obj_t * ui_Image3;
-extern lv_obj_t * ui_lblTempOutside;
-extern lv_obj_t * ui_lblTime;
 extern lv_obj_t * ui_lblTempOutsideGarden;
+extern lv_obj_t * ui_lblTime;
+extern lv_obj_t * ui_lblTempOutside;
 extern lv_obj_t * ui_Separator;
 extern lv_obj_t * ui_Container2;
 extern lv_obj_t * ui_btnLivingroom;
@@ -64,6 +64,9 @@ extern lv_obj_t * ui_Label11;
 extern lv_obj_t * ui_pnlTransferData;
 extern lv_obj_t * ui_lblActivity;
 extern lv_obj_t * ui_pgbTransferData;
+extern lv_obj_t * ui_btnTransfer;
+extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_Image2;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus
