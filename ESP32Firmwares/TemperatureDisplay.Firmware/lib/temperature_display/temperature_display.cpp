@@ -474,6 +474,7 @@ void TemperatureDisplay::handleTransferButtonClick(lv_event_t *e)
 
 void TemperatureDisplay::handleRoomButtonClick(lv_event_t *e)
 {
+    lv_obj_set_flag(ui_btnTransfer, LV_OBJ_FLAG_HIDDEN, true);
     lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
     Room room = static_cast<Room>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e)));
 
