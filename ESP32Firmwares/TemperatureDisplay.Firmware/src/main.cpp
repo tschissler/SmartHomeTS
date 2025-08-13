@@ -223,7 +223,22 @@ void setup()
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
 
-    // Connect to WiFi
+  // Initialize display
+  if (!display.init()) {
+    Serial.println("Failed to initialize display");
+    return;
+  }
+  
+  if (!display.begin()) {
+    Serial.println("Failed to start display");
+    return;
+  }
+
+  // Setup UI (after display is initialized)
+  display.setupUI(600);
+  display.updateVersion(version);
+
+  // Connect to WiFi
   Serial.print("Connecting to WiFi ");
   wifiLib.scanAndSelectNetwork();
   wifiLib.connect();
@@ -238,21 +253,6 @@ void setup()
   timeClient.begin();
   timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
   timeClient.update();
-
-  // Initialize display
-  if (!display.init()) {
-    Serial.println("Failed to initialize display");
-    return;
-  }
-  
-  if (!display.begin()) {
-    Serial.println("Failed to start display");
-    return;
-  }
-  
-  // Setup UI
-  display.setupUI(600);
-  display.updateVersion(version);
 
   // Set callback functions
   display.setTemperatureChangeCallback(onTemperatureChanged);
