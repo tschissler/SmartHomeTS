@@ -1,7 +1,11 @@
 #include "SerialComm.h"
 
-SerialComm::SerialComm(const Config& cfg) : _sw(), _cfg(cfg)
-{
+bool SerialComm::debugLogAll = false;
+
+SerialComm::SerialComm(const Config& cfg) : _hs(nullptr), _cfg(cfg) {
+  // Choose UART
+  int idx = (_cfg.uartIndex == 2) ? 2 : 1; // limit to 1 or 2
+  _hs = (idx == 2) ? &Serial2 : &Serial1;
 }
 
 void SerialComm::ReadData() {
@@ -24,8 +28,8 @@ void SerialComm::ReadData() {
 
 void SerialComm::sendWakeup() {
   begin8N1();
-  for (int i=0; i<_cfg.preambleBytes; ++i) _sw.write(0x55);
-  _sw.flush();
+  for (int i=0; i<_cfg.preambleBytes; ++i) _hs->write(0x55);
+  _hs->flush();
   Serial.println("Wake-up: " + String(_cfg.preambleBytes) + " x 0x55 sent @ 8N1");
   delay(120); 
 }
@@ -34,8 +38,8 @@ void SerialComm::sendShort(uint8_t C, uint8_t A) {
   begin8E1();
   const uint8_t cs = (uint8_t)((C + A) & 0xFF);
   const uint8_t f[5] = {0x10, C, A, cs, 0x16};
-  _sw.write(f, sizeof(f)); 
-  _sw.flush();
+  _hs->write(f, sizeof(f)); 
+  _hs->flush();
   Serial.print("TX Short: "); 
   dumpHex(f, sizeof(f), Serial); 
   Serial.println();
@@ -63,11 +67,11 @@ void SerialComm::sendSelectBySecondary(const char* serial8) {
   const uint8_t cs  = checksum(user, idx);
   const uint8_t hdr[4] = {0x68, len, len, 0x68};
 
-  _sw.write(hdr, 4);
-  _sw.write(user, idx);
-  _sw.write(cs);
-  _sw.write(0x16);
-  _sw.flush();
+  _hs->write(hdr, 4);
+  _hs->write(user, idx);
+  _hs->write(cs);
+  _hs->write(0x16);
+  _hs->flush();
 
   Serial.print("TX Select: ");
   dumpHex(hdr, 4, Serial); Serial.print("-");
@@ -90,20 +94,23 @@ bool SerialComm::tryReadAck(String label) {
 bool SerialComm::readByte(uint8_t& b, uint32_t timeoutMs) {
   const uint32_t start = millis();
   while (millis() - start < timeoutMs) {
-    if (_sw.available() > 0) { b = (uint8_t)_sw.read(); return true; }
+    if (_hs->available() > 0) {
+      b = (uint8_t)_hs->read();
+      if (debugLogAll) {
+        Serial.print("<RX "); if (b<16) Serial.print('0'); Serial.print(b, HEX); Serial.print(" @"); Serial.println(millis());
+      }
+      return true; }
     delay(1);
   }
   return false;
 }
 
 void SerialComm::begin8N1() {
-  _sw.end();
-  _sw.begin(_cfg.baud, SWSERIAL_8N1, _cfg.gpioRx, _cfg.gpioTx, _cfg.invertLogic, RX_BUF_LEN);
+  _hs->begin(_cfg.baud, SERIAL_8N1, _cfg.gpioRx, _cfg.gpioTx, _cfg.invertLogic);
 }
 
 void SerialComm::begin8E1() {
-  _sw.end();
-  _sw.begin(_cfg.baud, SWSERIAL_8E1, _cfg.gpioRx, _cfg.gpioTx, _cfg.invertLogic, RX_BUF_LEN);
+  _hs->begin(_cfg.baud, SERIAL_8E1, _cfg.gpioRx, _cfg.gpioTx, _cfg.invertLogic);
 }
 
 void SerialComm::dumpHex(const uint8_t* d, size_t n, Stream& out) {
@@ -112,6 +119,21 @@ void SerialComm::dumpHex(const uint8_t* d, size_t n, Stream& out) {
     if (d[i] < 16) out.print("0");
     out.print(d[i], HEX);
   }
+}
+
+void SerialComm::sniff(uint32_t windowMs, const char* label) {
+  Serial.print("Sniff "); Serial.print(label); Serial.print(" window="); Serial.print(windowMs); Serial.println("ms");
+  uint32_t start = millis();
+  uint32_t lastPrint = 0;
+  while (millis() - start < windowMs) {
+    while (_hs->available()) {
+      uint8_t b = _hs->read();
+      Serial.print(b<16?" ":" "); if (b<16) Serial.print('0'); Serial.print(b, HEX);
+      lastPrint = millis();
+    }
+    if (millis() - lastPrint > 200) delay(1);
+  }
+  Serial.println();
 }
 
 void SerialComm::encodeSerialTypeA(const char* ser8, uint8_t out4[4]) {

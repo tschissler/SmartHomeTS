@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include <SoftwareSerial.h>
+#include <HardwareSerial.h>
 #include <vector>
 
 class SerialComm {
@@ -12,6 +12,7 @@ public:
     uint32_t baud;             
     int      preambleBytes;   
     String   serialNumber;    // 8-stellige Seriennummer, leer = keine Selektion
+  int      uartIndex = 1;    // 1 oder 2 (UART1/UART2)
   };
 
   explicit SerialComm(const Config& cfg);
@@ -37,6 +38,12 @@ public:
   // Debug-Helfer
   static void dumpHex(const uint8_t* d, size_t n, Stream& out);
 
+    // --- Debug Erweiterungen ---
+    // Global einschalten, damit jede eingehende Byte-Lesung geloggt wird
+    static void setDebugLogAll(bool on) { debugLogAll = on; }
+    // Aktiver Schnüffelmodus für ein Zeitfenster (blockierend)
+    void sniff(uint32_t windowMs, const char* label = "");
+
 private:
   void begin8N1();
   void begin8E1();
@@ -47,11 +54,11 @@ private:
   static uint8_t toBcd(char tens, char ones);
   static void    encodeSerialTypeA(const char* ser8, uint8_t out4[4]);
 
+  static bool debugLogAll; // Definition in .cpp
+
 private:
-  SoftwareSerial _sw;
+  HardwareSerial* _hs;
   Config         _cfg;
   std::vector<uint8_t> _payload;
   uint8_t _ci;
-  // kleiner RX-Puffer für SoftwareSerial
-  static constexpr uint16_t RX_BUF_LEN = 256;
 };

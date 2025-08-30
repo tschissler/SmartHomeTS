@@ -44,8 +44,10 @@ void loop() {
   cfg.baud = BAUD;
   cfg.preambleBytes = PREAMBLE_BYTES;
   cfg.serialNumber = SERIAL_NR;
+  cfg.uartIndex = 1; // or 2 depending on which UART pins you wired
 
   SerialComm serialComm(cfg);
+  serialComm.setDebugLogAll(true);
   serialComm.ReadData();
   delay(2500);
   
