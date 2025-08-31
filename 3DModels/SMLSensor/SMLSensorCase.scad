@@ -1,5 +1,8 @@
 $fn = 100;
 
+
+use <spiral_extrude.scad>
+
 Magnet_Outer_Diameter = 27.0;
 Magnet_Inner_Diameter = 16.0;
 Magnet_Height = 5.0;
@@ -18,12 +21,23 @@ InnerWidth_X = 25.0;
 InnerWidth_Y = 25.0;
 InnerHeight = 19.0;
 
-USBPort_Width = 14.0;
-USBPort_Height = 7.0;
-USBPort_Offset_Y = 11.5;
-USBPort_Offset_Z = 12.5;
+USBPort_Width = 10.0;
+USBPort_Height = 4.0;
+USBPort_Offset_Y = InnerWidth_Y/2 - USBPort_Width/2;
+USBPort_Offset_Z = 11.5;
 
-//MagnetRing();
+Thread_Diameter = 2;
+
+PCB_Width = 17.8;
+PCB_Length = 20.8;
+PCB_USB_Offset = 1.4;
+PCB_Holder_Width = 3;
+
+difference()
+{
+    //MagnetRing();
+    //Thread();
+}
 ModuleBox();
 //Cap();
 
@@ -47,9 +61,25 @@ module Cap()
     }
 }
 
+module Thread()
+{
+    translate([0, 0, 2])
+        spiral_extrude(
+            Radius=Magnet_Outer_Diameter/2, 
+            EndRadius=Magnet_Outer_Diameter/2, 
+            Pitch=3, 
+            Height=Magnet_Height+3, 
+            StepsPerRev=50, 
+            Starts=1, 
+            $fn=20)
+            {
+                circle(d = Thread_Diameter);
+            }
+}
+
 module MagnetRing()
 {
-    translate([30, 0, 0])
+    translate([0, 0, 0])
     {
         difference()
         {
@@ -65,6 +95,13 @@ module MagnetRing()
 
 module ModuleBox()
 {
+    difference()
+    {
+        Thread();
+        translate([-50, -50, 0])
+            cube([100,100,Magnet_Height + Border_Bottom]);
+    }
+
     translate([0, 0, Magnet_Height + Border_Bottom + LED_Z_Offset])
     {
         Box();
@@ -72,6 +109,20 @@ module ModuleBox()
         {
             Magnet(LED_Z_Offset);
         }
+    }
+    PCBHolder();
+}
+
+module PCBHolder()
+{
+    translate([-InnerWidth_X/2, -PCB_Holder_Width/2, Magnet_Height + LED_Z_Offset])
+    {
+        cube([InnerWidth_X - PCB_Length, PCB_Holder_Width, 18]);
+        cube([InnerWidth_X - PCB_Length + 3, PCB_Holder_Width, USBPort_Offset_Z-PCB_USB_Offset]);
+    }
+    translate([InnerWidth_X/2-3, -PCB_Holder_Width/2, Magnet_Height + LED_Z_Offset])
+    {
+        cube([3, PCB_Holder_Width, USBPort_Offset_Z-PCB_USB_Offset]);
     }
 }
 
