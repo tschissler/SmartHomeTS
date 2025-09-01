@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - .github/workflows/HeatMeterSensorFirmware.yml
-      - ESP32Firmwares/HeatMeterSensor.Firmware/**
+      - ESP32Firmwares/HeatmeterSensor.Firmware/**
   workflow_dispatch:
   
 jobs:
@@ -15,7 +15,7 @@ jobs:
       blob_url: ${{ steps.construct_blob_url.outputs.blob_url }}
     defaults:
       run:
-        working-directory: ESP32Firmwares/HeatMeterSensor.Firmware
+        working-directory: ESP32Firmwares/HeatmeterSensor.Firmware
   
     steps:
     - uses: actions/checkout@v3
@@ -43,13 +43,13 @@ jobs:
       run: |
         az storage blob upload --account-name smarthomestorageprod \
                                --container-name firmwareupdates \
-                               --name HeatMeterSensorFirmware_$version.bin \
+                               --name HeatmeterSensorFirmware_$version.bin \
                                --file .pio/build/seeed_xiao_esp32c6/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "blob_url=https://smarthomestorageprod.blob.core.windows.net/firmwareupdates/HeatMeterSensorFirmware_$version.bin" >> $GITHUB_OUTPUT
+      run: echo "blob_url=https://smarthomestorageprod.blob.core.windows.net/firmwareupdates/HeatmeterSensorFirmware_$version.bin" >> $GITHUB_OUTPUT
                            
   triggerupdate:
     needs: build
