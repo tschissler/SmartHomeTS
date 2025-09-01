@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include <map>
 
 class WifiLib {
 public:
@@ -13,4 +14,5 @@ private:
     String ssid;
     String password;
     String passwords;
+    void parseWifis(std::map<String, String> &knownWifis);
 };
