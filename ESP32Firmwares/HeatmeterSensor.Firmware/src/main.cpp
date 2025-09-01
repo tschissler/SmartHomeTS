@@ -124,7 +124,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   Serial.println("Initializing M-Bus interface...");
-  if (!MBusInit(IR_RX_PIN, IR_TX_PIN, 2400, true)) {
+  if (!MBusInit(IR_RX_PIN, IR_TX_PIN, 2400, false)) {
       Serial.println("Error initializing M-Bus interface.");
   } else {
       Serial.println("M-Bus interface ready.");

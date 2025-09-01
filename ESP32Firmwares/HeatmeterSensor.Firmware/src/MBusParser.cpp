@@ -4,6 +4,8 @@
 // The documentation of the WDV Molliné Wingstar meter can be found here:
 // https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf
 
+// Global debug variable definition
+bool debug = false;
 
 // Struct to hold manufacturer info
 struct ManufacturerInfo {
@@ -13,7 +15,7 @@ struct ManufacturerInfo {
 
 // Struct to hold M-Bus header data
 struct MBusHeader {
-    uint32_t id;
+    String id;
     ManufacturerInfo manufacturer;
     uint8_t version;
     uint8_t medium;
@@ -282,25 +284,6 @@ String statusByteToString(uint8_t status) {
     return result;
 }
 
-// Helper: convert BCD encoded bytes (e.g. for meter ID) into an integer.
-unsigned long bcdToUInt(const uint8_t *data, int length) {
-    unsigned long value = 0;
-    unsigned long place = 1;
-    for (int i = 0; i < length; ++i) {
-        uint8_t byte = data[i];
-        uint8_t lowNibble = byte & 0x0F;
-        uint8_t highNibble = (byte >> 4) & 0x0F;
-    // lower digit
-        value += lowNibble * place;
-        place *= 10;
-    // higher digit
-        value += highNibble * place;
-        place *= 10;
-    }
-    return value;
-}
-
-
 // ---------- Helpers ----------
 static inline uint64_t read_u_le(const uint8_t* d, size_t n) {
   uint64_t v = 0;
@@ -439,8 +422,8 @@ void printHeaderInfo(MBusHeader &header)
 
 // Private helper function to parse M-Bus header information
 static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index) {
-    MBusHeader header = {0};
-    
+    MBusHeader header = {};
+
     uint8_t len = frame[1];      // Length from C to end of payload, the length must be repeated in the next byte
     if (len != frame[2]) {
         Serial.print("Length mismatch: ");
@@ -460,7 +443,7 @@ static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index) 
 
     if (len >= 3 + 9) {
         // 9 Bytes Header (ohne Signatur)
-        header.id = bcdToUInt(frame + index, 4);  // 4 Bytes ID (BCD)
+        header.id = DecodeTypeA(frame + index);  // 4 Bytes ID (BCD)
         index += 4;
         header.manufacturer = manufacturerInfoFromCode(frame[index] | (frame[index+1] << 8));
         index += 2;
@@ -538,7 +521,9 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
                     data.status = statusByteToString(DecodeTypeD(dataBytes, 1));
                 }
                 else
-                    Serial.println("Unknown VIF / VIFE for error code. Was " + String(VIF, HEX) + " / " + String(VIFE, HEX) + ", but only 0xFD / 0x17 is valid.");
+                    if (debug)
+                        Serial.println("Unknown VIF / VIFE for error code. Was " + String(VIF, HEX) + " / " + String(VIFE, HEX) + ", but only 0xFD / 0x17 is valid.");
+                break;
             }
             case 0x02 : { // Temperatures and days in operation
                 switch (VIF) {
@@ -559,9 +544,12 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
                         break;
                     }
                     default :
-                        Serial.print("Unknown VIF: 0x");
-                        Serial.print(VIF, HEX);
-                        Serial.println(" in DIF 0x02");
+                        if (debug)
+                        {
+                            Serial.print("Unknown VIF: 0x");
+                            Serial.print(VIF, HEX);
+                            Serial.println(" in DIF 0x02");
+                        }
                 }
                 break;
             }
@@ -599,6 +587,7 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
                     }
                     case 0x13 : { // Total Volume
                         data.totalVolume = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "m³");
+                        break;
                     }
                     case 0x2B : {
                         data.powerCurrentValue = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "kW");
@@ -610,11 +599,15 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
                     }
                     case 0x6D : { // Current date and time
                         data.currentDateAndTime = DecodeTypeF(dataBytes);
+                        break;
                     }
                     default :
-                        Serial.print("Unknown VIF: 0x");
-                        Serial.print(VIF, HEX);
-                        Serial.println(" in DIF 0x04");
+                        if (debug)
+                        {
+                            Serial.print("Unknown VIF: 0x");
+                            Serial.print(VIF, HEX);
+                            Serial.println(" in DIF 0x04");
+                        }
                 }
                 break;
             }
@@ -629,34 +622,45 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
                         break;
                     }
                     default :
-                        Serial.print("Unknown VIF: 0x");
-                        Serial.print(VIF, HEX);
-                        Serial.println(" in DIF 0x14");
+                        if (debug)
+                        {
+                            Serial.print("Unknown VIF: 0x");
+                            Serial.print(VIF, HEX);
+                            Serial.println(" in DIF 0x14");
+                        }
                 }
                 break;
             }
             case 0x03 : {
-                Serial.println("DIF 0x03 (Device type) not implemented yet -> ignoring");
-                Serial.println("Check https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf for more details.");
+                if (debug) {
+                    Serial.println("DIF 0x03 (Device type) not implemented yet -> ignoring");
+                    Serial.println("Check https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf for more details.");
+                }
                 break;
             }
   
             case 0x44 :
             case 0x42 : {
-                Serial.println("DIF 0x44 / 0x42 (Last billing date period data) not implemented yet -> ignoring");
-                Serial.println("Check https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf for more details.");
+                if (debug) {
+                    Serial.println("DIF 0x44 / 0x42 (Last billing date period data) not implemented yet -> ignoring");
+                    Serial.println("Check https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf for more details.");
+                }
                 break;
             }
 
             case 0x84 :
             case 0xC4 : {
-                Serial.println("DIF 0x84 / 0xC4 (Tariff register and pulse counter) not implemented yet -> ignoring");
-                Serial.println("Check https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf for more details.");
+                if (debug) {
+                    Serial.println("DIF 0x84 / 0xC4 (Tariff register and pulse counter) not implemented yet -> ignoring");
+                    Serial.println("Check https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf for more details.");
+                }
                 break;
             }
             default:
-                Serial.print("Unknown DIF: 0x");
-                Serial.println(DIF, HEX);
+                if (debug) {
+                    Serial.print("Unknown DIF: 0x");
+                    Serial.println(DIF, HEX);
+                }
                 break;
         }
     }
@@ -755,170 +759,6 @@ void parseMBusFrame(const uint8_t *frame, int length) {
 
     MBusData data = parseMBusData(frame, length, index);
     printMBusData(data);
-   
-    // while (index < length - 2) {  // bis vor Prüfsummen-Byte und Endbyte
-    //     uint8_t DIF = frame[index++];
-    //     if (DIF == 0x00 || DIF == 0x0F) {
-    //         // no further data (0x0F may indicate filler)
-    //         break;
-    //     }
-    //     uint8_t dataLen = 0;
-    //     bool dataIsBCD = false;
-    //     uint8_t dif_nibble = DIF & 0x0F;
-    //     switch (dif_nibble) {
-    //         case 0x00: dataLen = 0; break;
-    //         case 0x01: dataLen = 1; break;
-    //         case 0x02: dataLen = 2; break;
-    //         case 0x03: dataLen = 3; break;
-    //         case 0x04: dataLen = 4; break;
-    //         case 0x05: dataLen = 4; break;
-    //         case 0x06: dataLen = 6; break;
-    //         case 0x07: dataLen = 8; break;
-    //         case 0x08: dataLen = 0; break;
-    //         case 0x09: dataLen = 2; dataIsBCD = true; break;
-    //         case 0x0A: dataLen = 4; dataIsBCD = true; break;
-    //         case 0x0B: dataLen = 6; dataIsBCD = true; break;
-    //         case 0x0C: dataLen = 8; dataIsBCD = true; break;
-    //         default: /* 0x0D-0x0F sind Sonderfälle, nicht behandelt */ break;
-    //     }
-    // // Process DIFE (storage number / tariff if present)
-    //     uint8_t storageNo = 0;
-    //     if (DIF & 0x80) {
-    //         uint8_t DIFE = frame[index++];
-    //         storageNo = DIFE & 0x0F;
-    //         // Ignore further DIFE bits (tariff etc.) in this example
-    //     }
-    // // Read VIF (Value Information Field)
-    //     if (index >= length - 2) break;
-    //     uint8_t VIF = frame[index++];
-    //     uint8_t VIFE = 0;
-    //     if (vifHasVife(VIF)) {
-    //         // Extended VIF (e.g. manufacturer specific or special)
-    //         if (index < length - 2) {
-    //             VIFE = frame[index++];
-    //         }
-    //     }
-    // // Read data bytes
-    //     uint8_t dataBytes[8];
-    //     if (dataLen > 0) {
-    //         if (index + dataLen > length - 2) {
-    //             Serial.println("Data bytes missing/insufficient.");
-    //             break;
-    //         }
-    //         for (uint8_t i = 0; i < dataLen; ++i) {
-    //             dataBytes[i] = frame[index + i];
-    //         }
-    //         index += dataLen;
-    //     }
-
-    // // Interpret record based on VIF
-    // if (VIF == 0x78) {  // device ID (manufacturer number)
-    //         unsigned long idVal;
-    //         if (dataIsBCD) {
-    //             idVal = bcdToUInt(dataBytes, dataLen / 2);
-    //         } else {
-    //             // Falls doch als Binärwert gesendet (unwahrscheinlich), alternativ:
-    //             idVal = 0;
-    //             for (int i = 0; i < dataLen; ++i) {
-    //                 idVal |= ((unsigned long)dataBytes[i] << (8 * i));
-    //             }
-    //         }
-    //         Serial.print("Meter ID: ");
-    //         Serial.println(idVal);
-    //         continue;
-    //     }
-    //     if (VIF == 0x06 || VIF == 0x0E || (VIF == 0x3D && VIFE == 0x86) || (VIF == 0xFB && VIFE == 0x0D)) {
-    //         // Energy (heat/cold)
-    //         unsigned long raw = 0;
-    //         for (int i = 0; i < dataLen; ++i) {
-    //             raw |= ((unsigned long)dataBytes[i] << (8 * i));
-    //         }
-    //         double value = raw;
-    //         String unit = "";
-    //         if (VIF == 0x06) {
-    //             value = raw * 0.001;  // in MWh
-    //             unit = "MWh";
-    //         } else if (VIF == 0x0E) {
-    //             value = raw * 0.001;  // in GJ
-    //             unit = "GJ";
-    //         } else if (VIF == 0x3D && VIFE == 0x86) {
-    //             value = raw * 0.001;  // in MMBTU
-    //             unit = "MMBTU";
-    //         } else if (VIF == 0xFB && VIFE == 0x0D) {
-    //             value = raw * 0.001;  // in Gcal
-    //             unit = "Gcal";
-    //         }
-    //         Serial.print("Thermal energy: ");
-    //         Serial.print(value, 3);
-    //         Serial.print(" ");
-    //         Serial.println(unit);
-    //         continue;
-    //     }
-    //     if (VIF == 0x13) {  // Volumen
-    //         unsigned long raw = 0;
-    //         for (int i = 0; i < dataLen; ++i) {
-    //             raw |= ((unsigned long)dataBytes[i] << (8 * i));
-    //         }
-    //         double value = raw * 0.001;  // m³
-    //         Serial.print("Volume: ");
-    //         Serial.print(value, 3);
-    //         Serial.println(" m³");
-    //         continue;
-    //     }
-    //     if (VIF == 0x3B) {  // flow (l/h)
-    //         unsigned long raw = 0;
-    //         for (int i = 0; i < dataLen; ++i) {
-    //             raw |= ((unsigned long)dataBytes[i] << (8 * i));
-    //         }
-    //         Serial.print("Flow: ");
-    //         Serial.print(raw);
-    //         Serial.println(" l/h");
-    //         continue;
-    //     }
-    //     if (VIF == 0x5B || VIF == 0x5F) {  // temperature (°C)
-    //         int16_t raw = 0;
-    //         for (int i = 0; i < dataLen; ++i) {
-    //             raw |= ((uint16_t)dataBytes[i] << (8 * i));
-    //         }
-    //         String label = (VIF == 0x5B ? "Flow temp." : "Return temp.");
-    //         Serial.print(label + ": ");
-    //         Serial.print(raw);
-    //         Serial.println(" °C");
-    //         continue;
-    //     }
-    //     if (VIF == 0x61) {  // temperature difference (0.01°C)
-    //         int16_t raw = 0;
-    //         for (int i = 0; i < dataLen; ++i) {
-    //             raw |= ((uint16_t)dataBytes[i] << (8 * i));
-    //         }
-    //         double value = raw * 0.01;
-    //         Serial.print("Temp. difference: ");
-    //         Serial.print(value, 2);
-    //         Serial.println(" °C");
-    //         continue;
-    //     }
-    //     if (VIF == 0x23) {  // operating time in days
-    //         uint16_t raw = dataBytes[0] | (dataBytes[1] << 8);
-    //         Serial.print("Operating days: ");
-    //         Serial.print(raw);
-    //         Serial.println(" days");
-    //         continue;
-    //     }
-    //     // Show unknown record (hex values)
-    //     Serial.print("Unknown VIF 0x");
-    //     Serial.print(VIF, HEX);
-    //     if (VIFE != 0) {
-    //         Serial.print(" VIFE 0x");
-    //         Serial.print(VIFE, HEX);
-    //     }
-    //     Serial.print(" Data: ");
-    //     for (int i = 0; i < dataLen; ++i) {
-    //         if (dataBytes[i] < 0x10) Serial.print("0");
-    //         Serial.print(dataBytes[i], HEX);
-    //         Serial.print(" ");
-    //     }
-    //     Serial.println();
-    // }
 }
 
 

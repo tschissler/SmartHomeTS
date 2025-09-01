@@ -1,9 +1,9 @@
 #include "MBusComm.h"
+#include "MBusParser.h"  // Include to access the shared debug variable
 
 static int s_rxPin = -1;
 static int s_txPin = -1;
 static long s_baud  = 2400;
-static bool debug = false;
 
 bool MBusInit(int rxPin, int txPin, long baud, bool debugMode) {
     s_rxPin = rxPin;
