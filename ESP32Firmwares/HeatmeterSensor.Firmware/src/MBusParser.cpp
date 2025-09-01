@@ -1,13 +1,226 @@
 #include "MBusParser.h"
 
-// Helper: convert the 2-byte manufacturer code (M-Bus) into a 3-letter ASCII manufacturer ID.
-String manufacturerCodeToString(uint16_t manCode) {
+// This code is parsing M-Bus frames from the WDV Molliné Wingstar meter.
+// The documentation of the WDV Molliné Wingstar meter can be found here:
+// https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf
+
+
+// Struct to hold manufacturer info
+struct ManufacturerInfo {
+    String code;
+    String name;
+};
+
+// Struct to hold M-Bus header data
+struct MBusHeader {
+    uint32_t id;
+    ManufacturerInfo manufacturer;
+    uint8_t version;
+    uint8_t medium;
+    uint8_t accessNo;
+    uint8_t status;
+    uint16_t signature;
+};
+
+struct MBusData {
+    uint32_t deviceId;
+
+};
+
+// Helper: convert the 2-byte manufacturer code (M-Bus) into a 3-letter ASCII manufacturer ID and name.
+struct ManufacturerCodeName {
+    const char* code;
+    const char* name;
+};
+
+static const ManufacturerCodeName manufacturerTable[] = {
+    // Source: https://www.m-bus.de/man.html
+
+    {"ABB", "ABB AB, P.O. Box 1005, SE-61129 Nyköping, Nyköping,Sweden"},
+    {"ACE", "Actaris (Elektrizität)"},
+    {"ACG", "Actaris (Gas)"},
+    {"ACW", "Actaris (Wasser und Wärme)"},
+    {"AEG", "AEG"},
+    {"AEL", "Kohler, Türkei"},
+    {"AEM", "S.C. AEM S.A. Romania"},
+    {"AMP", "Ampy Automation Digilog Ltd"},
+    {"AMT", "Aquametro"},
+    {"APS", "Apsis Kontrol Sistemleri, Türkei"},
+    {"BEC", "Berg Energiekontrollsysteme GmbH"},
+    {"BER", "Bernina Electronic AG"},
+    {"BSE", "Basari Elektronik A.S., Türkei"},
+    {"BST", "BESTAS Elektronik Optik, Türkei"},
+    {"CBI", "Circuit Breaker Industries, Südafrika"},
+    {"CLO", "Clorius Raab Karcher Energie Service A/S"},
+    {"CON", "Conlog"},
+    {"CZM", "Cazzaniga S.p.A."},
+    {"DAN", "Danubia"},
+    {"DFS", "Danfoss A/S"},
+    {"DME", "DIEHL Metering, Industriestrasse 13, 91522 Ansbach, Germany"},
+    {"DZG", "Deutsche Zählergesellschaft"},
+    {"DWZ", "Lorenz GmbH & Co.KG"},
+    {"EDM", "EDMI Pty.Ltd."},
+    {"EFE", "Engelmann Sensor GmbH"},
+    {"EKT", "PA KVANT J.S., Russland"},
+    {"ELM", "Elektromed Elektronik Ltd, Türkei"},
+    {"ELS", "ELSTER Produktion GmbH"},
+    {"EMH", "EMH Elektrizitätszähler GmbH & CO KG"},
+    {"EMU", "EMU Elektronik AG"},
+    {"EMO", "Enermet"},
+    {"END", "ENDYS GmbH"},
+    {"ENP", "Kiev Polytechnical Scientific Research"},
+    {"ENT", "ENTES Elektronik, Türkei"},
+    {"ERL", "Erelsan Elektrik ve Elektronik, Türkei"},
+    {"ESM", "Starion Elektrik ve Elektronik, Türkei"},
+    {"EUR", "Eurometers Ltd"},
+    {"EWT", "Elin Wasserwerkstechnik"},
+    {"FED", "Federal Elektrik, Türkei"},
+    {"FML", "Siemens Measurements Ltd.( Formerly FML Ltd.)"},
+    {"GBJ", "Grundfoss A/S"},
+    {"GEC", "GEC Meters Ltd."},
+    {"GSP", "Ingenieurbuero Gasperowicz"},
+    {"GWF", "Gas- u. Wassermessfabrik Luzern"},
+    {"HEG", "Hamburger Elektronik Gesellschaft"},
+    {"HEL", "Heliowatt"},
+    {"HRZ", "HERZ Messtechnik GmbH"},
+    {"HTC", "Horstmann Timers and Controls Ltd."},
+    {"HYD", "Hydrometer GmbH"},
+    {"ICM", "Intracom, Griechenland"},
+    {"IDE", "IMIT S.p.A."},
+    {"INV", "Invensys Metering Systems AG"},
+    {"ISK", "Iskraemeco, Slovenia"},
+    {"IST", "ista SE"},
+    {"ITR", "Itron"},
+    {"IWK", "IWK Regler und Kompensatoren GmbH"},
+    {"KAM", "Kamstrup Energie A/S"},
+    {"KHL", "Kohler, Türkei"},
+    {"KKE", "KK-Electronic A/S"},
+    {"KNX", "KONNEX-based users (Siemens Regensburg)"},
+    {"KRO", "Kromschröder"},
+    {"KST", "Kundo SystemTechnik GmbH"},
+    {"LEM", "LEM HEME Ltd., UK"},
+    {"LGB", "Landis & Gyr Energy Management (UK) Ltd."},
+    {"LGD", "Landis & Gyr Deutschland"},
+    {"LGZ", "Landis & Gyr Zug"},
+    {"LHA", "Atlantic Meters, Südafrika"},
+    {"LML", "LUMEL, Polen"},
+    {"LSE", "Landis & Staefa electronic"},
+    {"LSP", "Landis & Staefa production"},
+    {"LUG", "Landis & Staefa"},
+    {"LSZ", "Siemens Building Technologies"},
+    {"MAD", "Maddalena S.r.I., Italien"},
+    {"MEI", "H. Meinecke AG (jetzt Invensys Metering Systems AG)"},
+    {"MKS", "MAK-SAY Elektrik Elektronik, Türkei"},
+    {"MNS", "MANAS Elektronik, Türkei"},
+    {"MPS", "Multiprocessor Systems Ltd, Bulgarien"},
+    {"MTC", "Metering Technology Corporation, USA"},
+    {"NIS", "Nisko Industries Israel"},
+    {"NMS", "Nisko Advanced Metering Solutions Israel"},
+    {"NRM", "Norm Elektronik, Türkei"},
+    {"ONR", "ONUR Elektroteknik, Türkei"},
+    {"PAD", "PadMess GmbH"},
+    {"PMG", "Spanner-Pollux GmbH (jetzt Invensys Metering Systems AG)"},
+    {"PRI", "Polymeters Response International Ltd."},
+    {"RAS", "Hydrometer GmbH"},
+    {"REL", "Relay GmbH"},
+    {"RKE", "ista SE"},
+    {"SAP", "Sappel"},
+    {"SCH", "Schnitzel GmbH"},
+    {"SEN", "Sensus GmbH"},
+    {"SMC", " "},
+    {"SME", "Siame, Tunesien"},
+    {"SML", "Siemens Measurements Ltd."},
+    {"SIE", "Siemens AG"},
+    {"SLB", "Schlumberger Industries Ltd."},
+    {"SON", "Sontex SA"},
+    {"SOF", "softflow.de GmbH"},
+    {"SPL", "Sappel"},
+    {"SPX", "Spanner Pollux GmbH (jetzt Invensys Metering Systems AG)"},
+    {"SVM", "AB Svensk Värmemätning SVM"},
+    {"TCH", "Techem Service AG"},
+    {"TIP", "TIP Thüringer Industrie Produkte GmbH"},
+    {"UAG", "Uher"},
+    {"UGI", "United Gas Industries"},
+    {"VES", "ista SE"},
+    {"VPI", "Van Putten Instruments B.V."},
+    {"WMO", "Westermo Teleindustri AB, Schweden"},
+    {"YTE", "Yuksek Teknoloji, Türkei"},
+    {"ZAG", "Zellwerg Uster AG"},
+    {"ZAP", "Zaptronix"},
+    {"ZIV", "ZIV Aplicaciones y Tecnologia, S.A."},
+};
+
+ManufacturerInfo manufacturerInfoFromCode(uint16_t manCode) {
     char letters[4];
     letters[0] = ((manCode >> 10) & 0x1F) + 'A' - 1;
     letters[1] = ((manCode >> 5) & 0x1F) + 'A' - 1;
     letters[2] = (manCode & 0x1F) + 'A' - 1;
     letters[3] = '\0';
-    return String(letters);
+    String codeStr = String(letters);
+    String nameStr = "Unknown";
+    for (size_t i = 0; i < sizeof(manufacturerTable)/sizeof(manufacturerTable[0]); ++i) {
+        if (codeStr == manufacturerTable[i].code) {
+            nameStr = manufacturerTable[i].name;
+            break;
+        }
+    }
+    return ManufacturerInfo{codeStr, nameStr};
+}
+
+// Helper: convert medium code (M-Bus) into a human-readable string.
+String mediumCodeToString(uint8_t medium)
+{
+    switch (medium)
+    {
+    case 0x02:
+        return("Electricity");
+        break;
+    case 0x03:
+        return("Gas");
+        break;
+    case 0x04:
+        return("Heat");
+        break;
+    case 0x06:
+        return("Hot water");
+        break;
+    case 0x07:
+        return("Water");
+        break;
+    case 0x08:
+        return("Heat cost allocator");
+        break;
+    case 0x0A:
+        return("Cooling (outlet)");
+        break;
+    case 0x0B:
+        return("Cooling (inlet)");
+        break;
+    case 0x0C:
+        return("Heat (inlet)");
+        break;
+    case 0x0D:
+        return("Heat/Cooling combined");
+        break;
+    default:
+        break;
+    }
+    return("Unknown");
+}
+
+// Helper: translate status byte into human-readable text
+String statusByteToString(uint8_t status) {
+    String result = "";
+    if (status & 0x01) result += "Temperature sensor 1: cable broken; ";
+    if (status & 0x02) result += "Temperature sensor 1: short circuit; ";
+    if (status & 0x04) result += "Temperature sensor 2: cable broken; ";
+    if (status & 0x08) result += "Temperature sensor 2: short circuit; ";
+    if (status & 0x10) result += "Error in flow measurement system / coil error; ";
+    if (status & 0x20) result += "Electronics defective; ";
+    if (status & 0x40) result += "Reset; ";
+    if (status & 0x80) result += "Low battery; ";
+    if (result.length() == 0) result = "OK";
+    return result;
 }
 
 // Helper: convert BCD encoded bytes (e.g. for meter ID) into an integer.
@@ -28,76 +241,78 @@ unsigned long bcdToUInt(const uint8_t *data, int length) {
     return value;
 }
 
+void PrintHeaderInfo(MBusHeader &header)
+{
+    Serial.println("M-Bus Header");
+    Serial.println("-------------------------------------------");
+    Serial.println("Identification number: " + String(header.id));
+    Serial.println("Manufacturer: " + String(header.manufacturer.name) + " (" + String(header.manufacturer.code) + ")");
+    Serial.println("Meter version: " + String(header.version));
+    Serial.print("Medium: 0x");
+    Serial.print(header.medium, HEX);
+    Serial.println(" (" + String(mediumCodeToString(header.medium)) + ")");
+    Serial.println("Access number: " + String(header.accessNo));
+    Serial.print("Status: 0x");
+    Serial.print(header.status, HEX);
+    Serial.println(" => " + statusByteToString(header.status));
+    Serial.print("Signature: 0x");
+    Serial.println(header.signature, HEX);
+}
+
 void parseMBusFrame(const uint8_t *frame, int length) {
+    MBusHeader header = {0};
+    MBusData data = {0};
+
     if (length < 5) {
     Serial.println("Invalid frame (too short).");
         return;
     }
-    // Prüfen auf gültigen Start
+    // Check if the long frame identifiers can be found at the correct positions
     if (frame[0] != 0x68 || frame[3] != 0x68) {
     Serial.println("No valid M-Bus frame received.");
         return;
     }
-    uint8_t len = frame[1];      // Länge von C bis Ende Nutzdaten
+    uint8_t len = frame[1];      // Length from C to end of payload, the length must be repeated in the next byte
+    if (len != frame[2]) {
+        Serial.print("Length mismatch: ");
+        Serial.print(len);
+        Serial.print(" != ");
+        Serial.println(frame[2]);
+        return;
+    }
     uint8_t control = frame[4];  // Steuerbyte (C-Field)
     uint8_t address = frame[5];  // Adresse (A-Field)
     uint8_t CI = frame[6];       // CI-Field (Control Information)
     if (CI != 0x72) {
     Serial.print("Unexpected CI field: 0x");
         Serial.println(CI, HEX);
-        // Falls fester Datensatz (CI=0x73) oder andere, hier nicht implementiert.
     }
     // Read header (after CI follow ID, manufacturer, version, medium, access, status, optional signature)
     int index = 7;
-    uint32_t id = 0;
-    uint16_t manufacturer = 0;
-    uint8_t version = 0;
-    uint8_t medium = 0;
-    uint8_t accessNo = 0;
-    uint8_t status = 0;
-    uint16_t signature = 0;
+    
     if (len >= 3 + 9) {
         // 9 Bytes Header (ohne Signatur)
-        id = bcdToUInt(frame + index, 4);  // 4 Bytes ID (BCD)
+        header.id = bcdToUInt(frame + index, 4);  // 4 Bytes ID (BCD)
         index += 4;
-        manufacturer = frame[index] | (frame[index+1] << 8);
+        header.manufacturer = manufacturerInfoFromCode(frame[index] | (frame[index+1] << 8));
         index += 2;
-        version = frame[index++];
-        medium = frame[index++];
-        accessNo = frame[index++];
-        status = frame[index++];
+        header.version = frame[index++];
+        header.medium = frame[index++];
+        header.accessNo = frame[index++];
+        header.status = frame[index++];
         if (len >= 3 + 11) {
-            // 2 bytes signature present (e.g. for error code or similar)
-            signature = frame[index] | (frame[index+1] << 8);
+            header.signature = frame[index] | (frame[index+1] << 8);
             index += 2;
         }
     }
+    
     // Output header info
-    Serial.print("Manufacturer: ");
-    Serial.println(manufacturerCodeToString(manufacturer));
-    Serial.print("Medium: 0x");
-    Serial.print(medium, HEX);
-    Serial.print(" (");
-    switch (medium) {
-        case 0x02: Serial.print("Electricity"); break;
-        case 0x03: Serial.print("Gas"); break;
-        case 0x04: Serial.print("Heat"); break;
-        case 0x06: Serial.print("Hot water"); break;
-        case 0x07: Serial.print("Water"); break;
-        case 0x08: Serial.print("Heat cost allocator"); break;
-        case 0x0A: Serial.print("Cooling (outlet)"); break;
-        case 0x0B: Serial.print("Cooling (inlet)"); break;
-        case 0x0C: Serial.print("Heat (inlet)"); break;
-        case 0x0D: Serial.print("Heat/Cooling combined"); break;
-        default: Serial.print("Unknown"); break;
-    }
-    Serial.println(")");
-    if (status != 0) {
-        Serial.print("Status: 0x");
-        Serial.println(status, HEX);
-    }
-    // Parse records
-    bool idPrinted = false;
+    PrintHeaderInfo(header);
+
+    Serial.println();
+    Serial.println("M-Bus Data Records");
+    Serial.println("-------------------------------------------");
+    
     while (index < length - 2) {  // bis vor Prüfsummen-Byte und Endbyte
         uint8_t DIF = frame[index++];
         if (DIF == 0x00 || DIF == 0x0F) {
@@ -113,10 +328,10 @@ void parseMBusFrame(const uint8_t *frame, int length) {
             case 0x02: dataLen = 2; break;
             case 0x03: dataLen = 3; break;
             case 0x04: dataLen = 4; break;
-            case 0x05: dataLen = 4; /* 32-bit real (treated like int here) */ break;
+            case 0x05: dataLen = 4; break;
             case 0x06: dataLen = 6; break;
             case 0x07: dataLen = 8; break;
-            case 0x08: dataLen = 0; /* selection for readout, not relevant here */ break;
+            case 0x08: dataLen = 0; break;
             case 0x09: dataLen = 2; dataIsBCD = true; break;
             case 0x0A: dataLen = 4; dataIsBCD = true; break;
             case 0x0B: dataLen = 6; dataIsBCD = true; break;
@@ -152,6 +367,7 @@ void parseMBusFrame(const uint8_t *frame, int length) {
             }
             index += dataLen;
         }
+
     // Interpret record based on VIF
     if (VIF == 0x78) {  // device ID (manufacturer number)
             unsigned long idVal;
@@ -262,8 +478,10 @@ void parseMBusFrame(const uint8_t *frame, int length) {
         Serial.println();
     }
     // If the meter ID was not output as a record, output from header:
-    if (!idPrinted && id != 0) {
+    if (!idPrinted && header.id != 0) {
         Serial.print("Meter ID: ");
-        Serial.println(id);
+        Serial.println(header.id);
     }
 }
+
+

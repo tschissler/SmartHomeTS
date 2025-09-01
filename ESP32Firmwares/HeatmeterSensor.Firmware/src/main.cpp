@@ -115,7 +115,7 @@ void setup() {
   String ssid = wifiLib.getSSID();
   
   // Set up MQTT
-  String mqttClientID = "ESP32SMLSensorClient_" + chipID;
+  String mqttClientID = "ESP32HeatmeterSensorClient_" + chipID;
   mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT();
   

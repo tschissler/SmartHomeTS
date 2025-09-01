@@ -5,4 +5,6 @@
 
 void parseMBusFrame(const uint8_t *frame, int length);
 
+void PrintHeaderInfo(MBusHeader &header);
+
 #endif
