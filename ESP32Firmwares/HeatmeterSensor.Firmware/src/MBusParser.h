@@ -3,8 +3,11 @@
 
 #include <Arduino.h>
 
-void parseMBusFrame(const uint8_t *frame, int length);
+// Forward declaration of MBusHeader struct
+struct MBusHeader;
+struct ManufacturerInfo;
+struct ManufacturerCodeName;
 
-void PrintHeaderInfo(MBusHeader &header);
+void parseMBusFrame(const uint8_t *frame, int length);
 
 #endif
