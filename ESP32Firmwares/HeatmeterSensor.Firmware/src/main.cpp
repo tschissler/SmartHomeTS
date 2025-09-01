@@ -2,20 +2,20 @@
 #include "MBusComm.h"
 #include "MBusParser.h"
 
-const int IR_RX_PIN = D5;            // IR-Phototransistor Eingang
-const int IR_TX_PIN = D8;            // IR-LED Ausgang
-const uint8_t METER_ADDRESS = 0xFE;     // M-Bus Primäradresse (0 = Standard)
-const unsigned long READ_INTERVAL_MS = 10 * 60 * 1000;  // Leseintervall (z.B. 10 Minuten)
+const int IR_RX_PIN = D5;            // IR phototransistor input
+const int IR_TX_PIN = D8;            // IR LED output
+const uint8_t METER_ADDRESS = 0xFE;     // M-Bus primary address (0 = default)
+const unsigned long READ_INTERVAL_MS = 10 * 60 * 1000;  // Read interval (e.g. 10 minutes)
 unsigned long lastReadTime = -10000000;
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) { /* Warten bis USB Serial aktiv */ }
-  Serial.println("Initialisiere M-Bus Interface...");
+  while (!Serial) { }
+  Serial.println("Initializing M-Bus interface...");
   if (!MBusInit(IR_RX_PIN, IR_TX_PIN, 2400, true)) {
-      Serial.println("Fehler bei der Initialisierung der M-Bus Schnittstelle.");
+      Serial.println("Error initializing M-Bus interface.");
   } else {
-      Serial.println("M-Bus Interface bereit.");
+      Serial.println("M-Bus interface ready.");
   }
 }
 
@@ -23,26 +23,24 @@ void loop() {
   if (millis() - lastReadTime >= READ_INTERVAL_MS) {
     lastReadTime = millis();
     Serial.println();
-    Serial.println("Starte Zählerauslesung...");
-    // Wake-Up senden
+    Serial.println("Start reading meter data...");
+    // Sending signal to wake-up meter and waiting for acknowledging
     bool ack = MBusSendWakeUp(METER_ADDRESS);
 
     if (!ack) {
-      Serial.println("Zähler hat nicht auf Wake-Up geantwortet. Überprüfung der Verbindung/Adresse nötig.");
+      Serial.println("Meter did not respond to wake-up. Please check connection and/or address.");
       return;
     }
-    // Request senden und Antwort einlesen
+    // Sending request and reading response
     MBusSendRequest(METER_ADDRESS);
     uint8_t frameBuf[300];
     int frameLen = MBusReadResponse(frameBuf, sizeof(frameBuf));
     if (frameLen < 0) {
-      Serial.print("Fehler beim Lesen des Rahmens, Code ");
+      Serial.print("Error reading frame, code ");
       Serial.println(frameLen);
     } else {
-      // Frame parsen und Daten ausgeben
+      // Parsing frame and data output
       parseMBusFrame(frameBuf, frameLen);
     }
-    // Baudrate wieder auf 2400 setzen (falls zuvor auf 300 gewechselt)
-    MBusInit(IR_RX_PIN, IR_TX_PIN, 2400);
   }
 }

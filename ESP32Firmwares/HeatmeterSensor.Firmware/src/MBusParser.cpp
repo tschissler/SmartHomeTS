@@ -1,6 +1,6 @@
 #include "MBusParser.h"
 
-// Hilfsfunktion: Wandelt den 2-Byte Herstellercode (M-Bus) in einen 3-stelligen ASCII-Code um.
+// Helper: convert the 2-byte manufacturer code (M-Bus) into a 3-letter ASCII manufacturer ID.
 String manufacturerCodeToString(uint16_t manCode) {
     char letters[4];
     letters[0] = ((manCode >> 10) & 0x1F) + 'A' - 1;
@@ -10,7 +10,7 @@ String manufacturerCodeToString(uint16_t manCode) {
     return String(letters);
 }
 
-// Hilfsfunktion: Wandelt BCD-codierte Bytes (z.B. für Zähler-ID) in einen Integer um.
+// Helper: convert BCD encoded bytes (e.g. for meter ID) into an integer.
 unsigned long bcdToUInt(const uint8_t *data, int length) {
     unsigned long value = 0;
     unsigned long place = 1;
@@ -18,10 +18,10 @@ unsigned long bcdToUInt(const uint8_t *data, int length) {
         uint8_t byte = data[i];
         uint8_t lowNibble = byte & 0x0F;
         uint8_t highNibble = (byte >> 4) & 0x0F;
-        // niedrigwertige Ziffer
+    // lower digit
         value += lowNibble * place;
         place *= 10;
-        // höherwertige Ziffer
+    // higher digit
         value += highNibble * place;
         place *= 10;
     }
@@ -30,12 +30,12 @@ unsigned long bcdToUInt(const uint8_t *data, int length) {
 
 void parseMBusFrame(const uint8_t *frame, int length) {
     if (length < 5) {
-        Serial.println("Ungültiger Frame (zu kurz).");
+    Serial.println("Invalid frame (too short).");
         return;
     }
     // Prüfen auf gültigen Start
     if (frame[0] != 0x68 || frame[3] != 0x68) {
-        Serial.println("Kein gültiger M-Bus Rah­men empfangen.");
+    Serial.println("No valid M-Bus frame received.");
         return;
     }
     uint8_t len = frame[1];      // Länge von C bis Ende Nutzdaten
@@ -43,11 +43,11 @@ void parseMBusFrame(const uint8_t *frame, int length) {
     uint8_t address = frame[5];  // Adresse (A-Field)
     uint8_t CI = frame[6];       // CI-Field (Control Information)
     if (CI != 0x72) {
-        Serial.print("Unerwartetes CI-Field: 0x");
+    Serial.print("Unexpected CI field: 0x");
         Serial.println(CI, HEX);
         // Falls fester Datensatz (CI=0x73) oder andere, hier nicht implementiert.
     }
-    // Header auslesen (nach CI folgen ID, Hersteller, Version, Medium, Access, Status, ggf. Signatur)
+    // Read header (after CI follow ID, manufacturer, version, medium, access, status, optional signature)
     int index = 7;
     uint32_t id = 0;
     uint16_t manufacturer = 0;
@@ -67,41 +67,41 @@ void parseMBusFrame(const uint8_t *frame, int length) {
         accessNo = frame[index++];
         status = frame[index++];
         if (len >= 3 + 11) {
-            // 2 Byte Signatur vorhanden (z.B. für Fehlercode oder ähnliches)
+            // 2 bytes signature present (e.g. for error code or similar)
             signature = frame[index] | (frame[index+1] << 8);
             index += 2;
         }
     }
-    // Header-Infos ausgeben
-    Serial.print("Hersteller: ");
+    // Output header info
+    Serial.print("Manufacturer: ");
     Serial.println(manufacturerCodeToString(manufacturer));
     Serial.print("Medium: 0x");
     Serial.print(medium, HEX);
     Serial.print(" (");
     switch (medium) {
-        case 0x02: Serial.print("Elektrizität"); break;
+        case 0x02: Serial.print("Electricity"); break;
         case 0x03: Serial.print("Gas"); break;
-        case 0x04: Serial.print("Wärme"); break;
-        case 0x06: Serial.print("Warmwasser"); break;
-        case 0x07: Serial.print("Wasser"); break;
-        case 0x08: Serial.print("Heizkostenverteiler"); break;
-        case 0x0A: Serial.print("Kälte (Outlet)"); break;
-        case 0x0B: Serial.print("Kälte (Inlet)"); break;
-        case 0x0C: Serial.print("Wärme (Inlet)"); break;
-        case 0x0D: Serial.print("Wärme/Kälte komb."); break;
-        default: Serial.print("Unbekannt"); break;
+        case 0x04: Serial.print("Heat"); break;
+        case 0x06: Serial.print("Hot water"); break;
+        case 0x07: Serial.print("Water"); break;
+        case 0x08: Serial.print("Heat cost allocator"); break;
+        case 0x0A: Serial.print("Cooling (outlet)"); break;
+        case 0x0B: Serial.print("Cooling (inlet)"); break;
+        case 0x0C: Serial.print("Heat (inlet)"); break;
+        case 0x0D: Serial.print("Heat/Cooling combined"); break;
+        default: Serial.print("Unknown"); break;
     }
     Serial.println(")");
     if (status != 0) {
         Serial.print("Status: 0x");
         Serial.println(status, HEX);
     }
-    // Datensätze parsen
+    // Parse records
     bool idPrinted = false;
     while (index < length - 2) {  // bis vor Prüfsummen-Byte und Endbyte
         uint8_t DIF = frame[index++];
         if (DIF == 0x00 || DIF == 0x0F) {
-            // keine weiteren Daten (0x0F kann Füller bedeuten)
+            // no further data (0x0F may indicate filler)
             break;
         }
         uint8_t dataLen = 0;
@@ -113,38 +113,38 @@ void parseMBusFrame(const uint8_t *frame, int length) {
             case 0x02: dataLen = 2; break;
             case 0x03: dataLen = 3; break;
             case 0x04: dataLen = 4; break;
-            case 0x05: dataLen = 4; /* 32-bit Real (wird wie Int behandelt) */ break;
+            case 0x05: dataLen = 4; /* 32-bit real (treated like int here) */ break;
             case 0x06: dataLen = 6; break;
             case 0x07: dataLen = 8; break;
-            case 0x08: dataLen = 0; /* Auswahl für Aus­lese, hier nicht relevant */ break;
+            case 0x08: dataLen = 0; /* selection for readout, not relevant here */ break;
             case 0x09: dataLen = 2; dataIsBCD = true; break;
             case 0x0A: dataLen = 4; dataIsBCD = true; break;
             case 0x0B: dataLen = 6; dataIsBCD = true; break;
             case 0x0C: dataLen = 8; dataIsBCD = true; break;
             default: /* 0x0D-0x0F sind Sonderfälle, nicht behandelt */ break;
         }
-        // DIFE verarbeiten (Speichernummer/Tarif falls vorhanden)
+    // Process DIFE (storage number / tariff if present)
         uint8_t storageNo = 0;
         if (DIF & 0x80) {
             uint8_t DIFE = frame[index++];
             storageNo = DIFE & 0x0F;
-            // Wir ignorieren weitere DIFE-Bits (Tarif etc.) in diesem Beispiel
+            // Ignore further DIFE bits (tariff etc.) in this example
         }
-        // VIF auslesen (Value Information Field)
+    // Read VIF (Value Information Field)
         if (index >= length - 2) break;
         uint8_t VIF = frame[index++];
         uint8_t VIFE = 0;
         if (VIF == 0xFD || VIF == 0xFB) {
-            // Erweiterter VIF (z.B. Herstellerspezifisch oder Sonder)
+            // Extended VIF (e.g. manufacturer specific or special)
             if (index < length - 2) {
                 VIFE = frame[index++];
             }
         }
-        // Datenbytes lesen
+    // Read data bytes
         uint8_t dataBytes[8];
         if (dataLen > 0) {
             if (index + dataLen > length - 2) {
-                Serial.println("Datenbytes fehlen/ungenügend.");
+                Serial.println("Data bytes missing/insufficient.");
                 break;
             }
             for (uint8_t i = 0; i < dataLen; ++i) {
@@ -152,8 +152,8 @@ void parseMBusFrame(const uint8_t *frame, int length) {
             }
             index += dataLen;
         }
-        // Datensatz anhand VIF interpretieren
-        if (VIF == 0x78) {  // Geräte-ID (Herstellnr.)
+    // Interpret record based on VIF
+    if (VIF == 0x78) {  // device ID (manufacturer number)
             unsigned long idVal;
             if (dataIsBCD) {
                 idVal = bcdToUInt(dataBytes, dataLen / 2);
@@ -164,13 +164,13 @@ void parseMBusFrame(const uint8_t *frame, int length) {
                     idVal |= ((unsigned long)dataBytes[i] << (8 * i));
                 }
             }
-            Serial.print("Zähler-ID: ");
+            Serial.print("Meter ID: ");
             Serial.println(idVal);
             idPrinted = true;
             continue;
         }
         if (VIF == 0x06 || VIF == 0x0E || (VIF == 0x3D && VIFE == 0x86) || (VIF == 0xFB && VIFE == 0x0D)) {
-            // Energie (Wärme/Kälte)
+            // Energy (heat/cold)
             unsigned long raw = 0;
             for (int i = 0; i < dataLen; ++i) {
                 raw |= ((unsigned long)dataBytes[i] << (8 * i));
@@ -190,7 +190,7 @@ void parseMBusFrame(const uint8_t *frame, int length) {
                 value = raw * 0.001;  // in Gcal
                 unit = "Gcal";
             }
-            Serial.print("Wärmeenergie: ");
+            Serial.print("Thermal energy: ");
             Serial.print(value, 3);
             Serial.print(" ");
             Serial.println(unit);
@@ -202,58 +202,58 @@ void parseMBusFrame(const uint8_t *frame, int length) {
                 raw |= ((unsigned long)dataBytes[i] << (8 * i));
             }
             double value = raw * 0.001;  // m³
-            Serial.print("Volumen: ");
+            Serial.print("Volume: ");
             Serial.print(value, 3);
             Serial.println(" m³");
             continue;
         }
-        if (VIF == 0x3B) {  // Durchfluss (l/h)
+        if (VIF == 0x3B) {  // flow (l/h)
             unsigned long raw = 0;
             for (int i = 0; i < dataLen; ++i) {
                 raw |= ((unsigned long)dataBytes[i] << (8 * i));
             }
-            Serial.print("Durchfluss: ");
+            Serial.print("Flow: ");
             Serial.print(raw);
             Serial.println(" l/h");
             continue;
         }
-        if (VIF == 0x5B || VIF == 0x5F) {  // Temperatur (°C)
+        if (VIF == 0x5B || VIF == 0x5F) {  // temperature (°C)
             int16_t raw = 0;
             for (int i = 0; i < dataLen; ++i) {
                 raw |= ((uint16_t)dataBytes[i] << (8 * i));
             }
-            String label = (VIF == 0x5B ? "Vorlauf-Temp." : "Rücklauf-Temp.");
+            String label = (VIF == 0x5B ? "Flow temp." : "Return temp.");
             Serial.print(label + ": ");
             Serial.print(raw);
             Serial.println(" °C");
             continue;
         }
-        if (VIF == 0x61) {  // Temperaturdifferenz (0,01°C)
+        if (VIF == 0x61) {  // temperature difference (0.01°C)
             int16_t raw = 0;
             for (int i = 0; i < dataLen; ++i) {
                 raw |= ((uint16_t)dataBytes[i] << (8 * i));
             }
             double value = raw * 0.01;
-            Serial.print("Temp.-Differenz: ");
+            Serial.print("Temp. difference: ");
             Serial.print(value, 2);
             Serial.println(" °C");
             continue;
         }
-        if (VIF == 0x23) {  // Betriebszeit in Tagen
+        if (VIF == 0x23) {  // operating time in days
             uint16_t raw = dataBytes[0] | (dataBytes[1] << 8);
-            Serial.print("Betriebstage: ");
+            Serial.print("Operating days: ");
             Serial.print(raw);
-            Serial.println(" Tage");
+            Serial.println(" days");
             continue;
         }
-        // Unbekannten Datensatz anzeigen (Hex-Werte)
-        Serial.print("Unbekannt VIF 0x");
+        // Show unknown record (hex values)
+        Serial.print("Unknown VIF 0x");
         Serial.print(VIF, HEX);
         if (VIFE != 0) {
             Serial.print(" VIFE 0x");
             Serial.print(VIFE, HEX);
         }
-        Serial.print(" Daten: ");
+        Serial.print(" Data: ");
         for (int i = 0; i < dataLen; ++i) {
             if (dataBytes[i] < 0x10) Serial.print("0");
             Serial.print(dataBytes[i], HEX);
@@ -261,9 +261,9 @@ void parseMBusFrame(const uint8_t *frame, int length) {
         }
         Serial.println();
     }
-    // Falls die Zähler-ID nicht als Datensatz ausgegeben wurde, aus dem Header ausgeben:
+    // If the meter ID was not output as a record, output from header:
     if (!idPrinted && id != 0) {
-        Serial.print("Zähler-ID: ");
+        Serial.print("Meter ID: ");
         Serial.println(id);
     }
 }
