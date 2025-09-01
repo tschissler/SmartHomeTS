@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "MBusComm.h"
 #include "MBusParser.h"
+#include <ArduinoJson.h>
 
 #include <ESP32Ping.h>
 #include <esp_mac.h> 
@@ -18,7 +19,7 @@ WifiLib wifiLib(WIFI_PASSWORDS);
 
 WiFiClient wifiClient;
 WiFiUDP ntpUDP;
-std::unique_ptr<MQTTClientLib> mqttClientLib = nullptr;
+std::unique_ptr<MQTTClientLib> mqttClient = nullptr;
 
 // M-Bus communication and parser instances
 MBusComm mbusComm;
@@ -36,15 +37,19 @@ const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/HeatMeter";
 static String mqtt_ConfigTopic = "config/HeatMeter/Sensorname/";
 
+enum SystemStatus { HEALTHY, TRANSMITTING, NO_METER_RESPONSE, NO_WIFI, NO_MQTT, OTA_IN_PROGRESS };
 const int IR_RX_PIN = D5;            // IR phototransistor input
 const int IR_TX_PIN = D8;            // IR LED output
-const int RED_LED_PIN = D3;         
-const int GREEN_LED_PIN = D4;
-const int BLUE_LED_PIN = D6;
+const int RED_LED_PIN = D7;         
+const int GREEN_LED_PIN = D9;
+const int BLUE_LED_PIN = D10;
 const uint8_t METER_ADDRESS = 0xFE;     // M-Bus primary address (0 = default)
 const unsigned long READ_INTERVAL_MS = 10 * 60 * 1000;  // Read interval (e.g. 10 minutes)
 unsigned long lastReadTime = -10000000;
+const unsigned long LED_BLINK_INTERVAL_MS = 3 * 1000;
+unsigned long lastBlinkTime = 0;
 RGBLED led = RGBLED(RED_LED_PIN, GREEN_LED_PIN, BLUE_LED_PIN);
+SystemStatus state = NO_WIFI;
 
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
@@ -93,7 +98,7 @@ void connectToMQTT() {
     Serial.println("WiFi not connected, trying to reconnect...");
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
+  mqttClient->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
 }
 
@@ -189,11 +194,60 @@ void printMBusData(const MBusData &data) {
     Serial.println("Current Date and Time: " + String((data.currentDateAndTime.day)) + "/" + String((data.currentDateAndTime.month)) + "/" + String((data.currentDateAndTime.year)) + " " + String((data.currentDateAndTime.hour)) + ":" + String((data.currentDateAndTime.minute)));
 }
 
+void publishMBusData(MBusHeader header, MBusData data) {
+    JsonDocument doc;
+    doc["status"] = header.status;
+    doc["status_text"] = MBusParser::statusByteToString(header.status);
+    doc["totalHeatEnergy"] = data.totalHeatEnergy.value;
+    doc["totalHeatEnergy_text"] = String(data.totalHeatEnergy.value) + " " + data.totalHeatEnergy.unit;
+    doc["totalVolume"] = data.totalVolume.value;
+    doc["totalVolume_text"] = String(data.totalVolume.value) + " " + data.totalVolume.unit;
+    doc["power"] = data.powerCurrentValue.value;
+    doc["power_text"] = String(data.powerCurrentValue.value) + " " + data.powerCurrentValue.unit;
+    doc["powerMaximum"] = data.powerMaximumValue.value;
+    doc["powerMaximum_text"] = String(data.powerMaximumValue.value) + " " + data.powerMaximumValue.unit;
+    doc["flow"] = data.flowCurrentValue.value;
+    doc["flow_text"] = String(data.flowCurrentValue.value) + " " + data.flowCurrentValue.unit;
+    doc["flowMaximum"] = data.flowMaximumValue.value;
+    doc["flowMaximum_text"] = String(data.flowMaximumValue.value) + " " + data.flowMaximumValue.unit;
+    doc["forwardFlowTemperature"] = data.forwardFlowTemperature.value;
+    doc["forwardFlowTemperature_text"] = String(data.forwardFlowTemperature.value) + " " + data.forwardFlowTemperature.unit;
+    doc["returnFlowTemperature"] = data.returnFlowTemperature.value;
+    doc["returnFlowTemperature_text"] = String(data.returnFlowTemperature.value) + " " + data.returnFlowTemperature.unit;
+    doc["temperatureDifference"] = data.temperatureDifference.value;
+    doc["temperatureDifference_text"] = String(data.temperatureDifference.value) + " " + data.temperatureDifference.unit;
+    doc["daysInOperation"] = data.daysInOperation.value;
+    doc["daysInOperation_text"] = String(data.daysInOperation.value) + " " + data.daysInOperation.unit;
+    doc["currentDateAndTime"] = String((data.currentDateAndTime.day)) + "/" + String((data.currentDateAndTime.month)) + "/" + String((data.currentDateAndTime.year)) + " " + String((data.currentDateAndTime.hour)) + ":" + String((data.currentDateAndTime.minute));
+
+    char jsonBuffer[256];
+    serializeJson(doc, jsonBuffer);
+
+    mqttClient->publish(baseTopic + "/" + location, jsonBuffer, true, 2);
+}
+
+void blinkStatus()
+{
+  if (state == SystemStatus::HEALTHY) {
+    led.blink(GREEN, 200, 1, 8);
+  } else if (state == SystemStatus::NO_METER_RESPONSE) {
+    led.blink(RED, 200, 2, 255);
+  } else if (state == SystemStatus::NO_WIFI) {
+    led.blink(RED, 200, 3, 255);
+  } else if (state == SystemStatus::NO_MQTT) {
+    led.blink(RED, 200, 4, 255);
+  } else if (state == SystemStatus::OTA_IN_PROGRESS) {
+    led.blink(YELLOW, 100, 1, 255);
+  } else if (state == SystemStatus::TRANSMITTING) {
+    led.blink(BLUE, 200, 2, 255);
+  }
+}
+
 void setup() {
   Serial.begin(115200);
-  led.blink(RED, 500, 2);
-  led.blink(GREEN, 500, 2);
-  led.blink(BLUE, 500, 2);
+  led.blink(RED, 200, 2);
+  led.blink(GREEN, 200, 2);
+  led.blink(BLUE, 200, 2);
   Serial.print("Heatmeter Sensor Version:");
   Serial.println(version);
   Serial.println("-------------------------------------------------------");
@@ -220,7 +274,7 @@ void setup() {
   
   // Set up MQTT
   String mqttClientID = "ESP32HeatmeterSensorClient_" + chipID;
-  mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  mqttClient = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT();
   
   // Print the IP address
@@ -233,18 +287,27 @@ void setup() {
   } else {
       Serial.println("M-Bus interface ready.");
   }
-  mqttClientLib->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+  mqttClient->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+  state = SystemStatus::HEALTHY;
 }
 
 void loop() {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
-  if (otaInProgress) { delay (500); return; }
+  if (otaInProgress) { state = SystemStatus::OTA_IN_PROGRESS; delay (500); return; }
+  else if (state == SystemStatus::OTA_IN_PROGRESS) { state = SystemStatus::HEALTHY; }
 
-  if(!mqttClientLib->loop())
+  if(!mqttClient->loop())
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
     }
+
+  if (millis() - lastBlinkTime >= LED_BLINK_INTERVAL_MS) {
+    lastBlinkTime = millis();
+    blinkStatus();
+    if (state == SystemStatus::TRANSMITTING)
+      state = SystemStatus::HEALTHY;
+  }
 
   if (millis() - lastReadTime >= READ_INTERVAL_MS) {
     lastReadTime = millis();
@@ -255,6 +318,7 @@ void loop() {
 
     if (!ack) {
       Serial.println("Meter did not respond to wake-up. Please check connection and/or address.");
+      state = SystemStatus::NO_METER_RESPONSE;
       return;
     }
     // Sending request and reading response
@@ -264,12 +328,16 @@ void loop() {
     if (frameLen < 0) {
       Serial.print("Error reading frame, code ");
       Serial.println(frameLen);
+      state = SystemStatus::NO_METER_RESPONSE;
     } else {
       // Parsing frame and data output
       MBusParser::debug = true;
       MBusParsingResult result = MBusParser::parseMBusFrame(frameBuf, frameLen);
       printMBusHeaderInfo(result.header);
       printMBusData(result.data);
+
+      publishMBusData(result.header, result.data);
+      state = SystemStatus::TRANSMITTING;
     }
   }
 }

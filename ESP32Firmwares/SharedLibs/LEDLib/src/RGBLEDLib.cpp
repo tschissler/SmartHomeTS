@@ -35,11 +35,7 @@ void RGBLED::blink(Color color, int waitTime, int repetitions, int brightness) {
         turnOn(color, brightness);
         delay(waitTime);
         turnOff();
-        
-        // Don't delay after the last blink
-        if (i < repetitions - 1) {
-            delay(waitTime);
-        }
+        delay(waitTime);
     }
 }
 
