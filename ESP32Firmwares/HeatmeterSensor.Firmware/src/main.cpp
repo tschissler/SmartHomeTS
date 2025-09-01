@@ -199,29 +199,29 @@ void publishMBusData(MBusHeader header, MBusData data) {
     doc["status"] = header.status;
     doc["status_text"] = MBusParser::statusByteToString(header.status);
     doc["totalHeatEnergy"] = data.totalHeatEnergy.value;
-    doc["totalHeatEnergy_text"] = String(data.totalHeatEnergy.value) + " " + data.totalHeatEnergy.unit;
+    doc["totalHeatEnergy_unit"] = data.totalHeatEnergy.unit;
     doc["totalVolume"] = data.totalVolume.value;
-    doc["totalVolume_text"] = String(data.totalVolume.value) + " " + data.totalVolume.unit;
+    doc["totalVolume_unit"] = data.totalVolume.unit;
     doc["power"] = data.powerCurrentValue.value;
-    doc["power_text"] = String(data.powerCurrentValue.value) + " " + data.powerCurrentValue.unit;
+    doc["power_unit"] = data.powerCurrentValue.unit;
     doc["powerMaximum"] = data.powerMaximumValue.value;
-    doc["powerMaximum_text"] = String(data.powerMaximumValue.value) + " " + data.powerMaximumValue.unit;
+    doc["powerMaximum_unit"] = data.powerMaximumValue.unit;
     doc["flow"] = data.flowCurrentValue.value;
-    doc["flow_text"] = String(data.flowCurrentValue.value) + " " + data.flowCurrentValue.unit;
+    doc["flow_unit"] = data.flowCurrentValue.unit;
     doc["flowMaximum"] = data.flowMaximumValue.value;
-    doc["flowMaximum_text"] = String(data.flowMaximumValue.value) + " " + data.flowMaximumValue.unit;
+    doc["flowMaximum_unit"] = data.flowMaximumValue.unit;
     doc["forwardFlowTemperature"] = data.forwardFlowTemperature.value;
-    doc["forwardFlowTemperature_text"] = String(data.forwardFlowTemperature.value) + " " + data.forwardFlowTemperature.unit;
+    doc["forwardFlowTemperature_unit"] = data.forwardFlowTemperature.unit;
     doc["returnFlowTemperature"] = data.returnFlowTemperature.value;
-    doc["returnFlowTemperature_text"] = String(data.returnFlowTemperature.value) + " " + data.returnFlowTemperature.unit;
+    doc["returnFlowTemperature_unit"] = data.returnFlowTemperature.unit;
     doc["temperatureDifference"] = data.temperatureDifference.value;
-    doc["temperatureDifference_text"] = String(data.temperatureDifference.value) + " " + data.temperatureDifference.unit;
+    doc["temperatureDifference_unit"] = data.temperatureDifference.unit;
     doc["daysInOperation"] = data.daysInOperation.value;
-    doc["daysInOperation_text"] = String(data.daysInOperation.value) + " " + data.daysInOperation.unit;
+    doc["daysInOperation_unit"] = data.daysInOperation.unit;
     doc["currentDateAndTime"] = String((data.currentDateAndTime.day)) + "/" + String((data.currentDateAndTime.month)) + "/" + String((data.currentDateAndTime.year)) + " " + String((data.currentDateAndTime.hour)) + ":" + String((data.currentDateAndTime.minute));
 
-    char jsonBuffer[256];
-    serializeJson(doc, jsonBuffer);
+    char jsonBuffer[512]; 
+    serializeJson(doc, jsonBuffer, doc.size());
 
     mqttClient->publish(baseTopic + "/" + location, jsonBuffer, true, 2);
 }
