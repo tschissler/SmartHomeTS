@@ -88,3 +88,13 @@ int AzureOTAUpdater::CheckUpdateStatus()
     return 0;
 }
 
+String AzureOTAUpdater::ExtractVersionFromUrl(String url) {
+    int lastUnderscoreIndex = url.lastIndexOf('_');
+    int lastDotIndex = url.lastIndexOf('.');
+
+    if (lastUnderscoreIndex != -1 && lastDotIndex != -1 && lastDotIndex > lastUnderscoreIndex) {
+        return url.substring(lastUnderscoreIndex + 1, lastDotIndex);
+    }
+
+    return ""; // Return empty string if the pattern is not found
+}
