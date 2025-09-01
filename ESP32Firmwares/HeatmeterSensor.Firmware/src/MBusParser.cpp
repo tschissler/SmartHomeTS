@@ -7,200 +7,6 @@
 // Global debug variable definition
 bool debug = false;
 
-// Struct to hold manufacturer info
-struct ManufacturerInfo {
-    String code;
-    String name;
-};
-
-// Struct to hold M-Bus header data
-struct MBusHeader {
-    String id;
-    ManufacturerInfo manufacturer;
-    uint8_t version;
-    uint8_t medium;
-    uint8_t accessNo;
-    uint8_t status;
-    uint16_t signature;
-};
-
-struct MBusDoubleValue {
-    double value;
-    String unit;
-    bool hasValue;
-    
-    MBusDoubleValue() : value(0.0), unit(""), hasValue(false) {}
-    MBusDoubleValue(double v, const String& u) : value(v), unit(u), hasValue(true) {}
-};
-
-struct MBusIntValue {
-    int32_t value;
-    String unit;
-    bool hasValue;
-    
-    MBusIntValue() : value(0), unit(""), hasValue(false) {}
-    MBusIntValue(int32_t v, const String& u) : value(v), unit(u), hasValue(true) {}
-};
-
-struct MBusDateTime {
-  int16_t year;    // e.g., 2025
-  uint8_t month;   // 1..12
-  uint8_t day;     // 1..31
-  uint8_t hour;    // 0..23
-  uint8_t minute;  // 0..59  (63 may be sentinel in some frames)
-  bool summer_time; // SU bit
-  bool invalid;     // IV bit
-};
-
-struct MBusData {
-    String deviceId;
-    MBusDoubleValue totalHeatEnergy;
-    MBusDoubleValue currentValue;
-    MBusDoubleValue heatmeterHeat;
-    MBusDoubleValue heatCoolingmeterHeat;
-    MBusDoubleValue totalVolume;
-    MBusDoubleValue powerCurrentValue;
-    MBusDoubleValue powerMaximumValue;
-    MBusIntValue flowCurrentValue;
-    MBusIntValue flowMaximumValue;
-    MBusIntValue forwardFlowTemperature;
-    MBusIntValue returnFlowTemperature;
-    MBusDoubleValue temperatureDifference;
-    MBusIntValue daysInOperation;
-    MBusDateTime currentDateAndTime;
-    String status;
-};
-
-// Helper: convert the 2-byte manufacturer code (M-Bus) into a 3-letter ASCII manufacturer ID and name.
-struct ManufacturerCodeName {
-    const char* code;
-    const char* name;
-};
-
-static const ManufacturerCodeName manufacturerTable[] = {
-    // Source: https://www.m-bus.de/man.html
-
-    {"ABB", "ABB AB, P.O. Box 1005, SE-61129 Nyköping, Nyköping,Sweden"},
-    {"ACE", "Actaris (Elektrizität)"},
-    {"ACG", "Actaris (Gas)"},
-    {"ACW", "Actaris (Wasser und Wärme)"},
-    {"AEG", "AEG"},
-    {"AEL", "Kohler, Türkei"},
-    {"AEM", "S.C. AEM S.A. Romania"},
-    {"AMP", "Ampy Automation Digilog Ltd"},
-    {"AMT", "Aquametro"},
-    {"APS", "Apsis Kontrol Sistemleri, Türkei"},
-    {"BEC", "Berg Energiekontrollsysteme GmbH"},
-    {"BER", "Bernina Electronic AG"},
-    {"BSE", "Basari Elektronik A.S., Türkei"},
-    {"BST", "BESTAS Elektronik Optik, Türkei"},
-    {"CBI", "Circuit Breaker Industries, Südafrika"},
-    {"CLO", "Clorius Raab Karcher Energie Service A/S"},
-    {"CON", "Conlog"},
-    {"CZM", "Cazzaniga S.p.A."},
-    {"DAN", "Danubia"},
-    {"DFS", "Danfoss A/S"},
-    {"DME", "DIEHL Metering, Industriestrasse 13, 91522 Ansbach, Germany"},
-    {"DZG", "Deutsche Zählergesellschaft"},
-    {"DWZ", "Lorenz GmbH & Co.KG"},
-    {"EDM", "EDMI Pty.Ltd."},
-    {"EFE", "Engelmann Sensor GmbH"},
-    {"EKT", "PA KVANT J.S., Russland"},
-    {"ELM", "Elektromed Elektronik Ltd, Türkei"},
-    {"ELS", "ELSTER Produktion GmbH"},
-    {"EMH", "EMH Elektrizitätszähler GmbH & CO KG"},
-    {"EMU", "EMU Elektronik AG"},
-    {"EMO", "Enermet"},
-    {"END", "ENDYS GmbH"},
-    {"ENP", "Kiev Polytechnical Scientific Research"},
-    {"ENT", "ENTES Elektronik, Türkei"},
-    {"ERL", "Erelsan Elektrik ve Elektronik, Türkei"},
-    {"ESM", "Starion Elektrik ve Elektronik, Türkei"},
-    {"EUR", "Eurometers Ltd"},
-    {"EWT", "Elin Wasserwerkstechnik"},
-    {"FED", "Federal Elektrik, Türkei"},
-    {"FML", "Siemens Measurements Ltd.( Formerly FML Ltd.)"},
-    {"GBJ", "Grundfoss A/S"},
-    {"GEC", "GEC Meters Ltd."},
-    {"GSP", "Ingenieurbuero Gasperowicz"},
-    {"GWF", "Gas- u. Wassermessfabrik Luzern"},
-    {"HEG", "Hamburger Elektronik Gesellschaft"},
-    {"HEL", "Heliowatt"},
-    {"HRZ", "HERZ Messtechnik GmbH"},
-    {"HTC", "Horstmann Timers and Controls Ltd."},
-    {"HYD", "Hydrometer GmbH"},
-    {"ICM", "Intracom, Griechenland"},
-    {"IDE", "IMIT S.p.A."},
-    {"INV", "Invensys Metering Systems AG"},
-    {"ISK", "Iskraemeco, Slovenia"},
-    {"IST", "ista SE"},
-    {"ITR", "Itron"},
-    {"IWK", "IWK Regler und Kompensatoren GmbH"},
-    {"KAM", "Kamstrup Energie A/S"},
-    {"KHL", "Kohler, Türkei"},
-    {"KKE", "KK-Electronic A/S"},
-    {"KNX", "KONNEX-based users (Siemens Regensburg)"},
-    {"KRO", "Kromschröder"},
-    {"KST", "Kundo SystemTechnik GmbH"},
-    {"LEM", "LEM HEME Ltd., UK"},
-    {"LGB", "Landis & Gyr Energy Management (UK) Ltd."},
-    {"LGD", "Landis & Gyr Deutschland"},
-    {"LGZ", "Landis & Gyr Zug"},
-    {"LHA", "Atlantic Meters, Südafrika"},
-    {"LML", "LUMEL, Polen"},
-    {"LSE", "Landis & Staefa electronic"},
-    {"LSP", "Landis & Staefa production"},
-    {"LUG", "Landis & Staefa"},
-    {"LSZ", "Siemens Building Technologies"},
-    {"MAD", "Maddalena S.r.I., Italien"},
-    {"MEI", "H. Meinecke AG (jetzt Invensys Metering Systems AG)"},
-    {"MKS", "MAK-SAY Elektrik Elektronik, Türkei"},
-    {"MNS", "MANAS Elektronik, Türkei"},
-    {"MPS", "Multiprocessor Systems Ltd, Bulgarien"},
-    {"MTC", "Metering Technology Corporation, USA"},
-    {"NIS", "Nisko Industries Israel"},
-    {"NMS", "Nisko Advanced Metering Solutions Israel"},
-    {"NRM", "Norm Elektronik, Türkei"},
-    {"ONR", "ONUR Elektroteknik, Türkei"},
-    {"PAD", "PadMess GmbH"},
-    {"PMG", "Spanner-Pollux GmbH (jetzt Invensys Metering Systems AG)"},
-    {"PRI", "Polymeters Response International Ltd."},
-    {"RAS", "Hydrometer GmbH"},
-    {"REL", "Relay GmbH"},
-    {"RKE", "ista SE"},
-    {"SAP", "Sappel"},
-    {"SCH", "Schnitzel GmbH"},
-    {"SEN", "Sensus GmbH"},
-    {"SMC", " "},
-    {"SME", "Siame, Tunesien"},
-    {"SML", "Siemens Measurements Ltd."},
-    {"SIE", "Siemens AG"},
-    {"SLB", "Schlumberger Industries Ltd."},
-    {"SON", "Sontex SA"},
-    {"SOF", "softflow.de GmbH"},
-    {"SPL", "Sappel"},
-    {"SPX", "Spanner Pollux GmbH (jetzt Invensys Metering Systems AG)"},
-    {"SVM", "AB Svensk Värmemätning SVM"},
-    {"TCH", "Techem Service AG"},
-    {"TIP", "TIP Thüringer Industrie Produkte GmbH"},
-    {"UAG", "Uher"},
-    {"UGI", "United Gas Industries"},
-    {"VES", "ista SE"},
-    {"VPI", "Van Putten Instruments B.V."},
-    {"WMO", "Westermo Teleindustri AB, Schweden"},
-    {"YTE", "Yuksek Teknoloji, Türkei"},
-    {"ZAG", "Zellwerg Uster AG"},
-    {"ZAP", "Zaptronix"},
-    {"ZIV", "ZIV Aplicaciones y Tecnologia, S.A."},
-};
-
-// List of VIFs that have VIFE (Value Information Field Extension)
-static const uint8_t VIFs_WITH_VIFE[] = {
-    0x86,  // Extended VIF for MMBTU
-    0xFB,  // Extended VIF for Gcal
-    0xFD,  // Extended VIF for Error code, Device type, Pulse Counter
-};
-
 // Helper function to check if a VIF has a VIFE
 static bool vifHasVife(uint8_t vif) {
     for (size_t i = 0; i < sizeof(VIFs_WITH_VIFE); ++i) {
@@ -229,7 +35,7 @@ ManufacturerInfo manufacturerInfoFromCode(uint16_t manCode) {
 }
 
 // Helper: convert medium code (M-Bus) into a human-readable string.
-String mediumCodeToString(uint8_t medium)
+String MediumCodeToString(uint8_t medium)
 {
     switch (medium)
     {
@@ -270,7 +76,7 @@ String mediumCodeToString(uint8_t medium)
 }
 
 // Helper: translate status byte into human-readable text
-String statusByteToString(uint8_t status) {
+String StatusByteToString(uint8_t status) {
     String result = "";
     if (status & 0x01) result += "Temperature sensor 1: cable broken; ";
     if (status & 0x02) result += "Temperature sensor 1: short circuit; ";
@@ -402,24 +208,6 @@ bool DecodeTypeG(const uint8_t* d, MBusDate& date) {
   return ok;
 }
 
-void printHeaderInfo(MBusHeader &header)
-{
-    Serial.println("M-Bus Header");
-    Serial.println("-------------------------------------------");
-    Serial.println("Identification number: " + String(header.id));
-    Serial.println("Manufacturer: " + String(header.manufacturer.name) + " (" + String(header.manufacturer.code) + ")");
-    Serial.println("Meter version: " + String(header.version));
-    Serial.print("Medium: 0x");
-    Serial.print(header.medium, HEX);
-    Serial.println(" (" + String(mediumCodeToString(header.medium)) + ")");
-    Serial.println("Access number: " + String(header.accessNo));
-    Serial.print("Status: 0x");
-    Serial.print(header.status, HEX);
-    Serial.println(" => " + statusByteToString(header.status));
-    Serial.print("Signature: 0x");
-    Serial.println(header.signature, HEX);
-}
-
 // Private helper function to parse M-Bus header information
 static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index) {
     MBusHeader header = {};
@@ -518,7 +306,7 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
         switch (DIF) {
             case 0x01 : { // Error code
                 if (VIF == 0xFD && VIFE == 0x17) {
-                    data.status = statusByteToString(DecodeTypeD(dataBytes, 1));
+                    data.status = StatusByteToString(DecodeTypeD(dataBytes, 1));
                 }
                 else
                     if (debug)
@@ -668,97 +456,22 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
     return data;
 }
 
-void printMBusData(const MBusData &data) {
-    Serial.println();
-    Serial.println("M-Bus Data Records");
-    Serial.println("-------------------------------------------");
-    Serial.println("Device ID: " + data.deviceId);
-    
-    if (data.totalHeatEnergy.hasValue)
-        Serial.println("Total Heat Energy : " + String(data.totalHeatEnergy.value) + " " + data.totalHeatEnergy.unit);
-    else
-        Serial.println("Total Heat Energy : Not set");
-        
-    if (data.currentValue.hasValue)
-        Serial.println("Current Value : " + String(data.currentValue.value) + " " + data.currentValue.unit);
-    else
-        Serial.println("Current Value : Not set");
-        
-    if (data.heatmeterHeat.hasValue)
-        Serial.println("Heatmeter Heat : " + String(data.heatmeterHeat.value) + " " + data.heatmeterHeat.unit);
-    else
-        Serial.println("Heatmeter Heat : Not set");
-        
-    if (data.heatCoolingmeterHeat.hasValue)
-        Serial.println("Heat/Coolingmeter Heat : " + String(data.heatCoolingmeterHeat.value) + " " + data.heatCoolingmeterHeat.unit);
-    else
-        Serial.println("Heat/Coolingmeter Heat : Not set");
-        
-    if (data.totalVolume.hasValue)
-        Serial.println("Total Volume : " + String(data.totalVolume.value) + " " + data.totalVolume.unit);
-    else
-        Serial.println("Total Volume : Not set");
-        
-    if (data.powerCurrentValue.hasValue)
-        Serial.println("Power - Current : " + String(data.powerCurrentValue.value) + " " + data.powerCurrentValue.unit);
-    else
-        Serial.println("Power - Current : Not set");
-        
-    if (data.powerMaximumValue.hasValue)
-        Serial.println("      - Maximum : " + String(data.powerMaximumValue.value) + " " + data.powerMaximumValue.unit);
-    else
-        Serial.println("      - Maximum : Not set");
-        
-    if (data.flowCurrentValue.hasValue)
-        Serial.println("Flow - Current : " + String(data.flowCurrentValue.value) + " " + data.flowCurrentValue.unit);
-    else
-        Serial.println("Flow - Current : Not set");
-        
-    if (data.flowMaximumValue.hasValue)
-        Serial.println("     - Maximum : " + String(data.flowMaximumValue.value) + " " + data.flowMaximumValue.unit);
-    else
-        Serial.println("     - Maximum : Not set");
-        
-    if (data.forwardFlowTemperature.hasValue)
-        Serial.println("Forward Flow Temperature : " + String(data.forwardFlowTemperature.value) + " " + data.forwardFlowTemperature.unit);
-    else
-        Serial.println("Forward Flow Temperature : Not set");
-        
-    if (data.returnFlowTemperature.hasValue)
-        Serial.println("Return Flow Temperature : " + String(data.returnFlowTemperature.value) + " " + data.returnFlowTemperature.unit);
-    else
-        Serial.println("Return Flow Temperature : Not set");
-        
-    if (data.temperatureDifference.hasValue)
-        Serial.println("Temperature Difference : " + String(data.temperatureDifference.value) + " " + data.temperatureDifference.unit);
-    else
-        Serial.println("Temperature Difference : Not set");
-        
-    if (data.daysInOperation.hasValue)
-        Serial.println("Days in operation: " + String(data.daysInOperation.value) + " " + data.daysInOperation.unit);
-    else
-        Serial.println("Days in operation: Not set");
-        
-    Serial.println("Current Date and Time: " + String((data.currentDateAndTime.day)) + "/" + String((data.currentDateAndTime.month)) + "/" + String((data.currentDateAndTime.year)) + " " + String((data.currentDateAndTime.hour)) + ":" + String((data.currentDateAndTime.minute)));
-}
-
-void parseMBusFrame(const uint8_t *frame, int length) {
+MBusParsingResult parseMBusFrame(const uint8_t *frame, int length) {
     if (length < 5) {
     Serial.println("Invalid frame (too short).");
-        return;
+        return {};
     }
     // Check if the long frame identifiers can be found at the correct positions
     if (frame[0] != 0x68 || frame[3] != 0x68) {
     Serial.println("No valid M-Bus frame received.");
-        return;
+        return {};
     }
 
     int index = 7;
     MBusHeader header = parseHeaderInfo(frame, length, index);
-    printHeaderInfo(header);
-
     MBusData data = parseMBusData(frame, length, index);
-    printMBusData(data);
+
+    return MBusParsingResult{ header, data };
 }
 
 

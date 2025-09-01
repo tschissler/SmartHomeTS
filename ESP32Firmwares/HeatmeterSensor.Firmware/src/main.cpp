@@ -88,6 +88,98 @@ void connectToMQTT() {
   Serial.println("MQTT Client is connected");
 }
 
+void printMBusHeaderInfo(MBusHeader &header)
+{
+    Serial.println("M-Bus Header");
+    Serial.println("-------------------------------------------");
+    Serial.println("Identification number: " + String(header.id));
+    Serial.println("Manufacturer: " + String(header.manufacturer.name) + " (" + String(header.manufacturer.code) + ")");
+    Serial.println("Meter version: " + String(header.version));
+    Serial.print("Medium: 0x");
+    Serial.print(header.medium, HEX);
+    Serial.println(" (" + String(MediumCodeToString(header.medium)) + ")");
+    Serial.println("Access number: " + String(header.accessNo));
+    Serial.print("Status: 0x");
+    Serial.print(header.status, HEX);
+    Serial.println(" => " + StatusByteToString(header.status));
+    Serial.print("Signature: 0x");
+    Serial.println(header.signature, HEX);
+}
+
+void printMBusData(const MBusData &data) {
+    Serial.println();
+    Serial.println("M-Bus Data Records");
+    Serial.println("-------------------------------------------");
+    Serial.println("Device ID: " + data.deviceId);
+    
+    if (data.totalHeatEnergy.hasValue)
+        Serial.println("Total Heat Energy : " + String(data.totalHeatEnergy.value) + " " + data.totalHeatEnergy.unit);
+    else
+        Serial.println("Total Heat Energy : Not set");
+        
+    if (data.currentValue.hasValue)
+        Serial.println("Current Value : " + String(data.currentValue.value) + " " + data.currentValue.unit);
+    else
+        Serial.println("Current Value : Not set");
+        
+    if (data.heatmeterHeat.hasValue)
+        Serial.println("Heatmeter Heat : " + String(data.heatmeterHeat.value) + " " + data.heatmeterHeat.unit);
+    else
+        Serial.println("Heatmeter Heat : Not set");
+        
+    if (data.heatCoolingmeterHeat.hasValue)
+        Serial.println("Heat/Coolingmeter Heat : " + String(data.heatCoolingmeterHeat.value) + " " + data.heatCoolingmeterHeat.unit);
+    else
+        Serial.println("Heat/Coolingmeter Heat : Not set");
+        
+    if (data.totalVolume.hasValue)
+        Serial.println("Total Volume : " + String(data.totalVolume.value) + " " + data.totalVolume.unit);
+    else
+        Serial.println("Total Volume : Not set");
+        
+    if (data.powerCurrentValue.hasValue)
+        Serial.println("Power - Current : " + String(data.powerCurrentValue.value) + " " + data.powerCurrentValue.unit);
+    else
+        Serial.println("Power - Current : Not set");
+        
+    if (data.powerMaximumValue.hasValue)
+        Serial.println("      - Maximum : " + String(data.powerMaximumValue.value) + " " + data.powerMaximumValue.unit);
+    else
+        Serial.println("      - Maximum : Not set");
+        
+    if (data.flowCurrentValue.hasValue)
+        Serial.println("Flow - Current : " + String(data.flowCurrentValue.value) + " " + data.flowCurrentValue.unit);
+    else
+        Serial.println("Flow - Current : Not set");
+        
+    if (data.flowMaximumValue.hasValue)
+        Serial.println("     - Maximum : " + String(data.flowMaximumValue.value) + " " + data.flowMaximumValue.unit);
+    else
+        Serial.println("     - Maximum : Not set");
+        
+    if (data.forwardFlowTemperature.hasValue)
+        Serial.println("Forward Flow Temperature : " + String(data.forwardFlowTemperature.value) + " " + data.forwardFlowTemperature.unit);
+    else
+        Serial.println("Forward Flow Temperature : Not set");
+        
+    if (data.returnFlowTemperature.hasValue)
+        Serial.println("Return Flow Temperature : " + String(data.returnFlowTemperature.value) + " " + data.returnFlowTemperature.unit);
+    else
+        Serial.println("Return Flow Temperature : Not set");
+        
+    if (data.temperatureDifference.hasValue)
+        Serial.println("Temperature Difference : " + String(data.temperatureDifference.value) + " " + data.temperatureDifference.unit);
+    else
+        Serial.println("Temperature Difference : Not set");
+        
+    if (data.daysInOperation.hasValue)
+        Serial.println("Days in operation: " + String(data.daysInOperation.value) + " " + data.daysInOperation.unit);
+    else
+        Serial.println("Days in operation: Not set");
+        
+    Serial.println("Current Date and Time: " + String((data.currentDateAndTime.day)) + "/" + String((data.currentDateAndTime.month)) + "/" + String((data.currentDateAndTime.year)) + " " + String((data.currentDateAndTime.hour)) + ":" + String((data.currentDateAndTime.minute)));
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.print("Heatmeter Sensor Version:");
@@ -162,7 +254,9 @@ void loop() {
       Serial.println(frameLen);
     } else {
       // Parsing frame and data output
-      parseMBusFrame(frameBuf, frameLen);
+      MBusParsingResult result = ParseMBusFrame(frameBuf, frameLen);
+      printMBusHeaderInfo(result.header);
+      printMBusData(result.data);
     }
   }
 }
