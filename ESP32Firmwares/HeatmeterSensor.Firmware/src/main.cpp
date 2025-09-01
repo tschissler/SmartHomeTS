@@ -19,6 +19,10 @@ WiFiClient wifiClient;
 WiFiUDP ntpUDP;
 std::unique_ptr<MQTTClientLib> mqttClientLib = nullptr;
 
+// M-Bus communication and parser instances
+MBusComm mbusComm;
+MBusParser mbusParser;
+
 static bool otaInProgress = false;
 static bool otaEnable = true;
 static bool sendMQTTMessages = true;
@@ -97,11 +101,11 @@ void printMBusHeaderInfo(MBusHeader &header)
     Serial.println("Meter version: " + String(header.version));
     Serial.print("Medium: 0x");
     Serial.print(header.medium, HEX);
-    Serial.println(" (" + String(MediumCodeToString(header.medium)) + ")");
+    Serial.println(" (" + String(MBusParser::mediumCodeToString(header.medium)) + ")");
     Serial.println("Access number: " + String(header.accessNo));
     Serial.print("Status: 0x");
     Serial.print(header.status, HEX);
-    Serial.println(" => " + StatusByteToString(header.status));
+    Serial.println(" => " + MBusParser::statusByteToString(header.status));
     Serial.print("Signature: 0x");
     Serial.println(header.signature, HEX);
 }
@@ -182,6 +186,7 @@ void printMBusData(const MBusData &data) {
 
 void setup() {
   Serial.begin(115200);
+  delay(5000);
   Serial.print("Heatmeter Sensor Version:");
   Serial.println(version);
   Serial.println("-------------------------------------------------------");
@@ -216,7 +221,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   Serial.println("Initializing M-Bus interface...");
-  if (!MBusInit(IR_RX_PIN, IR_TX_PIN, 2400, false)) {
+  if (!mbusComm.init(IR_RX_PIN, IR_TX_PIN, 2400, false)) {
       Serial.println("Error initializing M-Bus interface.");
   } else {
       Serial.println("M-Bus interface ready.");
@@ -239,22 +244,22 @@ void loop() {
     Serial.println();
     Serial.println("Start reading meter data...");
     // Sending signal to wake-up meter and waiting for acknowledging
-    bool ack = MBusSendWakeUp(METER_ADDRESS);
+    bool ack = mbusComm.sendWakeUp(METER_ADDRESS);
 
     if (!ack) {
       Serial.println("Meter did not respond to wake-up. Please check connection and/or address.");
       return;
     }
     // Sending request and reading response
-    MBusSendRequest(METER_ADDRESS);
+    mbusComm.sendRequest(METER_ADDRESS);
     uint8_t frameBuf[300];
-    int frameLen = MBusReadResponse(frameBuf, sizeof(frameBuf));
+    int frameLen = mbusComm.readResponse(frameBuf, sizeof(frameBuf));
     if (frameLen < 0) {
       Serial.print("Error reading frame, code ");
       Serial.println(frameLen);
     } else {
       // Parsing frame and data output
-      MBusParsingResult result = ParseMBusFrame(frameBuf, frameLen);
+      MBusParsingResult result = MBusParser::parseMBusFrame(frameBuf, frameLen);
       printMBusHeaderInfo(result.header);
       printMBusData(result.data);
     }

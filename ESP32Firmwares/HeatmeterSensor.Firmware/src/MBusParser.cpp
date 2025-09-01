@@ -8,14 +8,14 @@
 bool debug = false;
 
 // List of VIFs that have VIFE (Value Information Field Extension)
-static const uint8_t VIFs_WITH_VIFE[] = {
+const uint8_t MBusParser::VIFs_WITH_VIFE[] = {
     0x86,  // Extended VIF for MMBTU
     0xFB,  // Extended VIF for Gcal
     0xFD,  // Extended VIF for Error code, Device type, Pulse Counter
 };
 
 // Helper function to check if a VIF has a VIFE
-static bool vifHasVife(uint8_t vif) {
+bool MBusParser::vifHasVife(uint8_t vif) {
     for (size_t i = 0; i < sizeof(VIFs_WITH_VIFE); ++i) {
         if (vif == VIFs_WITH_VIFE[i]) {
             return true;
@@ -24,7 +24,7 @@ static bool vifHasVife(uint8_t vif) {
     return false;
 }
 
-static const ManufacturerCodeName manufacturerTable[] = {
+const ManufacturerCodeName MBusParser::manufacturerTable[] = {
     // Source: https://www.m-bus.de/man.html
 
     {"ABB", "ABB AB, P.O. Box 1005, SE-61129 Nyköping, Nyköping,Sweden"},
@@ -141,7 +141,12 @@ static const ManufacturerCodeName manufacturerTable[] = {
     {"ZIV", "ZIV Aplicaciones y Tecnologia, S.A."},
 };
 
-ManufacturerInfo manufacturerInfoFromCode(uint16_t manCode) {
+// Constructor
+MBusParser::MBusParser() {
+    // Nothing to initialize for static class
+}
+
+ManufacturerInfo MBusParser::manufacturerInfoFromCode(uint16_t manCode) {
     char letters[4];
     letters[0] = ((manCode >> 10) & 0x1F) + 'A' - 1;
     letters[1] = ((manCode >> 5) & 0x1F) + 'A' - 1;
@@ -159,7 +164,7 @@ ManufacturerInfo manufacturerInfoFromCode(uint16_t manCode) {
 }
 
 // Helper: convert medium code (M-Bus) into a human-readable string.
-String MediumCodeToString(uint8_t medium)
+String MBusParser::mediumCodeToString(uint8_t medium)
 {
     switch (medium)
     {
@@ -200,7 +205,7 @@ String MediumCodeToString(uint8_t medium)
 }
 
 // Helper: translate status byte into human-readable text
-String StatusByteToString(uint8_t status) {
+String MBusParser::statusByteToString(uint8_t status) {
     String result = "";
     if (status & 0x01) result += "Temperature sensor 1: cable broken; ";
     if (status & 0x02) result += "Temperature sensor 1: short circuit; ";
@@ -233,7 +238,7 @@ static inline int64_t read_s_le(const uint8_t* d, size_t n) {
  * Returns false if any nibble is not 0..9.
  * Output keeps leading zeros.
  */
-String DecodeTypeA(const uint8_t* d) {
+String MBusParser::DecodeTypeA(const uint8_t* d) {
     String out;
     out.reserve(8);
     out = "";
@@ -256,13 +261,13 @@ String DecodeTypeA(const uint8_t* d) {
 
 // ---------- Type B (signed binary, two's complement) ----------
 /* nBytes must be 1..8 */
-int64_t DecodeTypeB(const uint8_t* d, size_t size) {
+int64_t MBusParser::DecodeTypeB(const uint8_t* d, size_t size) {
   return read_s_le(d, size);
 }
 
 // ---------- Type C (unsigned binary) ----------
 /* nBytes must be 1..8 */
-bool DecodeTypeC(const uint8_t* d, size_t nBytes, uint64_t& value) {
+bool MBusParser::DecodeTypeC(const uint8_t* d, size_t nBytes, uint64_t& value) {
   if (nBytes == 0 || nBytes > 8) return false;
   value = read_u_le(d, nBytes);
   return true;
@@ -270,7 +275,7 @@ bool DecodeTypeC(const uint8_t* d, size_t nBytes, uint64_t& value) {
 
 // ---------- Type D (bit field) ----------
 /* Returns the bitfield as an unsigned integer (LSB = bit 0). */
-uint64_t DecodeTypeD(const uint8_t* d, size_t nBytes) {
+uint64_t MBusParser::DecodeTypeD(const uint8_t* d, size_t nBytes) {
   if (nBytes == 0 || nBytes > 8) return 0;
   return read_u_le(d, nBytes);
 }
@@ -282,7 +287,7 @@ uint64_t DecodeTypeD(const uint8_t* d, size_t nBytes) {
  * Byte 3: bits0..3 month, bits4..7 Y6..Y3
  * year = 1900 + 100*HY + (Y6..Y0)
  */
-MBusDateTime DecodeTypeF(const uint8_t* d) {
+MBusDateTime MBusParser::DecodeTypeF(const uint8_t* d) {
   MBusDateTime ts;
   uint8_t b0 = d[0], b1 = d[1], b2 = d[2], b3 = d[3];
 
@@ -333,7 +338,7 @@ bool DecodeTypeG(const uint8_t* d, MBusDate& date) {
 }
 
 // Private helper function to parse M-Bus header information
-static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index) {
+MBusHeader MBusParser::parseHeaderInfo(const uint8_t *frame, int length, int &index) {
     MBusHeader header = {};
 
     uint8_t len = frame[1];      // Length from C to end of payload, the length must be repeated in the next byte
@@ -355,9 +360,10 @@ static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index) 
 
     if (len >= 3 + 9) {
         // 9 Bytes Header (ohne Signatur)
+        Serial.print("Parsing header ...");
         header.id = DecodeTypeA(frame + index);  // 4 Bytes ID (BCD)
         index += 4;
-        header.manufacturer = manufacturerInfoFromCode(frame[index] | (frame[index+1] << 8));
+        header.manufacturer = MBusParser::manufacturerInfoFromCode(frame[index] | (frame[index+1] << 8));
         index += 2;
         header.version = frame[index++];
         header.medium = frame[index++];
@@ -367,14 +373,15 @@ static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index) 
             header.signature = frame[index] | (frame[index+1] << 8);
             index += 2;
         }
+        Serial.println(" Done");
     }
     
     return header;
 }
 
-MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
+MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index) {
     MBusData data = {""};
-
+    Serial.print("Parsing Data ...");
     while (index < length - 2) {  // parse all data before checksum byte and Endbyte
         uint8_t DIF = frame[index++];
         if (DIF == 0x00 || DIF == 0x0F) {
@@ -383,7 +390,6 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
         }
 
         uint8_t dataLen = 0;
-        bool dataIsBCD = false;
         uint8_t dif_nibble = DIF & 0x0F;
         switch (dif_nibble) {
             case 0x00: dataLen = 0; break;
@@ -395,10 +401,10 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
             case 0x06: dataLen = 6; break;
             case 0x07: dataLen = 8; break;
             case 0x08: dataLen = 0; break;
-            case 0x09: dataLen = 2; dataIsBCD = true; break;
-            case 0x0A: dataLen = 4; dataIsBCD = true; break;
-            case 0x0B: dataLen = 6; dataIsBCD = true; break;
-            case 0x0C: dataLen = 8; dataIsBCD = true; break;
+            case 0x09: dataLen = 2; break;
+            case 0x0A: dataLen = 4; break;
+            case 0x0B: dataLen = 6; break;
+            case 0x0C: dataLen = 8; break;
             default: /* 0x0D-0x0F sind Sonderfälle, nicht behandelt */ break;
         }
 
@@ -406,7 +412,7 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
         if (index >= length - 2) break;
         uint8_t VIF = frame[index++];
         uint8_t VIFE = 0;
-        if (vifHasVife(VIF)) {
+        if (MBusParser::vifHasVife(VIF)) {
             // Extended VIF (e.g. manufacturer specific or special)
             if (index < length - 2) {
                 VIFE = frame[index++];
@@ -430,7 +436,7 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
         switch (DIF) {
             case 0x01 : { // Error code
                 if (VIF == 0xFD && VIFE == 0x17) {
-                    data.status = StatusByteToString(DecodeTypeD(dataBytes, 1));
+                    data.status = statusByteToString(DecodeTypeD(dataBytes, 1));
                 }
                 else
                     if (debug)
@@ -576,11 +582,11 @@ MBusData parseMBusData(const uint8_t *frame, int length, int &index) {
                 break;
         }
     }
-
+    Serial.println(" Done");
     return data;
 }
 
-MBusParsingResult parseMBusFrame(const uint8_t *frame, int length) {
+MBusParsingResult MBusParser::parseMBusFrame(const uint8_t *frame, int length) {
     if (length < 5) {
     Serial.println("Invalid frame (too short).");
         return {};

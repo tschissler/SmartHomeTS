@@ -5,20 +5,6 @@
 
 extern bool debug;
 
-// forward declarations
-struct MBusParsingResult;
-struct MBusHeader;
-struct MBusData;
-struct ManufacturerInfo;
-struct MBusDoubleValue;
-struct MBusIntValue;
-struct ManufacturerCodeName;
-struct MBusDateTime;
-
-MBusParsingResult ParseMBusFrame(const uint8_t *frame, int length);
-String MediumCodeToString(uint8_t medium);
-String StatusByteToString(uint8_t status);
-
 // Struct to hold manufacturer info
 struct ManufacturerInfo {
     String code;
@@ -95,4 +81,42 @@ struct ManufacturerCodeName {
     const char* code;
     const char* name;
 };
+
+class MBusParser {
+private:
+    // Static manufacturer table
+    static const ManufacturerCodeName manufacturerTable[];
+    
+    // List of VIFs that have VIFE (Value Information Field Extension)
+    static const uint8_t VIFs_WITH_VIFE[];
+    
+    // Private helper methods
+    static bool vifHasVife(uint8_t vif);
+    static ManufacturerInfo manufacturerInfoFromCode(uint16_t manCode);
+    static unsigned long bcdToUInt(const uint8_t *data, int length);
+    
+    // M-Bus data type conversion methods
+    static String DecodeTypeA(const uint8_t* d);
+    static int64_t DecodeTypeB(const uint8_t* d, size_t size);
+    static bool DecodeTypeC(const uint8_t* d, size_t nBytes, uint64_t& value);
+    static uint64_t DecodeTypeD(const uint8_t* d, size_t nBytes);
+    static MBusDateTime DecodeTypeF(const uint8_t* d);
+    
+    static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index);
+    static MBusData parseMBusData(const uint8_t *frame, int length, int &index);
+    
+public:
+    // Constructor
+    MBusParser();
+    
+    // Main parsing method
+    static MBusParsingResult parseMBusFrame(const uint8_t *frame, int length);
+    
+    // Utility methods
+    static String mediumCodeToString(uint8_t medium);
+    static String statusByteToString(uint8_t status);
+    static void printHeaderInfo(const MBusHeader &header);
+    static void printMBusData(const MBusData &data);
+};
+
 #endif
