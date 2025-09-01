@@ -220,10 +220,11 @@ void publishMBusData(MBusHeader header, MBusData data) {
     doc["daysInOperation_unit"] = data.daysInOperation.unit;
     doc["currentDateAndTime"] = String((data.currentDateAndTime.day)) + "/" + String((data.currentDateAndTime.month)) + "/" + String((data.currentDateAndTime.year)) + " " + String((data.currentDateAndTime.hour)) + ":" + String((data.currentDateAndTime.minute));
 
-    char jsonBuffer[512]; 
-    serializeJson(doc, jsonBuffer, doc.size());
-
+    size_t jsonSize = measureJson(doc) + 1; // +1 for null terminator
+    char* jsonBuffer = new char[jsonSize];
+    serializeJson(doc, jsonBuffer, jsonSize);
     mqttClient->publish(baseTopic + "/" + location, jsonBuffer, true, 2);
+    delete[] jsonBuffer;
 }
 
 void blinkStatus()
