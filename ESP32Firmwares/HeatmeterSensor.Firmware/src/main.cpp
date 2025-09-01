@@ -7,6 +7,7 @@
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
 #include "WifiLib.h"
+#include "LEDLib.h"
 
 const char* version = FIRMWARE_VERSION;
 String chipID = "";
@@ -32,15 +33,18 @@ static String baseTopic = "data/heating";
 static String sensorName = "";
 static String location = "";
 const String mqtt_broker = "smarthomepi2";
-static String mqtt_OTAtopic = "OTAUpdate/HeatSensor";
-static String mqtt_ConfigTopic = "config/HeatSensor/Sensorname/";
+static String mqtt_OTAtopic = "OTAUpdate/HeatMeter";
+static String mqtt_ConfigTopic = "config/HeatMeter/Sensorname/";
 
 const int IR_RX_PIN = D5;            // IR phototransistor input
 const int IR_TX_PIN = D8;            // IR LED output
+const int RED_LED_PIN = D3;         
+const int GREEN_LED_PIN = D4;
+const int BLUE_LED_PIN = D6;
 const uint8_t METER_ADDRESS = 0xFE;     // M-Bus primary address (0 = default)
 const unsigned long READ_INTERVAL_MS = 10 * 60 * 1000;  // Read interval (e.g. 10 minutes)
 unsigned long lastReadTime = -10000000;
-
+RGBLED led = RGBLED(RED_LED_PIN, GREEN_LED_PIN, BLUE_LED_PIN);
 
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
@@ -86,6 +90,7 @@ void mqttCallback(String &topic, String &payload) {
 
 void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi not connected, trying to reconnect...");
     wifiLib.connect();
   }
   mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
@@ -114,7 +119,7 @@ void printMBusData(const MBusData &data) {
     Serial.println();
     Serial.println("M-Bus Data Records");
     Serial.println("-------------------------------------------");
-    Serial.println("Device ID: " + data.deviceId);
+    Serial.println("Device ID: " + String(data.deviceId));
     
     if (data.totalHeatEnergy.hasValue)
         Serial.println("Total Heat Energy : " + String(data.totalHeatEnergy.value) + " " + data.totalHeatEnergy.unit);
@@ -186,7 +191,9 @@ void printMBusData(const MBusData &data) {
 
 void setup() {
   Serial.begin(115200);
-  delay(5000);
+  led.blink(RED, 500, 2);
+  led.blink(GREEN, 500, 2);
+  led.blink(BLUE, 500, 2);
   Serial.print("Heatmeter Sensor Version:");
   Serial.println(version);
   Serial.println("-------------------------------------------------------");
@@ -259,6 +266,7 @@ void loop() {
       Serial.println(frameLen);
     } else {
       // Parsing frame and data output
+      MBusParser::debug = true;
       MBusParsingResult result = MBusParser::parseMBusFrame(frameBuf, frameLen);
       printMBusHeaderInfo(result.header);
       printMBusData(result.data);
