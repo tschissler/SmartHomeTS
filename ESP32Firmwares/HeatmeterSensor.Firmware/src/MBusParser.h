@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 
-extern bool debug;
-
 // Struct to hold manufacturer info
 struct ManufacturerInfo {
     String code;
@@ -40,7 +38,7 @@ struct MBusDateTime {
 };
 
 struct MBusData {
-    String deviceId;
+    uint32_t deviceId;
     MBusDoubleValue totalHeatEnergy;
     MBusDoubleValue currentValue;
     MBusDoubleValue heatmeterHeat;
@@ -96,19 +94,21 @@ private:
     static unsigned long bcdToUInt(const uint8_t *data, int length);
     
     // M-Bus data type conversion methods
-    static String DecodeTypeA(const uint8_t* d);
-    static int64_t DecodeTypeB(const uint8_t* d, size_t size);
+    static String DecodeTypeA_BCD(const uint8_t* d);
+    static uint32_t DecodeTypeA_UInt32(const uint8_t* d);
+    static int32_t DecodeTypeB(const uint8_t* d, size_t size);
     static bool DecodeTypeC(const uint8_t* d, size_t nBytes, uint64_t& value);
     static uint64_t DecodeTypeD(const uint8_t* d, size_t nBytes);
     static MBusDateTime DecodeTypeF(const uint8_t* d);
     
     static MBusHeader parseHeaderInfo(const uint8_t *frame, int length, int &index);
     static MBusData parseMBusData(const uint8_t *frame, int length, int &index);
-    
+
+    static bool ExtractDataFromFrame(uint8_t dataLen, int &index, int length, uint8_t dataBytes[8], const uint8_t *frame);
+
 public:
-    // Constructor
-    MBusParser();
-    
+    static bool debug;
+
     // Main parsing method
     static MBusParsingResult parseMBusFrame(const uint8_t *frame, int length);
     

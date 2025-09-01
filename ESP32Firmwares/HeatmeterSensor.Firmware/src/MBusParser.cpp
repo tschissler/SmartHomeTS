@@ -4,8 +4,8 @@
 // The documentation of the WDV Molliné Wingstar meter can be found here:
 // https://www.molline.de/fileadmin/content/content/Downloads/Produkte/02_W%C3%A4rmez%C3%A4hler/01_Kompaktz%C3%A4hler/01_WingStar_C3_Familie/M-Bus_Protokoll_Ultramess_C3_WingStar_C3.pdf
 
-// Global debug variable definition
-bool debug = false;
+// Static member variable definition
+bool MBusParser::debug = false;
 
 // List of VIFs that have VIFE (Value Information Field Extension)
 const uint8_t MBusParser::VIFs_WITH_VIFE[] = {
@@ -141,11 +141,6 @@ const ManufacturerCodeName MBusParser::manufacturerTable[] = {
     {"ZIV", "ZIV Aplicaciones y Tecnologia, S.A."},
 };
 
-// Constructor
-MBusParser::MBusParser() {
-    // Nothing to initialize for static class
-}
-
 ManufacturerInfo MBusParser::manufacturerInfoFromCode(uint16_t manCode) {
     char letters[4];
     letters[0] = ((manCode >> 10) & 0x1F) + 'A' - 1;
@@ -238,7 +233,15 @@ static inline int64_t read_s_le(const uint8_t* d, size_t n) {
  * Returns false if any nibble is not 0..9.
  * Output keeps leading zeros.
  */
-String MBusParser::DecodeTypeA(const uint8_t* d) {
+String MBusParser::DecodeTypeA_BCD(const uint8_t* d) {
+    if (debug) {
+        Serial.print("Decoding Type A for ");
+        for (int i = 0; i < 4; ++i) {
+            Serial.print(d[i], HEX);
+            Serial.print(" ");
+        }
+        Serial.println();
+    }
     String out;
     out.reserve(8);
     out = "";
@@ -259,9 +262,23 @@ String MBusParser::DecodeTypeA(const uint8_t* d) {
     return out;
 }
 
+// ---------- Type A (32-bit little-endian binary integer) ----------
+// Decodes 4 bytes of little-endian binary integer.
+uint32_t MBusParser::DecodeTypeA_UInt32(const uint8_t* b4) {
+    if (debug) {
+        Serial.print("Decoding Type A for ");
+        for (int i = 0; i < 4; ++i) {
+            Serial.print(b4[i], HEX);
+            Serial.print(" ");
+        }
+        Serial.println();
+    }
+    return read_u_le(b4, 4);
+}
+
 // ---------- Type B (signed binary, two's complement) ----------
 /* nBytes must be 1..8 */
-int64_t MBusParser::DecodeTypeB(const uint8_t* d, size_t size) {
+int32_t MBusParser::DecodeTypeB(const uint8_t* d, size_t size) {
   return read_s_le(d, size);
 }
 
@@ -361,7 +378,7 @@ MBusHeader MBusParser::parseHeaderInfo(const uint8_t *frame, int length, int &in
     if (len >= 3 + 9) {
         // 9 Bytes Header (ohne Signatur)
         Serial.print("Parsing header ...");
-        header.id = DecodeTypeA(frame + index);  // 4 Bytes ID (BCD)
+        header.id = DecodeTypeA_BCD(frame + index);  // 4 Bytes ID (BCD)
         index += 4;
         header.manufacturer = MBusParser::manufacturerInfoFromCode(frame[index] | (frame[index+1] << 8));
         index += 2;
@@ -380,8 +397,18 @@ MBusHeader MBusParser::parseHeaderInfo(const uint8_t *frame, int length, int &in
 }
 
 MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index) {
-    MBusData data = {""};
+    MBusData data = {};
     Serial.print("Parsing Data ...");
+    if (debug)
+    {
+        Serial.println("Frame data:");
+        for (int i = 0; i < length; ++i) {
+            Serial.print(frame[i], HEX);
+            Serial.print(" ");
+        }
+        Serial.println();
+    }
+
     while (index < length - 2) {  // parse all data before checksum byte and Endbyte
         uint8_t DIF = frame[index++];
         if (DIF == 0x00 || DIF == 0x0F) {
@@ -389,31 +416,14 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
             break;
         }
 
-        uint8_t dataLen = 0;
-        uint8_t dif_nibble = DIF & 0x0F;
-        switch (dif_nibble) {
-            case 0x00: dataLen = 0; break;
-            case 0x01: dataLen = 1; break;
-            case 0x02: dataLen = 2; break;
-            case 0x03: dataLen = 3; break;
-            case 0x04: dataLen = 4; break;
-            case 0x05: dataLen = 4; break;
-            case 0x06: dataLen = 6; break;
-            case 0x07: dataLen = 8; break;
-            case 0x08: dataLen = 0; break;
-            case 0x09: dataLen = 2; break;
-            case 0x0A: dataLen = 4; break;
-            case 0x0B: dataLen = 6; break;
-            case 0x0C: dataLen = 8; break;
-            default: /* 0x0D-0x0F sind Sonderfälle, nicht behandelt */ break;
-        }
+        // The last nibble of DIF defines the data length
+        uint8_t dataLen = DIF & 0x0F;
 
         // Read VIF (Value Information Field)
         if (index >= length - 2) break;
         uint8_t VIF = frame[index++];
         uint8_t VIFE = 0;
         if (MBusParser::vifHasVife(VIF)) {
-            // Extended VIF (e.g. manufacturer specific or special)
             if (index < length - 2) {
                 VIFE = frame[index++];
             }
@@ -421,21 +431,15 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
 
         // Read data bytes
         uint8_t dataBytes[8];
-        if (dataLen > 0) {
-            if (index + dataLen > length - 2) {
-                Serial.println("Data bytes missing/insufficient.");
-                break;
-            }
-            for (uint8_t i = 0; i < dataLen; ++i) {
-                dataBytes[i] = frame[index + i];
-            }
-            index += dataLen;
+        if (!MBusParser::ExtractDataFromFrame(dataLen, index, length, dataBytes, frame)) {
+            break;
         }
 
         // Interpret record based on DIF, VIF and VIFE, 
         switch (DIF) {
             case 0x01 : { // Error code
                 if (VIF == 0xFD && VIFE == 0x17) {
+                    if (debug) Serial.println("Parsing error code...");
                     data.status = statusByteToString(DecodeTypeD(dataBytes, 1));
                 }
                 else
@@ -446,18 +450,22 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
             case 0x02 : { // Temperatures and days in operation
                 switch (VIF) {
                     case 0x5B : { // Forward flow temperature
+                        if (debug) Serial.println("Parsing forward flow temperature...");
                         data.forwardFlowTemperature = MBusIntValue(static_cast<int32_t>(DecodeTypeB(dataBytes, 2)), "°C");
                         break;
                     }
                     case 0x5F : { // Return flow temperature
+                        if (debug) Serial.println("Parsing return flow temperature...");
                         data.returnFlowTemperature = MBusIntValue(static_cast<int32_t>(DecodeTypeB(dataBytes, 2)), "°C");
                         break;
                     }
                     case 0x61 : { // Temperature difference
+                        if (debug) Serial.println("Parsing temperature difference...");
                         data.temperatureDifference = MBusDoubleValue(static_cast<double>(DecodeTypeB(dataBytes, 2) * 0.01), "°C");
                         break;
                     }
                     case 0x23 : { // Days in operation
+                        if (debug) Serial.println("Parsing days in operation...");
                         data.daysInOperation = MBusIntValue(static_cast<int32_t>(DecodeTypeB(dataBytes, 2)), "days");
                         break;
                     }
@@ -474,20 +482,24 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
             case 0x04 : { // Current Values
                 switch (VIF) {
                     case 0x78 : {  // device ID
-                        data.deviceId = DecodeTypeA(dataBytes);
+                        if (debug) {Serial.println(); Serial.println("Parsing device ID...");}
+                        data.deviceId = DecodeTypeA_UInt32(dataBytes);
                         break;
                     }
                     case 0x06 : { // Total Heat Energy
+                        if (debug) Serial.println("Parsing total heat energy...");
                         data.totalHeatEnergy = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "MWh");
                         break;
                     }
                     case 0x0E : { // Current value
+                        if (debug) Serial.println("Parsing current value...");
                         data.currentValue = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "GJ");
                         break;
                     }
                     case 0x86 : {
                         switch (VIFE) {
                             case 0x3D : { // Heatmeter heat
+                                if (debug) Serial.println("Parsing heatmeter heat...");
                                 data.heatmeterHeat = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "MMBTU");
                                 break;
                             }
@@ -497,6 +509,7 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
                     case 0xDB : {
                         switch (VIFE) {
                             case 0x0D : { // Heat/Coolingmeter heat
+                                if (debug) Serial.println("Parsing heat/coolingmeter heat...");
                                 data.heatCoolingmeterHeat = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "Gcal");
                                 break;
                             }
@@ -504,18 +517,22 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
                         break;
                     }
                     case 0x13 : { // Total Volume
+                        if (debug) Serial.println("Parsing total volume...");
                         data.totalVolume = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "m³");
                         break;
                     }
                     case 0x2B : {
+                        if (debug) Serial.println("Parsing power current value...");
                         data.powerCurrentValue = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "kW");
                         break;
                     }
                     case 0x3B : {
+                        if (debug) Serial.println("Parsing flow current value...");
                         data.flowCurrentValue = MBusIntValue(DecodeTypeB(dataBytes, 4), "l/h");
                         break;
                     }
                     case 0x6D : { // Current date and time
+                        if (debug) Serial.println("Parsing current date and time...");
                         data.currentDateAndTime = DecodeTypeF(dataBytes);
                         break;
                     }
@@ -532,10 +549,12 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
             case 0x14 : { // Maximum Values
                 switch (VIF) {
                     case 0x2B : {
+                        if (debug) Serial.println("Parsing power maximum value...");
                         data.powerMaximumValue = MBusDoubleValue(DecodeTypeB(dataBytes, 4) * 0.001, "kW");
                         break;
                     }
                     case 0x3B : {
+                        if (debug) Serial.println("Parsing flow maximum value...");
                         data.flowMaximumValue = MBusIntValue(DecodeTypeB(dataBytes, 2), "l/h");
                         break;
                     }
@@ -584,6 +603,27 @@ MBusData MBusParser::parseMBusData(const uint8_t *frame, int length, int &index)
     }
     Serial.println(" Done");
     return data;
+}
+
+bool MBusParser::ExtractDataFromFrame(uint8_t dataLen, int &index, int length, uint8_t dataBytes[8], const uint8_t *frame)
+{
+    if (dataLen <= 0)
+    {
+        Serial.println("Invalid data length.");
+        return false;
+    }
+
+    if (index + dataLen > length - 2)
+    {
+        Serial.println("Data bytes missing/insufficient.");
+        return false;
+    }
+    for (uint8_t i = 0; i < dataLen; ++i)
+    {
+        dataBytes[i] = frame[index + i];
+    }
+    index += dataLen;
+    return true;
 }
 
 MBusParsingResult MBusParser::parseMBusFrame(const uint8_t *frame, int length) {

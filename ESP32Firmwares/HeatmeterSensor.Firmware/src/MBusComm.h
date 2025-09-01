@@ -8,6 +8,7 @@ private:
     int rxPin;
     int txPin;
     long baud;
+    bool debug;
     
     // Private helper method
     bool waitForAck(uint8_t frame[5]);
