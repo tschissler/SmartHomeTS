@@ -44,7 +44,7 @@ const int RED_LED_PIN = D7;
 const int GREEN_LED_PIN = D9;
 const int BLUE_LED_PIN = D10;
 const uint8_t METER_ADDRESS = 0xFE;     // M-Bus primary address (0 = default)
-const unsigned long READ_INTERVAL_MS = 10 * 60 * 1000;  // Read interval (e.g. 10 minutes)
+const unsigned long READ_INTERVAL_MS = 6 * 60 * 60 * 1000;  // Read interval (e.g. 6 hours) -> The meter can only be read 4 times per day
 unsigned long lastReadTime = -10000000;
 const unsigned long LED_BLINK_INTERVAL_MS = 3 * 1000;
 unsigned long lastBlinkTime = 0;
