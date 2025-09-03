@@ -156,7 +156,22 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("device", topicParts[4]);
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, topicParts[4], payload, tags, true);
 
-            return;
+            if (topicParts[3] == "Smartmeter")
+            {
+                try
+                {
+                    var smartmeterData = JsonSerializer.Deserialize<SmartmeterData>(payload);
+                    if (smartmeterData != null)
+                    {
+                        influx3Connector.WriteInfluxRecords(smartmeterData.ToInfluxRecords(), topicParts[2], topicParts[4]);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing Smartmeter data: {ex.Message}");
+                }
+            }
+             return;
         }
 
         if (topic.StartsWith("daten/temperatur/") || topic.StartsWith("daten/luftfeuchtigkeit/"))
