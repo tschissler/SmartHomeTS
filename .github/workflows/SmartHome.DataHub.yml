@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/SmartHome.DataHub.yml
       - SmartHome.DataHub/**
+  workflow_dispatch:
 
 env:
   PROJECT_NAME: SmartHome.DataHub
