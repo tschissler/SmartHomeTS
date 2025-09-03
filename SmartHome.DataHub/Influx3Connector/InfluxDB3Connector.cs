@@ -1,5 +1,6 @@
 ﻿using InfluxDB3.Client;
 using InfluxDB3.Client.Write;
+using SharedContracts;
 using System.Diagnostics.Metrics;
 
 namespace Influx3Connector
@@ -13,6 +14,47 @@ namespace Influx3Connector
             client = new InfluxDBClient(influxUrl, token: token, database: database);
         }
 
+        public void WriteInfluxRecords(IEnumerable<InfluxRecord> records, string location, string device)
+        {
+            foreach (var record in records)
+            {
+                switch (record.MeassurementType)
+                {
+                    case MeassurementType.Percent:
+                        WritePercentageValue(
+                            record.Category,
+                            record.SensorType,
+                            location,
+                            device,
+                            record.Meassurement,
+                            Convert.ToDouble(record.Value),
+                            DateTimeOffset.UtcNow);
+                        break;
+                    case MeassurementType.Energy:
+                        WriteEnergyValue(
+                            record.Category,
+                            record.SensorType,
+                            location,
+                            device,
+                            record.Meassurement,
+                            Convert.ToDouble(record.Value) / 1000.0, // Convert Wh to kWh
+                            DateTimeOffset.UtcNow);
+                        break;
+                    case MeassurementType.Power:
+                        WritePowerValue(
+                            record.Category,
+                            record.SensorType,
+                            location,
+                            device,
+                            record.Meassurement,
+                            Convert.ToDouble(record.Value),
+                            DateTimeOffset.UtcNow);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
         public void WritePercentageValue(
             string category,
             string sensorType,

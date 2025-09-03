@@ -155,6 +155,8 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("group", topicParts[3]);
             tags.Add("device", topicParts[4]);
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, topicParts[4], payload, tags, true);
+
+            influx3Connector.WriteEnergyValue("Electricity", topicParts[3], topicParts[2], topicParts[4], "PowerImportTotal_kWh", Convert.ToDouble(JObject.Parse(payload)["PowerImportTotal_kWh"]), DateTimeOffset.Now);
             return;
         }
 
@@ -189,30 +191,7 @@ void WriteEnphaseDataToDB(InfluxDB3Connector influx3Connector, string payload, s
         var enphaseData = JsonSerializer.Deserialize<EnphaseData>(payload);
         if (enphaseData != null)
         {
-            influx3Connector.WritePercentageValue(
-                "Electricity", "Envoy", location, device, "BatteryLevel",
-                enphaseData.BatteryLevel,
-                enphaseData.LastDataUpdate);
-            influx3Connector.WriteEnergyValue(
-                "Electricity", "Envoy", location, device, "BatteryEnergy",
-                enphaseData.BatteryEnergy,
-                enphaseData.LastDataUpdate);
-            influx3Connector.WritePowerValue(
-                "Electricity", "Envoy", location, device, "PowerFromBattery",
-                enphaseData.PowerFromBattery,
-                enphaseData.LastDataUpdate);
-            influx3Connector.WritePowerValue(
-                "Electricity", "Envoy", location, device, "PowerFromGrid",
-                enphaseData.PowerFromGrid,
-                enphaseData.LastDataUpdate);
-            influx3Connector.WritePowerValue(
-                "Electricity", "Envoy", location, device, "PowerFromPV",
-                enphaseData.PowerFromPV,
-                enphaseData.LastDataUpdate);
-            influx3Connector.WritePowerValue(
-                "Electricity", "Envoy", location, device, "PowerToHouse",
-                enphaseData.PowerToHouse,
-                enphaseData.LastDataUpdate);
+            influx3Connector.WriteInfluxRecords(enphaseData.ToInfluxRecords(), location, device);
         }
     }
     catch (Exception ex)

@@ -10,4 +10,8 @@
     <PackageReference Include="InfluxDB3.Client" Version="1.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
+  </ItemGroup>
+
 </Project>
