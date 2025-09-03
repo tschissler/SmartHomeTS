@@ -1,4 +1,5 @@
-﻿using InfluxConnector;
+﻿using Influx3Connector;
+using InfluxConnector;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json.Linq;
@@ -8,6 +9,7 @@ using System.Globalization;
 using System.Text.Json;
 
 const string influxUrl = "http://smarthomepi2:32086";
+const string influx3Url = "http://smarthomepi2:32087";
 
 const string chargingBucket = "Smarthome_ChargingData";
 const string electricityBucket = "Smarthome_ElectricityData";
@@ -28,6 +30,20 @@ if (string.IsNullOrEmpty(influxToken))
     return;
 }
 
+string? influx3Token = Environment.GetEnvironmentVariable("SMARTHOME__INFLUXDB3_TOKEN");
+if (string.IsNullOrEmpty(influx3Token))
+{
+    ConsoleHelpers.PrintErrorMessage("Environmentvariable SMARTHOME__INFLUXDB3_TOKEN not set. Please set it to your InfluxDB token.");
+    return;
+}
+
+string? dataHubEnvironment = Environment.GetEnvironmentVariable("SMARTHOME__DATAHUB_ENVIRONMENT");
+if (string.IsNullOrEmpty(dataHubEnvironment))
+{
+    ConsoleHelpers.PrintErrorMessage("Environmentvariable SMARTHOME__DATAHUB_ENVIRONMENT not set. Please set it to the environment you are running (Prod, Dev).");
+    return;
+}
+
 string? influxOrg = Environment.GetEnvironmentVariable("INFLUXDB_ORG");
 if (string.IsNullOrEmpty(influxOrg))
 {
@@ -35,12 +51,14 @@ if (string.IsNullOrEmpty(influxOrg))
     return;
 }
 
+string influx3Database = "Smarthome_" + dataHubEnvironment;
 ConsoleHelpers.PrintInformation($"Using org: {influxOrg} at {influxUrl}");
+ConsoleHelpers.PrintInformation($"Using InfluxDB 3 at {influx3Url} with database {influx3Database}");
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
-        services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter"));
+        services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment));
         services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, influxOrg, influxToken));
         services.AddLogging();
     })
@@ -49,6 +67,8 @@ var host = Host.CreateDefaultBuilder(args)
 using var serviceScope = host.Services.CreateScope();
 var services = serviceScope.ServiceProvider;
 var influxConnector = services.GetRequiredService<InfluxDbConnector>();
+
+var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token);
 
 // Setup MQTT client options
 ConsoleHelpers.PrintInformation(" ### Subscribing to MQTT topics");
@@ -112,6 +132,8 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("location", "M1");
             tags.Add("device", "EnvoyM1");
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM1", payload, tags, true);
+
+            WriteEnphaseDataToDB(influx3Connector, payload, "M1", "EnvoyM1");
             return;
         }
         if (topic == "data/electricity/envoym3")
@@ -120,6 +142,8 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("location", "M3");
             tags.Add("device", "EnvoyM3");
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM3", payload, tags, true);
+
+            WriteEnphaseDataToDB(influx3Connector, payload, "M3", "EnvoyM3");
             return;
         }
         if (topic.StartsWith("data/electricity/M1")
@@ -157,6 +181,45 @@ mqttClient.OnMessageReceived += async (sender, e) =>
         ConsoleHelpers.PrintErrorMessage($"####Error processing message: {ex.Message}");
     }
 };
+
+void WriteEnphaseDataToDB(InfluxDB3Connector influx3Connector, string payload, string location, string device)
+{
+    try
+    {
+        var enphaseData = JsonSerializer.Deserialize<EnphaseData>(payload);
+        if (enphaseData != null)
+        {
+            influx3Connector.WritePercentageValue(
+                "Electricity", "Envoy", location, device, "BatteryLevel",
+                enphaseData.BatteryLevel,
+                enphaseData.LastDataUpdate);
+            influx3Connector.WriteEnergyValue(
+                "Electricity", "Envoy", location, device, "BatteryEnergy",
+                enphaseData.BatteryEnergy,
+                enphaseData.LastDataUpdate);
+            influx3Connector.WritePowerValue(
+                "Electricity", "Envoy", location, device, "PowerFromBattery",
+                enphaseData.PowerFromBattery,
+                enphaseData.LastDataUpdate);
+            influx3Connector.WritePowerValue(
+                "Electricity", "Envoy", location, device, "PowerFromGrid",
+                enphaseData.PowerFromGrid,
+                enphaseData.LastDataUpdate);
+            influx3Connector.WritePowerValue(
+                "Electricity", "Envoy", location, device, "PowerFromPV",
+                enphaseData.PowerFromPV,
+                enphaseData.LastDataUpdate);
+            influx3Connector.WritePowerValue(
+                "Electricity", "Envoy", location, device, "PowerToHouse",
+                enphaseData.PowerToHouse,
+                enphaseData.LastDataUpdate);
+        }
+    }
+    catch (Exception ex)
+    {
+        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Enphase data: {ex.Message}");
+    }
+}
 
 // Run the host to keep the application running and processing events
 await host.RunAsync();
