@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "HeatmeterUSBHead": {
+      "commandName": "Project",
+      "commandLineArgs": "--port COM9"
+    }
+  }
+}
