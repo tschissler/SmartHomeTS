@@ -34,7 +34,7 @@ spec:
               mountPath: /var/lib/grafana
       containers:
         - name: grafana
-          image: grafana/grafana:9.5.5
+          image: grafana/grafana:latest
           ports:
             - containerPort: 3000
           env:
