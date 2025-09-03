@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: influxdb3
+  labels:
+    app: influxdb3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb3
+  template:
+    metadata:
+      labels:
+        app: influxdb3
+      annotations:
+        checksum/config: "{{ .Values.configmap | toYaml | sha256sum }}"
+    spec:
+      securityContext:
+        fsGroup: 1500
+        runAsUser: 1500
+        runAsGroup: 1500
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: influxdb3
+          image: influxdb:3-core
+          command: ["influxdb3"]
+          args:
+            - "serve"
+            - "--object-store"
+            - "file"
+            - "--data-dir"
+            - "/var/lib/influxdb3"
+            - "--node-id"
+            - "1"
+            - "--log-filter"
+            - "info"
+          ports:
+            - name: http
+              containerPort: 8181
+            - name: flight
+              containerPort: 8182
+          env:
+            # InfluxDB 3 Core uses the same one-shot init pattern (similar to v2) with DOCKER_INFLUXDB_INIT_* variables.
+            - name: DOCKER_INFLUXDB_INIT_MODE
+              value: setup
+            - name: DOCKER_INFLUXDB_INIT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: INFLUXDB_ADMIN_USER
+            - name: DOCKER_INFLUXDB_INIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: INFLUXDB_ADMIN_PASSWORD
+            - name: DOCKER_INFLUXDB_INIT_ORG
+              value: smarthome
+            - name: DOCKER_INFLUXDB_INIT_BUCKET
+              value: smarthomedb
+            # Provide an initial admin token (create key INFLUXDB_ADMIN_TOKEN in secret 'influxdb-secret').
+            - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: INFLUXDB_ADMIN_TOKEN
+          volumeMounts:
+            - name: influxdb3-storage
+              mountPath: /var/lib/influxdb3
+          readinessProbe:
+            tcpSocket:
+              port: 8181
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8181
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+      volumes:
+        - name: influxdb3-storage
+          persistentVolumeClaim:
+            claimName: influxdb3-pvc

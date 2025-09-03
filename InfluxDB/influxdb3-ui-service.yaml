@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb3-ui-service
+spec:
+  selector:
+    app: influxdb3-ui
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 32089
+    - name: api
+      protocol: TCP
+      port: 8888
+      targetPort: 8888
+      nodePort: 32090
+  type: NodePort

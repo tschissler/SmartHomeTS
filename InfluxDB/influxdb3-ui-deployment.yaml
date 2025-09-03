@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: influxdb3-ui
+  labels:
+    app: influxdb3-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb3-ui
+  template:
+    metadata:
+      labels:
+        app: influxdb3-ui
+    spec:
+      containers:
+        - name: influxdb3-ui
+          image: influxdata/influxdb3-ui
+          args: ["--mode=admin"]
+          ports:
+            - name: http
+              containerPort: 80
+            - name: api
+              containerPort: 8888
+          env:
+            # Configuration for connecting to InfluxDB3 Core
+            - name: INFLUXDB_URL
+              value: "http://influxdb3-service:8181"
+            - name: INFLUXDB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: INFLUXDB_ADMIN_TOKEN
+            - name: INFLUXDB_ORG
+              value: "smarthome"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
