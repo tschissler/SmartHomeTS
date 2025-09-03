@@ -4,6 +4,7 @@
     {
         Percent,
         Power,
-        Energy
+        Energy,
+        Voltage
     }
 }

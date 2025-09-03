@@ -50,6 +50,16 @@ namespace Influx3Connector
                             Convert.ToDouble(record.Value),
                             DateTimeOffset.UtcNow);
                         break;
+                    case MeassurementType.Voltage:
+                        WriteVoltageValue(
+                            record.Category,
+                            record.SensorType,
+                            location,
+                            device,
+                            record.Meassurement,
+                            Convert.ToDouble(record.Value),
+                            DateTimeOffset.UtcNow);
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -111,6 +121,26 @@ namespace Influx3Connector
                 .SetTag("device", device)
                 .SetTag("meassurement", meassurement)
                 .SetField("value_watt", value_watt)
+                .SetTimestamp(timestamp);
+            client.WritePointAsync(point);
+        }
+
+        public void WriteVoltageValue(
+            string category,
+            string sensorType,
+            string location,
+            string device,
+            string meassurement,
+            double value_volt,
+            DateTimeOffset timestamp)
+        {
+            var point = PointData.Measurement("voltage_values")
+                .SetTag("category", category)
+                .SetTag("sensor_type", sensorType)
+                .SetTag("location", location)
+                .SetTag("device", device)
+                .SetTag("meassurement", meassurement)
+                .SetField("value_volt", value_volt)
                 .SetTimestamp(timestamp);
             client.WritePointAsync(point);
         }

@@ -171,7 +171,22 @@ mqttClient.OnMessageReceived += async (sender, e) =>
                     ConsoleHelpers.PrintErrorMessage($"####Error deserializing Smartmeter data: {ex.Message}");
                 }
             }
-             return;
+            else if (topicParts[3] == "shelly")
+            {
+                try
+                {
+                    var shellyPowerData = JsonSerializer.Deserialize<ShellyPowerData>(payload);
+                    if (shellyPowerData != null)
+                    {
+                        influx3Connector.WriteInfluxRecords(shellyPowerData.ToInfluxRecords(), topicParts[2], topicParts[4]);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing Shelly data: {ex.Message}");
+                }
+            }
+            return;
         }
 
         if (topic.StartsWith("daten/temperatur/") || topic.StartsWith("daten/luftfeuchtigkeit/"))
