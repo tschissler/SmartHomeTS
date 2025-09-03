@@ -156,7 +156,6 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("device", topicParts[4]);
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, topicParts[4], payload, tags, true);
 
-            influx3Connector.WriteEnergyValue("Electricity", topicParts[3], topicParts[2], topicParts[4], "PowerImportTotal_kWh", Convert.ToDouble(JObject.Parse(payload)["PowerImportTotal_kWh"]), DateTimeOffset.Now);
             return;
         }
 
