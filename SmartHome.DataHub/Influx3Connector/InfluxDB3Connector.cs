@@ -18,45 +18,49 @@ namespace Influx3Connector
         {
             foreach (var record in records)
             {
-                switch (record.MeassurementType)
+                switch (record.MeasurementType)
                 {
-                    case MeassurementType.Percent:
+                    case MeasurementType.Percent:
                         WritePercentageValue(
-                            record.Category,
+                            record.Category.ToString(),
+                            record.SubCategory.ToString(),
                             record.SensorType,
                             location,
                             device,
-                            record.Meassurement,
+                            record.Measurement,
                             Convert.ToDouble(record.Value),
                             DateTimeOffset.UtcNow);
                         break;
-                    case MeassurementType.Energy:
+                    case MeasurementType.Energy:
                         WriteEnergyValue(
-                            record.Category,
+                            record.Category.ToString(),
+                            record.SubCategory.ToString(),
                             record.SensorType,
                             location,
                             device,
-                            record.Meassurement,
+                            record.Measurement,
                             Convert.ToDouble(record.Value) / 1000.0, // Convert Wh to kWh
                             DateTimeOffset.UtcNow);
                         break;
-                    case MeassurementType.Power:
+                    case MeasurementType.Power:
                         WritePowerValue(
-                            record.Category,
+                            record.Category.ToString(),
+                            record.SubCategory.ToString(),
                             record.SensorType,
                             location,
                             device,
-                            record.Meassurement,
+                            record.Measurement,
                             Convert.ToDouble(record.Value),
                             DateTimeOffset.UtcNow);
                         break;
-                    case MeassurementType.Voltage:
+                    case MeasurementType.Voltage:
                         WriteVoltageValue(
-                            record.Category,
+                            record.Category.ToString(),
+                            record.SubCategory.ToString(),
                             record.SensorType,
                             location,
                             device,
-                            record.Meassurement,
+                            record.Measurement,
                             Convert.ToDouble(record.Value),
                             DateTimeOffset.UtcNow);
                         break;
@@ -67,6 +71,7 @@ namespace Influx3Connector
         }
         public void WritePercentageValue(
             string category,
+            string subCategory,
             string sensorType,
             string location,
             string device,
@@ -76,6 +81,7 @@ namespace Influx3Connector
         {
             var point = PointData.Measurement("percent_values")
                 .SetTag("category", category)
+                .SetTag("sub_category", subCategory)
                 .SetTag("sensor_type", sensorType)
                 .SetTag("location", location)
                 .SetTag("device", device)
@@ -87,6 +93,7 @@ namespace Influx3Connector
 
         public void WriteEnergyValue(
             string category,
+            string subCategory,
             string sensorType,
             string location,
             string device,
@@ -96,6 +103,7 @@ namespace Influx3Connector
         {
             var point = PointData.Measurement("energy_values")
                 .SetTag("category", category)
+                .SetTag("sub_category", subCategory)
                 .SetTag("sensor_type", sensorType)
                 .SetTag("location", location)
                 .SetTag("device", device)
@@ -107,6 +115,7 @@ namespace Influx3Connector
 
         public void WritePowerValue(
             string category,
+            string subCategory,
             string sensorType,
             string location,
             string device,
@@ -116,6 +125,7 @@ namespace Influx3Connector
         {
             var point = PointData.Measurement("power_values")
                 .SetTag("category", category)
+                .SetTag("sub_category", subCategory)
                 .SetTag("sensor_type", sensorType)
                 .SetTag("location", location)
                 .SetTag("device", device)
@@ -127,6 +137,7 @@ namespace Influx3Connector
 
         public void WriteVoltageValue(
             string category,
+            string subCategory,
             string sensorType,
             string location,
             string device,
@@ -136,6 +147,7 @@ namespace Influx3Connector
         {
             var point = PointData.Measurement("voltage_values")
                 .SetTag("category", category)
+                .SetTag("sub_category", subCategory)
                 .SetTag("sensor_type", sensorType)
                 .SetTag("location", location)
                 .SetTag("device", device)

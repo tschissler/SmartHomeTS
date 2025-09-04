@@ -13,7 +13,7 @@ namespace SharedContracts
         decimal NetzanschlussMomentanleistung
     )
     {
-        private const string category = "Electricity";
+        private const DataCategory category = DataCategory.Electricity;
         private const string sensorType = "SMLSensor";
 
         public IEnumerable<InfluxRecord> ToInfluxRecords()
@@ -23,29 +23,32 @@ namespace SharedContracts
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = SubCategory.Production,
                     SensorType = sensorType,
-                    Meassurement = "GridConsumption",
+                    Measurement = "GridConsumption",
                     Value = Netzbezug,
                     Unit = "KWh",
-                    MeassurementType = MeassurementType.Energy
+                    MeasurementType = MeasurementType.Energy
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = SubCategory.Consumption,
                     SensorType = sensorType,
-                    Meassurement = "GridSupply",
+                    Measurement = "GridSupply",
                     Value = Netzeinspeisung,
                     Unit = "KWh",
-                    MeassurementType = MeassurementType.Energy
+                    MeasurementType = MeasurementType.Energy
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = NetzanschlussMomentanleistung < 0 ? SubCategory.Consumption : SubCategory.Production,
                     SensorType = sensorType,
-                    Meassurement = "CurrentPower",
+                    Measurement = "CurrentPower",
                     Value = NetzanschlussMomentanleistung,
                     Unit = "KWh",
-                    MeassurementType = MeassurementType.Power
+                    MeasurementType = MeasurementType.Power
                 }
             };
             return records;

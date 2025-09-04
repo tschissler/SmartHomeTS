@@ -16,7 +16,7 @@ namespace SharedContracts
         decimal PowerToHouse
     )
     {
-        private const string category = "Electricity";
+        private const DataCategory category = DataCategory.Electricity;
         private const string sensorType = "Envoy";
 
         public IEnumerable<InfluxRecord> ToInfluxRecords()
@@ -26,56 +26,62 @@ namespace SharedContracts
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = SubCategory.Other,
                     SensorType = sensorType,
-                    Meassurement = "BatteryLevel",
+                    Measurement = "BatteryLevel",
                     Value = BatteryLevel,
                     Unit = "Percent",
-                    MeassurementType = MeassurementType.Percent
+                    MeasurementType = MeasurementType.Percent
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = SubCategory.Other,
                     SensorType = sensorType,
-                    Meassurement = "BatteryEnergy",
+                    Measurement = "BatteryEnergy",
                     Value = BatteryEnergy,
                     Unit = "Wh",
-                    MeassurementType = MeassurementType.Energy
+                    MeasurementType = MeasurementType.Energy
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = SubCategory.Production,
                     SensorType = sensorType,
-                    Meassurement = "PowerFromPV",
+                    Measurement = "PowerFromPV",
                     Value = PowerFromPV,
                     Unit = "W",
-                    MeassurementType = MeassurementType.Power
+                    MeasurementType = MeasurementType.Power
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = PowerFromBattery < 0 ? SubCategory.Consumption : SubCategory.Production,
                     SensorType = sensorType,
-                    Meassurement = "PowerFromBattery",
+                    Measurement = "PowerFromBattery",
                     Value = PowerFromBattery,
                     Unit = "W",
-                    MeassurementType = MeassurementType.Power
+                    MeasurementType = MeasurementType.Power
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = PowerFromGrid < 0 ? SubCategory.Consumption : SubCategory.Production,
                     SensorType = sensorType,
-                    Meassurement = "PowerFromGrid",
+                    Measurement = "PowerFromGrid",
                     Value = PowerFromGrid,
                     Unit = "W",
-                    MeassurementType = MeassurementType.Power
+                    MeasurementType = MeasurementType.Power
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = SubCategory.Consumption,
                     SensorType = sensorType,
-                    Meassurement = "PowerToHouse",
+                    Measurement = "PowerToHouse",
                     Value = PowerToHouse,
                     Unit = "W",
-                    MeassurementType = MeassurementType.Power
+                    MeasurementType = MeasurementType.Power
                 }
             };
             return records;

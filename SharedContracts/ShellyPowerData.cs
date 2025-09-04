@@ -13,8 +13,9 @@ namespace SharedContracts
         decimal TotalPower
     )
     {
-        private const string category = "Electricity";
+        private const DataCategory category = DataCategory.Electricity;
         private const string sensorType = "Shelly";
+        private const SubCategory subCategory = SubCategory.Consumption;
 
         public IEnumerable<InfluxRecord> ToInfluxRecords()
         {
@@ -23,29 +24,32 @@ namespace SharedContracts
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = subCategory,
                     SensorType = sensorType,
-                    Meassurement = "Power",
+                    Measurement = "Power",
                     Value = Power,
                     Unit = "W",
-                    MeassurementType = MeassurementType.Power
+                    MeasurementType = MeasurementType.Power
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = subCategory,
                     SensorType = sensorType,
-                    Meassurement = "Voltage",
+                    Measurement = "Voltage",
                     Value = Voltage,
                     Unit = "V",
-                    MeassurementType = MeassurementType.Voltage
+                    MeasurementType = MeasurementType.Voltage
                 },
                 new InfluxRecord
                 {
                     Category = category,
+                    SubCategory = subCategory,
                     SensorType = sensorType,
-                    Meassurement = "TotalPower",
+                    Measurement = "TotalPower",
                     Value = TotalPower,
                     Unit = "KWh",
-                    MeassurementType = MeassurementType.Energy
+                    MeasurementType = MeasurementType.Energy
                 }
             };
             return records;

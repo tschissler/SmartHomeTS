@@ -2,12 +2,13 @@
 {
     public record InfluxRecord
         {
-        public string Category { get; init; }
-        public string SensorType { get; init; }
-        public string Meassurement { get; init; }
-        public MeassurementType MeassurementType { get; init; }
+        public required DataCategory Category { get; init; }
+        public required SubCategory SubCategory { get; init; }
+        public required string SensorType { get; init; }
+        public required string Measurement { get; init; }
+        public MeasurementType MeasurementType { get; init; }
         public decimal Value { get; init; }
-        public string Unit { get; init; }
+        public string? Unit { get; init; }
 
     }
 }

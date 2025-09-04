@@ -1,6 +1,6 @@
 ﻿namespace SharedContracts
 {
-    public enum  MeassurementType
+    public enum  MeasurementType
     {
         Percent,
         Power,
