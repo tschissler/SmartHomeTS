@@ -35,10 +35,10 @@ PCB_Holder_Width = 3;
 
 difference()
 {
-    //MagnetRing();
-    //Thread();
+    MagnetRing();
+    Thread();
 }
-ModuleBox();
+//ModuleBox();
 //Cap();
 
 module Cap()
@@ -86,9 +86,11 @@ module MagnetRing()
             cylinder(h = Magnet_Height + Border_Bottom +  LED_Z_Offset, d = Magnet_Outer_Diameter + 2*Border_Side);
             translate([0, 0, Border_Bottom])
             {
-                Magnet(Magnet_Height + LED_Z_Offset);
+                Magnet(Magnet_Height + LED_Z_Offset, 1);
             }            
             cylinder(h = Magnet_Height + Border_Bottom +  LED_Z_Offset, d = Magnet_Inner_Diameter - Border_Side);
+            translate([0,0,Magnet_Height])
+                cylinder(h = Magnet_Height + Border_Bottom +  LED_Z_Offset, d = Magnet_Outer_Diameter - Border_Side);
         }
     }
 }
@@ -104,10 +106,19 @@ module ModuleBox()
 
     translate([0, 0, Magnet_Height + Border_Bottom + LED_Z_Offset])
     {
-        Box();
-        translate([0, 0, -LED_Z_Offset])
+        difference()
         {
-            Magnet(LED_Z_Offset);
+            union()
+            {
+                Box();
+                translate([0, 0, -LED_Z_Offset])
+                {
+                    Magnet(LED_Z_Offset, 0);
+                }
+            }
+            
+            LEDHole(1);
+            LEDHole(-1);
         }
     }
     PCBHolder();
@@ -128,20 +139,20 @@ module PCBHolder()
 
 module LEDHole(direction)
 {
-    translate([0, (LED_Full_Distance-LED_Diameter)/2*direction, 0])
+    translate([0, (LED_Full_Distance-LED_Diameter)/2*direction, -15])
     {
-        cylinder(h = 10.0, d = LED_Diameter);
+        cylinder(h = 30.0, d = LED_Diameter);
     }
 }
 
-module Magnet(height)
+module Magnet(height, innerhole)
 {
     difference()
     {
         cylinder(h = height, d = Magnet_Outer_Diameter);
         translate([0, 0, 0])
         {
-            cylinder(h = height, d = Magnet_Inner_Diameter);
+            cylinder(h = height * innerhole, d = Magnet_Inner_Diameter);
         }
     }
 }
@@ -159,8 +170,6 @@ module Box()
             cube([InnerWidth_X, InnerWidth_Y, InnerHeight + 2*Border_Bottom], center = true);
         }
 
-        LEDHole(1);
-        LEDHole(-1);
         USBHole();
     }
 }
