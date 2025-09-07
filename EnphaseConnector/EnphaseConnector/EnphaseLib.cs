@@ -87,10 +87,10 @@ namespace EnphaseConnector
                             DateTimeOffset.FromUnixTimeSeconds(rawData.Meters.Last_Update),
                             rawData.Meters.Soc,
                             rawData.Meters.Enc_Agg_Energy,
-                            rawData.Meters.Pv.Agg_P_Mw / 1000,
-                            rawData.Meters.Storage.Agg_P_Mw / 1000,
-                            rawData.Meters.Grid.Agg_P_Mw / 1000,
-                            rawData.Meters.Load.Agg_P_Mw / 1000
+                            rawData.Meters.Pv.Agg_P_Mw,
+                            rawData.Meters.Storage.Agg_P_Mw,
+                            rawData.Meters.Grid.Agg_P_Mw,
+                            rawData.Meters.Load.Agg_P_Mw
                             );
                     }
                     else
