@@ -13,45 +13,7 @@ namespace SharedContracts
         decimal NetzanschlussMomentanleistung
     )
     {
-        private const DataCategory category = DataCategory.Electricity;
-        private const string sensorType = "SMLSensor";
-
-        public IEnumerable<InfluxRecord> ToInfluxRecords()
-        {
-            var records = new List<InfluxRecord>
-            {
-                new InfluxRecord
-                {
-                    Category = category,
-                    SubCategory = SubCategory.Production,
-                    SensorType = sensorType,
-                    Measurement = "GridConsumption",
-                    Value = Netzbezug,
-                    Unit = "KWh",
-                    MeasurementType = MeasurementType.Energy
-                },
-                new InfluxRecord
-                {
-                    Category = category,
-                    SubCategory = SubCategory.Consumption,
-                    SensorType = sensorType,
-                    Measurement = "GridSupply",
-                    Value = Netzeinspeisung,
-                    Unit = "KWh",
-                    MeasurementType = MeasurementType.Energy
-                },
-                new InfluxRecord
-                {
-                    Category = category,
-                    SubCategory = NetzanschlussMomentanleistung < 0 ? SubCategory.Consumption : SubCategory.Production,
-                    SensorType = sensorType,
-                    Measurement = "CurrentPower",
-                    Value = NetzanschlussMomentanleistung,
-                    Unit = "KWh",
-                    MeasurementType = MeasurementType.Power
-                }
-            };
-            return records;
-        }
+        public const MeasurementCategory Category = MeasurementCategory.Electricity;
+        public const string SensorType = "SMLSensor";
     }
 }

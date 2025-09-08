@@ -14,7 +14,7 @@ namespace Influx3Connector
             client = new InfluxDBClient(influxUrl, token: token, database: database);
         }
 
-        public void WriteInfluxRecords(IEnumerable<InfluxRecord> records, string location, string device)
+        public void WriteInfluxRecords(IEnumerable<InfluxRecord> records)
         {
             foreach (var record in records)
             {
@@ -22,46 +22,22 @@ namespace Influx3Connector
                 {
                     case MeasurementType.Percent:
                         WritePercentageValue(
-                            record.Category.ToString(),
-                            record.SubCategory.ToString(),
-                            record.SensorType,
-                            location,
-                            device,
-                            record.Measurement,
-                            Convert.ToDouble(record.Value),
+                            (InfluxPercentageRecord)record,
                             DateTimeOffset.UtcNow);
                         break;
                     case MeasurementType.Energy:
                         WriteEnergyValue(
-                            record.Category.ToString(),
-                            record.SubCategory.ToString(),
-                            record.SensorType,
-                            location,
-                            device,
-                            record.Measurement,
-                            Convert.ToDouble(record.Value) / 1000.0, // Convert Wh to kWh
+                            (InfluxEnergyRecord)record,
                             DateTimeOffset.UtcNow);
                         break;
                     case MeasurementType.Power:
                         WritePowerValue(
-                            record.Category.ToString(),
-                            record.SubCategory.ToString(),
-                            record.SensorType,
-                            location,
-                            device,
-                            record.Measurement,
-                            Convert.ToDouble(record.Value),
+                            (InfluxPowerRecord)record,
                             DateTimeOffset.UtcNow);
                         break;
                     case MeasurementType.Voltage:
                         WriteVoltageValue(
-                            record.Category.ToString(),
-                            record.SubCategory.ToString(),
-                            record.SensorType,
-                            location,
-                            device,
-                            record.Measurement,
-                            Convert.ToDouble(record.Value),
+                            (InfluxVoltageRecord)record,
                             DateTimeOffset.UtcNow);
                         break;
                     default:
@@ -70,89 +46,69 @@ namespace Influx3Connector
             }
         }
         public void WritePercentageValue(
-            string category,
-            string subCategory,
-            string sensorType,
-            string location,
-            string device,
-            string meassurement,
-            double value_percent,
+            InfluxPercentageRecord record,
             DateTimeOffset timestamp)
         {
             var point = PointData.Measurement("percent_values")
-                .SetTag("category", category)
-                .SetTag("sub_category", subCategory)
-                .SetTag("sensor_type", sensorType)
-                .SetTag("location", location)
-                .SetTag("device", device)
-                .SetTag("meassurement", meassurement)
-                .SetField("value_percent", value_percent)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory.ToString())
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_percent", record.Value_Percent)
                 .SetTimestamp(timestamp);
             client.WritePointAsync(point);
         }
 
         public void WriteEnergyValue(
-            string category,
-            string subCategory,
-            string sensorType,
-            string location,
-            string device,
-            string meassurement,
-            double value_kwh,
+            InfluxEnergyRecord record,
             DateTimeOffset timestamp)
         {
             var point = PointData.Measurement("energy_values")
-                .SetTag("category", category)
-                .SetTag("sub_category", subCategory)
-                .SetTag("sensor_type", sensorType)
-                .SetTag("location", location)
-                .SetTag("device", device)
-                .SetTag("meassurement", meassurement)
-                .SetField("value_kwh", value_kwh)
+                .SetTag("measurement_id", record.MeasurementId)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory.ToString())
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_delta_kwh", Convert.ToDouble(record.Value_Delta_KWh))
+                .SetField("value_cumulated_kwh", Convert.ToDouble(record.Value_Cumulated_KWh))
                 .SetTimestamp(timestamp);
             client.WritePointAsync(point);
         }
 
         public void WritePowerValue(
-            string category,
-            string subCategory,
-            string sensorType,
-            string location,
-            string device,
-            string meassurement,
-            double value_watt,
+            InfluxPowerRecord record,
             DateTimeOffset timestamp)
         {
             var point = PointData.Measurement("power_values")
-                .SetTag("category", category)
-                .SetTag("sub_category", subCategory)
-                .SetTag("sensor_type", sensorType)
-                .SetTag("location", location)
-                .SetTag("device", device)
-                .SetTag("meassurement", meassurement)
-                .SetField("value_watt", value_watt)
+                .SetTag("measurement_id", record.MeasurementId)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory.ToString())
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_watt", Convert.ToDouble(record.Value_W))
                 .SetTimestamp(timestamp);
             client.WritePointAsync(point);
         }
 
         public void WriteVoltageValue(
-            string category,
-            string subCategory,
-            string sensorType,
-            string location,
-            string device,
-            string meassurement,
-            double value_volt,
+            InfluxVoltageRecord record,
             DateTimeOffset timestamp)
         {
             var point = PointData.Measurement("voltage_values")
-                .SetTag("category", category)
-                .SetTag("sub_category", subCategory)
-                .SetTag("sensor_type", sensorType)
-                .SetTag("location", location)
-                .SetTag("device", device)
-                .SetTag("meassurement", meassurement)
-                .SetField("value_volt", value_volt)
+                .SetTag("measurement_id", record.MeasurementId)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory.ToString())
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_volt", Convert.ToDouble(record.Value_V))
                 .SetTimestamp(timestamp);
             client.WritePointAsync(point);
         }

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json.Linq;
 using SharedContracts;
+using SmartHome.DataHub;
 using SmartHomeHelpers.Logging;
 using System.Globalization;
 using System.Text.Json;
@@ -60,6 +61,7 @@ var host = Host.CreateDefaultBuilder(args)
     {
         services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment));
         services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, influxOrg, influxToken));
+        services.AddSingleton<Converters>(_ => new Converters());
         services.AddLogging();
     })
     .Build();
@@ -68,7 +70,8 @@ using var serviceScope = host.Services.CreateScope();
 var services = serviceScope.ServiceProvider;
 var influxConnector = services.GetRequiredService<InfluxDbConnector>();
 
-var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token);
+//var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token);
+var converters = services.GetRequiredService<Converters>();
 
 // Setup MQTT client options
 ConsoleHelpers.PrintInformation(" ### Subscribing to MQTT topics");
@@ -133,7 +136,7 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("device", "EnvoyM1");
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM1", payload, tags, true);
 
-            WriteEnphaseDataToDB(influx3Connector, payload, "M1", "EnvoyM1");
+            //WriteEnphaseDataToDB(influx3Connector, payload, "M1", "EnvoyM1");
             return;
         }
         if (topic == "data/electricity/envoym3")
@@ -143,7 +146,7 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("device", "EnvoyM3");
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM3", payload, tags, true);
 
-            WriteEnphaseDataToDB(influx3Connector, payload, "M3", "EnvoyM3");
+            //WriteEnphaseDataToDB(influx3Connector, payload, "M3", "EnvoyM3");
             return;
         }
         if (topic.StartsWith("data/electricity/M1")
@@ -151,41 +154,43 @@ mqttClient.OnMessageReceived += async (sender, e) =>
         {
             tags = new Dictionary<string, string>();
             var topicParts = topic.Split('/');
-            tags.Add("location", topicParts[2]);
+            var location = topicParts[2];
+            var device = topicParts[4];
+            tags.Add("location", location);
             tags.Add("group", topicParts[3]);
-            tags.Add("device", topicParts[4]);
-            WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, topicParts[4], payload, tags, true);
+            tags.Add("device", device);
+            WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, device, payload, tags, true);
 
-            if (topicParts[3] == "Smartmeter")
-            {
-                try
-                {
-                    var smartmeterData = JsonSerializer.Deserialize<SmartmeterData>(payload);
-                    if (smartmeterData != null)
-                    {
-                        influx3Connector.WriteInfluxRecords(smartmeterData.ToInfluxRecords(), topicParts[2], topicParts[4]);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing Smartmeter data: {ex.Message}");
-                }
-            }
-            else if (topicParts[3] == "shelly")
-            {
-                try
-                {
-                    var shellyPowerData = JsonSerializer.Deserialize<ShellyPowerData>(payload);
-                    if (shellyPowerData != null)
-                    {
-                        influx3Connector.WriteInfluxRecords(shellyPowerData.ToInfluxRecords(), topicParts[2], topicParts[4]);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing Shelly data: {ex.Message}");
-                }
-            }
+            //if (topicParts[3] == "Smartmeter")
+            //{
+            //    try
+            //    {
+            //        var smartmeterData = JsonSerializer.Deserialize<SmartmeterData>(payload);
+            //        if (smartmeterData != null)
+            //        {
+            //            influx3Connector.WriteInfluxRecords(converters.SmartmeterDataToInfluxRecords(smartmeterData, location, device));
+            //        }
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Smartmeter data: {ex.Message}");
+            //    }
+            //}
+            //else if (topicParts[3] == "shelly")
+            //{
+            //    try
+            //    {
+            //        var shellyPowerData = JsonSerializer.Deserialize<ShellyPowerData>(payload);
+            //        if (shellyPowerData != null)
+            //        {
+            //            influx3Connector.WriteInfluxRecords(converters.ShellyPowerDataToInfluxRecords(shellyPowerData, location, device));
+            //        }
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Shelly data: {ex.Message}");
+            //    }
+            //}
             return;
         }
 
@@ -220,7 +225,7 @@ void WriteEnphaseDataToDB(InfluxDB3Connector influx3Connector, string payload, s
         var enphaseData = JsonSerializer.Deserialize<EnphaseData>(payload);
         if (enphaseData != null)
         {
-            influx3Connector.WriteInfluxRecords(enphaseData.ToInfluxRecords(), location, device);
+            influx3Connector.WriteInfluxRecords(converters.EnphaseDataToInfluxRecords(enphaseData, location, device));
         }
     }
     catch (Exception ex)
