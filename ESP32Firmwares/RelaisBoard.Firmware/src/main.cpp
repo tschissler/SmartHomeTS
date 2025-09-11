@@ -85,7 +85,7 @@ bool updateRoomMapping(const String& jsonConfig) {
   JsonArray rooms = doc.as<JsonArray>();
   
   for (JsonObject room : rooms) {
-    if (!room.containsKey("Room") || !room.containsKey("Pin")) {
+    if (!room["Room"].is<String>() || !room["Pin"].is<int>()) {
       Serial.println("Room mapping entry missing 'Room' or 'Pin' field");
       continue;
     }
