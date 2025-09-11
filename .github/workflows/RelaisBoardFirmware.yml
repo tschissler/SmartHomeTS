@@ -1,0 +1,63 @@
+name: RelaismoduleFirmware CD
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - .github/workflows/RelaisBoardFirmware.yml
+      - ESP32Firmwares/RelaisBoard.Firmware/**
+  workflow_dispatch:
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      blob_url: ${{ steps.construct_blob_url.outputs.blob_url }}
+    defaults:
+      run:
+        working-directory: ESP32Firmwares/RelaisBoard.Firmware
+  
+    steps:
+    - uses: actions/checkout@v3
+    - name: Generating version 
+      run: echo "version=0.0.$(( ${{ github.run_number }}))" >> $GITHUB_ENV
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install platformio
+
+    - name: Build with PlatformIO  
+      env:
+        WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
+        SMLSENSORFW_VERSION: ${{ env.version }}
+      run: |
+        pio run
+
+    - name: Upload Firmware to Azure Blob Storage
+      run: |
+        az storage blob upload --account-name smarthomestorageprod \
+                               --container-name firmwareupdates \
+                               --name RelaisBoardFirmware_$version.bin \
+                               --file .pio/build/esp32dev/firmware.bin \
+                               --account-key ${{ secrets.AZURE_STORAGE_KEY }}
+                               
+    - name: Construct Blob URL
+      id: construct_blob_url
+      run: echo "blob_url=https://smarthomestorageprod.blob.core.windows.net/firmwareupdates/RelaisBoardFirmware_$version.bin" >> $GITHUB_OUTPUT
+                           
+  triggerupdate:
+    needs: build
+    runs-on: [self-hosted, linux]
+    steps:
+#    - name: Install Mosquitto Clients
+#      run: sudo apt-get install -y mosquitto-clients
+
+    - name: Trigger MQTT Update Message
+      run: |
+        mosquitto_pub -h smarthomepi2 -p 32004 -t OTAUpdate/Relaismodule -q 2 -m ${{ needs.build.outputs.blob_url }} -i buildrunner -r
