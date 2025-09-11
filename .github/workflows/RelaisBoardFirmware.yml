@@ -35,7 +35,7 @@ jobs:
     - name: Build with PlatformIO  
       env:
         WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
-        SMLSENSORFW_VERSION: ${{ env.version }}
+        FIRMWARE_VERSION: ${{ env.version }}
       run: |
         pio run
 
