@@ -255,7 +255,7 @@ void setup() {
   
   // Set up MQTT
   String mqttClientID = "ESP32RelaismoduleClient_" + chipID;
-  mqttClient = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  mqttClient = std::unique_ptr<MQTTClientLib>(new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback));
   connectToMQTT();
 
   // Print the IP address
