@@ -138,10 +138,12 @@ void mqttCallback(String &topic, String &payload) {
       int relayPin = getRelayPinForRoom(roomName);
       
       if (relayPin != -1) {
-          if (payload == "ON") {
+          String payloadUpper = payload;
+          payloadUpper.toUpperCase();
+          if (payloadUpper == "ON") {
               digitalWrite(relayPin, LOW); 
               Serial.println("Relay for room '" + roomName + "' turned ON (GPIO " + String(relayPin) + ")");
-          } else if (payload == "OFF") {
+          } else if (payloadUpper == "OFF") {
               digitalWrite(relayPin, HIGH);
               Serial.println("Relay for room '" + roomName + "' turned OFF (GPIO " + String(relayPin) + ")");
           } else {
