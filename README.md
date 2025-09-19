@@ -25,6 +25,7 @@ The current state of my SmartHome system covers these capabilities:
 - **Solar Production**: Live monitoring of Enphase microinverter system performance
 - **Lighting Control**: RGB LED strip automation and customizable lighting scenes
 - **Smart Device Integration**: Energy consumption tracking via Shelly smart switches
+- **[Room temperature / thermostat control](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#temperature-display)**: Allowing users to set temperature targets per room
 
 ## Technologies Used
 
@@ -100,7 +101,7 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
 
 #### Temperature Display
 
-- **Purpose**: This project allows control of room temperatures by viewing and changing thermostat settings. The display integrates fully via MQTT as it receives all data to be displayed by subscribing to various MQTT topics and sending changes to the thermostat settings as MQTT messages.
+- **Purpose**: This project allows control of room temperatures by viewing and changing thermostat settings. The display integrates fully via MQTT as it receives all data to be displayed by subscribing to various MQTT topics and sending changes to the thermostat settings as MQTT messages. These MQTT messages are then picked up by the [ShellyConnector](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#shellyconnector) and used to define the target temperature for these devices.
 
 - **Inspiration**: Learn how to build a visual interface controlled by touch gestures.
   
