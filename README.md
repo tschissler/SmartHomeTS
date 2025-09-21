@@ -35,7 +35,7 @@ The current state of my SmartHome system covers these capabilities:
 - **Lighting Control**: RGB LED strip automation and customizable lighting scenes
 - **Smart Device Integration**: Energy consumption tracking via Shelly smart switches
 
-![ShellyPLug](./Docs/images/shelly.jpg)
+![ShellyPlug](./Docs/images/Shelly.jpg)
 
 - **[Room temperature / thermostat control](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#temperature-display)**: Allowing users to set temperature targets per room
 
