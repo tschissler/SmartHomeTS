@@ -22,6 +22,7 @@ The current state of my SmartHome system covers these capabilities:
   https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030
   
 - **Water Management**: Ultrasonic cistern level monitoring with trend analysis
+- **Water consumption**: Reading measurement from analog water meter via OCR functionality ![Watermeter display](Docs/images/Watermeter2.jpg) ![Watermeter sensor](Docs/images/Watermeter.jpg)
 - **Environmental Sensing**: Multi-zone temperature and humidity monitoring with ESP32 sensors ![Temperature Sensor indoor](Docs/images/Tempsensor.jpg) ![Temperature Sensor outdoor](Docs/images/Tempsensor_outdoor.jpg)
 
 - **EV Charging Optimization**: Automated charging control based on solar production and energy pricing ![Screenshot of SmartHome.Web](./Docs/images/image1.png)
@@ -36,7 +37,7 @@ The current state of my SmartHome system covers these capabilities:
 - **Control of underfloor heating** by powering servomotors with a relais controller box
 ![Underfloor heating](./Docs/images/UnderfloorHeating.jpg)
 
-
+- **Heat meter reading**: Read heat energy produced by the heatpump to calculate COP and compare with device value.  ![Heatmeter Sensor](./Docs/images/HeatmeterSensor.jpg)
 
 
 ## Technologies Used
