@@ -23,12 +23,29 @@ The current state of my SmartHome system covers these capabilities:
   
 - **Water Management**: Ultrasonic cistern level monitoring with trend analysis
 - **Environmental Sensing**: Multi-zone temperature and humidity monitoring with ESP32 sensors
+
+![Temperature Sensor indoor](Docs/images/Tempsensor.jpg)
+![Temperature Sensor outdoor](Docs/images/Tempsensor_outdoor.jpg)
+
 - **EV Charging Optimization**: Automated charging control based on solar production and energy pricing
+![Screenshot of SmartHome.Web](./Docs/images/image1.png)
+
 - **Vehicle Integration**: Real-time data from BMW/Mini Connected Drive and VW Connect APIs
 - **Solar Production**: Live monitoring of Enphase microinverter system performance
 - **Lighting Control**: RGB LED strip automation and customizable lighting scenes
 - **Smart Device Integration**: Energy consumption tracking via Shelly smart switches
+
+![ShellyPLug](./Docs/images/shelly.jpg)
+
 - **[Room temperature / thermostat control](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#temperature-display)**: Allowing users to set temperature targets per room
+
+![TemperatureDisplay](https://github.com/user-attachments/assets/1d667af0-d9ec-42c1-a91c-68037762102b)
+
+- **Control of underfloor heating** by powering servomotors with a relais controller box
+![Underfloor heating](./Docs/images/UnderfloorHeating.jpg)
+
+
+
 
 ## Technologies Used
 
@@ -115,8 +132,6 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
   - The display is built with this device: [WaveShare ESP32-S3-Touch-LCD-7](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-7).
   - It uses the [LVGL library](https://github.com/lvgl/lvgl). The UI is designed using [SquareLine Studio](https://squareline.io/).
 
-![TemperatureDisplay](https://github.com/user-attachments/assets/1d667af0-d9ec-42c1-a91c-68037762102b)
-
 Setup and build: [`ESP32Firmwares/TemperatureDisplay.Firmware/README.md`](ESP32Firmwares/TemperatureDisplay.Firmware/README.md)
 
 ### MCPServer
@@ -176,7 +191,6 @@ Setup and build: [`ESP32Firmwares/TemperatureDisplay.Firmware/README.md`](ESP32F
 
 - **Purpose**: A web interface for visualizing and controlling the smart home system, offering a centralized dashboard.
 - **Inspiration**: Learn how to build interactive web applications with Blazor and Syncfusion.
-![Screenshot of SmartHome.Web](./Docs/images/image1.png)
 
 ### ShellyConnector
 
