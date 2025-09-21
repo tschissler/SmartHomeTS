@@ -60,10 +60,10 @@ LEDHolderOffsetX4 = LEDHolderOffsetX3 + 76;
 
 
 
-//BottomPart();
+BottomPart();
 //InsertHolders();
- translate([0, 150, 0])
-     TopPart();
+//  translate([0, 150, 0])
+//      TopPart();
 
 //CableHolderTop();
 

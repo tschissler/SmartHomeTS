@@ -61,12 +61,12 @@ LEDHolderOffsetX2 = LEDHolderOffsetX1 + 31;
 
 
 
-BottomPart();
-InsertHolders();
-//  translate([0, 150, 0])
-//      TopPart();
+// BottomPart();
+// InsertHolders();
+ translate([0, 150, 0])
+     TopPart();
 
-//CableHolderTop();
+// CableHolderTop();
 
 module CableHolderTop()
 {
