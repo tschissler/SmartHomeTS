@@ -30,6 +30,14 @@ A lightweight firmware to switch heating circuits per room using an ESP32 microc
 
 ## Images
 
+Assembled device
 ![Case 2](images/Case_2.jpg)
+
+Assembled device
 ![Connections](images/Connections.jpg)
+
+Installation in heating manifold
 ![Heating Box](images/Heating_box.jpg)
+
+Installation of 2-port version
+![2-port version](images/Heatingcontroller_2port.jpg)
