@@ -18,6 +18,7 @@ While the code is tailored specifically to my equipment, devices, and needs, it 
 The current state of my SmartHome system covers these capabilities:
 
 - **[Energy Monitoring](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#smlsensorfirmware)**: Smart meter integration via SML protocol for real-time consumption/feed-in data
+  [SMLSensor demonstration video](https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030)
 - **Water Management**: Ultrasonic cistern level monitoring with trend analysis
 - **Environmental Sensing**: Multi-zone temperature and humidity monitoring with ESP32 sensors
 - **EV Charging Optimization**: Automated charging control based on solar production and energy pricing
@@ -40,9 +41,9 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 - **SML - Smart Meter Language Protocol**: A protocol used by smart meters to communicate data. Currently the SML protocol is used in the [SMLSensor project](https://github.com/tschissler/SmartHomeTS/tree/main/ESP32Firmwares/SMLSensor.Firmware) to read SML data via IR signals and send these values as MQTT messages.
 - **InfluxDB**: A time-series database optimized for storing and querying time-stamped data. This repository uses InfluxDB to manage energy consumption and climate metrics, showcasing its power in data analytics. Learn more at [InfluxDB Documentation](https://docs.influxdata.com/).
 - **Model Context Protocol (MCP)**: A protocol for AI tools that allows structured retrieval and manipulation of data. This repository features a C# MCP server for InfluxDB, enabling AI assistants to directly query schema and sample data to provide better assistance in creating Flux queries. Learn more at [Model Context Protocol](https://github.com/microsoft/node-model-context-protocol).
-- **Kubernetes**: A container orchestration platform that ensures scalability and reliability. Kubernetes is used across multiple projects to manage containerized applications, making it essential for modern DevOps. Learn more at [Kubernetes.io](https://kubernetes.io/). In this project I use [microk8s](https://microk8s.io/) to host a Kubernetes cluster on a set of Raspberry Pis.
-- **Docker**: Simplifies application deployment by containerizing services. Container images are built during the build process and then used to deploy to the kubernetes cluster. Learn more at [Docker Documentation](https://docs.docker.com/).
-- **Flutter**: A cross-platform framework for building mobile apps. The Smarthome_app project illustrates how to use Flutter to build apps that run on mobile devices, Windows and in the browser. Learn more at [Flutter.dev](https://flutter.dev/).
+- **Kubernetes**: A container orchestration platform that ensures scalability and reliability. Kubernetes is used across multiple projects to manage containerized applications, making it essential for modern DevOps. Learn more at [Kubernetes.io](https://kubernetes.io/). In this project I use [MicroK8s](https://microk8s.io/) to host a Kubernetes cluster on a set of Raspberry Pis.
+- **Docker**: Simplifies application deployment by containerizing services. Container images are built during the build process and then used to deploy to the Kubernetes cluster. Learn more at [Docker Documentation](https://docs.docker.com/).
+- **Flutter**: A cross-platform framework for building mobile apps. The `smarthome_app` project illustrates how to use Flutter to build apps that run on mobile devices, Windows and in the browser (see [`smarthome_app/README.md`](smarthome_app/README.md)). Learn more at [Flutter.dev](https://flutter.dev/).
 - **Blazor**: A web framework for building interactive applications using C#. The SmartHome.Web project is an example of how to create responsive and feature-rich web interfaces. Learn more at [Blazor Documentation](https://learn.microsoft.com/en-us/aspnet/core/blazor/).
 - **Syncfusion**: Provides UI components for creating interactive and visually appealing applications. Used in SmartHome.Web, it demonstrates how to enhance user interfaces with minimal effort. Learn more at [Syncfusion Blazor Components](https://www.syncfusion.com/blazor-components).
 
@@ -80,6 +81,8 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 
 - **Purpose**: A centralized data hub service that processes and routes data between various smart home components and InfluxDB, serving as a bridge for data transformation and storage.
 - **Inspiration**: Learn how to build scalable data processing services using .NET and implement data pipeline architectures.
+  
+  More details: [`SmartHome.DataHub/SmartHome.DataHub/README.md`](SmartHome.DataHub/SmartHome.DataHub/README.md)
 
 ### EnphaseConnector
 
@@ -90,12 +93,12 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 
 - **Purpose**: Firmware for ESP32-based devices, including LED strips, temperature sensors, and more.
 - **Inspiration**: Learn how to program microcontrollers for IoT applications.
+  
+  Quick links: [`SMLSensor.Firmware`](ESP32Firmwares/SMLSensor.Firmware/README.md) · [`TemperatureDisplay.Firmware`](ESP32Firmwares/TemperatureDisplay.Firmware/README.md) · [`HeatmeterSensor.Firmware`](ESP32Firmwares/HeatmeterSensor.Firmware/README.md) · [`RelaisBoard.Firmware`](ESP32Firmwares/RelaisBoard.Firmware/README.md) · [`CANBusGateway.Firmware`](ESP32Firmwares/CANBusGateway.Firmware/README.md)
 
 #### SMLSensor.Firmware
 
 - **Purpose**: Reading data from a digital energy meter using the SML (Smart Meter Language) protocol. This repo also features instructions on how to build the hardware for the sensor.
-
-https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030
 
 For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/SMLSensor.Firmware#readme)
 
@@ -111,6 +114,8 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
   - It uses the [LVGL library](https://github.com/lvgl/lvgl). The UI is designed using [SquareLine Studio](https://squareline.io/).
 
 ![TemperatureDisplay](https://github.com/user-attachments/assets/1d667af0-d9ec-42c1-a91c-68037762102b)
+
+Setup and build: [`ESP32Firmwares/TemperatureDisplay.Firmware/README.md`](ESP32Firmwares/TemperatureDisplay.Firmware/README.md)
 
 ### MCPServer
 
@@ -147,7 +152,7 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
      - `GetSample`: Get sample data from a measurement
      - And other utilities for time range analysis and field type inspection
 
-### Influx
+### InfluxDB
 
 - **Purpose**: Manages InfluxDB for storing and querying time-series data, such as energy consumption and climate metrics.
 - **Inspiration**: See how to use time-series databases for advanced data analytics.
@@ -157,6 +162,8 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
 
 - **Purpose**: Provides visualization and monitoring dashboards for the smart home system, creating interactive charts and graphs from InfluxDB time-series data.
 - **Inspiration**: Learn how to deploy Grafana in Kubernetes and create compelling data visualizations for real-time monitoring.
+  
+  Deployment/config: [`Grafana/README.md`](Grafana/README.md)
 
 ### Smarthome.App.MAUI
 
@@ -205,7 +212,7 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
 
 - **Purpose**: Previously contained experimental projects using .NET nanoFramework on ESP32 devices, including the KellerDevice project for water level monitoring.
 - **Inspiration**: Demonstrates how to use C# and .NET on microcontrollers, exploring the possibilities of bringing familiar development paradigms to embedded systems.
-- **Status**: Deprecated in favor of traditional C/C++ ESP32 firmware development for better performance and OTA update capaility.
+- **Status**: Deprecated in favor of traditional C/C++ ESP32 firmware development for better performance and OTA update capability.
 
 ## Tools Frequently Used
 
@@ -223,15 +230,16 @@ Kubernetes secrets are used in this repository to securely manage sensitive info
 You can see one example in the BMWConnector project as it uses Kubernetes Secrets for securely managing OAuth tokens required for authenticating with the BMW Connected Drive API. Here's how it works:
 
 1. **Loading Secrets**:
-   - The `load_oauth_store_from_k8s_secret` function in k8s_utils.py reads OAuth tokens from a Kubernetes Secret. It decodes the base64-encoded values and sets them in the `MyBMWAccount` object for authentication.
 
-2. **Storing Secrets**:
-   - The `store_oauth_store_to_k8s_secret` function updates or creates a Kubernetes Secret with the latest OAuth tokens. It encodes the tokens in base64 before storing them, ensuring secure handling of sensitive data.
+  The `load_oauth_store_from_k8s_secret` function in `k8s_utils.py` reads OAuth tokens from a Kubernetes Secret. It decodes the base64-encoded values and sets them in the `MyBMWAccount` object for authentication.
 
-3. **Integration in bmw_mqtt.py**:
-   - The `connect_vehicle` function attempts to load OAuth tokens from Kubernetes Secrets for authentication. If this fails, it prompts the user for a captcha token (in interactive mode) and stores the new tokens back into the Kubernetes Secret.
-   - As the secret is stored in Kubernetes as a centralized instance, the interactive providing of a captcha token can be executed on a workstation and the service running in the Kubernetes cluster can then pick up this information when running.
-   - During the main loop, the script periodically refreshes the OAuth tokens and updates the Kubernetes Secret to keep the tokens valid.
+1. **Storing Secrets**:
+
+  The `store_oauth_store_to_k8s_secret` function updates or creates a Kubernetes Secret with the latest OAuth tokens. It encodes the tokens in base64 before storing them, ensuring secure handling of sensitive data.
+
+1. **Integration in `bmw_mqtt.py`**:
+
+  The `connect_vehicle` function attempts to load OAuth tokens from Kubernetes Secrets for authentication. If this fails, it prompts the user for a captcha token (in interactive mode) and stores the new tokens back into the Kubernetes Secret. As the secret is stored in Kubernetes as a centralized instance, the interactive providing of a captcha token can be executed on a workstation and the service running in the Kubernetes cluster can then pick up this information when running. During the main loop, the script periodically refreshes the OAuth tokens and updates the Kubernetes Secret to keep the tokens valid.
 
 This approach ensures secure and automated management of authentication tokens, reducing manual intervention and enhancing reliability.
 
@@ -252,6 +260,25 @@ This project is hosted on **GitHub**, leveraging its robust ecosystem for versio
 - **Kubernetes Agent**: A custom agent runs on the Kubernetes cluster, enabling automated deployments directly from GitHub Actions. This integration ensures that updates are deployed seamlessly to the cluster.
 
 These workflows are designed to provide a robust and automated pipeline, reducing manual effort and ensuring consistent deployments.
+
+## External Components Used
+
+Some essential parts of my running setup live in external repositories; they are not part of this codebase but are integral to the overall system:
+
+### CAN-Gateway (Hoval heat pump)
+
+- Repository: [wladwnt/CAN-Gateway](https://github.com/wladwnt/CAN-Gateway)
+- Purpose: Reads CAN bus data from a Hoval heat pump and exposes it so the rest of the system can consume and visualize metrics.
+
+![CAN-Gateway for Hoval heat pump](./Docs/images/CanGateway.jpg)
+![CAN-Gateway for Hoval heat pump](./Docs/images/CanGateway2.jpg)
+
+### AI-on-the-edge-device (Water meter OCR)
+
+- Repository: [jomjol/AI-on-the-edge-device](https://github.com/jomjol/AI-on-the-edge-device)
+- Purpose: Performs OCR on the water meter using an ESP32-based camera to extract readings and feed them into the data pipeline.
+
+![Watermeter OCR device](./Docs/images/Watermeter.jpg)
 
 ## External Resources
 
