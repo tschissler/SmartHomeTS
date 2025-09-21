@@ -18,7 +18,9 @@ While the code is tailored specifically to my equipment, devices, and needs, it 
 The current state of my SmartHome system covers these capabilities:
 
 - **[Energy Monitoring](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#smlsensorfirmware)**: Smart meter integration via SML protocol for real-time consumption/feed-in data
-  [SMLSensor demonstration video](https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030)
+
+  https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030
+  
 - **Water Management**: Ultrasonic cistern level monitoring with trend analysis
 - **Environmental Sensing**: Multi-zone temperature and humidity monitoring with ESP32 sensors
 - **EV Charging Optimization**: Automated charging control based on solar production and energy pricing
