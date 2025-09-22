@@ -29,8 +29,10 @@ The current state of my SmartHome system covers these capabilities:
 
 - **Vehicle Integration**: Real-time data from BMW/Mini Connected Drive and VW Connect APIs
 - **Solar Production**: Live monitoring of Enphase microinverter system performance
-- **Lighting Control**: RGB LED strip automation and customizable lighting scenes ![Lightning Control](Docs/images/Illumination.mp4)
-- 
+- **Lighting Control**: RGB LED strip automation and customizable lighting scenes 
+  
+  https://github.com/tschissler/SmartHomeTS/blob/main/Docs/images/Illumination.mp4
+  
 - **Smart Device Integration**: Energy consumption tracking via Shelly smart switches ![ShellyPlug](./Docs/images/Shelly.jpg)
 
 - **[Room temperature / thermostat control](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#temperature-display)**: Allowing users to set temperature targets per room ![TemperatureDisplay](https://github.com/user-attachments/assets/1d667af0-d9ec-42c1-a91c-68037762102b)
