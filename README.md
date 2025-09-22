@@ -22,14 +22,15 @@ The current state of my SmartHome system covers these capabilities:
   https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030
   
 - **Water Management**: Ultrasonic cistern level monitoring with trend analysis
-- **Water consumption**: Reading measurement from analog water meter via OCR functionality ![Watermeter display](Docs/images/Watermeter2.jpg) ![Watermeter sensor](Docs/images/Watermeter.jpg)
+- **Water consumption**: Reading measurement from analog water meter via OCR functionality ![Watermeter display](Docs/images/Watermeter3.jpg) ![Watermeter sensor](Docs/images/Watermeter.jpg)
 - **Environmental Sensing**: Multi-zone temperature and humidity monitoring with ESP32 sensors ![Temperature Sensor indoor](Docs/images/Tempsensor.jpg) ![Temperature Sensor outdoor](Docs/images/Tempsensor_outdoor.jpg)
 
 - **EV Charging Optimization**: Automated charging control based on solar production and energy pricing ![Screenshot of SmartHome.Web](./Docs/images/image1.png)
 
 - **Vehicle Integration**: Real-time data from BMW/Mini Connected Drive and VW Connect APIs
 - **Solar Production**: Live monitoring of Enphase microinverter system performance
-- **Lighting Control**: RGB LED strip automation and customizable lighting scenes
+- **Lighting Control**: RGB LED strip automation and customizable lighting scenes ![Lightning Control](Docs/images/Illumination.mp4)
+- 
 - **Smart Device Integration**: Energy consumption tracking via Shelly smart switches ![ShellyPlug](./Docs/images/Shelly.jpg)
 
 - **[Room temperature / thermostat control](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#temperature-display)**: Allowing users to set temperature targets per room ![TemperatureDisplay](https://github.com/user-attachments/assets/1d667af0-d9ec-42c1-a91c-68037762102b)
