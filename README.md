@@ -31,7 +31,7 @@ The current state of my SmartHome system covers these capabilities:
 - **Solar Production**: Live monitoring of Enphase microinverter system performance
 - **Lighting Control**: RGB LED strip automation and customizable lighting scenes 
   
-  https://github.com/tschissler/SmartHomeTS/blob/main/Docs/images/Illumination.mp4
+  https://github.com/user-attachments/assets/a5237b24-f65d-43e7-95f5-5848af950f3c
   
 - **Smart Device Integration**: Energy consumption tracking via Shelly smart switches ![ShellyPlug](./Docs/images/Shelly.jpg)
 
