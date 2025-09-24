@@ -232,7 +232,7 @@ While working with this repository, the following tools are frequently utilized 
 
 - **VSCode**: A lightweight and versatile code editor, ideal for quick edits and exploring the codebase. Extensions like PlatformIO and Docker make it a powerful tool for embedded and containerized development.
 - **Visual Studio**: Used for developing and debugging .NET projects like ChargingController and SmartHome.DataHub. Its robust debugging tools and integration with Azure DevOps make it indispensable for large-scale projects.
-- **MQTT Explorer**: A graphical MQTT client that simplifies the process of monitoring and debugging MQTT topics and messages. It is particularly useful for projects like MQTTBroker and ShellyConnector. [https://mqtt-explorer.com/](https://mqtt-explorer.com/(
+- **MQTT Explorer**: A graphical MQTT client that simplifies the process of monitoring and debugging MQTT topics and messages. It is particularly useful for projects like MQTTBroker and ShellyConnector. [https://mqtt-explorer.com/](https://mqtt-explorer.com/)
 - **OpenSCAD**: A script-based 3D CAD modeler that is used for creating precise 3D models, such as the sensor cases and module boxes in the `3DModels` directory. It allows for parametric design, making it easy to adjust dimensions and features programmatically. Learn more at [OpenSCAD](https://openscad.org/).
 
 ## Kubernetes Secrets Usage
