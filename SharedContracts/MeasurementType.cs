@@ -5,6 +5,7 @@
         Percent,
         Power,
         Energy,
-        Voltage
+        Voltage,
+        Temperature
     }
 }

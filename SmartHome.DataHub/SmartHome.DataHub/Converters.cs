@@ -249,5 +249,25 @@ namespace SmartHome.DataHub
             };
             return records;
         }
+
+        public InfluxTemperatureRecord TemperatureDataToInfluxRecords(decimal value, string location, string meassurement)
+        {
+            var subCategory = meassurement.Contains("Aussenfuehler") ?
+                TemperatureSubCategory.Outdoor :
+                TemperatureSubCategory.HeatingTemperature;
+
+            return new InfluxTemperatureRecord
+            {
+                MeasurementId = "Temperature_" + location + "_" + meassurement,
+                Category = MeasurementCategory.Temperature,
+                SubCategory = subCategory,
+                SensorType = "CanGateway",
+                Location = location,
+                Device = "Heatpump",
+                Measurement = meassurement,
+                Value_DegreeC = value,
+                MeasurementType = MeasurementType.Temperature
+            };
+        }
     }
 }

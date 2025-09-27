@@ -70,7 +70,7 @@ using var serviceScope = host.Services.CreateScope();
 var services = serviceScope.ServiceProvider;
 var influxConnector = services.GetRequiredService<InfluxDbConnector>();
 
-//var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token);
+var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token);
 var converters = services.GetRequiredService<Converters>();
 
 // Setup MQTT client options
@@ -84,7 +84,7 @@ await mqttClient.SubscribeToTopic("data/electricity/envoym1");
 await mqttClient.SubscribeToTopic("data/electricity/envoym3");
 await mqttClient.SubscribeToTopic("daten/temperatur/#");
 await mqttClient.SubscribeToTopic("daten/luftfeuchtigkeit/#");
-await mqttClient.SubscribeToTopic("cangateway/M3/#");
+await mqttClient.SubscribeToTopic("cangateway/#");
 
 
 mqttClient.OnMessageReceived += async (sender, e) =>
@@ -136,7 +136,7 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("device", "EnvoyM1");
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM1", payload, tags, true);
 
-            //WriteEnphaseDataToDB(influx3Connector, payload, "M1", "EnvoyM1");
+            WriteEnphaseDataToDB(influx3Connector, payload, "M1", "EnvoyM1");
             return;
         }
         if (topic == "data/electricity/envoym3")
@@ -146,7 +146,7 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("device", "EnvoyM3");
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM3", payload, tags, true);
 
-            //WriteEnphaseDataToDB(influx3Connector, payload, "M3", "EnvoyM3");
+            WriteEnphaseDataToDB(influx3Connector, payload, "M3", "EnvoyM3");
             return;
         }
         if (topic.StartsWith("data/electricity/M1")
@@ -161,36 +161,36 @@ mqttClient.OnMessageReceived += async (sender, e) =>
             tags.Add("device", device);
             WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, device, payload, tags, true);
 
-            //if (topicParts[3] == "Smartmeter")
-            //{
-            //    try
-            //    {
-            //        var smartmeterData = JsonSerializer.Deserialize<SmartmeterData>(payload);
-            //        if (smartmeterData != null)
-            //        {
-            //            influx3Connector.WriteInfluxRecords(converters.SmartmeterDataToInfluxRecords(smartmeterData, location, device));
-            //        }
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Smartmeter data: {ex.Message}");
-            //    }
-            //}
-            //else if (topicParts[3] == "shelly")
-            //{
-            //    try
-            //    {
-            //        var shellyPowerData = JsonSerializer.Deserialize<ShellyPowerData>(payload);
-            //        if (shellyPowerData != null)
-            //        {
-            //            influx3Connector.WriteInfluxRecords(converters.ShellyPowerDataToInfluxRecords(shellyPowerData, location, device));
-            //        }
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Shelly data: {ex.Message}");
-            //    }
-            //}
+            if (topicParts[3] == "Smartmeter")
+            {
+                try
+                {
+                    var smartmeterData = JsonSerializer.Deserialize<SmartmeterData>(payload);
+                    if (smartmeterData != null)
+                    {
+                        influx3Connector.WriteInfluxRecords(converters.SmartmeterDataToInfluxRecords(smartmeterData, location, device));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing Smartmeter data: {ex.Message}");
+                }
+            }
+            else if (topicParts[3] == "shelly")
+            {
+                try
+                {
+                    var shellyPowerData = JsonSerializer.Deserialize<ShellyPowerData>(payload);
+                    if (shellyPowerData != null)
+                    {
+                        influx3Connector.WriteInfluxRecords(converters.ShellyPowerDataToInfluxRecords(shellyPowerData, location, device));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing Shelly data: {ex.Message}");
+                }
+            }
             return;
         }
 
@@ -207,8 +207,7 @@ mqttClient.OnMessageReceived += async (sender, e) =>
         {
             tags = new Dictionary<string, string>();
             var topicParts = topic.Split('/');
-            tags.Add("location", topicParts[2]);
-            WriteFloatAsFields(heatingDataBucket, influxConnector, topic, topicParts[1], payload, tags);
+            WriteCangatewayDataToDB(influx3Connector, payload, topicParts);
             return;
         }
     }
@@ -217,6 +216,24 @@ mqttClient.OnMessageReceived += async (sender, e) =>
         ConsoleHelpers.PrintErrorMessage($"####Error processing message: {ex.Message}");
     }
 };
+
+void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload, string[] topicParts)
+{
+    if (topicParts.Length < 3)
+        return;
+    var location = topicParts[1];
+    var meassurement = topicParts[2];
+    if (meassurement.Contains("_gradC"))
+    {
+        meassurement = meassurement.Replace("_gradC", "");
+        influx3Connector.WriteTemperatureValue(
+            converters.TemperatureDataToInfluxRecords(
+                Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                location, 
+                meassurement),
+            DateTimeOffset.UtcNow);
+    }
+}
 
 void WriteEnphaseDataToDB(InfluxDB3Connector influx3Connector, string payload, string location, string device)
 {
