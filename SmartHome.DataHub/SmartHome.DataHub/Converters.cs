@@ -249,21 +249,5 @@ namespace SmartHome.DataHub
             };
             return records;
         }
-
-        public InfluxTemperatureRecord TemperatureDataToInfluxRecords(decimal value, string location, string subCategory, string meassurement)
-        {
-            return new InfluxTemperatureRecord
-            {
-                MeasurementId = "Heizung_" + location + "_" + meassurement,
-                Category = MeasurementCategory.Heizung,
-                SubCategory = subCategory,
-                SensorType = "CanGateway",
-                Location = location,
-                Device = "Waermepumpe",
-                Measurement = meassurement,
-                Value_DegreeC = value,
-                MeasurementType = MeasurementType.Temperature
-            };
-        }
     }
 }

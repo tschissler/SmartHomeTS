@@ -232,12 +232,19 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
     {
         case "Temperatur":
             influx3Connector.WriteTemperatureValue(
-                       converters.TemperatureDataToInfluxRecords(
-                           Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
-                           location,
-                           measurementType,
-                           meassurement),
-                       DateTimeOffset.UtcNow);
+                new InfluxTemperatureRecord
+                {
+                    MeasurementId = "Heizung_" + location + "_" + meassurement,
+                    Category = MeasurementCategory.Heizung,
+                    SubCategory = subCategory,
+                    SensorType = "CanGateway",
+                    Location = location,
+                    Device = "Waermepumpe",
+                    Measurement = meassurement,
+                    Value_DegreeC = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                    MeasurementType = MeasurementType.Temperature
+                },
+                DateTimeOffset.UtcNow);
             break;
         case "Leistung":
             influx3Connector.WritePowerValue(
