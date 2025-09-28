@@ -1,4 +1,5 @@
-﻿using Influx3Connector;
+﻿using Google.Protobuf.WellKnownTypes;
+using Influx3Connector;
 using InfluxConnector;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -237,6 +238,22 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                            measurementType,
                            meassurement),
                        DateTimeOffset.UtcNow);
+            break;
+        case "Leistung":
+            influx3Connector.WritePowerValue(
+                new InfluxPowerRecord
+                {
+                    MeasurementId = "Heizung_" + location + "_" + meassurement,
+                    Category = MeasurementCategory.Heizung,
+                    SubCategory = subCategory,
+                    SensorType = "CanGateway",
+                    Location = location,
+                    Device = "Waermepumpe",
+                    Measurement = meassurement,
+                    Value_W = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                    MeasurementType = MeasurementType.Power
+                },
+                DateTimeOffset.UtcNow);
             break;
     }
 }

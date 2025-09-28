@@ -63,7 +63,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = currentPowerId,
                     Category = SmartmeterData.Category,
-                    SubCategory = data.NetzanschlussMomentanleistung < 0 ? MeasurementSubCategory.Consumption : MeasurementSubCategory.Production,
+                    SubCategory = data.NetzanschlussMomentanleistung < 0 ? "Verbrauch" : "Einspeisung",
                     SensorType = SmartmeterData.SensorType,
                     Location = location,
                     Device = device,
@@ -136,7 +136,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = powerFromPVId,
                     Category = EnphaseData.category,
-                    SubCategory = MeasurementSubCategory.Production,
+                    SubCategory = "Produktion",
                     SensorType = EnphaseData.sensorType,
                     Location = location,
                     Device = device,
@@ -148,7 +148,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = powerFromBatteryId,
                     Category = EnphaseData.category,
-                    SubCategory = data.PowerFromBattery < 0 ? MeasurementSubCategory.Consumption : MeasurementSubCategory.Production,
+                    SubCategory = data.PowerFromBattery < 0 ? "Laden" : "Entladen",
                     SensorType = EnphaseData.sensorType,
                     Location = location,
                     Device = device,
@@ -160,7 +160,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = powerFromGridId,
                     Category = EnphaseData.category,
-                    SubCategory = data.PowerFromGrid < 0 ? MeasurementSubCategory.Consumption : MeasurementSubCategory.Production,
+                    SubCategory = data.PowerFromGrid < 0 ? "Verbrauch" : "Einspeisung",
                     SensorType = EnphaseData.sensorType,
                     Location = location,
                     Device = device,
@@ -172,7 +172,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "PowerToHouse",
                     Category = EnphaseData.category,
-                    SubCategory = MeasurementSubCategory.Consumption,
+                    SubCategory = "Verbrauch",
                     SensorType = EnphaseData.sensorType,
                     Location = location,
                     Device = device,
@@ -213,7 +213,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = powerId,
                     Category = ShellyPowerData.Category,
-                    SubCategory = ShellyPowerData.SubCategory,
+                    SubCategory = ShellyPowerData.SubCategory.ToString(),
                     SensorType = ShellyPowerData.SensorType,
                     Location = location,
                     Device = device,
@@ -259,7 +259,7 @@ namespace SmartHome.DataHub
                 SubCategory = subCategory,
                 SensorType = "CanGateway",
                 Location = location,
-                Device = "Heatpump",
+                Device = "Waermepumpe",
                 Measurement = meassurement,
                 Value_DegreeC = value,
                 MeasurementType = MeasurementType.Temperature
