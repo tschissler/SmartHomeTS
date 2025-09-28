@@ -250,16 +250,12 @@ namespace SmartHome.DataHub
             return records;
         }
 
-        public InfluxTemperatureRecord TemperatureDataToInfluxRecords(decimal value, string location, string meassurement)
+        public InfluxTemperatureRecord TemperatureDataToInfluxRecords(decimal value, string location, string subCategory, string meassurement)
         {
-            var subCategory = meassurement.Contains("Aussenfuehler") ?
-                TemperatureSubCategory.Outdoor :
-                TemperatureSubCategory.HeatingTemperature;
-
             return new InfluxTemperatureRecord
             {
-                MeasurementId = "Temperature_" + location + "_" + meassurement,
-                Category = MeasurementCategory.Temperature,
+                MeasurementId = "Heizung_" + location + "_" + meassurement,
+                Category = MeasurementCategory.Heizung,
                 SubCategory = subCategory,
                 SensorType = "CanGateway",
                 Location = location,

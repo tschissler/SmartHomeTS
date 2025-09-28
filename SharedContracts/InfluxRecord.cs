@@ -38,7 +38,7 @@
 
     public record InfluxTemperatureRecord : InfluxRecord
     {
-        public required TemperatureSubCategory SubCategory { get; init; }
+        public required string SubCategory { get; init; }
         public required decimal Value_DegreeC { get; init; } // in °C
     }
 }

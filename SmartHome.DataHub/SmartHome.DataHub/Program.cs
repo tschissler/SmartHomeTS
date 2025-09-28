@@ -91,11 +91,12 @@ mqttClient.OnMessageReceived += async (sender, e) =>
 {
     Dictionary<string, string> tags;
     //ConsoleHelpers.PrintInformation($"Message received: {e.Topic}");
+
+    string topic = e.Topic;
+    string payload = e.Payload;
+
     try
     {
-        string topic = e.Topic;
-        string payload = e.Payload;
-
         if (topic == "data/charging/KebaGarage_ChargingSessionEnded")
         {
             var car = cars[positionChargingStationGarage.GetClosestNearby([bmwPosition, miniPosition, vwPosition])??0];
@@ -219,19 +220,24 @@ mqttClient.OnMessageReceived += async (sender, e) =>
 
 void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload, string[] topicParts)
 {
-    if (topicParts.Length < 3)
+    if (topicParts.Length < 4)
         return;
     var location = topicParts[1];
-    var meassurement = topicParts[2];
-    if (meassurement.Contains("_gradC"))
+    var subCategory = topicParts[2];
+    var measurementType = topicParts[3];
+    var meassurement = topicParts[4];
+
+    switch (measurementType)
     {
-        meassurement = meassurement.Replace("_gradC", "");
-        influx3Connector.WriteTemperatureValue(
-            converters.TemperatureDataToInfluxRecords(
-                Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
-                location, 
-                meassurement),
-            DateTimeOffset.UtcNow);
+        case "Temperatur":
+            influx3Connector.WriteTemperatureValue(
+                       converters.TemperatureDataToInfluxRecords(
+                           Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                           location,
+                           measurementType,
+                           meassurement),
+                       DateTimeOffset.UtcNow);
+            break;
     }
 }
 

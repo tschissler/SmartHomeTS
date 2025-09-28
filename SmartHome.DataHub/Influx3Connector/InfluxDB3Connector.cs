@@ -117,7 +117,7 @@ namespace Influx3Connector
             var point = PointData.Measurement("temperature_values")
                 .SetTag("measurement_id", record.MeasurementId)
                 .SetTag("category", record.Category.ToString())
-                .SetTag("sub_category", record.SubCategory.ToString())
+                .SetTag("sub_category", record.SubCategory)
                 .SetTag("sensor_type", record.SensorType)
                 .SetTag("location", record.Location)
                 .SetTag("device", record.Device)
