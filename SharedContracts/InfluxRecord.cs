@@ -32,7 +32,7 @@
 
     public record InfluxPercentageRecord : InfluxRecord
     {
-        public required MeasurementSubCategory SubCategory { get; init; }
+        public required string SubCategory { get; init; }
         public required decimal Value_Percent { get; init; } // in Percent
     }
 

@@ -111,7 +111,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = batteryLevelId,
                     Category = EnphaseData.category,
-                    SubCategory = MeasurementSubCategory.Other,
+                    SubCategory = "Ladestand",
                     SensorType = EnphaseData.sensorType,
                     Location = location,
                     Device = device,
