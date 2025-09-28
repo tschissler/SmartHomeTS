@@ -234,7 +234,7 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
             influx3Connector.WriteTemperatureValue(
                 new InfluxTemperatureRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + meassurement,
+                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
                     Category = MeasurementCategory.Heizung,
                     SubCategory = subCategory,
                     SensorType = "CanGateway",
@@ -250,7 +250,7 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
             influx3Connector.WritePowerValue(
                 new InfluxPowerRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + meassurement,
+                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
                     Category = MeasurementCategory.Heizung,
                     SubCategory = subCategory,
                     SensorType = "CanGateway",
