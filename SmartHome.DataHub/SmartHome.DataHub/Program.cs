@@ -278,6 +278,22 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                 },
                 DateTimeOffset.UtcNow);
             break;
+        case "Status":
+            influx3Connector.WriteStatusValue(
+                new InfluxStatusRecord
+                {
+                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    Category = MeasurementCategory.Heizung,
+                    SubCategory = subCategory,
+                    SensorType = "CanGateway",
+                    Location = location,
+                    Device = "Waermepumpe",
+                    Measurement = meassurement,
+                    Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    MeasurementType = MeasurementType.Percent
+                },
+                DateTimeOffset.UtcNow);
+            break;
     }
 }
 

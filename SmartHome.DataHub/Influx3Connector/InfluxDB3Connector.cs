@@ -130,6 +130,26 @@ namespace Influx3Connector
             }
         }
 
+        public void WriteStatusValue(
+            InfluxStatusRecord record,
+            DateTimeOffset timestamp)
+        {
+            var point = PointData.Measurement("status_values")
+                .SetTag("measurement_id", record.MeasurementId)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory)
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_status", Convert.ToInt16(record.Value_Status))
+                .SetTimestamp(timestamp);
+            lock (pointsBatch)
+            {
+                pointsBatch.Add(point);
+            }
+        }
+
         public void WriteVoltageValue(
             InfluxVoltageRecord record,
             DateTimeOffset timestamp)
