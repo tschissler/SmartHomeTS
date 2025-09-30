@@ -65,7 +65,7 @@ static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname";
 static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness";
 static int brightness = 255;
 static int blinkCount = 0;
-static const int MAX_BLINK_COUNT = 20;
+static const int MAX_BLINK_COUNT = 3;
 
 void setLedColor(uint8_t r, uint8_t g, uint8_t b) {
   pixels.setPixelColor(0, pixels.Color(r, g, b));
