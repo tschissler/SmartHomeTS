@@ -163,6 +163,7 @@ void mqttCallback(String &topic, String &payload) {
       location.replace("Relaismodule_", "");
       Serial.println("Sensor name set to: " + sensorName);
       Serial.println("Location set to: " + location);
+      mqttClient->publish(("meta/" + sensorName + "/version/RelaisModule").c_str(), String(version), true, 2);
       mqtt_config_Topic = mqtt_config_Base + sensorName + "/Relais";
       Serial.println("Config topic set to: " + mqtt_config_Topic);
       
@@ -221,7 +222,7 @@ void setup() {
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
 
-  String chipID = "";
+  chipID = "";
   for (int i = 0; i < 6; ++i) {
     if (mac[i] < 0x10) chipID += "0";  // Add leading zero if needed
     chipID += String(mac[i], HEX);
@@ -255,8 +256,6 @@ void setup() {
   // Print the IP address
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
-
-  mqttClient->publish(("meta/" + sensorName + "/version/RelaisModule").c_str(), String(version), true, 2);
 
   digitalWrite(RELAIS_1, LOW);
   delay(100);
