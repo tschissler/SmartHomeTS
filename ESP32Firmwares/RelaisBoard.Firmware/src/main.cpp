@@ -256,7 +256,8 @@ void setup() {
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
-  mqttClient->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+  mqttClient->publish(("meta/" + sensorName + "/version/RelaisModule").c_str(), String(version), true, 2);
+
   digitalWrite(RELAIS_1, LOW);
   delay(100);
   digitalWrite(RELAIS_2, LOW);
