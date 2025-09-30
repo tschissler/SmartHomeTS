@@ -240,14 +240,6 @@ void setup() {
   pinMode(RELAIS_6, OUTPUT);
   pinMode(RELAIS_7, OUTPUT);
   pinMode(RELAIS_8, OUTPUT);
-  digitalWrite(RELAIS_1, HIGH);
-  digitalWrite(RELAIS_2, HIGH);
-  digitalWrite(RELAIS_3, HIGH);
-  digitalWrite(RELAIS_4, HIGH);
-  digitalWrite(RELAIS_5, HIGH);
-  digitalWrite(RELAIS_6, HIGH);
-  digitalWrite(RELAIS_7, HIGH);
-  digitalWrite(RELAIS_8, HIGH);
 
   // Connect to WiFi
   Serial.print("Connecting to WiFi ");
@@ -265,6 +257,38 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   mqttClient->publish(("meta/" + sensorName + "/version").c_str(), String(version), true, 2);
+  digitalWrite(RELAIS_1, LOW);
+  delay(100);
+  digitalWrite(RELAIS_2, LOW);
+  delay(100);
+  digitalWrite(RELAIS_3, LOW);
+  delay(100);
+  digitalWrite(RELAIS_4, LOW);
+  delay(100);
+  digitalWrite(RELAIS_5, LOW);
+  delay(100);
+  digitalWrite(RELAIS_6, LOW);
+  delay(100);
+  digitalWrite(RELAIS_7, LOW);
+  delay(100);
+  digitalWrite(RELAIS_8, LOW);
+  delay(100);
+  digitalWrite(RELAIS_1, HIGH);
+  delay(100);
+  digitalWrite(RELAIS_2, HIGH);
+  delay(100);
+  digitalWrite(RELAIS_3, HIGH);
+  delay(100);
+  digitalWrite(RELAIS_4, HIGH);
+  delay(100);
+  digitalWrite(RELAIS_5, HIGH);
+  delay(100);
+  digitalWrite(RELAIS_6, HIGH);
+  delay(100);
+  digitalWrite(RELAIS_7, HIGH);
+  delay(100);
+  digitalWrite(RELAIS_8, HIGH);
+  delay(100);
 }
 
 void loop() {
