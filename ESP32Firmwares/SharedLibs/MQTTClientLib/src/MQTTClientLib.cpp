@@ -26,6 +26,8 @@ void MQTTClientLib::connect(std::vector<String> subscriptionTopics) {
 
      // Subscribe to the list of topics
     for (const String& topic : subscriptionTopics) {
+        if (topic.isEmpty()) continue; 
+        
         bool subscribeSuccess = mqttClient.subscribe(topic.c_str());
         if (subscribeSuccess) {
             Serial.print("Subscribed to topic: ");

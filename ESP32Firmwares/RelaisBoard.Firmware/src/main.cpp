@@ -55,15 +55,13 @@ static String mqtt_config_Base = "config/Relaismodule/";
 static String mqtt_config_Topic = "";
 static String mqtt_CommandsTopic = "commands/Heating/#";
 
-// Function to get relay pin for a given pin number (1-8)
 int getRelayPinByNumber(int pinNumber) {
   if (pinNumber >= 1 && pinNumber <= NUMBER_OF_RELAYS) {
-    return relayPins[pinNumber - 1]; // Convert 1-based to 0-based index
+    return relayPins[pinNumber - 1]; 
   }
   return -1; // Invalid pin number
 }
 
-// Function to update room to pin mapping from JSON config
 bool updateRoomMapping(const String& jsonConfig) {
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, jsonConfig);
@@ -73,10 +71,8 @@ bool updateRoomMapping(const String& jsonConfig) {
     return false;
   }
   
-  // Clear existing mapping
   roomToPinMapping.clear();
   
-  // Parse the JSON array
   if (!doc.is<JsonArray>()) {
     Serial.println("Room mapping JSON must be an array");
     return false;
@@ -107,7 +103,6 @@ bool updateRoomMapping(const String& jsonConfig) {
   return true;
 }
 
-// Function to get relay pin for a room name
 int getRelayPinForRoom(const String& roomName) {
   auto it = roomToPinMapping.find(roomName);
   if (it != roomToPinMapping.end()) {
@@ -115,8 +110,6 @@ int getRelayPinForRoom(const String& roomName) {
   }
   return -1; // Room not found
 }
-
-
 
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
@@ -208,7 +201,7 @@ void connectToMQTT() {
     Serial.println("WiFi not connected, trying to reconnect...");
     wifiLib.connect();
   }
-  mqttClient->connect({mqtt_SensornameTopic, mqtt_OTAtopic, mqtt_CommandsTopic, mqtt_config_Topic});
+  mqttClient->connect({mqtt_SensornameTopic, mqtt_OTAtopic, mqtt_CommandsTopic});
   Serial.println("MQTT Client is connected");
 }
 
