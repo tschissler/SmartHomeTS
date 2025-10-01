@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <map>
+#include <NTPClient.h>
+#include <time.h>
 
 #include <ESP32Ping.h>
 #include <esp_mac.h> 
@@ -38,6 +40,7 @@ WifiLib wifiLib(WIFI_PASSWORDS);
 
 WiFiClient wifiClient;
 WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000); // UTC+1, update every 60 seconds
 std::unique_ptr<MQTTClientLib> mqttClient = nullptr;
 
 static bool otaInProgress = false;
@@ -54,6 +57,7 @@ static String mqtt_SensornameTopic = "config/Relaismodule/Sensorname/";
 static String mqtt_config_Base = "config/Relaismodule/";
 static String mqtt_config_Topic = "";
 static String mqtt_CommandsTopic = "commands/Heating/#";
+static String mqtt_Data_Topic = "daten/Heizung/{location}/";
 static bool subscribedToCommands = false;
 static bool subscribedToConfig = false;
 
@@ -113,6 +117,32 @@ int getRelayPinForRoom(const String& roomName) {
   return -1; // Room not found
 }
 
+String getCurrentTimestamp() {
+  timeClient.update();
+  unsigned long epochTime = timeClient.getEpochTime();
+  
+  // Convert epoch time to readable format
+  struct tm *ptm = gmtime((time_t *)&epochTime);
+  
+  char timestamp[25];
+  sprintf(timestamp, "%04d-%02d-%02d %02d:%02d:%02d",
+          ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday,
+          ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+  
+  return String(timestamp);
+}
+
+void publishRelayState(const String& roomName, const String& state) {
+  JsonDocument doc;
+  doc["state"] = state;
+  doc["timestamp"] = getCurrentTimestamp();
+  
+  String jsonOutput;
+  serializeJson(doc, jsonOutput);
+  
+  mqttClient->publish((mqtt_Data_Topic + roomName).c_str(), jsonOutput.c_str(), true, 1);
+}
+
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
@@ -138,9 +168,11 @@ void mqttCallback(String &topic, String &payload) {
           if (payloadUpper == "ON") {
               digitalWrite(relayPin, LOW); 
               Serial.println("Relay for room '" + roomName + "' turned ON (GPIO " + String(relayPin) + ")");
+              publishRelayState(roomName, "ON");
           } else if (payloadUpper == "OFF") {
               digitalWrite(relayPin, HIGH);
               Serial.println("Relay for room '" + roomName + "' turned OFF (GPIO " + String(relayPin) + ")");
+              publishRelayState(roomName, "OFF");
           } else {
               Serial.println("Invalid payload for relay command. Use 'ON' or 'OFF'.");
           }
@@ -160,6 +192,7 @@ void mqttCallback(String &topic, String &payload) {
       Serial.println("Location set to: " + location);
       mqttClient->publish(("meta/" + sensorName + "/version/RelaisModule").c_str(), String(version), true, 0);
       mqtt_config_Topic = mqtt_config_Base + sensorName + "/Relais";
+      mqtt_Data_Topic = "daten/Heizung/" + location + "/FussbodenHeizungSteuerung";
       Serial.println("Config topic set to: " + mqtt_config_Topic);
       
       //mqttClient->subscribe(mqtt_config_Topic);
@@ -245,6 +278,12 @@ void setup() {
   wifiLib.connect();
   String ssid = wifiLib.getSSID();
   
+  // Initialize NTP Client
+  Serial.println("Starting NTP client...");
+  timeClient.begin();
+  timeClient.update();
+  Serial.println("NTP time synchronized: " + getCurrentTimestamp());
+
   // Set up MQTT
   String mqttClientID = "ESP32RelaismoduleClient_" + chipID;
   mqttClient = std::unique_ptr<MQTTClientLib>(new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback));
@@ -291,6 +330,9 @@ void setup() {
 void loop() {
     otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
     if (otaInProgress) { delay (500); return; }
+
+    // Update NTP time client
+    timeClient.update();
 
     if(!mqttClient->loop())
     {
