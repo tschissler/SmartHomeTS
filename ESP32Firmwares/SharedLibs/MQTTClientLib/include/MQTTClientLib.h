@@ -8,7 +8,7 @@
 // MQTT Broker settings
 const int mqtt_port = 32004;
 // Define the maximum packet size for the MQTT client
-#define MQTT_MAX_PACKET_SIZE 4096
+#define MQTT_MAX_PACKET_SIZE 8192
 
 
 class MQTTClientLib {

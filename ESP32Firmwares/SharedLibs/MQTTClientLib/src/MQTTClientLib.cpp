@@ -4,7 +4,7 @@ MQTTClientLib::MQTTClientLib(const String& mqtt_broker, const String& clientId, 
     : mqttClient(MQTTClient(MQTT_MAX_PACKET_SIZE)), clientId(clientId), mqtt_broker(mqtt_broker) {
     mqttClient.begin(mqtt_broker.c_str(), mqtt_port, wifiClient);
     mqttClient.onMessage(callback);
-    mqttClient.setOptions(60, false, 1000);
+    mqttClient.setOptions(60, false, 10000);
 }
 
 void MQTTClientLib::connect(std::vector<String> subscriptionTopics) {
@@ -27,7 +27,7 @@ void MQTTClientLib::connect(std::vector<String> subscriptionTopics) {
      // Subscribe to the list of topics
     for (const String& topic : subscriptionTopics) {
         if (topic.isEmpty()) continue; 
-        
+
         bool subscribeSuccess = mqttClient.subscribe(topic.c_str());
         if (subscribeSuccess) {
             Serial.print("Subscribed to topic: ");

@@ -54,6 +54,8 @@ static String mqtt_SensornameTopic = "config/Relaismodule/Sensorname/";
 static String mqtt_config_Base = "config/Relaismodule/";
 static String mqtt_config_Topic = "";
 static String mqtt_CommandsTopic = "commands/Heating/#";
+static bool subscribedToCommands = false;
+static bool subscribedToConfig = false;
 
 int getRelayPinByNumber(int pinNumber) {
   if (pinNumber >= 1 && pinNumber <= NUMBER_OF_RELAYS) {
@@ -156,11 +158,11 @@ void mqttCallback(String &topic, String &payload) {
       location.replace("Relaismodule_", "");
       Serial.println("Sensor name set to: " + sensorName);
       Serial.println("Location set to: " + location);
-      mqttClient->publish(("meta/" + sensorName + "/version/RelaisModule").c_str(), String(version), true, 2);
+      mqttClient->publish(("meta/" + sensorName + "/version/RelaisModule").c_str(), String(version), true, 0);
       mqtt_config_Topic = mqtt_config_Base + sensorName + "/Relais";
       Serial.println("Config topic set to: " + mqtt_config_Topic);
       
-      mqttClient->subscribe(mqtt_config_Topic);
+      //mqttClient->subscribe(mqtt_config_Topic);
       Serial.println("Subscribed to config topic: " + mqtt_config_Topic);
       return;
     } 
@@ -201,7 +203,9 @@ void connectToMQTT() {
     Serial.println("WiFi not connected, trying to reconnect...");
     wifiLib.connect();
   }
-  mqttClient->connect({mqtt_SensornameTopic, mqtt_OTAtopic, mqtt_CommandsTopic});
+  // Subscribing only to topic for OTA update and reading sensor name
+  // Other topics (Configuration, Commands) will be subscribed once sensor name is known
+  mqttClient->connect({mqtt_SensornameTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
 }
 
@@ -294,6 +298,18 @@ void loop() {
       connectToMQTT();
     }
 
-    delay(500);
+    if (sensorName != "" && !subscribedToConfig) {
+      mqttClient->subscribe(mqtt_config_Topic);
+      Serial.println("Subscribed to config topic: " + mqtt_config_Topic);
+      subscribedToConfig = true;
+    }
+
+    if (!roomToPinMapping.empty() && !subscribedToCommands) {
+      mqttClient->subscribe(mqtt_CommandsTopic);
+      Serial.println("Subscribed to commands topic: " + mqtt_CommandsTopic);
+      subscribedToCommands = true;
+    }
+
+    delay(5000);
 }
 
