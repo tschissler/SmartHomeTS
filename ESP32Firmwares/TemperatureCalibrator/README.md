@@ -6,46 +6,55 @@ This project reads temperature, humidity, and pressure data from multiple sensor
 
 ### Sensors and GPIO Connections
 
-| Sensor | Type | SDA Pin | SCL Pin | Measures |
-|--------|------|---------|---------|----------|
-| SHTC3 | Temperature/Humidity | GPIO22 | GPIO21 | Temperature, Humidity |
-| BMP180 | Pressure/Temperature | GPIO19 | GPIO18 | Temperature, Pressure |
-| BME280 | All-in-one | GPIO16 | GPIO17 | Temperature, Humidity, Pressure |
+| Sensor | Type | SDA Pin | SCL Pin | I2C Bus | Measures |
+|--------|------|---------|---------|---------|----------|
+| SHTC3 | Temperature/Humidity | GPIO22 | GPIO21 | I2C_1 | Temperature, Humidity |
+| BMP180 | Pressure/Temperature | GPIO22 | GPIO21 | I2C_1 | Temperature, Pressure |
+| BME280 | All-in-one | GPIO16 | GPIO17 | I2C_2 | Temperature, Humidity, Pressure |
 
 ### Wiring Diagram
 
 ```
-ESP32           SHTC3           BMP180          BME280
------           -----           ------          ------
-GPIO22  <-----> SDA
-GPIO21  <-----> SCL
-GPIO19  <-----> | |             SDA
-GPIO18  <-----> | |             SCL
-GPIO16  <-----> | |             | |             SDA
-GPIO17  <-----> | |             | |             SCL
-GND     <-----> GND             GND             GND
-3.3V    <-----> VCC             VCC             VCC
+ESP32           SHTC3/BMP180    BME280
+-----           ------------    ------
+GPIO22  <-----> SDA (shared)
+GPIO21  <-----> SCL (shared)
+GPIO16  <-----> | |             SDA
+GPIO17  <-----> | |             SCL
+GND     <-----> GND             GND
+3.3V    <-----> VCC             VCC
 ```
 
-### ⚠️ Important: Boot-Safe GPIO Selection
+### ⚠️ Important: I2C Bus Configuration
 
-The ESP32 has several "strapping pins" that are checked during boot and can prevent the device from starting or uploading firmware if they're pulled to the wrong logic level by connected sensors:
+The ESP32 supports only 2 hardware I2C buses, so this project uses:
 
-**Problematic pins to AVOID for I2C:**
+**I2C Bus 1 (GPIO22/21):**
+- SHTC3 and BMP180 share the same I2C bus
+- Both sensors have different I2C addresses, so no conflicts
+
+**I2C Bus 2 (GPIO16/17):**
+- BME280 uses a separate I2C bus
+
+**Boot-Safe GPIO Selection:**
+
+The following pins are avoided as they can interfere with ESP32 boot/upload:
 - GPIO0, GPIO2, GPIO5, GPIO12, GPIO15 - Boot strapping pins
 - GPIO1, GPIO3 - Serial communication (TX/RX)
 - GPIO6-11 - Connected to internal flash
 
-**Safe pins for I2C (used in this project):**
-- GPIO16, GPIO17, GPIO18, GPIO19, GPIO21, GPIO22 - General purpose, boot-safe
+**Safe pins used in this project:**
+- GPIO16, GPIO17, GPIO21, GPIO22 - General purpose, boot-safe
 
 ## Features
 
-- **Multi-I2C Support**: Each sensor uses its own I2C bus to prevent conflicts
-- **Real-time Comparison**: Shows all sensor readings in a formatted table
-- **Statistical Analysis**: Calculates temperature averages, ranges, and outliers
-- **Error Handling**: Displays sensor status and handles initialization failures
-- **Clean Output**: Easy-to-read table format for comparing sensor values
+- **Dual I2C Bus Support**: Uses ESP32's 2 hardware I2C buses to handle 3 sensors efficiently
+- **Shared I2C Bus**: SHTC3 and BMP180 share I2C_1, BME280 uses I2C_2
+- **Real-time Comparison**: Shows all sensor readings side-by-side every 5 seconds
+- **Comprehensive Statistics**: Calculates average, range, min, and max temperatures across all working sensors
+- **Error Handling**: Shows sensor status (OK/FAIL) and handles sensor initialization failures
+- **Boot-Safe Design**: Uses GPIO pins that don't interfere with ESP32 boot process
+- **Clean Output Format**: Professional table format for easy sensor comparison
 
 ## Sample Output
 
@@ -55,22 +64,22 @@ ESP32 Multi-Sensor Temperature Calibrator
 Initializing sensors...
 ✓ SHTC3 initialized successfully
 ✓ BMP180 initialized successfully
-✓ BME280 initialized successfully at address 0x76
+✓ BME280 initialized successfully
 ==========================================
-Starting measurements...
+Starting measurements with available sensors...
 ==========================================
-Sensor Comparison Table:
-│ Sensor  │ Temperature │ Humidity │ Pressure  │ Status │
-├─────────┼─────────────┼──────────┼───────────┼────────┤
-│ SHTC3   │    23.45°C  │  45.20%  │     N/A   │   OK   │
-│ BMP180  │    23.52°C  │    N/A   │ 1013.2hPa │   OK   │
-│ BME280  │    23.48°C  │  45.18%  │ 1013.1hPa │   OK   │
-├─────────┼─────────────┼──────────┼───────────┼────────┤
-│ STATS   │ Avg: 23.48°C│          │           │        │
-│         │ Range: 0.07°C│          │           │        │
-│         │ Min: 23.45°C │          │           │        │
-│         │ Max: 23.52°C │          │           │        │
-└─────────┴─────────────┴──────────┴───────────┴────────┘
+┌─────────┬───────────────┬──────────┬───────────┬────────┐
+│ Sensor  │ Temperature   │ Humidity │ Pressure  │ Status │
+├─────────┼───────────────┼──────────┼───────────┼────────┤
+│ SHTC3   │     23.45°C   │  45.20%  │     N/A   │   OK   │
+│ BMP180  │     23.52°C   │    N/A   │ 1013.2hPa │   OK   │
+│ BME280  │     23.48°C   │  45.18%  │ 1013.1hPa │   OK   │
+├─────────┼───────────────┼──────────┼───────────┼────────┤
+│ STATS   │ Avg: 23.48°C  │          │           │        │
+│         │ Range: 0.07°C │          │           │        │
+│         │ Min: 23.45°C  │          │           │        │
+│         │ Max: 23.52°C  │          │           │        │
+└─────────┴───────────────┴──────────┴───────────┴────────┘
 ```
 
 ## Usage
@@ -87,7 +96,9 @@ Sensor Comparison Table:
    Or open Serial Monitor at 115200 baud in your IDE
 
 3. **Analyze Results**:
-   - Compare temperature readings across all sensors
+   - Compare temperature readings across all three sensors
+   - SHTC3 and BME280 provide humidity comparison
+   - BMP180 and BME280 provide pressure comparison  
    - Look for consistent outliers to identify less accurate sensors
    - Use the statistical data to determine sensor precision
    - Note any sensors showing "FAIL" status
@@ -103,6 +114,10 @@ To change: Modify `delay(5000)` in the main loop
 - BMP180: Fixed address (auto-detected)
 - SHTC3: Fixed address (auto-detected)
 
+### I2C Bus Assignment
+- **I2C_1 (GPIO22/21)**: SHTC3 + BMP180 (shared bus)
+- **I2C_2 (GPIO16/17)**: BME280 (dedicated bus)
+
 ### Libraries Used
 - Adafruit SHTC3 Library
 - Adafruit BMP085 Library (for BMP180)
@@ -113,15 +128,17 @@ To change: Modify `delay(5000)` in the main loop
 ## Troubleshooting
 
 ### Sensor Not Detected
-1. Check wiring connections
+1. Check wiring connections (especially shared I2C bus connections)
 2. Verify power supply (3.3V)
 3. Ensure proper I2C pull-up resistors (usually built into modules)
 4. Try different I2C addresses for BME280 (0x76 or 0x77)
+5. Check that SHTC3 and BMP180 aren't conflicting on shared bus
 
 ### Inconsistent Readings
 - Allow sensors to stabilize (first few readings may vary)
-- Ensure sensors are at the same temperature
+- Ensure all sensors are at the same ambient temperature
 - Check for interference from other devices
+- Verify no loose connections on shared I2C bus
 
 ### Build Errors
 - Ensure all libraries are properly installed via PlatformIO

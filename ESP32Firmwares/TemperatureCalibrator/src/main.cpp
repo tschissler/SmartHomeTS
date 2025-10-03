@@ -155,8 +155,12 @@ void printSensorComparison(SensorData shtc3_data, SensorData bmp180_data, Sensor
                 bmp180_data.valid ? bmp180_data.pressure : 0.0,
                 bmp180_data.valid ? "  OK  " : " FAIL ");
   
-  // BME280 row - show as disabled
-    Serial.printf ("│ BME280  │     DISABLED  │    N/A   │     N/A   │  SKIP  │\n");
+  // BME280 row - show actual data if available
+  Serial.printf("│ BME280  │   %9.2f°C │  %6.2f%% │%7.1fhPa │ %s │\n",
+                bme280_data.valid ? bme280_data.temperature : 0.0,
+                bme280_data.valid ? bme280_data.humidity : 0.0,
+                bme280_data.valid ? bme280_data.pressure : 0.0,
+                bme280_data.valid ? "  OK  " : " FAIL ");
 }
 
 SensorData readSHTC3() {
