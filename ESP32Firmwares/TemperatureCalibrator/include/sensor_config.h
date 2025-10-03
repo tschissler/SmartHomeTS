@@ -11,6 +11,8 @@
 #define BME280_SDA_PIN  16
 #define BME280_SCL_PIN  17
 
+#define DHT22_DATA_PIN  4
+
 // I2C Addresses
 #define BME280_ADDRESS_1  0x76
 #define BME280_ADDRESS_2  0x77
@@ -27,6 +29,10 @@
 #define BME280_HAS_TEMPERATURE  true
 #define BME280_HAS_HUMIDITY     true
 #define BME280_HAS_PRESSURE     true
+
+#define DHT22_HAS_TEMPERATURE   true
+#define DHT22_HAS_HUMIDITY      true
+#define DHT22_HAS_PRESSURE      false
 
 // Measurement intervals
 #define READING_INTERVAL_MS     5000

@@ -3,17 +3,20 @@
 #include "Adafruit_SHTC3.h"
 #include "Adafruit_BMP085.h"
 #include "Adafruit_BME280.h"
+#include "DHT.h"
 #include "sensor_config.h"
 
 // Create sensor objects
 Adafruit_SHTC3 shtc3;
 Adafruit_BMP085 bmp180;
 Adafruit_BME280 bme280;
+DHT dht22(DHT22_DATA_PIN, DHT22);
 
 // Sensor status flags
 bool shtc3_available = false;
 bool bmp180_available = false;
 bool bme280_available = false;
+bool dht22_available = false;
 
 // Define multiple I2C interfaces
 TwoWire I2C_1 = TwoWire(0);  // SHTC3 - GPIO22(SDA), GPIO23(SCL)
@@ -31,7 +34,8 @@ struct SensorData {
 SensorData readSHTC3();
 SensorData readBMP180();
 SensorData readBME280();
-void printSensorComparison(SensorData shtc3_data, SensorData bmp180_data, SensorData bme280_data);
+SensorData readDHT22();
+void printSensorComparison(SensorData shtc3_data, SensorData bmp180_data, SensorData bme280_data, SensorData dht22_data);
 void printSeparator();
 
 void setup() {
@@ -69,6 +73,20 @@ void setup() {
   } else {
     Serial.println("✗ Failed to initialize BME280");
   }
+
+  // Initialize DHT22
+  Serial.println("Initializing DHT22...");
+  dht22.begin();
+  delay(2000);  // DHT22 needs time to stabilize
+  
+  // Test DHT22 with a reading
+  float test_temp = dht22.readTemperature();
+  if (!isnan(test_temp)) {
+    Serial.println("✓ DHT22 initialized successfully");
+    dht22_available = true;
+  } else {
+    Serial.println("✗ Failed to initialize DHT22");
+  }
   
   printSeparator();
   Serial.println("Starting measurements with available sensors...");
@@ -80,6 +98,7 @@ void loop() {
   SensorData shtc3_data = {0, 0, 0, false};
   SensorData bmp180_data = {0, 0, 0, false};
   SensorData bme280_data = {0, 0, 0, false};
+  SensorData dht22_data = {0, 0, 0, false};
   
   if (shtc3_available) {
     shtc3_data = readSHTC3();
@@ -93,13 +112,18 @@ void loop() {
     bme280_data = readBME280();
   }
   
+  if (dht22_available) {
+    dht22_data = readDHT22();
+  }
+  
   // Calculate and display statistics only for working sensors
-  float temps[3];
+  float temps[4];  // Now we have 4 sensors
   int valid_temp_count = 0;
   
   if (shtc3_data.valid) temps[valid_temp_count++] = shtc3_data.temperature;
   if (bmp180_data.valid) temps[valid_temp_count++] = bmp180_data.temperature;
   if (bme280_data.valid) temps[valid_temp_count++] = bme280_data.temperature;
+  if (dht22_data.valid) temps[valid_temp_count++] = dht22_data.temperature;
   
   if (valid_temp_count > 1) {
     // Calculate temperature statistics
@@ -120,10 +144,8 @@ void loop() {
     Serial.println("│ Sensor  │ Temperature   │ Humidity │ Pressure  │ Status │");
     Serial.println("├─────────┼───────────────┼──────────┼───────────┼────────┤");
       
-    // Print comparison table
-    printSensorComparison(shtc3_data, bmp180_data, bme280_data);
-
-    Serial.println("├─────────┼───────────────┼──────────┼───────────┼────────┤");
+      // Print comparison table
+    printSensorComparison(shtc3_data, bmp180_data, bme280_data, dht22_data);    Serial.println("├─────────┼───────────────┼──────────┼───────────┼────────┤");
     Serial.printf ("│ STATS   │ Avg: %6.2f°C │          │           │        │\n", temp_avg);
     Serial.printf ("│         │ Range:%5.2f°C │          │           │        │\n", temp_range);
     Serial.printf ("│         │ Min: %6.2f°C │          │           │        │\n", temp_min);
@@ -142,7 +164,7 @@ void loop() {
   delay(5000);  // Wait 5 seconds between readings
 }
 
-void printSensorComparison(SensorData shtc3_data, SensorData bmp180_data, SensorData bme280_data) {
+void printSensorComparison(SensorData shtc3_data, SensorData bmp180_data, SensorData bme280_data, SensorData dht22_data) {
   // SHTC3 row
     Serial.printf ("│ SHTC3   │   %9.2f°C │  %6.2f%% │     N/A   │ %s │\n", 
                 shtc3_data.valid ? shtc3_data.temperature : 0.0,
@@ -161,6 +183,12 @@ void printSensorComparison(SensorData shtc3_data, SensorData bmp180_data, Sensor
                 bme280_data.valid ? bme280_data.humidity : 0.0,
                 bme280_data.valid ? bme280_data.pressure : 0.0,
                 bme280_data.valid ? "  OK  " : " FAIL ");
+
+  // DHT22 row
+  Serial.printf("│ DHT22   │   %9.2f°C │  %6.2f%% │     N/A   │ %s │\n",
+                dht22_data.valid ? dht22_data.temperature : 0.0,
+                dht22_data.valid ? dht22_data.humidity : 0.0,
+                dht22_data.valid ? "  OK  " : " FAIL ");
 }
 
 SensorData readSHTC3() {
@@ -217,6 +245,25 @@ SensorData readBME280() {
     }
   } catch (...) {
     // BME280 reading failed, return invalid data
+  }
+  
+  return data;
+}
+
+SensorData readDHT22() {
+  SensorData data = {0, 0, 0, false};
+  
+  if (!dht22_available) return data;
+  
+  float temp = dht22.readTemperature();
+  float humidity = dht22.readHumidity();
+  
+  // Check if readings are valid
+  if (!isnan(temp) && !isnan(humidity)) {
+    data.temperature = temp;
+    data.humidity = humidity;
+    data.pressure = 0;  // DHT22 doesn't measure pressure
+    data.valid = true;
   }
   
   return data;
