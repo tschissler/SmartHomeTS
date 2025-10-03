@@ -38,7 +38,7 @@ static String mqtt_ThermostatEsszimmerTopic = "data/thermostat/M3/shelly/Esszimm
 static String mqtt_ThermostatKuecheTopic = "data/thermostat/M3/shelly/Kueche";
 static String mqtt_ThermostatGaestezimmerTopic = "data/thermostat/M3/shelly/Gaestezimmer";
 static String mqtt_ThermostatBueroTopic = "data/thermostat/M3/shelly/Buero";
-static String mqtt_HeatPumpCurrentPower = "cangateway/M3/Aktuelle_Leistung_Heizen_kW";
+static String mqtt_HeatPumpCurrentPower = "cangateway/M3/WEZ/Leistung/Aktuelle_Leistung_Heizen";
 
 const char* version = FIRMWARE_VERSION;
 String chipID = "";
