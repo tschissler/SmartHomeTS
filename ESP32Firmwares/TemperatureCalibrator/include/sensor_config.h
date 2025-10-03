@@ -13,6 +13,8 @@
 
 #define DHT22_DATA_PIN  4
 
+#define DS18B20_DATA_PIN 2
+
 // I2C Addresses
 #define BME280_ADDRESS_1  0x76
 #define BME280_ADDRESS_2  0x77
@@ -33,6 +35,10 @@
 #define DHT22_HAS_TEMPERATURE   true
 #define DHT22_HAS_HUMIDITY      true
 #define DHT22_HAS_PRESSURE      false
+
+#define DS18B20_HAS_TEMPERATURE true
+#define DS18B20_HAS_HUMIDITY    false
+#define DS18B20_HAS_PRESSURE    false
 
 // Measurement intervals
 #define READING_INTERVAL_MS     5000
