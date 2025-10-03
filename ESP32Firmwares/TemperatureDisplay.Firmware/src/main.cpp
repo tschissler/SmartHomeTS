@@ -78,6 +78,7 @@ void mqttCallback(String &topic, String &payload) {
     if (topic == mqtt_DeviceNameTopic) {
       deviceName = payload;
       Serial.println("Sensor name set to: " + deviceName);
+      mqttClientLib->publish(("meta/" + deviceName + "/version/TemperatureDisplay").c_str(), String(version), true, 2);
       return;
     } 
 
@@ -259,8 +260,6 @@ void setup()
   display.setRoomChangeCallback(onRoomChanged);
   display.updateIsConnected(WiFi.status() == WL_CONNECTED);
   display.setTemperatureSetCallback(targetTemperatureSet);
-
-  mqttClientLib->publish(("meta/" + deviceName + "/version/TemperatureDisplay").c_str(), String(version), true, 2);
 
   Serial.println("Initialization complete");
 }
