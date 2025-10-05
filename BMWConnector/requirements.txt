@@ -1,4 +1,4 @@
-bimmer_connected>=0.17.2
+bimmer_connected>=0.17.3
 httpx
 pycryptodome>=3.4
 pyjwt>=2.1.0
