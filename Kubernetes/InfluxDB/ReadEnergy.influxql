@@ -1,0 +1,11 @@
+SELECT (now() - time) / 1000000000 as age_in_seconds FROM your_measurement ORDER BY time DESC LIMIT 1
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,5 @@
+SELECT 
+  last("value_watt")
+FROM "power_values" 
+WHERE ( "time" > now()-1m AND "location" = 'M1' AND "sub_category" = 'Production') 
+GROUP BY "measurement_id"

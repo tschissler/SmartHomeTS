@@ -1,0 +1,11 @@
+#$timeFilter:boolean=time >= now() - 30d
+
+SELECT last("value_kwh") - first("value_kwh") AS consumption
+FROM "energy_values" 
+WHERE $timeFilter AND sub_category = 'Consumption' AND location = 'M1'
+GROUP BY device, meassurement
+fill(none) 
+
+
+
+SELECT DISTINCT location FROM temperature_values ORDER BY location
