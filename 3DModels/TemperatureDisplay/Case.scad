@@ -40,21 +40,43 @@ DoveTailBase = 20;
 DoveTailOffset = 48;
 DoveTailLength = InnerDepth - 20;
 
-
 ButtonHoleWidth = 6.0;
 ButtonHoleHeight = 3.0;
 ButtonHoleOffsetFromBottom = 6.5;
 Button1OffsetFromLeft = 73.5;
 Button2OffsetFromLeft = 84.5;
 
-Case();
-Holder();
+StandAngle = 50;
+StandRadius = 10;
 
-module Holder() {
-    translate([0,0, -WallThickness])
-        cube([OuterWidth, OuterDepth, WallThickness]);
+//Case();
+//Holder();
+Stand();
 
-    DoveTail(0.2);
+module Stand() 
+{
+
+    translate([0,
+        StandRadius * sin(StandAngle),
+        StandRadius + StandRadius * cos(StandAngle)])
+        rotate([StandAngle, 0, 0])
+        {
+            Holder(10,3);
+            //Case();
+        }
+
+    translate([0, 0, StandRadius])
+        rotate([0, 90, 0])
+            cylinder(h=OuterWidth, r=StandRadius);
+
+    cube([OuterWidth, OuterDepth*0.75, WallThickness*3]);
+}
+
+module Holder(overlap, thicknessfactor=1) {
+    translate([0, -overlap, -WallThickness*thicknessfactor])
+        cube([OuterWidth, OuterDepth+overlap, WallThickness*thicknessfactor]);
+
+    DoveTail(0.2, overlap);
 }
 
 module Case()
@@ -67,14 +89,14 @@ module Case()
     }
 }
 
-module DoveTail(gap=0) {
+module DoveTail(gap=0, overlap=0) {
     translate([DoveTailWidth1 + DoveTailOffset, DoveTailLength, DoveTailHeight])
         rotate([90, 180, 0]) {
-            DoveTailTrail(gap);            
+            DoveTailTrail(gap, overlap);            
         }
     translate([OuterWidth - DoveTailOffset, DoveTailLength, DoveTailHeight])
         rotate([90, 180, 0]) {
-            DoveTailTrail(gap);            
+            DoveTailTrail(gap, overlap);            
         }
 }
 
@@ -95,7 +117,7 @@ module DoveTail2() {
     DoveTailTrail(0.2);
 }
 
-module DoveTailTrail(gap=0) {
+module DoveTailTrail(gap=0, overlap=0) {
     widthDifference = (DoveTailWidth1 - DoveTailWidth2) / 2 + gap;
     p1 = [gap, 0];
     p2 = [DoveTailWidth1-gap, 0];
@@ -103,7 +125,7 @@ module DoveTailTrail(gap=0) {
     p4 = [widthDifference, DoveTailHeight];
 
     translate([0, 0, 0])
-        linear_extrude(height=DoveTailLength)
+        linear_extrude(height=DoveTailLength+overlap)
             polygon(points=[p1, p2, p3, p4], paths=[[0, 1, 2, 3]]);    
 }
 
