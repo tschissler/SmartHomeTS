@@ -59,9 +59,11 @@ static int readingCount = 0;
 
 static String baseTopic = "daten";
 static String sensorName = "";
+static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
 static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname";
+static String mqtt_LocationTopic = "config/TemperaturSensor2/{ID}/Location";
 static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness";
 static int brightness = 255;
 static int blinkCount = 0;
@@ -105,6 +107,12 @@ void mqttCallback(String &topic, String &payload) {
     if (topic == mqtt_SensorNameTopic) {
       sensorName = payload;
       Serial.println("Sensor name set to: " + sensorName);
+      return;
+    } 
+
+    if (topic == mqtt_LocationTopic) {
+      location = payload;
+      Serial.println("Location set to: " + location);
       return;
     } 
 
@@ -156,7 +164,7 @@ void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_SensorNameTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
+  mqttClientLib->connect({mqtt_SensorNameTopic, mqtt_LocationTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
 }
 
@@ -226,6 +234,8 @@ void publishSensorData()
     mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
     mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
     mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
+    mqttClientLib->publish((baseTopic + "/temperatur/" + location + "/" + sensorName).c_str(), String(humString), true, 2);
+    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + location + "/" + sensorName).c_str(), String(humString), true, 2);
   }
   Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Version: " + version);
 }
