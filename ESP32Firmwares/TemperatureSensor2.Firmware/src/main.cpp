@@ -143,7 +143,7 @@ void mqttCallback(String &topic, String &payload) {
 
     if (topic == mqtt_ConfigTopic) {
       parseConfigJSON(payload);       
-      mqttClientLib->publish(("meta/TemperaturSensor2/" + sensorName + "/version").c_str(), String(version), true, 2);
+      mqttClientLib->publish(("meta/TemperaturSensor2/" + location + "/" + sensorName + "/version").c_str(), String(version), true, 2);
       return;
     } 
 
