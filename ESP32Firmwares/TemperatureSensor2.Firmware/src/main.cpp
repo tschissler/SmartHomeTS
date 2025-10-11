@@ -142,7 +142,8 @@ void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
     if (topic == mqtt_ConfigTopic) {
-      parseConfigJSON(payload); 
+      parseConfigJSON(payload);       
+      mqttClientLib->publish(("meta/" + sensorName + "/version/TemperaturSensor2").c_str(), String(version), true, 2);
       return;
     } 
 
@@ -293,8 +294,6 @@ void setup() {
   //Init DHT sensor
   dht.begin();
   Serial.println("DHT sensor initialized");
-
-  mqttClientLib->publish(("meta/" + sensorName + "/version/TemperaturSensor2").c_str(), String(version), true, 2);
 }
 
 void loop() {
