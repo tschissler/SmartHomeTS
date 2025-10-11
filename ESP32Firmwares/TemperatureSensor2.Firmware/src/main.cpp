@@ -102,7 +102,7 @@ String extractVersionFromUrl(String url) {
 
 void parseConfigJSON(String jsonPayload) {
   // Create a JSON document with enough capacity
-  StaticJsonDocument<200> doc;
+  JsonDocument doc;
   
   // Parse the JSON string
   DeserializationError error = deserializeJson(doc, jsonPayload);
@@ -115,17 +115,17 @@ void parseConfigJSON(String jsonPayload) {
   }
   
   // Extract values from JSON
-  if (doc.containsKey("SensorName")) {
+  if (!doc["SensorName"].isNull()) {
     sensorName = doc["SensorName"].as<String>();
     Serial.println("Sensor name set to: " + sensorName);
   }
   
-  if (doc.containsKey("Location")) {
+  if (!doc["Location"].isNull()) {
     location = doc["Location"].as<String>();
     Serial.println("Location set to: " + location);
   }
   
-  if (doc.containsKey("Brightness")) {
+  if (!doc["Brightness"].isNull()) {
     int newBrightness = doc["Brightness"];
     if (newBrightness >= 0 && newBrightness <= 255) {
       brightness = newBrightness;
@@ -182,7 +182,7 @@ void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_SensorNameTopic, mqtt_LocationTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
+  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
 }
 
@@ -273,8 +273,7 @@ void setup() {
   chipID = ESP32Helpers::getChipId();
   Serial.print("ESP32 Chip ID: ");
   Serial.println(chipID);
-  mqtt_SensorNameTopic.replace("{ID}", chipID);
-  mqtt_BrightnessTopic.replace("{ID}", chipID);
+  mqtt_ConfigTopic.replace("{ID}", chipID);
 
   // Connect to WiFi
   Serial.print("Connecting to WiFi ");
