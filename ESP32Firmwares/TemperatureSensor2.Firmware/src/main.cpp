@@ -5,6 +5,7 @@
 #include <NTPClient.h>
 #include <ESP32Ping.h>
 #include "ESP32Helpers.h"
+#include <ArduinoJson.h>
 
 // Shared libaries
 #include "AzureOTAUpdater.h"
@@ -63,8 +64,8 @@ static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
 static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname";
-static String mqtt_LocationTopic = "config/TemperaturSensor2/{ID}/Location";
 static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness";
+static String mqtt_ConfigTopic = "config/TemperaturSensor2/{ID}";
 static int brightness = 255;
 static int blinkCount = 0;
 static const int MAX_BLINK_COUNT = 3;
@@ -101,6 +102,44 @@ String extractVersionFromUrl(String url) {
     return "";
 }
 
+void parseConfigJSON(String jsonPayload) {
+  // Create a JSON document with enough capacity
+  StaticJsonDocument<200> doc;
+  
+  // Parse the JSON string
+  DeserializationError error = deserializeJson(doc, jsonPayload);
+  
+  // Check if parsing was successful
+  if (error) {
+    Serial.print("JSON parsing failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+  
+  // Extract values from JSON
+  if (doc.containsKey("SensorName")) {
+    sensorName = doc["SensorName"].as<String>();
+    Serial.println("Sensor name set to: " + sensorName);
+  }
+  
+  if (doc.containsKey("Location")) {
+    location = doc["Location"].as<String>();
+    Serial.println("Location set to: " + location);
+  }
+  
+  if (doc.containsKey("Brightness")) {
+    int newBrightness = doc["Brightness"];
+    if (newBrightness >= 0 && newBrightness <= 255) {
+      brightness = newBrightness;
+      pixels.setBrightness(brightness);
+      pixels.show();
+      Serial.println("Brightness set to: " + String(brightness));
+    } else {
+      Serial.println("Invalid brightness value: " + String(newBrightness));
+    }
+  }
+}
+
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
@@ -110,9 +149,8 @@ void mqttCallback(String &topic, String &payload) {
       return;
     } 
 
-    if (topic == mqtt_LocationTopic) {
-      location = payload;
-      Serial.println("Location set to: " + location);
+    if (topic == mqtt_ConfigTopic) {
+      parseConfigJSON(payload); 
       return;
     } 
 
