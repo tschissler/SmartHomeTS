@@ -63,8 +63,6 @@ static String sensorName = "";
 static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
-static String mqtt_SensorNameTopic = "config/TemperaturSensor2/{ID}/Sensorname";
-static String mqtt_BrightnessTopic = "config/TemperaturSensor2/{ID}/Brightness";
 static String mqtt_ConfigTopic = "config/TemperaturSensor2/{ID}";
 static int brightness = 255;
 static int blinkCount = 0;
@@ -143,28 +141,10 @@ void parseConfigJSON(String jsonPayload) {
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
-    if (topic == mqtt_SensorNameTopic) {
-      sensorName = payload;
-      Serial.println("Sensor name set to: " + sensorName);
-      return;
-    } 
-
     if (topic == mqtt_ConfigTopic) {
       parseConfigJSON(payload); 
       return;
     } 
-
-    if (topic == mqtt_BrightnessTopic) {
-      brightness = payload.toInt();
-      if (brightness >= 0 && brightness <= 255) {
-        pixels.setBrightness(brightness);
-        pixels.show();
-        Serial.println("Brightness set to: " + String(brightness));
-      } else {
-        Serial.println("Invalid brightness value: " + payload);
-      }
-      return;
-    }
 
     if (topic == mqtt_OTAtopic) {
       if (otaInProgress || !otaEnable) {
