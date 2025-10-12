@@ -143,7 +143,6 @@ void mqttCallback(String &topic, String &payload) {
 
     if (topic == mqtt_ConfigTopic) {
       parseConfigJSON(payload);       
-      mqttClientLib->publish(("meta/TemperaturSensor2/" + location + "/" + sensorName + "/version").c_str(), String(version), true, 2);
       return;
     } 
 
@@ -180,11 +179,19 @@ void mqttCallback(String &topic, String &payload) {
 }
 
 void connectToMQTT(bool cleanSession) {
+  Serial.print("WiFi Status: ");
+  Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+
   if (WiFi.status() != WL_CONNECTED) {
-    wifiLib.connect();
+      Serial.println("WiFi not connected, attempting to reconnect...");
+      wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic}, cleanSession);
-  Serial.println("MQTT Client is connected");
+
+  mqttClientLib->connect(cleanSession);
+  mqttClientLib->subscribe({mqtt_ConfigTopic, mqtt_OTAtopic});
+  Serial.println("### MQTT Client is connected and subscribed to topics");
+  Serial.println("Config Topic: " + mqtt_ConfigTopic);
+  Serial.println("OTA Topic: " + mqtt_OTAtopic);
 }
 
 void readSensorData() {
@@ -282,11 +289,6 @@ void setup() {
   wifiLib.connect();
   String ssid = wifiLib.getSSID();
 
-  // Set up MQTT
-  String mqttClientID = "ESP32TemperatureSensorClient_" + chipID;
-  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
-  connectToMQTT(true);
-
   timeClient.begin();
   timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
   timeClient.update();
@@ -294,6 +296,12 @@ void setup() {
   //Init DHT sensor
   dht.begin();
   Serial.println("DHT sensor initialized");
+
+  // Set up MQTT
+  String mqttClientID = "ESP32TemperatureSensor2Client_" + chipID;
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  connectToMQTT(true);
+  mqttClientLib->publish(("meta/TemperaturSensor2/" + location + "/" + sensorName + "/version").c_str(), String(version), true, 2);
 }
 
 void loop() {
@@ -316,11 +324,25 @@ void loop() {
       publishSensorData();
     }
 
-    if(!mqttClientLib->loop())
+    bool mqttConnected = mqttClientLib->loop();
+    if(!mqttConnected)
     {
+      // Log detailed information about the disconnection
+      int lastErr = mqttClientLib->lastError();
+      Serial.print("MQTT loop() returned false! Last Error Code: ");
+      Serial.println(lastErr);
+      Serial.print("WiFi Status: ");
+      Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+      Serial.print("WiFi RSSI: ");
+      Serial.println(WiFi.RSSI());
+      Serial.print("Free Heap: ");
+      Serial.println(ESP.getFreeHeap());
+      Serial.print("Uptime: ");
+      Serial.println(millis() / 1000);
+      
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT(false);
     }
   }
-  delay(100);
+  delay(500);
 }

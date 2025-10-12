@@ -7,8 +7,12 @@ MQTTClientLib::MQTTClientLib(const String& mqtt_broker, const String& clientId, 
     mqttClient.setOptions(60, false, 10000);
 }
 
-void MQTTClientLib::connect(std::vector<String> subscriptionTopics, bool cleanSession) {
+void MQTTClientLib::connect(bool cleanSession) {
     while (!mqttClient.connected()) {
+        Serial.println("=== MQTT Connection Attempt ===");
+        Serial.print("Clean Session: ");
+        Serial.println(cleanSession ? "true" : "false");
+
         mqttClient.setCleanSession(cleanSession);
         Serial.print("Connecting to MQTT Broker ");
         Serial.print(mqtt_broker);
@@ -25,22 +29,7 @@ void MQTTClientLib::connect(std::vector<String> subscriptionTopics, bool cleanSe
         }
     }
 
-     // Subscribe to the list of topics
-    for (const String& topic : subscriptionTopics) {
-        if (topic.isEmpty()) continue; 
-
-        bool subscribeSuccess = mqttClient.subscribe(topic.c_str());
-        if (subscribeSuccess) {
-            Serial.print("Subscribed to topic: ");
-            Serial.println(topic);
-        } else {
-            Serial.print("Failed to subscribe to topic: ");
-            Serial.println(topic);
-            Serial.print("Last Error: ");
-            Serial.println(mqttClient.lastError());
-        }
-    }
-    Serial.println("Connected to MQTT Broker and subscribed to topics");
+    Serial.println("Connected to MQTT Broker");
 }
 
 bool MQTTClientLib::loop() {
@@ -57,7 +46,28 @@ bool MQTTClientLib::publish(const String& topic, const String& payload, bool ret
 }
 
 bool MQTTClientLib::subscribe(const String& topic) {
-    return mqttClient.subscribe(topic.c_str());
+    if (topic.isEmpty()) return false; 
+
+    bool subscribeSuccess = mqttClient.subscribe(topic.c_str());
+    if (subscribeSuccess) {
+        Serial.print("Subscribed to topic: ");
+        Serial.println(topic);
+    } else {
+        Serial.print("#####################################################################Failed to subscribe to topic: ");
+        Serial.println(topic);
+        Serial.print("Last Error: ");
+        Serial.println(mqttClient.lastError());
+    }
+    return subscribeSuccess;
+}
+
+bool MQTTClientLib::subscribe(const std::vector<String>& topics) {
+    bool allSubscribed = true;
+    for (const auto& topic : topics) {
+        bool result = subscribe(topic.c_str());
+        allSubscribed = allSubscribed && result;
+    }
+    return allSubscribed;
 }
 
 int MQTTClientLib::lastError() {

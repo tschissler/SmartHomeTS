@@ -14,10 +14,11 @@ const int mqtt_port = 32004;
 class MQTTClientLib {
 public:
     MQTTClientLib(const String& mqtt_broker, const String& clientId, WiFiClient& wifiClient, MQTTClientCallbackSimple callback);
-    void connect(std::vector<String> subscriptionTopics, bool cleanSession);
+    void connect(bool cleanSession);
     bool loop();
     bool publish(const String &topic, const String &payload, bool retained, int qos, bool printLogMessages = true);
     bool subscribe(const String& topic);
+    bool subscribe(const std::vector<String>& topics);
     int lastError();
 
 private:
