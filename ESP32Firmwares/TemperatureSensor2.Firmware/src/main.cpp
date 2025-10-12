@@ -179,11 +179,11 @@ void mqttCallback(String &topic, String &payload) {
     }
 }
 
-void connectToMQTT() {
+void connectToMQTT(bool cleanSession) {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
+  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic}, cleanSession);
   Serial.println("MQTT Client is connected");
 }
 
@@ -285,7 +285,7 @@ void setup() {
   // Set up MQTT
   String mqttClientID = "ESP32TemperatureSensorClient_" + chipID;
   mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
-  connectToMQTT();
+  connectToMQTT(true);
 
   timeClient.begin();
   timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
@@ -319,7 +319,7 @@ void loop() {
     if(!mqttClientLib->loop())
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
-      connectToMQTT();
+      connectToMQTT(false);
     }
   }
   delay(100);
