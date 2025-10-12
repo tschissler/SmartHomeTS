@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/TemperatureSensor2Firmware.yml
       - ESP32Firmwares/TemperatureSensor2.Firmware/**
+  workflow_dispatch:
   
 jobs:
   build:
