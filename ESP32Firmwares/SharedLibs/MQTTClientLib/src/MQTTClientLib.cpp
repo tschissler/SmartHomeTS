@@ -7,9 +7,9 @@ MQTTClientLib::MQTTClientLib(const String& mqtt_broker, const String& clientId, 
     mqttClient.setOptions(60, false, 10000);
 }
 
-void MQTTClientLib::connect(std::vector<String> subscriptionTopics) {
+void MQTTClientLib::connect(std::vector<String> subscriptionTopics, bool cleanSession) {
     while (!mqttClient.connected()) {
-        mqttClient.setCleanSession(true);
+        mqttClient.setCleanSession(cleanSession);
         Serial.print("Connecting to MQTT Broker ");
         Serial.print(mqtt_broker);
         Serial.print(" with ClientId ");
