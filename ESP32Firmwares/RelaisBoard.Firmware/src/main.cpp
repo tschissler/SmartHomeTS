@@ -242,7 +242,7 @@ void connectToMQTT(bool cleanSession) {
   // Subscribing only to topic for OTA update and reading sensor name
   // Other topics (Configuration, Commands) will be subscribed once sensor name is known
   mqttClient->connect(cleanSession);
-  mqttClientLib->subscribe({mqtt_SensornameTopic, mqtt_OTAtopic});
+  mqttClient->subscribe({mqtt_SensornameTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
   Serial.println("Sensor Name Topic: " + mqtt_SensornameTopic);
   Serial.println("OTA Topic: " + mqtt_OTAtopic);
