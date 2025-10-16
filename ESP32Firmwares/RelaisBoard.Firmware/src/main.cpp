@@ -231,15 +231,21 @@ void mqttCallback(String &topic, String &payload) {
     }
 }
 
-void connectToMQTT() {
+void connectToMQTT(bool cleanSession) {
+  Serial.print("WiFi Status: ");
+  Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected, trying to reconnect...");
-    wifiLib.connect();
+      Serial.println("WiFi not connected, attempting to reconnect...");
+      wifiLib.connect();
   }
   // Subscribing only to topic for OTA update and reading sensor name
   // Other topics (Configuration, Commands) will be subscribed once sensor name is known
-  mqttClient->connect({mqtt_SensornameTopic, mqtt_OTAtopic});
+  mqttClient->connect(cleanSession);
+  mqttClientLib->subscribe({mqtt_SensornameTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
+  Serial.println("Sensor Name Topic: " + mqtt_SensornameTopic);
+  Serial.println("OTA Topic: " + mqtt_OTAtopic);
 }
 
 void setup() {
@@ -287,7 +293,7 @@ void setup() {
   // Set up MQTT
   String mqttClientID = "ESP32RelaismoduleClient_" + chipID;
   mqttClient = std::unique_ptr<MQTTClientLib>(new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback));
-  connectToMQTT();
+  connectToMQTT(true);
 
   // Print the IP address
   Serial.print("IP Address: ");
@@ -337,7 +343,7 @@ void loop() {
     if(!mqttClient->loop())
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
-      connectToMQTT();
+      connectToMQTT(false);
     }
 
     if (sensorName != "" && !subscribedToConfig) {
