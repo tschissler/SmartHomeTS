@@ -10,9 +10,12 @@ public:
     String getSSID() const;
     String getPassword() const;
     String getLocalIP() const;
+    String getBSSID() const;
 private:
     String ssid;
     String password;
     String passwords;
+    uint8_t bssid[6];
+    bool bssidSet;
     void parseWifis(std::map<String, String> &knownWifis);
 };

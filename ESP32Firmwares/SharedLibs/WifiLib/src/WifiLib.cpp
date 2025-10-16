@@ -1,7 +1,9 @@
 #include "WifiLib.h"
 #include <WiFi.h>
 
-WifiLib::WifiLib(const String& wifiPasswords) : passwords(wifiPasswords), ssid(""), password("") {}
+WifiLib::WifiLib(const String& wifiPasswords) : passwords(wifiPasswords), ssid(""), password(""), bssidSet(false) {
+    memset(bssid, 0, sizeof(bssid));
+}
 
 void WifiLib::scanAndSelectNetwork() {
     Serial.println("Scanning for WiFi networks...");
@@ -46,11 +48,23 @@ void WifiLib::scanAndSelectNetwork() {
 
         ssid = "";
         password = "";
+        bssidSet = false;
         return;
     } else {
         ssid = WiFi.SSID(maxRSSIIndex);
         password = knownWifis[ssid];
-        Serial.println("Strongest known WiFi network is " + ssid + " with RSSI " + String(maxRSSI) + " dBm");
+        
+        // Store the BSSID of the strongest access point
+        uint8_t* foundBSSID = WiFi.BSSID(maxRSSIIndex);
+        if (foundBSSID != nullptr) {
+            memcpy(bssid, foundBSSID, 6);
+            bssidSet = true;
+            Serial.printf("Strongest known WiFi network is %s with RSSI %d dBm, BSSID: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                ssid.c_str(), maxRSSI, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+        } else {
+            bssidSet = false;
+            Serial.println("Strongest known WiFi network is " + ssid + " with RSSI " + String(maxRSSI) + " dBm");
+        }
     }
 }
 
@@ -60,9 +74,19 @@ void WifiLib::connect() {
         delay(1000);
         scanAndSelectNetwork();
     }
+    
     Serial.print("Connecting to WiFi ");
     Serial.println(ssid);
-    WiFi.begin(ssid.c_str(), password.c_str());
+    
+    // Connect with specific BSSID if available to ensure connection to the strongest AP
+    if (bssidSet) {
+        Serial.printf("Connecting to specific access point with BSSID: %02X:%02X:%02X:%02X:%02X:%02X\n",
+            bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+        WiFi.begin(ssid.c_str(), password.c_str(), 0, bssid, true);
+    } else {
+        WiFi.begin(ssid.c_str(), password.c_str());
+    }
+    
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
         Serial.println("Could not connect to Wifi " + ssid + " - password might be incorrect, retrying...");
@@ -93,3 +117,13 @@ void WifiLib::parseWifis(std::map<String, String> &knownWifis) {
 String WifiLib::getSSID() const { return ssid; }
 String WifiLib::getPassword() const { return password; }
 String WifiLib::getLocalIP() const { return WiFi.localIP().toString(); }
+
+String WifiLib::getBSSID() const {
+    if (bssidSet) {
+        char bssidStr[18];
+        sprintf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X", 
+            bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+        return String(bssidStr);
+    }
+    return "";
+}
