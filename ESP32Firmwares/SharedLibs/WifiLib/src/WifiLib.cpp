@@ -18,11 +18,12 @@ void WifiLib::scanAndSelectNetwork() {
     Serial.print(numberOfNetworks);
     Serial.println(" networks.");
     for (int i = 0; i < numberOfNetworks; i++) {
-        Serial.print(WiFi.SSID(i));
-        Serial.print(" (");
-        Serial.print(WiFi.RSSI(i));
-        Serial.print(") ");
-        Serial.println(WiFi.encryptionType(i));
+        Serial.printf("%s  RSSI:%d dBm  ch:%d  BSSID:%s  enc:%d\n",
+            WiFi.SSID(i).c_str(),
+            WiFi.RSSI(i),
+            WiFi.channel(i),
+            WiFi.BSSIDstr(i).c_str(),
+            WiFi.encryptionType(i));
         delay(10);
     }
     int maxRSSI = -1000;
