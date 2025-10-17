@@ -67,6 +67,19 @@ namespace ShellyConnector
                                 IsValid: emeterData.Emeters[0].Is_Valid
                                 );
                             break;
+                        case DeviceType.Shelly3EMGen3:
+                            jsonString = await Http.GetStringAsync($"http://{device.IPAddress}/rpc/EM.GetStatus?id=0");
+                            var emeterGen3PowerData = JsonConvert.DeserializeObject<ShellyEmeterGen3PowerData>(jsonString);
+                            jsonString = await Http.GetStringAsync($"http://{device.IPAddress}/rpc/EMData.GetStatus?id=0");
+                            var eMeterGen3EnergyData = JsonConvert.DeserializeObject<ShellyEmeterGen3EnergyData>(jsonString);
+                            powerData = new ShellyPowerData(
+                                Power: emeterGen3PowerData.total_act_power,
+                                TotalPower: eMeterGen3EnergyData.total_act,
+                                Voltage: (emeterGen3PowerData.a_voltage + emeterGen3PowerData.b_voltage + emeterGen3PowerData.c_voltage) / 3,
+                                Timestamp: DateTimeOffset.Now,
+                                IsValid: true
+                                );
+                            break;
                         case DeviceType.ShellyPlugS:
                         case DeviceType.ShellyPlug2:
                             jsonString = Http.GetStringAsync($"http://{device.IPAddress}/meter/0").Result;
