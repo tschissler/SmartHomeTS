@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/bmwconnector.yml
       - BMWConnector/**
+  workflow_dispatch:
 
 env:
   PROJECT_NAME: BMWConnector
