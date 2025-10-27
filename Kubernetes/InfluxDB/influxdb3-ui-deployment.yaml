@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
         - name: influxdb3-ui
-          image: influxdata/influxdb3-ui
+          image: influxdata/influxdb3-ui:latest
+          imagePullPolicy: Always
           args: ["--mode=admin"]
           ports:
             - name: http

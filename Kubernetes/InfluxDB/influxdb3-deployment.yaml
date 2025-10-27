@@ -24,6 +24,7 @@ spec:
       containers:
         - name: influxdb3
           image: influxdb:3-core
+          imagePullPolicy: Always
           command: ["influxdb3"]
           args:
             - "serve"
