@@ -101,20 +101,16 @@ String extractVersionFromUrl(String url) {
 }
 
 void parseConfigJSON(String jsonPayload) {
-  // Create a JSON document with enough capacity
   JsonDocument doc;
   
-  // Parse the JSON string
   DeserializationError error = deserializeJson(doc, jsonPayload);
   
-  // Check if parsing was successful
   if (error) {
     Serial.print("JSON parsing failed: ");
     Serial.println(error.c_str());
     return;
   }
   
-  // Extract values from JSON
   if (!doc["SensorName"].isNull()) {
     sensorName = doc["SensorName"].as<String>();
     Serial.println("Sensor name set to: " + sensorName);
