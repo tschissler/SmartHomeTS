@@ -6,6 +6,8 @@
         Power,
         Energy,
         Voltage,
-        Temperature
+        Temperature,
+        Status,
+        Counter
     }
 }

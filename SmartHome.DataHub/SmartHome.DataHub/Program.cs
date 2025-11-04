@@ -290,7 +290,39 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Device = "Waermepumpe",
                     Measurement = meassurement,
                     Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
-                    MeasurementType = MeasurementType.Percent
+                    MeasurementType = MeasurementType.Status
+                },
+                DateTimeOffset.UtcNow);
+            break;
+        case "Energie":
+            influx3Connector.WriteStatusValue(
+                new InfluxStatusRecord
+                {
+                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    Category = MeasurementCategory.Heizung,
+                    SubCategory = subCategory,
+                    SensorType = "CanGateway",
+                    Location = location,
+                    Device = "Waermepumpe",
+                    Measurement = meassurement,
+                    Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    MeasurementType = MeasurementType.Energy
+                },
+                DateTimeOffset.UtcNow);
+            break;
+        case "Zaehler":
+            influx3Connector.WriteStatusValue(
+                new InfluxStatusRecord
+                {
+                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    Category = MeasurementCategory.Heizung,
+                    SubCategory = subCategory,
+                    SensorType = "CanGateway",
+                    Location = location,
+                    Device = "Waermepumpe",
+                    Measurement = meassurement,
+                    Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    MeasurementType = MeasurementType.Counter
                 },
                 DateTimeOffset.UtcNow);
             break;
