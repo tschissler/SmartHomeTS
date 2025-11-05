@@ -24,6 +24,7 @@ GeoPosition? bmwPosition = null;
 GeoPosition? miniPosition = null;
 GeoPosition? vwPosition = null;
 string[] cars = new string[] { "BMW", "Mini", "VW" };
+Dictionary<string, decimal> previousValues = new ();
 
 string? influxToken = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
 if (string.IsNullOrEmpty(influxToken))
@@ -228,13 +229,15 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
     var measurementType = topicParts[3];
     var meassurement = topicParts[4];
 
+    var measurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement;
+
     switch (measurementType)
     {
         case "Temperatur":
             influx3Connector.WriteTemperatureValue(
                 new InfluxTemperatureRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    MeasurementId = measurementId,
                     Category = MeasurementCategory.Heizung,
                     SubCategory = subCategory,
                     SensorType = "CanGateway",
@@ -250,7 +253,7 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
             influx3Connector.WritePowerValue(
                 new InfluxPowerRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    MeasurementId = measurementId,
                     Category = MeasurementCategory.Heizung,
                     SubCategory = subCategory,
                     SensorType = "CanGateway",
@@ -266,7 +269,7 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
             influx3Connector.WritePercentageValue(
                 new InfluxPercentageRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    MeasurementId = measurementId,
                     Category = MeasurementCategory.Heizung,
                     SubCategory = subCategory,
                     SensorType = "CanGateway",
@@ -282,7 +285,7 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
             influx3Connector.WriteStatusValue(
                 new InfluxStatusRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    MeasurementId = measurementId,
                     Category = MeasurementCategory.Heizung,
                     SubCategory = subCategory,
                     SensorType = "CanGateway",
@@ -295,33 +298,46 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                 DateTimeOffset.UtcNow);
             break;
         case "Energie":
-            influx3Connector.WriteStatusValue(
-                new InfluxStatusRecord
+            var currentValue = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture);
+            var delta = 0m;
+            var previousValue = previousValues.FirstOrDefault(kv => kv.Key == measurementId);
+            if (previousValue.Key != null)
+            {
+                delta = currentValue - previousValue.Value;
+                previousValues[measurementId] = currentValue;
+            }
+            else
+            {
+                previousValues.Add(measurementId, currentValue);
+            }
+            influx3Connector.WriteEnergyValue(
+                new InfluxEnergyRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    MeasurementId = measurementId,
                     Category = MeasurementCategory.Heizung,
-                    SubCategory = subCategory,
+                    SubCategory = MeasurementSubCategory.Consumption,
                     SensorType = "CanGateway",
                     Location = location,
                     Device = "Waermepumpe",
                     Measurement = meassurement,
-                    Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    Value_Cumulated_KWh = currentValue,
+                    Value_Delta_KWh = delta,
                     MeasurementType = MeasurementType.Energy
                 },
                 DateTimeOffset.UtcNow);
             break;
         case "Zaehler":
-            influx3Connector.WriteStatusValue(
-                new InfluxStatusRecord
+            influx3Connector.WriteCounterValue(
+                new InfluxCounterRecord
                 {
-                    MeasurementId = "Heizung_" + location + "_" + subCategory + "_" + meassurement,
+                    MeasurementId = measurementId,
                     Category = MeasurementCategory.Heizung,
                     SubCategory = subCategory,
                     SensorType = "CanGateway",
                     Location = location,
                     Device = "Waermepumpe",
                     Measurement = meassurement,
-                    Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    Value_Counter = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
                     MeasurementType = MeasurementType.Counter
                 },
                 DateTimeOffset.UtcNow);

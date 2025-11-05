@@ -47,4 +47,10 @@
         public required string SubCategory { get; init; }
         public required decimal Value_Status { get; init; } // in °C
     }
+
+    public record InfluxCounterRecord : InfluxRecord
+    {
+        public required string SubCategory { get; init; }
+        public required int Value_Counter { get; init; } // in °C
+    }
 }
