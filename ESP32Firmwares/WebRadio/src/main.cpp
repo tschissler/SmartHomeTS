@@ -23,7 +23,16 @@ AudioFileSourceICYStream *file;
 AudioFileSourceBuffer *buff;
 AudioOutputI2S *out;
 
-// Remove task handles - going back to single core like working code
+// FreeRTOS task handles for dual-core operation
+TaskHandle_t audioTaskHandle = NULL;
+
+// Queue for passing metadata from audio core to UI core
+QueueHandle_t metadataQueue = NULL;
+
+// Structure for metadata messages
+struct MetadataMessage {
+  char text[21];  // 20 chars + null terminator
+};
 
 // KY-023 Joystick pins
 #define VRX_PIN 34    // Analog pin for X-axis
@@ -281,17 +290,55 @@ void metadataCB(void *cbData, const char *type, bool isUnicode, const char *str)
   const char *tag = (const char *)cbData;
   Serial.printf("[%s][META] %s%s: %s\n", tag ? tag : "?", isUnicode ? "(U)" : "", type ? type : "", str ? str : "");
 
-  // Display metadata on LCD line 3 (index 2), truncated to 20 characters
-  if (str && strlen(str) > 0) {
-    String metadata = String(str);
-    if (metadata.length() > 20) {
-      metadata = metadata.substring(0, 20);
+  // Send metadata to UI core via queue instead of direct LCD write
+  if (str && strlen(str) > 0 && metadataQueue != NULL) {
+    MetadataMessage msg;
+    strncpy(msg.text, str, 20);
+    msg.text[20] = '\0';  // Ensure null termination
+    
+    // Send to queue (non-blocking from audio core)
+    xQueueSend(metadataQueue, &msg, 0);
+  }
+}
+
+// Audio task that runs on Core 1 - dedicated to audio processing only
+void audioTask(void *parameter) {
+  Serial.println("Audio task started on Core 1");
+  
+  for (;;) {
+    // Handle audio streaming with buffer monitoring
+    if (mp3 && mp3->isRunning()) {
+      if (!mp3->loop()) {
+        mp3->stop();
+        radioPlaying = false;
+        Serial.println("Stream ended");
+        // Note: updateDisplay() will be called from main loop on Core 0
+      }
+      
+      // Buffer monitoring (every 5 seconds)
+      static unsigned long lastBufferCheck = 0;
+      if (millis() - lastBufferCheck > 5000) {
+        lastBufferCheck = millis();
+        uint32_t bufferLevel = buff ? buff->getFillLevel() : 0;
+        Serial.print("Buffer: ");
+        Serial.print(bufferLevel);
+        Serial.print(" bytes, WiFi: ");
+        Serial.print(WiFi.RSSI());
+        Serial.print(" dBm, Heap: ");
+        Serial.println(ESP.getFreeHeap());
+        
+        // Warn if buffer is getting low
+        if (bufferLevel < 4096) {
+          Serial.println("WARNING: Buffer level low!");
+        }
+      }
+    } else {
+      // No audio playing, yield CPU time
+      vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     
-    lcd.setCursor(0, 2);
-    lcd.print("                    "); // Clear the line first (20 spaces)
-    lcd.setCursor(0, 2);
-    lcd.print(metadata);
+    // Small delay to prevent watchdog timeout
+    vTaskDelay(1 / portTICK_PERIOD_MS);
   }
 }
 
@@ -475,37 +522,40 @@ void setup() {
   mp3 = new AudioGeneratorMP3();
   mp3->RegisterStatusCB(statusCB, (void*)"MP3");
   mp3->RegisterMetadataCB(metadataCB, (void*)"MP3");
+  
+  // Create metadata queue for communication between cores
+  metadataQueue = xQueueCreate(5, sizeof(MetadataMessage));
+  
+  // Create audio task on Core 1 (dedicated for audio processing)
+  xTaskCreatePinnedToCore(
+    audioTask,          // Task function
+    "AudioTask",        // Task name
+    4096,              // Stack size (4KB)
+    NULL,              // Parameters
+    2,                 // Priority (high priority)
+    &audioTaskHandle,  // Task handle
+    1                  // Core 1 (Core 0 is for main loop/UI)
+  );
     
   updateDisplay();
 }
 
 void loop() {
-  // Handle audio streaming with buffer monitoring
-  if (mp3 && mp3->isRunning()) {
-    if (!mp3->loop()) {
-      mp3->stop();
-      radioPlaying = false;
-      updateDisplay();
-      Serial.println("Stream ended");
-    }
-    
-    // Buffer monitoring (every 5 seconds)
-    static unsigned long lastBufferCheck = 0;
-    if (millis() - lastBufferCheck > 5000) {
-      lastBufferCheck = millis();
-      uint32_t bufferLevel = buff ? buff->getFillLevel() : 0;
-      Serial.print("Buffer: ");
-      Serial.print(bufferLevel);
-      Serial.print(" bytes, WiFi: ");
-      Serial.print(WiFi.RSSI());
-      Serial.print(" dBm, Heap: ");
-      Serial.println(ESP.getFreeHeap());
-      
-      // Warn if buffer is getting low
-      if (bufferLevel < 4096) {
-        Serial.println("WARNING: Buffer level low!");
-      }
-    }
+  // Handle metadata updates from queue (Core 0 - UI operations)
+  MetadataMessage msg;
+  if (metadataQueue != NULL && xQueueReceive(metadataQueue, &msg, 0) == pdTRUE) {
+    // Update LCD with metadata on Core 0 (won't interrupt audio on Core 1)
+    lcd.setCursor(0, 2);
+    lcd.print("                    "); // Clear the line first (20 spaces)
+    lcd.setCursor(0, 2);
+    lcd.print(msg.text);
+  }
+  
+  // Update display if radio state changed (handled on Core 0)
+  static bool lastRadioPlaying = radioPlaying;
+  if (lastRadioPlaying != radioPlaying) {
+    lastRadioPlaying = radioPlaying;
+    updateDisplay();
   }
   
   // Read the switch state
