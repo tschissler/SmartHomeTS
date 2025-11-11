@@ -9,6 +9,7 @@
 #include "AudioFileSourceBuffer.h"
 #include "AudioGeneratorMP3.h"
 #include "AudioOutputI2S.h"
+#include "esp_sleep.h"
 
 // WiFi credentials - CHANGE THESE!
 const char* ssid = "agileMax_Guest";
@@ -68,6 +69,17 @@ bool backlightOn = true;
 unsigned long lastJoystickRead = 0;
 unsigned long lastAudioCheck = 0;
 unsigned long streamStartTime = 0;
+
+// Retry mechanism variables
+int retryAttempt = 0;
+const int maxRetries = 3;
+
+// Deep sleep variables
+bool deepSleepEnabled = true; // Enable/disable deep sleep feature
+unsigned long sleepDelay = 2000; // Delay before entering deep sleep (ms)
+
+// Function declarations
+void enterDeepSleep();
 const unsigned long STREAM_TIMEOUT = 10000; // 10 seconds timeout
 
 // Robust switch debouncing variables
@@ -402,18 +414,46 @@ void audioTask(void *parameter) {
 }
 
 void startRadio() {
+  // Turn on LCD backlight when starting audio
+  if (!backlightOn) {
+    lcd.backlight();
+    backlightOn = true;
+  }
+  
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected!");
+    retryAttempt = 0; // Reset retry counter on WiFi failure
     return;
   }
   
-  // Stop any current playback
+  // Stop any current playback and ensure clean state
   if (mp3 && mp3->isRunning()) {
     mp3->stop();
+    delay(100); // Give time for proper cleanup
+  }
+  
+  // Also close any existing file connection
+  if (file && file->isOpen()) {
+    file->close();
+    delay(50); // Additional cleanup time
   }
   
   Serial.print("Connecting to: ");
   Serial.println(stations[currentStation]);
+  if (retryAttempt > 0) {
+    Serial.print("Retry attempt: ");
+    Serial.print(retryAttempt);
+    Serial.print("/");
+    Serial.println(maxRetries);
+    
+    // Show retry status on display
+    lcd.setCursor(0, 3);
+    lcd.print("Retry ");
+    lcd.print(retryAttempt);
+    lcd.print("/");
+    lcd.print(maxRetries);
+    lcd.print("...        ");
+  }
   
   // Resolve redirects and playlists
   String finalUrl = resolveStreamUrl(stations[currentStation], 6, 7000);
@@ -422,12 +462,25 @@ void startRadio() {
     lcd.setCursor(0, 3);
     lcd.print("URL Error!           ");
     delay(2000);
-    // Try next station
-    currentStation = (currentStation + 1) % numStations;
-    updateDisplay();
-    delay(1000);
-    startRadio();
-    return;
+    
+    // Handle retry for URL resolution failure - stay on same station
+    if (retryAttempt < maxRetries) {
+      retryAttempt++;
+      int retryDelay = 1000 * retryAttempt; // Exponential backoff: 1s, 2s, 3s
+      Serial.print("Retrying same station in ");
+      Serial.print(retryDelay);
+      Serial.println("ms...");
+      delay(retryDelay);
+      startRadio();
+      return;
+    } else {
+      // Max retries reached, reset counter and stay on same station
+      Serial.println("Max URL retries reached, giving up on this station");
+      retryAttempt = 0; // Reset counter
+      lcd.setCursor(0, 3);
+      lcd.print("URL failed!          ");
+      return; // Don't auto-switch to next station
+    }
   }
   
   Serial.print("Final Stream URL: ");
@@ -478,6 +531,7 @@ void startRadio() {
     if (bufferReady || finalLevel > 1024) { // More lenient check - try if we have at least 1KB
       if (mp3->begin(buff, out)) {
         radioPlaying = true;
+        retryAttempt = 0; // Reset retry counter on successful connection
         Serial.print("Started with buffer: ");
         Serial.print(finalLevel);
         Serial.print(" bytes - ");
@@ -485,26 +539,96 @@ void startRadio() {
       } else {
         Serial.println("Failed to start MP3 decoder");
         file->close();
+        
+        // Handle retry for MP3 decoder failure - stay on same station
+        if (retryAttempt < maxRetries) {
+          retryAttempt++;
+          int retryDelay = 1000 * retryAttempt; // Exponential backoff
+          Serial.print("Retrying MP3 decoder on same station in ");
+          Serial.print(retryDelay);
+          Serial.println("ms...");
+          delay(retryDelay);
+          startRadio();
+          return;
+        } else {
+          // Max retries reached for this station, reset counter and stay
+          Serial.println("Max MP3 decoder retries reached, giving up on this station");
+          retryAttempt = 0;
+          lcd.setCursor(0, 3);
+          lcd.print("MP3 failed!          ");
+          return; // Don't auto-switch to next station
+        }
       }
     } else {
       Serial.print("Buffer failed to fill adequately (");
       Serial.print(finalLevel);
-      Serial.println(" bytes) - trying next station");
+      Serial.println(" bytes) - handling retry");
       file->close();
       
-      // Auto-try next station if buffer fails
-      currentStation = (currentStation + 1) % numStations;
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Buffer failed!");
-      lcd.setCursor(0, 1);
-      lcd.print("Trying next...");
-      delay(1000);
-      startRadio(); // Recursive call to try next station
-      return;
+      // Handle retry for buffer failure - stay on same station
+      if (retryAttempt < maxRetries) {
+        retryAttempt++;
+        int retryDelay = 1000 * retryAttempt; // Exponential backoff
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Buffer failed!");
+        lcd.setCursor(0, 1);
+        lcd.print("Retry ");
+        lcd.print(retryAttempt);
+        lcd.print("/");
+        lcd.print(maxRetries);
+        lcd.print("...");
+        Serial.print("Retrying buffer on same station in ");
+        Serial.print(retryDelay);
+        Serial.println("ms...");
+        delay(retryDelay);
+        startRadio();
+        return;
+      } else {
+        // Max retries reached, reset counter and stay on same station
+        Serial.println("Max buffer retries reached, giving up on this station");
+        retryAttempt = 0;
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Buffer failed!");
+        lcd.setCursor(0, 1);
+        lcd.print("Max retries reached");
+        delay(2000);
+        updateDisplay(); // Show station info again
+        return; // Don't auto-switch to next station
+      }
     }
   } else {
     Serial.println("Failed to open stream");
+    
+    // Handle retry for stream opening failure - stay on same station
+    if (retryAttempt < maxRetries) {
+      retryAttempt++;
+      int retryDelay = 1000 * retryAttempt; // Exponential backoff: 1s, 2s, 3s
+      Serial.print("Retrying stream on same station in ");
+      Serial.print(retryDelay);
+      Serial.println("ms...");
+      
+      lcd.setCursor(0, 3);
+      lcd.print("Stream retry ");
+      lcd.print(retryAttempt);
+      lcd.print("/");
+      lcd.print(maxRetries);
+      lcd.print(" ");
+      
+      delay(retryDelay);
+      startRadio();
+      return;
+    } else {
+      // Max retries reached, reset counter and stay on same station
+      Serial.println("Max stream retries reached, giving up on this station");
+      retryAttempt = 0; // Reset counter
+      lcd.setCursor(0, 3);
+      lcd.print("Stream failed!       ");
+      delay(2000);
+      updateDisplay(); // Show station info again
+      return; // Don't auto-switch to next station
+    }
   }
   
   updateDisplay();
@@ -517,9 +641,67 @@ void stopRadio() {
   radioPlaying = false;
   Serial.println("Radio stopped");
   updateDisplay();
+  
+  // Turn off LCD backlight when audio is stopped
+  lcd.noBacklight();
+  backlightOn = false;
+  
+  // Enter deep sleep if enabled
+  if (deepSleepEnabled) {
+    enterDeepSleep();
+  }
+}
+
+void enterDeepSleep() {
+  Serial.println("Preparing for deep sleep...");
+  
+  // Show sleep message on LCD
+  lcd.setCursor(0, 2);
+  lcd.print("Going to sleep...");
+  lcd.setCursor(0, 3);
+  lcd.print("Press switch to wake");
+  
+  // Wait a moment for the message to be visible
+  delay(sleepDelay);
+  
+  // Clear the LCD to save power
+  lcd.clear();
+  lcd.noBacklight();
+  
+  // Configure wake-up source: joystick switch on GPIO32
+  // The switch is normally HIGH (pull-up), goes LOW when pressed
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_32, 0); // Wake on LOW signal
+  
+  // Disconnect WiFi to save power during sleep
+  WiFi.disconnect();
+  WiFi.mode(WIFI_OFF);
+  
+  // Stop any running tasks
+  if (audioTaskHandle != NULL) {
+    vTaskDelete(audioTaskHandle);
+    audioTaskHandle = NULL;
+  }
+  
+  Serial.println("Entering deep sleep...");
+  Serial.flush(); // Make sure all serial data is sent before sleeping
+  
+  // Enter deep sleep
+  esp_deep_sleep_start();
 }
 
 void changeStation(int direction) {
+  // Stop current playback properly before changing stations
+  bool wasPlaying = radioPlaying;
+  if (wasPlaying && mp3 && mp3->isRunning()) {
+    mp3->stop();
+    radioPlaying = false;
+    // Give the audio system time to clean up
+    delay(200);
+  }
+  
+  // Reset retry counter when manually changing stations
+  retryAttempt = 0;
+  
   if (direction > 0) {
     currentStation = (currentStation + 1) % numStations;
   } else {
@@ -533,7 +715,9 @@ void changeStation(int direction) {
 
   updateDisplay();
 
-  if (radioPlaying) {
+  if (wasPlaying) {
+    // Give additional time for cleanup before restarting
+    delay(100);
     startRadio(); // Restart with new station
   }
 }
@@ -541,7 +725,19 @@ void changeStation(int direction) {
 void setup() {
   // Initialize serial communication for debugging
   Serial.begin(115200);
-  Serial.println("Starting ESP32 Web Radio...");
+  
+  // Check wake-up reason
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+  
+  switch(wakeup_reason) {
+    case ESP_SLEEP_WAKEUP_EXT0:
+      Serial.println("Wakeup caused by external signal using RTC_IO (joystick switch)");
+      break;
+    case ESP_SLEEP_WAKEUP_UNDEFINED:
+    default:
+      Serial.println("Starting ESP32 Web Radio...");
+      break;
+  }
   
   // Initialize joystick pins
   pinMode(SW_PIN, INPUT_PULLUP);
@@ -553,13 +749,20 @@ void setup() {
   // Initialize the LCD
   lcd.init();
   lcd.backlight();
+  backlightOn = true; // Track backlight state
   lcd.clear();
   
-  // Show startup message
+  // Show startup or wake-up message
   lcd.setCursor(0, 0);
   lcd.print("ESP32 Web Radio");
   lcd.setCursor(0, 1);
-  lcd.print("Bitte warten...");
+  
+  if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
+    lcd.print("Waking up...");
+    Serial.println("Device woken from deep sleep");
+  } else {
+    lcd.print("Bitte warten...");
+  }
   delay(2000);
   
   // Connect to WiFi
@@ -597,6 +800,23 @@ void setup() {
   );
     
   updateDisplay();
+  
+  // Check if joystick switch is held during startup to disable deep sleep
+  if (digitalRead(SW_PIN) == LOW) {
+    deepSleepEnabled = false;
+    Serial.println("Deep sleep disabled (switch held during startup)");
+    lcd.setCursor(0, 3);
+    lcd.print("Deep sleep OFF");
+    delay(2000);
+    updateDisplay();
+  }
+  
+  // If woken from deep sleep, automatically start playing the radio
+  if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
+    Serial.println("Auto-starting radio after wake-up");
+    delay(1000); // Give time for everything to initialize
+    startRadio();
+  }
 }
 
 void loop() {
