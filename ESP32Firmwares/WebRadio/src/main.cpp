@@ -31,7 +31,8 @@ QueueHandle_t metadataQueue = NULL;
 
 // Structure for metadata messages
 struct MetadataMessage {
-  char text[21];  // 20 chars + null terminator
+  char line1[21];  // First line: 20 chars + null terminator
+  char line2[21];  // Second line: 20 chars + null terminator
 };
 
 // KY-023 Joystick pins
@@ -82,27 +83,47 @@ const unsigned long debounceDelay = 50;
 const unsigned long joystickDelay = 200; // Reduced for better responsiveness during audio
 
 void updateDisplay() {
-  // Clear both lines
-  lcd.clear();
-  
-  // Line 1+2: Station info
+  // Clear first two lines
   lcd.setCursor(0, 0);
-    String stationName = stationNames[currentStation];
-    int newlineIndex = stationName.indexOf('\n');
-    if (newlineIndex != -1) {
-      lcd.print(stationName.substring(0, newlineIndex));
-      lcd.setCursor(0, 1);
-      lcd.print(stationName.substring(newlineIndex + 1));
+  lcd.print("                    "); // Clear line 1
+  lcd.setCursor(0, 1);
+  lcd.print("                    "); // Clear line 2
+  
+  // Line 1+2: Station info with play status
+  lcd.setCursor(0, 0);
+  String stationName = stationNames[currentStation];
+  int newlineIndex = stationName.indexOf('\n');
+  if (newlineIndex != -1) {
+    lcd.print(stationName.substring(0, newlineIndex));
+    lcd.setCursor(0, 1);
+    String line2 = stationName.substring(newlineIndex + 1);
+    // Add play status to second line if there's space
+    if (line2.length() <= 13) {
+      lcd.print(line2);
+      lcd.print(" ");
+      if (!radioPlaying) {
+        lcd.print("AUS");
+      } else {
+        lcd.print("ON");
+      }
+    } else {
+      lcd.print(line2);
+    }
+  } else {
+    // Single line station name - add play status if there's space
+    if (stationName.length() <= 16) {
+      lcd.print(stationName);
+      lcd.print(" ");
+      if (!radioPlaying) {
+        lcd.print("AUS");
+      } else {
+        lcd.print("ON");
+      }
     } else {
       lcd.print(stationName);
     }
-    lcd.setCursor(0, 3);
-    if (!radioPlaying) {
-      lcd.print("AUS");
-    }
-    else {
-      lcd.print("Spielt");
-    }
+  }
+  // Note: Lines 3 and 4 are now reserved for metadata display
 }
 
 void connectToWiFi() {
@@ -286,6 +307,29 @@ void statusCB(void *cbData, int code, const char *string) {
   Serial.printf("[%s][STATUS] code=%d msg=%s\n", tag ? tag : "?", code, string ? string : "");
 }
 
+// Function to convert German umlauts to LCD character codes
+String convertUmlautsToLcd(String text) {
+  // Replace UTF-8 encoded German umlauts with HD44780 LCD character codes
+  text.replace("ä", "\xe1");  // ä -> LCD char 0xe1
+  text.replace("Ä", "\xe1");  // Ä -> LCD char 0xe1 (same as ä on most displays)
+  text.replace("ö", "\xef");  // ö -> LCD char 0xef  
+  text.replace("Ö", "\xef");  // Ö -> LCD char 0xef (same as ö on most displays)
+  text.replace("ü", "\xf5");  // ü -> LCD char 0xf5
+  text.replace("Ü", "\xf5");  // Ü -> LCD char 0xf5 (same as ü on most displays)
+  text.replace("ß", "\xe2");  // ß -> LCD char 0xe2
+  
+  // Also handle ISO-8859-1 encoded characters (direct byte values)
+  text.replace(String((char)0xE4), "\xe1");  // ä (0xE4) -> LCD ä
+  text.replace(String((char)0xC4), "\xe1");  // Ä (0xC4) -> LCD ä
+  text.replace(String((char)0xF6), "\xef");  // ö (0xF6) -> LCD ö
+  text.replace(String((char)0xD6), "\xef");  // Ö (0xD6) -> LCD ö
+  text.replace(String((char)0xFC), "\xf5");  // ü (0xFC) -> LCD ü
+  text.replace(String((char)0xDC), "\xf5");  // Ü (0xDC) -> LCD ü
+  text.replace(String((char)0xDF), "\xe2");  // ß (0xDF) -> LCD ß
+  
+  return text;
+}
+
 void metadataCB(void *cbData, const char *type, bool isUnicode, const char *str) {
   const char *tag = (const char *)cbData;
   Serial.printf("[%s][META] %s%s: %s\n", tag ? tag : "?", isUnicode ? "(U)" : "", type ? type : "", str ? str : "");
@@ -293,8 +337,27 @@ void metadataCB(void *cbData, const char *type, bool isUnicode, const char *str)
   // Send metadata to UI core via queue instead of direct LCD write
   if (str && strlen(str) > 0 && metadataQueue != NULL) {
     MetadataMessage msg;
-    strncpy(msg.text, str, 20);
-    msg.text[20] = '\0';  // Ensure null termination
+    memset(&msg, 0, sizeof(msg)); // Clear the structure
+    
+    // Convert umlauts to LCD character codes for proper display
+    String metadata = convertUmlautsToLcd(String(str));
+    int totalLength = metadata.length();
+    
+    if (totalLength <= 20) {
+      // Fits in one line
+      strncpy(msg.line1, metadata.c_str(), 20);
+      msg.line1[20] = '\0';
+      msg.line2[0] = '\0'; // Empty second line
+    } else {
+      // Need to wrap to two lines (max 40 chars total)
+      String line1Text = metadata.substring(0, 20);
+      String line2Text = metadata.substring(20, min(40, totalLength));
+      
+      strncpy(msg.line1, line1Text.c_str(), 20);
+      msg.line1[20] = '\0';
+      strncpy(msg.line2, line2Text.c_str(), 20);
+      msg.line2[20] = '\0';
+    }
     
     // Send to queue (non-blocking from audio core)
     xQueueSend(metadataQueue, &msg, 0);
@@ -544,11 +607,21 @@ void loop() {
   // Handle metadata updates from queue (Core 0 - UI operations)
   MetadataMessage msg;
   if (metadataQueue != NULL && xQueueReceive(metadataQueue, &msg, 0) == pdTRUE) {
-    // Update LCD with metadata on Core 0 (won't interrupt audio on Core 1)
+    // Update LCD with metadata on Core 0 - lines 3 and 4 (won't interrupt audio on Core 1)
+    
+    // Clear line 3 and display first line
     lcd.setCursor(0, 2);
-    lcd.print("                    "); // Clear the line first (20 spaces)
+    lcd.print("                    "); // Clear line 3 (20 spaces)
     lcd.setCursor(0, 2);
-    lcd.print(msg.text);
+    lcd.print(msg.line1);
+    
+    // Clear line 4 and display second line (if any)
+    lcd.setCursor(0, 3);
+    lcd.print("                    "); // Clear line 4 (20 spaces)
+    lcd.setCursor(0, 3);
+    if (strlen(msg.line2) > 0) {
+      lcd.print(msg.line2);
+    }
   }
   
   // Update display if radio state changed (handled on Core 0)
