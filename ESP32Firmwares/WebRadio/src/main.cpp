@@ -47,20 +47,16 @@ struct MetadataMessage {
 // Web radio stations - Classic Rock and Metal focused
 const char* stations[] = {
   "https://liveradio.swr.de/sw282p3/swr4ul/",
-  "http://streams.80s80s.de/web/mp3-192/streams.80s80s.de/", // 80s80s 192k (WORKS GREAT!)
-  "http://regiocast.streamabc.net/regc-radiobobclassicrock1594088-mp3-128-5621663",                 // Classic Rock Florida 128k
-  "http://stream.radiorockrevolution.com:443/listen.mp3", // Rock Revolution 128k
-  "http://184.75.223.134:8347/stream",                // Heavy Metal Radio 128k (WORKS!)
-  "http://radio.spainmedia.es:8006/stream"            // Rock & Metal Radio 128k
+  "https://dispatcher.rndfnk.com/br/br24/live/mp3/mid",
+  "https://dispatcher.rndfnk.com/br/br1/schwaben/mp3/mid",
+  "https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3?aggregator=web"
 };
 
 const String stationNames[] = {
   "SWR4 Ulm",
-  "80s80s Radio",
-  "Radio BOB\nClassic Rock", 
-  "Rock Revolution",
-  "Heavy Metal",
-  "Rock & Metal"
+  "BR24",
+  "BR1 Schwaben",
+  "Deutschlandfunk"
 };
 
 const int numStations = sizeof(stations) / sizeof(stations[0]);
@@ -80,7 +76,7 @@ bool lastStableState = HIGH;
 bool switchReading = HIGH;
 unsigned long lastDebounceTime = 0;
 const unsigned long debounceDelay = 50;
-const unsigned long joystickDelay = 200; // Reduced for better responsiveness during audio
+const unsigned long joystickDelay = 150; // Slightly faster for better responsiveness
 
 void updateDisplay() {
   // Clear first two lines
@@ -671,16 +667,19 @@ void loop() {
     int vrxValue = analogRead(VRX_PIN);
     int vryValue = analogRead(VRY_PIN);
     
-    // Check for joystick UP (next station)
-    if (vryValue > 3000) {
+    // Check for joystick movements with more reliable thresholds
+    // Center position is around 2048 (12-bit ADC), so use wider deadband
+    if (vryValue > 3200) {  // Increased threshold for more reliable detection
       changeStation(1);
       Serial.println("Joystick Right - Next station");
+      delay(100); // Small delay to prevent double-triggering
     }
     
-    // Check for joystick DOWN (previous station)
-    else if (vryValue < 1000) {
+    // Check for joystick DOWN (previous station)  
+    else if (vryValue < 800) {  // Increased threshold for more reliable detection
       changeStation(-1);
       Serial.println("Joystick Left - Previous station");
+      delay(100); // Small delay to prevent double-triggering
     }
     
   }
