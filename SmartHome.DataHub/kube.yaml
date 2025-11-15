@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: smarthomedatahub
+  labels:
+    app: smarthomedatahub
 spec:
   replicas: 1
   selector:
@@ -22,15 +24,13 @@ spec:
             value: "env:INFLUX_TOKEN"
           - name: INFLUX_ORG
             value: "env:INFLUX_ORG"
-          # - name: EnphaseUserName
-          #   value: "env:EnphaseUserName"
-          # - name: EnphasePassword
-          #   value: "env:EnphasePassword"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: smarthomedatahub-service
+  labels:
+    app: smarthomedatahub
 spec:
   type: ClusterIP    
   ports:  
