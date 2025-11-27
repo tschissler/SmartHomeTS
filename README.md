@@ -42,6 +42,9 @@ The current state of my SmartHome system covers these capabilities:
 
 - **Heat meter reading**: Read heat energy produced by the heatpump to calculate COP and compare with device value.  ![Heatmeter Sensor](./Docs/images/HeatmeterSensor.jpg)
 
+- **Heatpump monitoring**: Reading parameters from the heat pump (Hoval Belaria) and visualizing with Grafana, controlling parameters is on the backlog 😁
+<img width="100%" alt="Heatpump data charts" src="./Docs/images/Heatpump data charts.jpg" />
+<img width="100%" alt="CAN-Bus gateway" src="./Docs/images/CANBus gateway.jpg" />
 
 ## Technologies Used
 
