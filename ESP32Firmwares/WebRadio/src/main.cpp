@@ -10,6 +10,25 @@
 #include "AudioGeneratorMP3.h"
 #include "AudioOutputI2S.h"
 #include "esp_sleep.h"
+#include "ESP32Helpers.h"
+#include <NTPClient.h>
+
+// Shared libaries
+#include "AzureOTAUpdater.h"
+#include "WifiLib.h"
+
+const char* version = TEMPSENSORFW_VERSION;
+String chipID = "";
+ 
+// WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
+// Set WIFI_PASSWORDS as environment variables on your dev-system following the pattern: WIFI_PASSWORDS="ssid1;password1|ssid2;password2"
+WifiLib wifiLib(WIFI_PASSWORDS);
+WiFiClient wifiClient;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+
+static int otaInProgress = 0;
+static bool otaEnable = OTA_ENABLED != "false";
 
 // WiFi credentials - CHANGE THESE!
 const char* ssid = "agileMax_Guest";
@@ -48,6 +67,9 @@ struct MetadataMessage {
 // Web radio stations - Classic Rock and Metal focused
 const char* stations[] = {
   "https://liveradio.swr.de/sw282p3/swr4ul/",
+  "https://streams.br.de/brheimat_2.m3u",
+  "https://streams.br.de/brschlager_2.m3u",
+  "https://orf-live.ors-shoutcast.at/stm-q1a.m3u",
   "https://dispatcher.rndfnk.com/br/br24/live/mp3/mid",
   "https://dispatcher.rndfnk.com/br/br1/schwaben/mp3/mid",
   "https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3?aggregator=web"
@@ -55,6 +77,9 @@ const char* stations[] = {
 
 const String stationNames[] = {
   "SWR4 Ulm",
+  "BR Heimat",
+  "BR Schlager",
+  "ORF Steiermark",
   "BR24",
   "BR1 Schwaben",
   "Deutschlandfunk"
@@ -91,43 +116,56 @@ const unsigned long debounceDelay = 50;
 const unsigned long joystickDelay = 150; // Slightly faster for better responsiveness
 
 void updateDisplay() {
-  // Clear first two lines
-  lcd.setCursor(0, 0);
-  lcd.print("                    "); // Clear line 1
-  lcd.setCursor(0, 1);
-  lcd.print("                    "); // Clear line 2
+  lcd.clear();                
   
-  // Line 1+2: Station info with play status
+  // Line 1+2: Status symbol + station info
   lcd.setCursor(0, 0);
+  
+  // First position: Play/Pause symbol
+  if (radioPlaying) {
+    lcd.print("\x7E"); // Play symbol (right-pointing triangle)
+  } else {
+    lcd.print("\xFF"); // Stop/Pause symbol (solid block)
+  }
+  
+  // Second position: Space
+  lcd.print(" ");
+  
+  // Remaining 18 characters for station name
   String stationName = stationNames[currentStation];
   int newlineIndex = stationName.indexOf('\n');
   if (newlineIndex != -1) {
-    lcd.print(stationName.substring(0, newlineIndex));
-    lcd.setCursor(0, 1);
+    // Multi-line station name
+    String line1 = stationName.substring(0, newlineIndex);
     String line2 = stationName.substring(newlineIndex + 1);
-    // Add play status to second line if there's space
-    if (line2.length() <= 13) {
-      lcd.print(line2);
-      lcd.print(" ");
-      if (!radioPlaying) {
-        lcd.print("AUS");
-      } else {
-        lcd.print("ON");
-      }
+    
+    // Print first part (max 18 chars to leave room for status)
+    if (line1.length() > 18) {
+      lcd.print(line1.substring(0, 18));
+    } else {
+      lcd.print(line1);
+    }
+    
+    lcd.setCursor(2, 1); // Start at position 2 (after status symbol and space)
+    if (line2.length() > 18) {
+      lcd.print(line2.substring(0, 18));
     } else {
       lcd.print(line2);
     }
   } else {
-    // Single line station name - add play status if there's space
-    if (stationName.length() <= 16) {
-      lcd.print(stationName);
-      lcd.print(" ");
-      if (!radioPlaying) {
-        lcd.print("AUS");
+    // Single line station name
+    if (stationName.length() > 18) {
+      // If name is too long, print first 18 chars on line 1, rest on line 2
+      lcd.print(stationName.substring(0, 18));
+      lcd.setCursor(2, 1); // Start at position 2 on second line
+      String remainingText = stationName.substring(18);
+      if (remainingText.length() > 18) {
+        lcd.print(remainingText.substring(0, 18));
       } else {
-        lcd.print("ON");
+        lcd.print(remainingText);
       }
     } else {
+      // Station name fits in remaining space
       lcd.print(stationName);
     }
   }
@@ -135,37 +173,19 @@ void updateDisplay() {
 }
 
 void connectToWiFi() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Verbinden...");
+  lcd.setCursor(0, 2);
+  lcd.print("Verbinde W-LAN...");
   
-  WiFi.begin(ssid, password);
-  
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
-    Serial.print(".");
-    lcd.setCursor(0, 1);
-    for (int i = 0; i < (attempts % 16); i++) {
-      lcd.print(".");
-    }
-    attempts++;
-  }
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Verbunden!");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP());
-    delay(2000);
-  } else {
-    Serial.println("WiFi Verbindung fehlgeschlagen!");
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("WiFi Verbingung fehlgeschlagen!");
-    delay(2000);
-  }
+    // Connect to WiFi
+  Serial.print("Connecting to WiFi ");
+  wifiLib.scanAndSelectNetwork();
+  wifiLib.connect();
+  String ssid = wifiLib.getSSID();
+
+  timeClient.begin();
+  timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
+  timeClient.update();
+
 }
 
 // Hilfsfunktion: trimmt und checkt, ob Zeile wie URL aussieht
@@ -448,15 +468,43 @@ void startRadio() {
     
     // Show retry status on display
     lcd.setCursor(0, 3);
-    lcd.print("Retry ");
+    lcd.print("Versuch ");
     lcd.print(retryAttempt);
     lcd.print("/");
     lcd.print(maxRetries);
     lcd.print("...        ");
   }
   
-  // Resolve redirects and playlists
-  String finalUrl = resolveStreamUrl(stations[currentStation], 6, 7000);
+  // Animation characters for connection/resolution phase
+  char animChars[] = {'-', '\\', '|', '/'};
+  int animIndex = 0;
+  
+  // Show initial connecting animation
+  lcd.setCursor(0, 0);
+  lcd.print(animChars[animIndex]);
+  animIndex = (animIndex + 1) % 4;
+  
+  // Resolve redirects and playlists with animation
+  Serial.println("Resolving stream URL with redirects and playlists...");
+  
+  // Start resolving - this may take several seconds for redirects
+  unsigned long resolveStart = millis();
+  String finalUrl = "";
+  
+  // We'll call resolveStreamUrl in a way that allows us to show animation
+  // Unfortunately resolveStreamUrl is blocking, but we can show animation before and after
+  
+  // Show connecting animation for a brief moment
+  for (int i = 0; i < 10; i++) {
+    lcd.setCursor(0, 0);
+    lcd.print(animChars[animIndex]);
+    animIndex = (animIndex + 1) % 4;
+    delay(50);
+  }
+  
+  // Now resolve the actual URL (this is the blocking part)
+  finalUrl = resolveStreamUrl(stations[currentStation], 6, 7000);
+  
   if (!finalUrl.length()) {
     Serial.println("Could not resolve stream URL");
     lcd.setCursor(0, 3);
@@ -493,14 +541,19 @@ void startRadio() {
     Serial.println(playUrl);
   }
 
+  // Show opening stream animation
+  Serial.println("Opening stream connection...");
+  for (int i = 0; i < 8; i++) {
+    lcd.setCursor(0, 0);
+    lcd.print(animChars[animIndex]);
+    animIndex = (animIndex + 1) % 4;
+    delay(60);
+  }
+
   // Start new stream with pre-buffering
   if (file->open(playUrl.c_str())) {
     Serial.println("Stream opened, pre-buffering...");
-    
-    // Update display to show buffering
-    lcd.setCursor(0, 3);
-    lcd.print("Puffern...           ");
-    
+       
     // Pre-buffer for better stability (wait for buffer to fill up)
     unsigned long bufferStart = millis();
     bool bufferReady = false;
@@ -508,7 +561,16 @@ void startRadio() {
     // First, give the stream time to start flowing
     delay(500); // Initial delay to let stream start
     
+    // Animation characters for spinning effect
+    char animChars[] = {'-', '\\', '|', '/'};
+    int animIndex = 0;
+    
     while (millis() - bufferStart < 5000) { // Wait up to 5 seconds for buffering
+      // Update display to show buffering with spinning animation at position (0,0)
+      lcd.setCursor(0, 0);
+      lcd.print(animChars[animIndex]);
+      animIndex = (animIndex + 1) % 4; // Cycle through animation characters
+
       // Keep the stream processing
       if (file->isOpen()) {
         buff->loop();
@@ -520,7 +582,7 @@ void startRadio() {
         break;
       }
     
-      delay(50); // Smaller delay to keep responsive
+      delay(100); // Slightly longer delay to make animation visible
     }
     
     uint32_t finalLevel = buff->getFillLevel();
@@ -555,7 +617,7 @@ void startRadio() {
           Serial.println("Max MP3 decoder retries reached, giving up on this station");
           retryAttempt = 0;
           lcd.setCursor(0, 3);
-          lcd.print("MP3 failed!          ");
+          lcd.print("MP3 fehlgeschlagen!  ");
           return; // Don't auto-switch to next station
         }
       }
@@ -571,9 +633,9 @@ void startRadio() {
         int retryDelay = 1000 * retryAttempt; // Exponential backoff
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Buffer failed!");
+        lcd.print("Verbindung fehlgeschlagen!");
         lcd.setCursor(0, 1);
-        lcd.print("Retry ");
+        lcd.print("Versuch ");
         lcd.print(retryAttempt);
         lcd.print("/");
         lcd.print(maxRetries);
@@ -590,9 +652,7 @@ void startRadio() {
         retryAttempt = 0;
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Buffer failed!");
-        lcd.setCursor(0, 1);
-        lcd.print("Max retries reached");
+        lcd.print("Verbindung fehlgeschlagen!");
         delay(2000);
         updateDisplay(); // Show station info again
         return; // Don't auto-switch to next station
@@ -610,7 +670,7 @@ void startRadio() {
       Serial.println("ms...");
       
       lcd.setCursor(0, 3);
-      lcd.print("Stream retry ");
+      lcd.print("Versuch ");
       lcd.print(retryAttempt);
       lcd.print("/");
       lcd.print(maxRetries);
@@ -624,13 +684,15 @@ void startRadio() {
       Serial.println("Max stream retries reached, giving up on this station");
       retryAttempt = 0; // Reset counter
       lcd.setCursor(0, 3);
-      lcd.print("Stream failed!       ");
+      lcd.print("Fehler mit Sender!  ");
       delay(2000);
       updateDisplay(); // Show station info again
       return; // Don't auto-switch to next station
     }
   }
   
+  // Small delay to let buffering animation be visible before updating display
+  delay(200);
   updateDisplay();
 }
 
@@ -654,12 +716,6 @@ void stopRadio() {
 
 void enterDeepSleep() {
   Serial.println("Preparing for deep sleep...");
-  
-  // Show sleep message on LCD
-  lcd.setCursor(0, 2);
-  lcd.print("Going to sleep...");
-  lcd.setCursor(0, 3);
-  lcd.print("Press switch to wake");
   
   // Wait a moment for the message to be visible
   delay(sleepDelay);
@@ -714,8 +770,18 @@ void changeStation(int direction) {
   Serial.println(stationNames[currentStation]);
 
   updateDisplay();
+  
+  // Clear old metadata from lines 3 and 4 when switching stations
+  lcd.setCursor(0, 2);
+  lcd.print("                    "); // Clear line 3 (20 spaces)
+  lcd.setCursor(0, 3);
+  lcd.print("                    "); // Clear line 4 (20 spaces)
 
   if (wasPlaying) {
+    // Set playing state before starting radio to show correct symbol during buffering
+    radioPlaying = true;
+    updateDisplay(); // Update display with play symbol before buffering starts
+    
     // Give additional time for cleanup before restarting
     delay(100);
     startRadio(); // Restart with new station
@@ -739,12 +805,18 @@ void setup() {
       break;
   }
   
+  chipID = ESP32Helpers::getChipId();
+  Serial.print("ESP32 Chip ID: ");
+  Serial.println(chipID);
+
   // Initialize joystick pins
   pinMode(SW_PIN, INPUT_PULLUP);
   
   // Configure ADC for better analog reading
   analogReadResolution(12);
-  analogSetAttenuation(ADC_11db);
+  // Configure attenuation for joystick pins specifically
+  analogSetPinAttenuation(VRX_PIN, ADC_11db);
+  analogSetPinAttenuation(VRY_PIN, ADC_11db);
   
   // Initialize the LCD
   lcd.init();
@@ -758,7 +830,6 @@ void setup() {
   lcd.setCursor(0, 1);
   
   if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
-    lcd.print("Waking up...");
     Serial.println("Device woken from deep sleep");
   } else {
     lcd.print("Bitte warten...");
@@ -806,7 +877,6 @@ void setup() {
     deepSleepEnabled = false;
     Serial.println("Deep sleep disabled (switch held during startup)");
     lcd.setCursor(0, 3);
-    lcd.print("Deep sleep OFF");
     delay(2000);
     updateDisplay();
   }
@@ -820,6 +890,12 @@ void setup() {
 }
 
 void loop() {
+  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
+
+   if (otaInProgress == 1) {
+    lcd.setCursor(0, 1);
+    lcd.print("Update läuft...");
+   }
   // Handle metadata updates from queue (Core 0 - UI operations)
   MetadataMessage msg;
   if (metadataQueue != NULL && xQueueReceive(metadataQueue, &msg, 0) == pdTRUE) {
