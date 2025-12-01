@@ -4,25 +4,36 @@
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <ESP32Ping.h>
-#include "ESP32Helpers.h"
 #include <ArduinoJson.h>
+#include <memory>
+#include <Adafruit_NeoPixel.h>
 
 // Shared libaries
+#include "ESP32Helpers.h"
 #include "AzureOTAUpdater.h"
 #include "MQTTClientLib.h"
 #include "WifiLib.h"
 
 // Project specific libraries
-#include "DHT.h"
-#include <Adafruit_NeoPixel.h>
 #include "colors.h"
+#include "SensorType.h"
+#include "SensorData.h"
+#include "ISensor.h"
+#include "DhtSensor.h"
+#include "Sht45Sensor.h"
 
 // Pin configuration
 #define NEOPIXEL_PIN 17       // WS2812 connected to GP8
 #define NUMPIXELS    1       // Number of LEDs (just one)
-#define DHTPIN 19 
-#define DHTTYPE DHT22  
 #define BLINK_DURATION 100       // Blink duration in milliseconds
+
+// Sensor configuration
+SensorType sensorType;
+constexpr SensorType candidates[] = {
+    SensorType::DHT22,
+    SensorType::SHT45,
+    SensorType::DS18B20
+};
 
 const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
@@ -36,7 +47,7 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 MQTTClientLib* mqttClientLib = nullptr;
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_RGB + NEO_KHZ800);
-DHT dht(DHTPIN, DHTTYPE);
+static std::unique_ptr<ISensor> sensor;
 
 static int otaInProgress = 0;
 static bool otaEnable = OTA_ENABLED != "false";
@@ -48,12 +59,6 @@ static int lastMQTTSentMinute = 0;
 static const int MAX_READINGS = 24;  // 2.5 seconds * 24 = 60 seconds (1 minute)
 static const unsigned long READING_INTERVAL = 2500;  // 5 seconds between readings
 static unsigned long lastReadingTime = 0;
-
-struct SensorData {
-  float temperature;
-  float humidity;
-  unsigned long timestamp;
-};
 
 static SensorData readings[MAX_READINGS];
 static int readingCount = 0;
@@ -190,6 +195,41 @@ void connectToMQTT(bool cleanSession) {
   Serial.println("OTA Topic: " + mqtt_OTAtopic);
 }
 
+bool tryInitializeSensor(SensorType type) {
+    std::unique_ptr<ISensor> candidate;
+
+    switch (type) {
+        case SensorType::DHT22:
+            candidate.reset(new DhtSensor(DHTPIN, DHTTYPE));
+            break;
+        case SensorType::SHT45:
+            candidate.reset(new Sht45Sensor());
+            break;
+        // ...
+        default:
+            return false;
+    }
+
+    if (!candidate || !candidate->begin() || !candidate->read().success) {
+        Serial.println("Probe failed for " + String(toString(type)));
+        return false;
+    }
+
+    sensorType = type;
+    sensor = std::move(candidate);
+    Serial.println("Using sensor type " + String(toString(sensorType)));
+    return true;
+}
+
+void initializeSensor() {
+  for (SensorType type : candidates) {
+    if (tryInitializeSensor(type)) {
+        return;
+    }
+  }
+  Serial.println("No supported sensor could be initialized");
+}
+
 void readSensorData() {
   if (sensorName == "") {
     Serial.println("Sensor name not set, skipping sensor reading");
@@ -197,33 +237,36 @@ void readSensorData() {
     return;
   }
 
-  SensorData data = {NAN, NAN, 0};
-
-  if (readingCount <= MAX_READINGS) {
-    data.humidity = dht.readHumidity();
-    data.temperature = dht.readTemperature();
-
-    if (isnan(data.humidity) || isnan(data.temperature)) {
-      Serial.println("Failed to read from DHT22 sensor!");
-      return;
-    }
-    data.timestamp = millis();
-    readings[readingCount] = data;
-    Serial.println("Sensor data read: " + String(data.temperature) + "°C, " + String(data.humidity) + "%");
-    lastReadingTime = data.timestamp;
-    readingCount++;
-    if (blinkCount < MAX_BLINK_COUNT) {
-      blinkCount++;
-      blinkLed(BLUE, true);
-    }    
-    else {
-      blinkLed(BLUE);
-    }
+  if (!sensor) {
+    Serial.println("Sensor not initialized, skipping sensor reading");
+    blinkLed(RED, true);
+    return;
   }
-  else {
+
+  if (readingCount >= MAX_READINGS) {
     Serial.println("Maximum readings reached, skipping sensor reading");
     blinkLed(RED, true);
     return;
+  }
+
+  SensorData data = sensor->read();
+
+  if (!data.success) {
+    Serial.println("Failed to read from sensor type " + String(toString(sensorType)) + "!");
+    blinkLed(RED, true);
+    return;
+  }
+
+  readings[readingCount] = data;
+  Serial.println("Sensor data read: " + String(data.temperature) + "°C, " + String(data.humidity) + "%");
+  lastReadingTime = data.timestampMs;
+  readingCount++;
+  if (blinkCount < MAX_BLINK_COUNT) {
+    blinkCount++;
+    blinkLed(BLUE, true);
+  }
+  else {
+    blinkLed(BLUE);
   }
 }
 
@@ -289,9 +332,7 @@ void setup() {
   timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
   timeClient.update();
 
-  //Init DHT sensor
-  dht.begin();
-  Serial.println("DHT sensor initialized");
+  initializeSensor();
 
   // Set up MQTT
   String mqttClientID = "ESP32TemperatureSensor2Client_" + chipID;
