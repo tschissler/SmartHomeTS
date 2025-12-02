@@ -14,7 +14,10 @@ Board_Length = 25;
 
 Sensor_Width = 17.8;
 Sensor_Height = 9;
+//SHT45
 Sensor_Length = 28;
+//DS18B20
+Sensor_Length = 14;
 Sensor_Wall = 2;
 
 LED_Length = 16;
@@ -30,8 +33,12 @@ Full_Width = BoardWidth + 2 * wall;
 
 Grid_Size = 2.9;
 Grid_Gap = 0.8;
+//SHT45
+Grid_Rows = 7;
+//DS18B20
+Grid_Rows = 3;
 
-upper = 0;
+upper = 1;
 
 difference()
 {
@@ -52,7 +59,7 @@ difference()
         cube([5, USBC_Width, USBC_Height]);
     // LED
     translate([(Full_Width-LED_Width)/2, USB_length+(Board_Length-LED_Length)/2 , 0.5])
-        cube([LED_Width, LED_Length, LED_Width]);
+        cube([LED_Width, LED_Length, Full_Heigh-1]);
 
     translate([-1,-1,Full_Heigh/2*upper])
         cube([BoardWidth+2*wall+2, Full_Length+2, Full_Heigh/2+.001]);
@@ -93,7 +100,7 @@ module Pins2()
 module Grid()
 {
     translate([(Full_Width-Sensor_Width)/2, Full_Length-Grid_Gap-Grid_Size-Sensor_Wall-Grid_Gap*2, -0.1])
-    for (y=[0:6]) {
+    for (y=[0:Grid_Rows-1]) {
         for (x=[0:4]) {
             translate([x*(Grid_Size+Grid_Gap), -y*(Grid_Size+Grid_Gap), 0])
                 cube([Grid_Size, Grid_Size, 40]);
