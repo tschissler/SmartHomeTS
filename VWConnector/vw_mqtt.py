@@ -4,7 +4,7 @@ import asyncio
 import json
 from typing import Optional
 from carconnectivity import carconnectivity
-from carconnectivity.vehicle import ElectricVehicle
+from carconnectivity.vehicle import ElectricVehicle, Charging
 from carconnectivity.commands import GenericCommand
 from carconnectivity.command_impl import ChargingStartStopCommand
 import paho.mqtt.client as mqtt
@@ -30,7 +30,8 @@ async def fetch_vehicle_info(carConnect: carconnectivity.CarConnectivity) -> dic
         garage: Optional[Garage] = carConnect.get_garage()
         vehicle = garage.get_vehicle(carvin)
         chargingEndTime = None
-        if vehicle.charging.state.value.value == ChargingStatus.ChargingState.CHARGING.value and vehicle.charging.estimated_date_reached.value is not None:
+        ChargingState = type(vehicle.charging.state.value)
+        if vehicle.charging.state.value == ChargingState.CHARGING.value and vehicle.charging.estimated_date_reached.value is not None:
             chargingEndTime = vehicle.charging.estimated_date_reached.value.isoformat()
 
         return {
@@ -55,54 +56,6 @@ async def fetch_vehicle_info(carConnect: carconnectivity.CarConnectivity) -> dic
         print("Error fetching vehicle info:", e)
         return {}
         
-
-async def fetch_vehicle_info_weconnect():
-    username_env = os.getenv('VW_USERNAME')
-    password_env = os.getenv('VW_PASSWORD')
-    carvin_env = os.getenv('VW_VIN')
-
-    if not username_env or not password_env:
-        raise ValueError("VW credentials are not set in the environment")
-    if carvin_env is None:
-        raise ValueError("Environment variable 'VW_VIN' is not set")
-
-    username: str = username_env
-    password: str = password_env
-    carvin: str = carvin_env
-    if carvin is None:
-        raise ValueError("Environment variable 'VW_VIN' is not set")
-
-    print('#  Initialize WeConnect')
-    weConnect = weconnect.WeConnect(username=username, password=password, updateAfterLogin=False, loginOnInit=False)
-    weConnect.login()
-    weConnect.update()
-
-    #weConnect.update(updateCapabilities=False, updatePictures=False, selective=[]) 
-    #allElements = weConnect.getLeafChildren()
-    #for element in allElements:
-    #    print(element.getGlobalAddress())
-    
-    vehicle = weConnect.vehicles[carvin]
-        
-    brand = "VW"
-    chargingEndTime = None
-    if vehicle.domains['charging']["chargingStatus"].chargingState.value == ChargingStatus.ChargingState.CHARGING :
-        chargingEndTime = (datetime.now() + timedelta(minutes=vehicle.domains["charging"]["chargingStatus"].remainingChargingTimeToComplete_min.value)).isoformat()
-    return {
-        "nickname": vehicle.nickname.value,
-        "brand": brand,
-        "name": vehicle.model.value,
-        "battery": int(vehicle.domains['charging']["batteryStatus"].currentSOC_pct.value),
-        "chargingStatus": vehicle.domains['charging']["chargingStatus"].chargingState.value.value,
-        "chargingTarget": vehicle.domains['automation']["chargingProfiles"].profiles[1].targetSOC_pct.value,
-        "chargingEndTime": chargingEndTime,
-        "chargerConnected": vehicle.domains["charging"]["plugStatus"].plugConnectionState.value == PlugStatus.PlugConnectionState.CONNECTED,
-        "remainingRange": vehicle.domains['charging']["batteryStatus"].cruisingRangeElectric_km.value,
-        "mileage": vehicle.domains['measurements']["odometerStatus"].odometer.value,
-
-        "lastUpdate": vehicle.domains['charging']["batteryStatus"].currentSOC_pct.lastUpdateFromServer.isoformat(),
-    }
-
 def validate_env_vars():
     required_vars = ['VW_USERNAME', 'VW_PASSWORD', 'VW_VIN']
     for var in required_vars:
