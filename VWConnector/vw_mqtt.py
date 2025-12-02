@@ -8,10 +8,6 @@ from carconnectivity.vehicle import ElectricVehicle
 from carconnectivity.commands import GenericCommand
 from carconnectivity.command_impl import ChargingStartStopCommand
 import paho.mqtt.client as mqtt
-from weconnect import weconnect
-from weconnect.domain import Domain
-from weconnect.elements.plug_status import PlugStatus
-from weconnect.elements.charging_status import ChargingStatus
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -61,9 +57,20 @@ async def fetch_vehicle_info(carConnect: carconnectivity.CarConnectivity) -> dic
         
 
 async def fetch_vehicle_info_weconnect():
-    username = os.getenv('VW_USERNAME')
-    password = os.getenv('VW_PASSWORD')
-    carvin = os.getenv('VW_VIN')
+    username_env = os.getenv('VW_USERNAME')
+    password_env = os.getenv('VW_PASSWORD')
+    carvin_env = os.getenv('VW_VIN')
+
+    if not username_env or not password_env:
+        raise ValueError("VW credentials are not set in the environment")
+    if carvin_env is None:
+        raise ValueError("Environment variable 'VW_VIN' is not set")
+
+    username: str = username_env
+    password: str = password_env
+    carvin: str = carvin_env
+    if carvin is None:
+        raise ValueError("Environment variable 'VW_VIN' is not set")
 
     print('#  Initialize WeConnect')
     weConnect = weconnect.WeConnect(username=username, password=password, updateAfterLogin=False, loginOnInit=False)
@@ -121,6 +128,8 @@ async def main():
     password = os.getenv('VW_PASSWORD')
     carvin = os.getenv('VW_VIN')
 
+    carConnect: Optional[carconnectivity.CarConnectivity] = None
+
     try:
         car_connectivity_config = {
             "carConnectivity": {
@@ -139,10 +148,19 @@ async def main():
         carConnect = carconnectivity.CarConnectivity(config=car_connectivity_config, tokenstore_file="tokenstore.json")
         carConnect.fetch_all()
         garage: Optional[Garage] = carConnect.get_garage()
+        if garage is None:
+            raise RuntimeError("Garage not available from car connectivity")
         vehicle = garage.get_vehicle(carvin)
-        print("successfully connected for vehicle " + vehicle.name.value)
+        if vehicle is None:
+            raise RuntimeError("Vehicle with provided VIN not found")
+        print(f"successfully connected for vehicle {vehicle.name.value}")
     except Exception as e:
         print("Error connecting to VW API:", e)
+        return
+
+    if carConnect is None:
+        print("VW API connection not available; stopping connector.")
+        return
 
     while True:
         try:
