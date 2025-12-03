@@ -25,7 +25,6 @@ Firmware for an ESP32-based temperature probe that polls all DS18B20 sensors on 
 ## Firmware Behavior
 
 - Initializes the OneWire bus and searches for connected sensor devices.
-- Configures active devices for 12-bit resolution conversions when supported.
 - Initiates temperature conversions and waits for completion.
 - Prints the unique 64-bit ROM address alongside the temperature in Celsius for each sensor.
 
