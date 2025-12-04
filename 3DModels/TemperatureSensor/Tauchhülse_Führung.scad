@@ -1,13 +1,13 @@
 $fn=100;
 
-Ueberstand_Sensor = 0.5;
+Ueberstand_Sensor = 0.3;
 Tauchhuelse_Durchmesser = 12-Ueberstand_Sensor;
 
-Fuehrung_Laenge = 30;
+Fuehrung_Laenge = 35;
 
-Sensor_Durchmesser = 6;
-Sensor_Laenge = 20;
-Kabel_Durchmesser = 3;
+Sensor_Durchmesser = 6.5;
+Sensor_Laenge = 25;
+Kabel_Durchmesser = 5;
 
 difference() {
     translate([Tauchhuelse_Durchmesser/2, 0, 0])
