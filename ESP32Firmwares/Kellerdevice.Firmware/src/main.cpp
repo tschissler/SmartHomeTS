@@ -241,10 +241,10 @@ void publishSensorData()
 
   if (sendMQTTMessages)
   {
-    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
+    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/M1/" + sensorName).c_str(), String(tempString), true, 2);
     mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
-    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
-    mqttClientLib->publish((baseTopic + "/zisterneFuellstand/" + sensorName).c_str(), String(cisternFillString), true, 2);
+    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/M1/" + sensorName).c_str(), String(humString), true, 2);
+    mqttClientLib->publish((baseTopic + "/zisterneFuellstand/M1/" + sensorName).c_str(), String(cisternFillString), true, 2);
   }
   Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Cistern Fill Level: " + String(avgCisternFillLevel) + "%, Version: " + version);
 }
