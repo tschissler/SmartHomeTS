@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include "DHT.h"
 #include <WiFiUdp.h>
@@ -49,6 +50,7 @@ static int switchBottomStatus = false;
 
 static String baseTopic = "daten";
 static String sensorName = "";
+static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
 static String mqtt_ConfigTopic = "config/TemperaturSensor/Sensorname/";
@@ -89,12 +91,33 @@ void printInformationOnTFT(String temperature, String humidity, bool displayMQTT
   tftDisplay.printInformation(data);
 }
 
+void parseConfigJSON(String jsonPayload) {
+  JsonDocument doc;
+  
+  DeserializationError error = deserializeJson(doc, jsonPayload);
+  
+  if (error) {
+    Serial.print("JSON parsing failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+  
+  if (!doc["SensorName"].isNull()) {
+    sensorName = doc["SensorName"].as<String>();
+    Serial.println("Sensor name set to: " + sensorName);
+  }
+  
+  if (!doc["Location"].isNull()) {
+    location = doc["Location"].as<String>();
+    Serial.println("Location set to: " + location);
+  }
+}
+
 void mqttCallback(String &topic, String &payload) {
     Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
 
     if (topic == mqtt_ConfigTopic) {
-      sensorName = payload;
-      Serial.println("Sensor name set to: " + sensorName);
+      parseConfigJSON(payload);
       return;
     } 
 
@@ -133,7 +156,9 @@ void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
+  mqttClientLib->connect(false);
+  mqttClientLib->subscribe(mqtt_ConfigTopic);
+  mqttClientLib->subscribe(mqtt_OTAtopic);
   Serial.println("MQTT Client is connected");
 }
 
@@ -158,20 +183,20 @@ void readSensorAndPublish() {
 
   if (sendMQTTMessages)
   {
-    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
-    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
+    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + location + "/" + sensorName).c_str(), String(tempString), true, 2);
+    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + location + "/" + sensorName).c_str(), String(humString), true, 2);
     
-    if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
-      switchTopStatus = digitalRead(SWITCH_TOP_PIN);
-      mqttClientLib->publish((baseTopic + "/fenster/fenster_oben/" + sensorName).c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
-      Serial.println("Switch Top Status changed to " + String(switchTopStatus));
-    }
+    // if (digitalRead(SWITCH_TOP_PIN) != switchTopStatus) {
+    //   switchTopStatus = digitalRead(SWITCH_TOP_PIN);
+    //   mqttClientLib->publish((baseTopic + "/fenster/fenster_oben/" + sensorName).c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+    //   Serial.println("Switch Top Status changed to " + String(switchTopStatus));
+    // }
 
-    if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
-      switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
-      mqttClientLib->publish((baseTopic + "/fenster/fenster_unten/" + sensorName).c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
-      Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
-    }
+    // if (digitalRead(SWITCH_BOTTOM_PIN) != switchBottomStatus) {
+    //   switchBottomStatus = digitalRead(SWITCH_BOTTOM_PIN);
+    //   mqttClientLib->publish((baseTopic + "/fenster/fenster_unten/" + sensorName).c_str(), switchTopStatus?"offen":"geschlossen", true, 2);
+    //   Serial.println("Switch Bottom Status changed to " + String(switchBottomStatus));
+    // }
   }
   Serial.println("Temperature: " + String(temperature) + "°C, Humidity: " + String(humidity) + "%, Version: " + version);
   printInformationOnTFT(String(temperature), String(humidity), true);
