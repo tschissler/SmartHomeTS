@@ -141,12 +141,12 @@ namespace SmartHome.Web.Services
                         ClimateData.CisternFillLevel = CreateDataPoint(payload) ?? ClimateData.CisternFillLevel;
                         break;
                     }
-                case "daten/temperatur/Aussen":
+                case "daten/temperatur/M1/Aussen":
                     {
                         ClimateData.OutsideTemperature = CreateDataPoint(payload) ?? ClimateData.OutsideTemperature;
                         break;
                     }
-                case "daten/luftfeuchtigkeit/Aussen":
+                case "daten/luftfeuchtigkeit/M1/Aussen":
                     {
                         ClimateData.OutsideHumidity = CreateDataPoint(payload) ?? ClimateData.OutsideHumidity;
                         break;
@@ -171,22 +171,22 @@ namespace SmartHome.Web.Services
                     ClimateData.BathRoomM1Humidity = CreateDataPoint(payload) ?? ClimateData.BathRoomM1Humidity;
                     break;
                 }
-                case "daten/temperatur/Wohnzimmer":
+                case "daten/temperatur/M1/Wohnzimmer":
                     {
                         ClimateData.LivingRoomTemperature = CreateDataPoint(payload) ?? ClimateData.LivingRoomTemperature;
                         break;
                     }
-                case "daten/luftfeuchtigkeit/Wohnzimmer":
+                case "daten/luftfeuchtigkeit/M1/Wohnzimmer":
                     {
                         ClimateData.LivingRoomHumidity = CreateDataPoint(payload) ?? ClimateData.LivingRoomHumidity;
                         break;
                     }
-                case "daten/temperatur/Schlafzimmer":
+                case "daten/temperatur/M1/Schlafzimmer":
                     {
                         ClimateData.BedroomTemperature = CreateDataPoint(payload) ?? ClimateData.BedroomTemperature;
                         break;
                     }
-                case "daten/luftfeuchtigkeit/Schlafzimmer":
+                case "daten/luftfeuchtigkeit/M1/Schlafzimmer":
                     {
                         ClimateData.BedroomHumidity = CreateDataPoint(payload) ?? ClimateData.BedroomHumidity;
                         break;
