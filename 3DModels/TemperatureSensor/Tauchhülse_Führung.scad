@@ -3,10 +3,10 @@ $fn=100;
 Ueberstand_Sensor = 0.3;
 Tauchhuelse_Durchmesser = 12-Ueberstand_Sensor;
 
-Fuehrung_Laenge = 35;
+Fuehrung_Laenge = 50;
 
-Sensor_Durchmesser = 6.5;
-Sensor_Laenge = 25;
+Sensor_Durchmesser = 7;
+Sensor_Laenge = 40;
 Kabel_Durchmesser = 5;
 
 difference() {
