@@ -9,6 +9,7 @@ using SmartHome.DataHub;
 using SmartHomeHelpers.Logging;
 using System.Globalization;
 using System.Text.Json;
+using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
 
 const string influxUrl = "http://smarthomepi2:32086";
 const string influx3Url = "http://smarthomepi2:32087";
@@ -77,6 +78,8 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("data/electricity/envoym3");
     await mqttClient.SubscribeToTopic("daten/temperatur/#");
     await mqttClient.SubscribeToTopic("daten/luftfeuchtigkeit/#");
+    await mqttClient.SubscribeToTopic("data/thermostat/M1/shelly/#");
+    await mqttClient.SubscribeToTopic("data/thermostat/M3/shelly/#");
     await mqttClient.SubscribeToTopic("cangateway/#");
 
     var influxConnector = scope.ServiceProvider.GetRequiredService<InfluxDbConnector>();
@@ -194,15 +197,63 @@ using (var scope = app.Services.CreateScope())
                 return;
             }
 
-            if (topic.StartsWith("daten/temperatur/") || topic.StartsWith("daten/luftfeuchtigkeit/"))
+            if (topic.StartsWith("daten/temperatur/"))
             {
-                tags = new Dictionary<string, string>();
                 var topicParts = topic.Split('/');
-                tags.Add("device", topicParts[2]);
-                WriteFloatAsFields(environmentDataBucket, influxConnector, topic, topicParts[1], payload, tags);
+                var location = topicParts[2];
+                var measurement = topicParts[3];
+                var measurementId = "Temperatur_" + location + "_" + measurement;
+                influx3Connector.WriteTemperatureValue(
+                    new InfluxTemperatureRecord
+                    {
+                        MeasurementId = measurementId,
+                        Category = MeasurementCategory.Temperature,
+                        SubCategory = "",
+                        SensorType = "TempSensor",
+                        Location = location,
+                        Device = "TempSensor",
+                        Measurement = measurement,
+                        Value_DegreeC = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                        MeasurementType = MeasurementType.Temperature
+                    },
+                    DateTimeOffset.UtcNow);
                 return;
             }
 
+            if (topic.StartsWith("daten/luftfeuchtigkeit/"))
+            {
+                var topicParts = topic.Split('/');
+                var location = topicParts[2];
+                var measurement = topicParts[3];
+                var measurementId = "Luftfeuchtigkeit_" + location + "_" + measurement;
+                influx3Connector.WritePercentageValue(
+                    new InfluxPercentageRecord
+                    {
+                        MeasurementId = measurementId,
+                        SubCategory = "",
+                        Category = MeasurementCategory.Humidity,
+                        SensorType = "TempSensor",
+                        Location = location,
+                        Device = "TempSensor",
+                        Measurement = measurement,
+                        Value_Percent = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                        MeasurementType = MeasurementType.Temperature
+                    },
+                    DateTimeOffset.UtcNow);
+                return;
+            }
+
+            if (topic.StartsWith("data/thermostat/M1/shelly/") || topic.StartsWith("data/thermostat/M3/shelly/"))
+            {
+                tags = new Dictionary<string, string>();
+                var topicParts = topic.Split('/');
+                var location = topicParts[2];
+                var device = topicParts[4];
+                tags.Add("location", location);
+                tags.Add("device", device);
+                WriteJsonPropertiesAsFields(environmentDataBucket, influxConnector, topic, "Thermostat_Shelly", payload, tags);
+                return;
+            }
             if (topic.StartsWith("cangateway"))
             {
                 tags = new Dictionary<string, string>();
