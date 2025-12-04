@@ -21,6 +21,7 @@
 #include "ISensor.h"
 #include "DhtSensor.h"
 #include "Sht45Sensor.h"
+#include "DS18B20Sensor.h"
 
 // Pin configuration
 #define NEOPIXEL_PIN 17       // WS2812 connected to GP8
@@ -200,12 +201,17 @@ bool tryInitializeSensor(SensorType type) {
 
     switch (type) {
         case SensorType::DHT22:
+            Serial.println("Probing for DHT22 sensor...");
             candidate.reset(new DhtSensor(DHTPIN, DHTTYPE));
             break;
         case SensorType::SHT45:
+            Serial.println("Probing for SHT45 sensor...");
             candidate.reset(new Sht45Sensor());
             break;
-        // ...
+        case SensorType::DS18B20:
+            Serial.println("Probing for DS18B20 sensor...");
+            candidate.reset(new DS18B20Sensor());
+            break;
         default:
             return false;
     }
@@ -221,13 +227,15 @@ bool tryInitializeSensor(SensorType type) {
     return true;
 }
 
-void initializeSensor() {
+bool initializeSensor() {
   for (SensorType type : candidates) {
     if (tryInitializeSensor(type)) {
-        return;
+        return true;
     }
   }
   Serial.println("No supported sensor could be initialized");
+  blinkLed(RED, true);
+  return false;
 }
 
 void readSensorData() {
