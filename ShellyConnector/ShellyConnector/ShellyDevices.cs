@@ -130,6 +130,13 @@ namespace ShellyConnector
                     Location : Location.M1,
                     DeviceId : "200"
                 ),
+                new ShellyDevice(
+                    DeviceName : "Kinderzimmer",
+                    DeviceType : DeviceType.ShellyBluTRV,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 74 }),
+                    Location : Location.M1,
+                    DeviceId : "201"
+                ),
 
                 //M3
                 new ShellyDevice(
