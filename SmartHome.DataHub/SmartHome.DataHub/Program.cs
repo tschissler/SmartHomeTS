@@ -208,7 +208,7 @@ using (var scope = app.Services.CreateScope())
                     {
                         MeasurementId = measurementId,
                         Category = MeasurementCategory.Temperature,
-                        SubCategory = "",
+                        SubCategory = "-",
                         SensorType = "TempSensor",
                         Location = location,
                         Device = "TempSensor",
@@ -220,7 +220,7 @@ using (var scope = app.Services.CreateScope())
                 return;
             }
 
-            if (topic.StartsWith("daten/luftfeuchtigkeit/"))
+            if (topic.StartsWith("daten/luftfeuchtigkeit/") && payload != "nan")
             {
                 var topicParts = topic.Split('/');
                 var location = topicParts[2];
@@ -230,7 +230,7 @@ using (var scope = app.Services.CreateScope())
                     new InfluxPercentageRecord
                     {
                         MeasurementId = measurementId,
-                        SubCategory = "",
+                        SubCategory = "-",
                         Category = MeasurementCategory.Humidity,
                         SensorType = "TempSensor",
                         Location = location,
@@ -243,17 +243,45 @@ using (var scope = app.Services.CreateScope())
                 return;
             }
 
-            if (topic.StartsWith("data/thermostat/M1/shelly/") || topic.StartsWith("data/thermostat/M3/shelly/"))
-            {
-                tags = new Dictionary<string, string>();
-                var topicParts = topic.Split('/');
-                var location = topicParts[2];
-                var device = topicParts[4];
-                tags.Add("location", location);
-                tags.Add("device", device);
-                WriteJsonPropertiesAsFields(environmentDataBucket, influxConnector, topic, "Thermostat_Shelly", payload, tags);
-                return;
-            }
+            //if (topic.StartsWith("data/thermostat/M1/shelly/") || topic.StartsWith("data/thermostat/M3/shelly/"))
+            //{
+            //    ShellyThermostatData? data;
+            //    try
+            //    {
+            //        data = JsonSerializer.Deserialize<ShellyThermostatData>(payload);
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        ConsoleHelpers.PrintErrorMessage($"####Error deserializing ShellyThermostat data for topic {topic}: {ex.Message}");
+            //        ConsoleHelpers.PrintErrorMessage($"Payload: {payload}");
+            //        data = null;
+            //    }
+
+            //    if (data != null)
+            //    {
+            //        tags = new Dictionary<string, string>();
+            //        var topicParts = topic.Split('/');
+            //        var location = topicParts[2];
+            //        var device = topicParts[4];
+            //        var measurement = "CurrentTemperature";
+            //        influx3Connector.WriteTemperatureValue(
+            //            new InfluxTemperatureRecord
+            //            {
+            //                MeasurementId = measurementId,
+            //                Category = MeasurementCategory.Temperature,
+            //                SubCategory = "Thermostat",
+            //                SensorType = "Thermostat",
+            //                Location = location,
+            //                Device = "Shelly",
+            //                Measurement = measurement,
+            //                Value_DegreeC = data.CurrentTemperature,
+            //                MeasurementType = MeasurementType.Temperature
+            //            },
+            //            DateTimeOffset.UtcNow);
+            //    }
+            //    return;
+            //}
+
             if (topic.StartsWith("cangateway"))
             {
                 tags = new Dictionary<string, string>();
