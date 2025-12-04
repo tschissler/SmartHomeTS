@@ -304,10 +304,10 @@ void publishSensorData()
 
   if (sendMQTTMessages)
   {
-    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
+    // mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
+    // mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
+    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + location + "/" + sensorName).c_str(), String(tempString), true, 2);
     mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
-    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
-    mqttClientLib->publish((baseTopic + "/temperatur/" + location + "/" + sensorName).c_str(), String(tempString), true, 2);
     mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + location + "/" + sensorName).c_str(), String(humString), true, 2);
   }
   Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Version: " + version);
