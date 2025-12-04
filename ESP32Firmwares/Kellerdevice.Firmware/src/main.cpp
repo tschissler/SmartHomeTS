@@ -165,7 +165,8 @@ void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_SensorNameTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
+  mqttClientLib->connect(false);
+  mqttClientLib->subscribe({mqtt_SensorNameTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
 }
 
