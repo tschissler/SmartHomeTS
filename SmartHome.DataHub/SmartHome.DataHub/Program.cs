@@ -214,7 +214,6 @@ using (var scope = app.Services.CreateScope())
                         Device = "TempSensor",
                         Measurement = measurement,
                         Value_DegreeC = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
-                        MeasurementType = MeasurementType.Temperature
                     },
                     DateTimeOffset.UtcNow);
                 return;
@@ -237,50 +236,86 @@ using (var scope = app.Services.CreateScope())
                         Device = "TempSensor",
                         Measurement = measurement,
                         Value_Percent = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
-                        MeasurementType = MeasurementType.Temperature
                     },
                     DateTimeOffset.UtcNow);
                 return;
             }
 
-            //if (topic.StartsWith("data/thermostat/M1/shelly/") || topic.StartsWith("data/thermostat/M3/shelly/"))
-            //{
-            //    ShellyThermostatData? data;
-            //    try
-            //    {
-            //        data = JsonSerializer.Deserialize<ShellyThermostatData>(payload);
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        ConsoleHelpers.PrintErrorMessage($"####Error deserializing ShellyThermostat data for topic {topic}: {ex.Message}");
-            //        ConsoleHelpers.PrintErrorMessage($"Payload: {payload}");
-            //        data = null;
-            //    }
+            if (topic.StartsWith("data/thermostat/M1/shelly/") || topic.StartsWith("data/thermostat/M3/shelly/"))
+            {
+                ShellyThermostatData? data;
+                try
+                {
+                    data = JsonSerializer.Deserialize<ShellyThermostatData>(payload);
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing ShellyThermostat data for topic {topic}: {ex.Message}");
+                    ConsoleHelpers.PrintErrorMessage($"Payload: {payload}");
+                    data = null;
+                }
 
-            //    if (data != null)
-            //    {
-            //        tags = new Dictionary<string, string>();
-            //        var topicParts = topic.Split('/');
-            //        var location = topicParts[2];
-            //        var device = topicParts[4];
-            //        var measurement = "CurrentTemperature";
-            //        influx3Connector.WriteTemperatureValue(
-            //            new InfluxTemperatureRecord
-            //            {
-            //                MeasurementId = measurementId,
-            //                Category = MeasurementCategory.Temperature,
-            //                SubCategory = "Thermostat",
-            //                SensorType = "Thermostat",
-            //                Location = location,
-            //                Device = "Shelly",
-            //                Measurement = measurement,
-            //                Value_DegreeC = data.CurrentTemperature,
-            //                MeasurementType = MeasurementType.Temperature
-            //            },
-            //            DateTimeOffset.UtcNow);
-            //    }
-            //    return;
-            //}
+                if (data != null)
+                {
+                    tags = new Dictionary<string, string>();
+                    var topicParts = topic.Split('/');
+                    var location = topicParts[2];
+                    var device = topicParts[4];
+                    influx3Connector.WriteTemperatureValue(
+                        new InfluxTemperatureRecord
+                        {
+                            MeasurementId = $"Temperatur_{location}_{device}_Isttemperatur",
+                            Category = MeasurementCategory.Temperature,
+                            SubCategory = "Ist",
+                            SensorType = "Thermostat",
+                            Location = location,
+                            Device = device,
+                            Measurement = "Isttemperatur",
+                            Value_DegreeC = data.CurrentTemperature,
+                        },
+                        DateTimeOffset.UtcNow);
+                    influx3Connector.WriteTemperatureValue(
+                        new InfluxTemperatureRecord
+                        {
+                            MeasurementId = $"Temperatur_{location}_{device}_Solltemperatur",
+                            Category = MeasurementCategory.Temperature,
+                            SubCategory = "Soll",
+                            SensorType = "Thermostat",
+                            Location = location,
+                            Device = device,
+                            Measurement = "Solltemperatur",
+                            Value_DegreeC = data.TargetTemperature,
+                        },
+                        DateTimeOffset.UtcNow);
+                    influx3Connector.WritePercentageValue(
+                        new InfluxPercentageRecord
+                        {
+                            MeasurementId = $"Ventilposition_{location}_{device}",
+                            Category = MeasurementCategory.Ventil,
+                            SubCategory = "Ist",
+                            SensorType = "Thermostat",
+                            Location = location,
+                            Device = device,
+                            Measurement = "Ventilposition",
+                            Value_Percent = data.ValvePosition,
+                        },
+                        DateTimeOffset.UtcNow);
+                    influx3Connector.WritePercentageValue(
+                        new InfluxPercentageRecord
+                        {
+                            MeasurementId = $"Batterie_{location}_{device}",
+                            Category = MeasurementCategory.Electricity,
+                            SubCategory = "Ist",
+                            SensorType = "Thermostat",
+                            Location = location,
+                            Device = device,
+                            Measurement = "Batterie",
+                            Value_Percent = data.BatteryLevel,
+                        },
+                        DateTimeOffset.UtcNow);
+                }
+                return;
+            }
 
             if (topic.StartsWith("cangateway"))
             {
@@ -293,6 +328,8 @@ using (var scope = app.Services.CreateScope())
         catch (Exception ex)
         {
             ConsoleHelpers.PrintErrorMessage($"####Error processing message: {ex.Message}");
+            ConsoleHelpers.PrintErrorMessage(topic);
+            ConsoleHelpers.PrintErrorMessage(payload);
         }
     };
 }
@@ -324,7 +361,6 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Device = "Waermepumpe",
                     Measurement = meassurement,
                     Value_DegreeC = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
-                    MeasurementType = MeasurementType.Temperature
                 },
                 DateTimeOffset.UtcNow);
             break;
@@ -340,7 +376,6 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Device = "Waermepumpe",
                     Measurement = meassurement,
                     Value_W = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
-                    MeasurementType = MeasurementType.Power
                 },
                 DateTimeOffset.UtcNow);
             break;
@@ -356,7 +391,6 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Device = "Waermepumpe",
                     Measurement = meassurement,
                     Value_Percent = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
-                    MeasurementType = MeasurementType.Percent
                 },
                 DateTimeOffset.UtcNow);
             break;
@@ -372,7 +406,6 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Device = "Waermepumpe",
                     Measurement = meassurement,
                     Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
-                    MeasurementType = MeasurementType.Status
                 },
                 DateTimeOffset.UtcNow);
             break;
@@ -401,7 +434,6 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Measurement = meassurement,
                     Value_Cumulated_KWh = currentValue,
                     Value_Delta_KWh = delta,
-                    MeasurementType = MeasurementType.Energy
                 },
                 DateTimeOffset.UtcNow);
             break;
@@ -417,7 +449,6 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Device = "Waermepumpe",
                     Measurement = meassurement,
                     Value_Counter = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
-                    MeasurementType = MeasurementType.Counter
                 },
                 DateTimeOffset.UtcNow);
             break;
