@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ShellyConnector.DataContracts
+namespace SharedContracts
 {
     public record ShellyThermostatData (
         decimal TargetTemperature, 

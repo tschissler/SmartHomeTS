@@ -10,7 +10,8 @@ namespace SharedContracts
         DateTimeOffset Timestamp,
         decimal Power,
         decimal Voltage,
-        decimal TotalPower
+        decimal TotalPower,
+        bool IsValid
     )
     {
         public const MeasurementCategory Category = MeasurementCategory.Electricity;

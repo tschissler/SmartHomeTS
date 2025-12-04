@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using SharedContracts;
 using ShellyConnector.DataContracts;
 using SmartHomeHelpers.Logging;
 

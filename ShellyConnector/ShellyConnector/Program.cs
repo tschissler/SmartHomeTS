@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MQTTClient;
 using Newtonsoft.Json;
+using SharedContracts;
 using ShellyConnector;
 using ShellyConnector.DataContracts;
 using SmartHomeHelpers.Logging;

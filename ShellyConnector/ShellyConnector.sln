@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35201.85
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11222.16 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShellyConnector", "ShellyConnector\ShellyConnector.csproj", "{9B5B2864-B58F-4BCE-8876-28CAD7E53F33}"
 EndProject
@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Dockerfile = Dockerfile
 		kube.yaml = kube.yaml
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedContracts", "..\SharedContracts\SharedContracts.csproj", "{5D2B14B2-F78A-F1C5-24D1-3B53FDB8A9AC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{93AC5E95-4F1E-40CE-A8C8-2B167464B33F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93AC5E95-4F1E-40CE-A8C8-2B167464B33F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93AC5E95-4F1E-40CE-A8C8-2B167464B33F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D2B14B2-F78A-F1C5-24D1-3B53FDB8A9AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D2B14B2-F78A-F1C5-24D1-3B53FDB8A9AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D2B14B2-F78A-F1C5-24D1-3B53FDB8A9AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D2B14B2-F78A-F1C5-24D1-3B53FDB8A9AC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

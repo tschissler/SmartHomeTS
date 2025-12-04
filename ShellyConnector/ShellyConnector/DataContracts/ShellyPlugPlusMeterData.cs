@@ -9,14 +9,14 @@ namespace ShellyConnector.DataContracts
 {
     public class ShellySwitch
     {
-        public double apower { get; set; }
-        public double voltage { get; set; }
+        public decimal apower { get; set; }
+        public decimal voltage { get; set; }
         public ShellyEnergy aenergy { get; set; }
     }
 
     public class ShellyEnergy
     {
-        public double total { get; set; }
+        public decimal total { get; set; }
     }
 
     public class ShellyPlugPlusMeterData
