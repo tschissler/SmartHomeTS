@@ -53,7 +53,7 @@ static String sensorName = "";
 static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
-static String mqtt_ConfigTopic = "config/TemperaturSensor/Sensorname/";
+static String mqtt_ConfigTopic = "config/TemperaturSensor/";
 
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
