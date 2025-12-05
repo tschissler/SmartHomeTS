@@ -164,10 +164,7 @@ void mqttCallback(String &topic, String &payload) {
       if(strcmp(version, updateVersion.c_str())) {
           // Trigger OTA Update
           String firmwareUrlStr = payload;
-          firmwareUrlStr.replace(
-              "/firmwareupdates/",
-              String("/firmwareupdates/") + BOARDCONFIG + "/"
-          );
+          firmwareUrlStr.replace("---board---", String(BOARDCONFIG));
           const char *firmwareUrl = firmwareUrlStr.c_str();
           Serial.println("New firmware available, starting OTA Update from " + String(firmwareUrl));
           otaInProgress = true;

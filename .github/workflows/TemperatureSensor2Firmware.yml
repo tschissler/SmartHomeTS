@@ -42,14 +42,14 @@ jobs:
     - name: Upload Firmware to Azure Blob Storage
       run: |
         az storage blob upload --account-name smarthomestorageprod \
-                               --container-name firmwareupdates \
+                               --container-name firmwareupdates/TemperatureSensor2/esp32_c6 \
                                --name TemperatureSensor2Firmware_$version.bin \
                                --file .pio/build/esp32-c6/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "blob_url=https://smarthomestorageprod.blob.core.windows.net/firmwareupdates/TemperatureSensor2Firmware_$version.bin" >> $GITHUB_OUTPUT
+      run: echo "blob_url=https://smarthomestorageprod.blob.core.windows.net/firmwareupdates/TemperatureSensor2/---board---/TemperatureSensor2Firmware_$version.bin" >> $GITHUB_OUTPUT
 
   build_esp32_devkit_v4:
     runs-on: ubuntu-latest
@@ -82,7 +82,7 @@ jobs:
     - name: Upload Firmware to Azure Blob Storage
       run: |
         az storage blob upload --account-name smarthomestorageprod \
-                               --container-name firmwareupdates/esp32-devkit-v4 \
+                               --container-name firmwareupdates/TemperatureSensor2/esp32-devkit-v4 \
                                --name TemperatureSensor2Firmware_$version.bin \
                                --file .pio/build/esp32-devkit-v4/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
