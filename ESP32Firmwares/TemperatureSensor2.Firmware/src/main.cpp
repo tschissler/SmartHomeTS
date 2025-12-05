@@ -163,7 +163,12 @@ void mqttCallback(String &topic, String &payload) {
       Serial.println("New firmware version is " + updateVersion);
       if(strcmp(version, updateVersion.c_str())) {
           // Trigger OTA Update
-          const char *firmwareUrl = payload.c_str();
+          String firmwareUrlStr = payload;
+          firmwareUrlStr.replace(
+              "/firmwareupdates/",
+              String("/firmwareupdates/") + BOARDCONFIG + "/"
+          );
+          const char *firmwareUrl = firmwareUrlStr.c_str();
           Serial.println("New firmware available, starting OTA Update from " + String(firmwareUrl));
           otaInProgress = true;
           bool result =  AzureOTAUpdater::UpdateFirmwareFromUrl(firmwareUrl);
