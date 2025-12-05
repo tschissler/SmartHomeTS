@@ -9,7 +9,7 @@
 // The DallasTemperature library can do all this work for you!
 // https://github.com/milesburton/Arduino-Temperature-Control-Library
 
-OneWire  ds(5);  // on pin 5 (a 4.7K resistor is necessary)
+OneWire  ds(18);  // on pin 18 (a 4.7K resistor is necessary)
 
 static uint8_t previousLineCount = 0;
 
