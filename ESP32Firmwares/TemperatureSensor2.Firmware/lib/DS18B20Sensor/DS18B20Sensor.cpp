@@ -52,7 +52,13 @@ SensorData DS18B20Sensor::read()
 
     delay(750);
 
-    sensor.reset();
+    auto sensorResetResult = sensor.reset();
+    if (sensorResetResult == 0)
+    {
+        Serial.println("Sensor not responding during read!");
+        data.success = false;
+        return data;
+    }
     sensor.select(sensorAddress);
     sensor.write(0xBE); // read scratchpad
 

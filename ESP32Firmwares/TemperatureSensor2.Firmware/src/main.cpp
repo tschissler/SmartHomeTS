@@ -24,7 +24,7 @@
 #include "DS18B20Sensor.h"
 
 // Pin configuration
-#define NEOPIXEL_PIN 17       // WS2812 connected to GP8
+#define NEOPIXEL_PIN 17       // WS2812 connected to GP17
 #define NUMPIXELS    1       // Number of LEDs (just one)
 #define BLINK_DURATION 100       // Blink duration in milliseconds
 
