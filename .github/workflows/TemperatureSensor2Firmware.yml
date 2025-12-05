@@ -82,9 +82,9 @@ jobs:
     - name: Upload Firmware to Azure Blob Storage
       run: |
         az storage blob upload --account-name smarthomestorageprod \
-                               --container-name firmwareupdates \
+                               --container-name firmwareupdates/esp32-devkit-v4 \
                                --name TemperatureSensor2Firmware_$version.bin \
-                               --file .pio/build/esp32-c6/firmware.bin \
+                               --file .pio/build/esp32-devkit-v4/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
   triggerupdate:
