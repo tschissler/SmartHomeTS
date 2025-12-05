@@ -157,6 +157,7 @@ void mqttCallback(String &topic, String &payload) {
         return;
       }
 
+      pixels.setBrightness(255);
       setLedColor(255, 255, 0); // Set LED color to yellow indicating OTA update
       String updateVersion = extractVersionFromUrl(payload);
       Serial.println("Current firmware version is " + String(version));
