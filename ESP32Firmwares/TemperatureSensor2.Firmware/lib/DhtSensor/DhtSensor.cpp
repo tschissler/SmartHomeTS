@@ -10,17 +10,21 @@ bool DhtSensor::begin() {
     return true;
 }
 
-SensorData DhtSensor::read() {
+std::vector<SensorData> DhtSensor::read() {
+    std::vector<SensorData> result;
     SensorData data{};
     data.humidity = dht_.readHumidity();
     data.temperature = dht_.readTemperature();
 
     if (isnan(data.humidity) || isnan(data.temperature)) {
         data.success = false;
-        return data;
+        result.push_back(data);
+        return result;
     }
 
     data.timestampMs = millis();
     data.success = true;
-    return data;
+    data.sensorId = 0;
+    result.push_back(data);
+    return result;
 }

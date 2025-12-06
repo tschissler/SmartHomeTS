@@ -6,6 +6,11 @@
 #include <ESP32Ping.h>
 #include <ArduinoJson.h>
 #include <memory>
+#include <vector>
+#include <unordered_map>
+#include <string>
+#include <cstdio>
+#include <math.h>
 #include <Adafruit_NeoPixel.h>
 
 // Shared libaries
@@ -61,11 +66,13 @@ static const int MAX_READINGS = 24;  // 2.5 seconds * 24 = 60 seconds (1 minute)
 static const unsigned long READING_INTERVAL = 2500;  // 5 seconds between readings
 static unsigned long lastReadingTime = 0;
 
-static SensorData readings[MAX_READINGS];
-static int readingCount = 0;
+static std::vector<std::vector<SensorData>> readings;
+static uint64_t primarySensorId = 0;
+static bool primarySensorIdSet = false;
 
 static String baseTopic = "daten";
 static String sensorName = "";
+static std::unordered_map<std::string, String> sensorNames;
 static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
@@ -127,6 +134,31 @@ void parseConfigJSON(String jsonPayload) {
     Serial.println("Location set to: " + location);
   }
   
+  if (!doc["SensorNames"].isNull()) {
+    JsonVariant sensorNamesVariant = doc["SensorNames"];
+    if (sensorNamesVariant.is<JsonArray>()) {
+      sensorNames.clear();
+      JsonArray namesArray = sensorNamesVariant.as<JsonArray>();
+      for (JsonObject nameEntry : namesArray) {
+        for (JsonPair kv : nameEntry) {
+          String idKey = String(kv.key().c_str());
+          String displayName = kv.value().as<String>();
+          idKey.trim();
+          displayName.trim();
+          idKey.toUpperCase();
+          if (idKey.length() == 0 || displayName.length() == 0) {
+            continue;
+          }
+          sensorNames[std::string(idKey.c_str())] = displayName;
+          Serial.println("Sensor name override added: " + idKey + " -> " + displayName);
+        }
+      }
+      Serial.println("Sensor name overrides loaded: " + String(static_cast<unsigned long>(sensorNames.size())));
+    } else {
+      Serial.println("SensorNames is not an array; ignoring override configuration.");
+    }
+  }
+
   if (!doc["Brightness"].isNull()) {
     int newBrightness = doc["Brightness"];
     if (newBrightness >= 0 && newBrightness <= 255) {
@@ -219,13 +251,22 @@ bool tryInitializeSensor(SensorType type) {
             return false;
     }
 
-    if (!candidate || !candidate->begin() || !candidate->read().success) {
+    if (!candidate || !candidate->begin()) {
+      Serial.println("Probe failed for " + String(toString(type)));
+      return false;
+    }
+
+    auto initialReadings = candidate->read();
+    if (initialReadings.empty() || !initialReadings.front().success) {
         Serial.println("Probe failed for " + String(toString(type)));
         return false;
     }
 
     sensorType = type;
     sensor = std::move(candidate);
+    readings.clear();
+    primarySensorIdSet = false;
+    primarySensorId = 0;
     Serial.println("Using sensor type " + String(toString(sensorType)));
     return true;
 }
@@ -241,8 +282,16 @@ bool initializeSensor() {
   return false;
 }
 
+String getSensorDisplayName(uint64_t sensorId) {
+  String idKey = sensor->formatSensorId(sensorId);
+  if (sensorNames.find(std::string(idKey.c_str())) != sensorNames.end()) {
+    return sensorNames[std::string(idKey.c_str())];
+  }
+  return idKey;
+}
+
 void readSensorData() {
-  if (sensorName == "") {
+  if (sensorName == "" && sensorNames.empty()) {
     Serial.println("Sensor name not set, skipping sensor reading");
     blinkLed(RED, true);
     return;
@@ -254,24 +303,58 @@ void readSensorData() {
     return;
   }
 
-  if (readingCount >= MAX_READINGS) {
+  if (readings.size() >= MAX_READINGS) {
     Serial.println("Maximum readings reached, skipping sensor reading");
     blinkLed(RED, true);
     return;
   }
 
-  SensorData data = sensor->read();
+  auto sensorReadings = sensor->read();
+  if (sensorReadings.empty()) {
+    Serial.println("Failed to read from sensor type " + String(toString(sensorType)) + " (no readings returned)!");
+    blinkLed(RED, true);
+    return;
+  }
 
-  if (!data.success) {
+  const SensorData* primaryReading = nullptr;
+  std::vector<SensorData> successfulReadings;
+  for (size_t i = 0; i < sensorReadings.size(); ++i) {
+    const auto& reading = sensorReadings[i];
+    if (reading.success) {
+      Serial.printf("Sensor reading[%u] (id: %s): %.2f°C, %.2f%%\n",
+                    static_cast<unsigned>(i),
+                    getSensorDisplayName(reading.sensorId).c_str(),
+                    reading.temperature,
+                    reading.humidity);
+      successfulReadings.push_back(reading);
+      if (!primarySensorIdSet) {
+        primarySensorId = reading.sensorId;
+        primarySensorIdSet = true;
+      }
+      if (!primaryReading) {
+        primaryReading = &reading;
+      }
+    } else {
+      String formattedId = sensor->formatSensorId(reading.sensorId);
+      Serial.printf("Sensor reading[%u] (id: %s): failed\n",
+                    static_cast<unsigned>(i),
+                    formattedId.c_str());
+    }
+  }
+
+  if (primaryReading == nullptr) {
     Serial.println("Failed to read from sensor type " + String(toString(sensorType)) + "!");
     blinkLed(RED, true);
     return;
   }
 
-  readings[readingCount] = data;
+  if (!successfulReadings.empty()) {
+    readings.push_back(successfulReadings);
+  }
+
+  SensorData data = *primaryReading;
   Serial.println("Sensor data read: " + String(data.temperature) + "°C, " + String(data.humidity) + "%");
   lastReadingTime = data.timestampMs;
-  readingCount++;
   if (blinkCount < MAX_BLINK_COUNT) {
     blinkCount++;
     blinkLed(BLUE, true);
@@ -283,37 +366,107 @@ void readSensorData() {
 
 void publishSensorData()
 {
-  if (readingCount == 0) {
+  if (readings.empty()) {
     Serial.println("No sensor data to publish");
     return;
   }
 
-  char tempString[8];
-  char humString[8];
-
-  // Calculate average temperature and humidity
-  float avgTemperature = 0;
-  float avgHumidity = 0;
-  for (int i = 0; i < readingCount; i++) {
-    avgTemperature += readings[i].temperature;
-    avgHumidity += readings[i].humidity;
+  if (!sensor) {
+    Serial.println("Sensor not initialized, cannot publish data");
+    return;
   }
-  avgTemperature /= readingCount;
-  avgHumidity /= readingCount;
-  readingCount = 0; // Reset reading count after publishing
 
-  dtostrf(avgTemperature, 1, 2, tempString);
-  dtostrf(avgHumidity, 1, 2, humString);
+  struct Aggregate {
+    float temperatureSum = 0.0f;
+    float humiditySum = 0.0f;
+    size_t temperatureCount = 0;
+    size_t humidityCount = 0;
+  };
+  std::unordered_map<uint64_t, Aggregate> aggregates;
 
-  if (sendMQTTMessages)
-  {
-    // mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + sensorName).c_str(), String(tempString), true, 2);
-    // mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + sensorName).c_str(), String(humString), true, 2);
-    mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/" + location + "/" + sensorName).c_str(), String(tempString), true, 2);
+  for (const auto &batch : readings) {
+    for (const auto &reading : batch) {
+      Aggregate &agg = aggregates[reading.sensorId];
+      agg.temperatureSum += reading.temperature;
+      agg.temperatureCount++;
+      if (!isnan(reading.humidity)) {
+        agg.humiditySum += reading.humidity;
+        agg.humidityCount++;
+      }
+    }
+  }
+
+  if (aggregates.empty()) {
+    Serial.println("No successful sensor data to publish");
+    readings.clear();
+    return;
+  }
+
+  float primaryAvgTemperature = NAN;
+  float primaryAvgHumidity = NAN;
+  bool primaryDataAvailable = false;
+
+  for (const auto &entry : aggregates) {
+    const uint64_t id = entry.first;
+    const Aggregate &agg = entry.second;
+    float avgTemperature = agg.temperatureSum / static_cast<float>(agg.temperatureCount);
+    float avgHumidity = agg.humidityCount > 0 ? (agg.humiditySum / static_cast<float>(agg.humidityCount)) : NAN;
+    String formattedId = sensor->formatSensorId(id);
+
+    if (agg.humidityCount > 0) {
+      Serial.printf("Average sensor (id: %s): %.2f°C, %.2f%%\n",
+                    getSensorDisplayName(id).c_str(),
+                    avgTemperature,
+                    avgHumidity);
+    } else {
+      Serial.printf("Average sensor (id: %s): %.2f°C, humidity unavailable\n",
+                    getSensorDisplayName(id).c_str(),
+                    avgTemperature);
+    }
+
+    if (!primaryDataAvailable) {
+      if ((primarySensorIdSet && id == primarySensorId) || !primarySensorIdSet) {
+        primaryAvgTemperature = avgTemperature;
+        primaryAvgHumidity = avgHumidity;
+        primarySensorId = id;
+        primarySensorIdSet = true;
+        primaryDataAvailable = true;
+      }
+    }
+  }
+
+  if (!primaryDataAvailable) {
+    // Fallback: use first aggregate entry
+    const auto &fallback = *aggregates.begin();
+    primaryAvgTemperature = fallback.second.temperatureSum / static_cast<float>(fallback.second.temperatureCount);
+    primaryAvgHumidity = fallback.second.humidityCount > 0
+                             ? fallback.second.humiditySum / static_cast<float>(fallback.second.humidityCount)
+                             : NAN;
+    primarySensorId = fallback.first;
+    primarySensorIdSet = true;
+    primaryDataAvailable = true;
+  }
+
+  if (primaryDataAvailable && sendMQTTMessages) {
+    char tempString[8];
+    char humString[8];
+
+    dtostrf(primaryAvgTemperature, 1, 2, tempString);
+    dtostrf(primaryAvgHumidity, 1, 2, humString);
+
+    String temperatureTopic = baseTopic + "/temperatur/" + location + "/" + sensorName;
+    String humidityTopic = baseTopic + "/luftfeuchtigkeit/" + location + "/" + sensorName;
+
+    mqttSuccess = mqttClientLib->publish(temperatureTopic.c_str(), String(tempString), true, 2);
     mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
-    mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/" + location + "/" + sensorName).c_str(), String(humString), true, 2);
+    mqttClientLib->publish(humidityTopic.c_str(), String(humString), true, 2);
+  } else if (!primaryDataAvailable) {
+    Serial.println("Primary sensor has no data to publish");
   }
-  Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Version: " + version);
+
+  Serial.println("Version: " + String(version));
+
+  readings.clear();
 }
 
 void setup() {
@@ -343,6 +496,11 @@ void setup() {
   timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
   timeClient.update();
 
+  readings.clear();
+  readings.reserve(MAX_READINGS);
+  primarySensorIdSet = false;
+  primarySensorId = 0;
+
   initializeSensor();
 
   // Set up MQTT
@@ -368,7 +526,7 @@ void loop() {
     }
 
     // Transmit data every minute
-    if (readingCount >= MAX_READINGS) {
+    if (readings.size() >= MAX_READINGS) {
       publishSensorData();
     }
 
