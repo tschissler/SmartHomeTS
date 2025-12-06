@@ -142,6 +142,10 @@ void loop(void) {
     lineCount = 1;
   }
 
+  Serial.println("                                                                             ");
+  lineCount++;
+  Serial.println("                                                                             ");
+  lineCount++;
   previousLineCount = lineCount;
   delay(1000);
 }
