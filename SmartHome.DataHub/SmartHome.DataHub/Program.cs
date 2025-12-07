@@ -134,20 +134,20 @@ using (var scope = app.Services.CreateScope())
             }
             if (topic == "data/electricity/envoym1")
             {
-                tags = new Dictionary<string, string>();
-                tags.Add("location", "M1");
-                tags.Add("device", "EnvoyM1");
-                WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM1", payload, tags, true);
+                //tags = new Dictionary<string, string>();
+                //tags.Add("location", "M1");
+                //tags.Add("device", "EnvoyM1");
+                //WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM1", payload, tags, true);
 
                 WriteEnphaseDataToDB(influx3Connector, payload, "M1", "EnvoyM1");
                 return;
             }
             if (topic == "data/electricity/envoym3")
             {
-                tags = new Dictionary<string, string>();
-                tags.Add("location", "M3");
-                tags.Add("device", "EnvoyM3");
-                WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM3", payload, tags, true);
+                //tags = new Dictionary<string, string>();
+                //tags.Add("location", "M3");
+                //tags.Add("device", "EnvoyM3");
+                //WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM3", payload, tags, true);
 
                 WriteEnphaseDataToDB(influx3Connector, payload, "M3", "EnvoyM3");
                 return;
@@ -155,14 +155,14 @@ using (var scope = app.Services.CreateScope())
             if (topic.StartsWith("data/electricity/M1")
                 || topic.StartsWith("data/electricity/M3"))
             {
-                tags = new Dictionary<string, string>();
                 var topicParts = topic.Split('/');
                 var location = topicParts[2];
                 var device = topicParts[4];
-                tags.Add("location", location);
-                tags.Add("group", topicParts[3]);
-                tags.Add("device", device);
-                WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, device, payload, tags, true);
+                //tags = new Dictionary<string, string>();
+                //tags.Add("location", location);
+                //tags.Add("group", topicParts[3]);
+                //tags.Add("device", device);
+                //WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, device, payload, tags, true);
 
                 if (topicParts[3] == "Smartmeter")
                 {

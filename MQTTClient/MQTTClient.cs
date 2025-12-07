@@ -1,5 +1,4 @@
 ﻿using MQTTnet;
-using MQTTnet.Client;
 using MQTTnet.Protocol;
 using SmartHomeHelpers.Logging;
 using System.Text;
@@ -24,7 +23,7 @@ namespace MQTTClient
 
         async Task ConnectAsync()
         {
-            var factory = new MqttFactory();
+            var factory = new MqttClientFactory();
             _client = factory.CreateMqttClient();
 
             _options = new MqttClientOptionsBuilder()
@@ -35,7 +34,7 @@ namespace MQTTClient
 
             _client.ApplicationMessageReceivedAsync += e =>
             {
-                if (e.ApplicationMessage.Payload is not null)
+                if (e.ApplicationMessage.Payload.Length > 0)
                 {
                     var messageReceivedEventArgs = new MqttMessageReceivedEventArgs
                     {
