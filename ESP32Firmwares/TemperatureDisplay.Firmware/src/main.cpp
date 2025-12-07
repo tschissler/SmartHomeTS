@@ -32,7 +32,7 @@ const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/TemperatureDisplay";
 static String mqtt_DeviceNameTopic = "config/TemperaturDisplay/{ID}/DeviceName";
 static String mqtt_OutsideTempTopic = "cangateway/M3/WPAE/Temperatur/AF1_Aussenfuehler";
-static String mqtt_OutsideTempGardenTopic = "daten/temperatur/Aussen";
+static String mqtt_OutsideTempGardenTopic = "daten/temperatur/M1/Aussen";
 static String mqtt_ThermostatWohnzimmerTopic = "data/thermostat/M3/shelly/Wohnzimmer";
 static String mqtt_ThermostatEsszimmerTopic = "data/thermostat/M3/shelly/Esszimmer";
 static String mqtt_ThermostatKuecheTopic = "data/thermostat/M3/shelly/Kueche";
@@ -187,7 +187,8 @@ void connectToMQTT() {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({
+  mqttClientLib->connect(false);
+  mqttClientLib->subscribe({
     mqtt_DeviceNameTopic, 
     mqtt_OTAtopic, 
     mqtt_ThermostatBueroTopic, 

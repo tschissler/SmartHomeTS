@@ -85,11 +85,11 @@ void TemperatureDisplay::setupUI(unsigned long displayTimeoutSec = 60)
     lv_obj_add_event_cb(ui_mainScreen, scr_event_handler_static, LV_EVENT_CLICKED, NULL);
     lv_obj_add_event_cb(ui_arcTargetTemp, arc_event_handler_static, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(ui_arcTargetTemp, arc_release_event_handler_static, LV_EVENT_RELEASED, NULL);
-    lv_obj_add_event_cb(ui_btnLivingroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Wohnzimmer);
-    lv_obj_add_event_cb(ui_btnDiningroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Esszimmer);
-    lv_obj_add_event_cb(ui_btnKitchen, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Kueche);
-    lv_obj_add_event_cb(ui_btnGuestroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Gaestezimmer);
-    lv_obj_add_event_cb(ui_btnStudy, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
+    // lv_obj_add_event_cb(ui_btnLivingroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Wohnzimmer);
+    // lv_obj_add_event_cb(ui_btnDiningroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Esszimmer);
+    // lv_obj_add_event_cb(ui_btnKitchen, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Kueche);
+    // lv_obj_add_event_cb(ui_btnGuestroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Gaestezimmer);
+    // lv_obj_add_event_cb(ui_btnStudy, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
     lv_obj_add_event_cb(ui_btnTransfer, btn_transfer_event_handler_static, LV_EVENT_CLICKED, NULL);
 
     // Set initial values

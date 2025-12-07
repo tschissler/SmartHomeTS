@@ -16,7 +16,7 @@ void ThermostatData::reset() {
 }
 
 bool ThermostatData::parseFromJson(const String& jsonPayload) {
-    StaticJsonDocument<512> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, jsonPayload);
     
     if (error) {
@@ -34,42 +34,42 @@ bool ThermostatData::parseFromJsonDocument(const JsonDocument& doc) {
     
     try {
         // Parse required fields
-        if (doc.containsKey("TargetTemperature")) {
+        if (doc["TargetTemperature"].is<float>()) {
             targetTemperature = doc["TargetTemperature"].as<float>();
         } else {
             Serial.println("Missing TargetTemperature field");
             return false;
         }
         
-        if (doc.containsKey("CurrentTemperature")) {
+        if (doc["CurrentTemperature"].is<float>()) {
             currentTemperature = doc["CurrentTemperature"].as<float>();
         } else {
             Serial.println("Missing CurrentTemperature field");
             return false;
         }
         
-        if (doc.containsKey("ValvePosition")) {
+        if (doc["ValvePosition"].is<int>()) {
             valvePosition = doc["ValvePosition"].as<int>();
         } else {
             Serial.println("Missing ValvePosition field");
             return false;
         }
         
-        if (doc.containsKey("BatteryLevel")) {
+        if (doc["BatteryLevel"].is<int>()) {
             batteryLevel = doc["BatteryLevel"].as<int>();
         } else {
             Serial.println("Missing BatteryLevel field");
             return false;
         }
         
-        if (doc.containsKey("IsConnected")) {
+        if (doc["IsConnected"].is<bool>()) {
             isConnected = doc["IsConnected"].as<bool>();
         } else {
             Serial.println("Missing IsConnected field");
             return false;
         }
         
-        if (doc.containsKey("LastUpdated")) {
+        if (doc["LastUpdated"].is<const char*>()) {
             lastUpdated = doc["LastUpdated"].as<String>();
         } else {
             Serial.println("Missing LastUpdated field");
