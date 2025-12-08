@@ -91,6 +91,7 @@ void TemperatureDisplay::setupUI(unsigned long displayTimeoutSec = 60)
     // lv_obj_add_event_cb(ui_btnGuestroom, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Gaestezimmer);
     // lv_obj_add_event_cb(ui_btnStudy, btn_event_handler_static, LV_EVENT_CLICKED, (void *)Room::Buero);
     lv_obj_add_event_cb(ui_btnTransfer, btn_transfer_event_handler_static, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(ui_btnCancel, btn_cancel_event_handler_static, LV_EVENT_CLICKED, NULL);
 
     // Set initial values
     setCurrentRoom(currentRoom);
@@ -410,6 +411,16 @@ void TemperatureDisplay::btn_transfer_event_handler_static(lv_event_t *e)
     }
 }
 
+void TemperatureDisplay::btn_cancel_event_handler_static(lv_event_t *e)
+{
+    if (instance) {
+        instance->lastActivityTime = millis();
+        if(instance->isDisplayOn) {
+           instance->handleCancelButtonClick(e);
+        } 
+    }
+}
+
 void TemperatureDisplay::scr_event_handler_static(lv_event_t *e)
 {
     if (instance) {
@@ -423,6 +434,9 @@ void TemperatureDisplay::scr_event_handler_static(lv_event_t *e)
 // Instance event handlers
 void TemperatureDisplay::handleArcValueChange(lv_event_t *e)
 {
+    if (ui_mainScreen != lv_scr_act()) {
+        return; 
+    }
     lv_obj_t *arc = (lv_obj_t *)lv_event_get_target(e);
     int32_t value = lv_arc_get_value(arc);
 
@@ -455,6 +469,7 @@ void TemperatureDisplay::handleArcRelease(lv_event_t *e)
     // Convert arc value to temperature
     updatedTargetTemperature = value / 2.0f;
     lv_obj_set_flag(ui_btnTransfer, LV_OBJ_FLAG_HIDDEN, false);
+    lv_obj_set_flag(ui_btnCancel, LV_OBJ_FLAG_HIDDEN, false);
 
     Serial.printf("Arc released at: %.1f°C for room: %s\n", updatedTargetTemperature, roomToString(currentRoom));
 }
@@ -478,6 +493,17 @@ void TemperatureDisplay::handleTransferButtonClick(lv_event_t *e)
         onTemperatureSet(updatedTargetTemperature, currentRoom);
     }
     lv_obj_set_flag(ui_btnTransfer, LV_OBJ_FLAG_HIDDEN, true);
+    lv_obj_set_flag(ui_btnCancel, LV_OBJ_FLAG_HIDDEN, true);
+}
+
+void TemperatureDisplay::handleCancelButtonClick(lv_event_t *e)
+{
+    const ThermostatData& data = getThermostatData(currentRoom);
+    transferInProgress = false;
+    updateSelectedRoomData();
+    updateStatusPanel(Status::NONE);
+    lv_obj_set_flag(ui_btnTransfer, LV_OBJ_FLAG_HIDDEN, true);
+    lv_obj_set_flag(ui_btnCancel, LV_OBJ_FLAG_HIDDEN, true);
 }
 
 void TemperatureDisplay::handleRoomButtonClick(lv_event_t *e)
