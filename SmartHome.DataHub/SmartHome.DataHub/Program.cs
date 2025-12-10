@@ -411,6 +411,10 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
             break;
         case "Energie":
             var currentValue = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture);
+            if (meassurement.Contains("MWh"))
+            {
+                currentValue = currentValue * 1000m; 
+            }
             var delta = 0m;
             var previousValue = previousValues.FirstOrDefault(kv => kv.Key == measurementId);
             if (previousValue.Key != null)
