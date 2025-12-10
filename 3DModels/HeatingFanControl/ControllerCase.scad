@@ -1,4 +1,4 @@
-$fn=100;
+$fn=50;
 
 InnerWidth_x = 114;
 InnerWidth_y = 70.5;
@@ -25,10 +25,10 @@ StepDownHolderOffset_x2 = 75;
 StepDownHolderOffset_y1 = 22;
 StepDownHolderOffset_y2 = 52;
 
-CaseHolderWidth = 6;
-CaseHolderHeight = 7;
+CaseHolderWidth = 8;
+CaseHolderHeight = 10;
 
-ScrewDiameter = 2;
+ScrewDiameter = 3;
 HolderWidth = 8;
 HolderHeight = PCBLevel - PCBThickness;
 
@@ -42,26 +42,31 @@ USBHoleXOffset = 20 + Wall + PCBOffset_x;
 USBHoleZOffset = 14 + Wall + PCBLevel;
 
 ACBladeRadius = 2;
-ACConnectorZOffset = 45-19;
-ACConnectorYOffset = 59;
-ACConnectorHoleOffsetZ = 9.5;
-ACConnectorHoleOffsetY = 7;
-ACConnectorHoleDistanceY = 28.1;
+ACConnectorXOffset = (ESPInnerWidth_x-27)/2;
+ACConnectorZOffset = Inner_Height - 21;
+ACConnectorHoleOffsetZ = 9;
+ACConnectorHoleDistance = 40;
 
 VentingHolesDiameter = 4;
 VentingHolesDistance = 6;
 VentingHolesOffset = 6;
 
 
-difference() {
-    ESPCasePart();
+// difference() {
+//     ESPCasePart(false);
 
+//     translate([OuterWidth_x, 0, OuterHeight+Wall+1])
+//         rotate([0, 180, 0]) 
+//             PowersupplyPart(true);
+// }
+
+difference() {
     translate([OuterWidth_x, 0, OuterHeight+Wall+1])
         rotate([0, 180, 0]) 
-            PowersupplyPart();
+            PowersupplyPart(false);
+    ESPCasePart(true);
 }
-
-module ESPCasePart() {
+module ESPCasePart(createHolepins) {
     difference() {
         cube([OuterWidth_x, OuterWidth_y, OuterHeight]);
         translate([Wall, Wall, Wall])
@@ -78,13 +83,13 @@ module ESPCasePart() {
             USBHole();
 
         // Venting Holes
-        VentingHoles();
+        VentingHoles(Inner_Height/2);
     }
-    CaseHolders(false);
+    CaseHolders(createHolepins);
     Holders();
 }
 
-module PowersupplyPart() {
+module PowersupplyPart(createHolepins) {
       difference() {
         cube([OuterWidth_x, OuterWidth_y, OuterHeight]);
         translate([Wall, Wall, Wall])
@@ -92,16 +97,22 @@ module PowersupplyPart() {
         translate([ESPInnerWidth_x + Wall, -0.1, Wall])
             cube([InnerWidth_x, OuterWidth_y+0.2, Inner_Height+0.1]);
 
+        // Venting Holes
+        zOffset = 2*Wall + VentingHolesOffset;
+        VentingHoles(zOffset, true);
 
+        translate([ACConnectorXOffset, 0, ACConnectorZOffset])
+            ACConnector();    
     }
-
-    CaseHolders(true);
+    CaseHolders(createHolepins);
+    translate([ACConnectorXOffset, HolderHeight + Wall, ACConnectorZOffset])
+        ACConnectorHolder();
 }
 
-module VentingHoles() {
+module VentingHoles(zOffset, bottom=false) {
     for (x = [0 : VentingHolesDistance : Inner_Height/2 - VentingHolesDistance]) {
         for (y = [0 : VentingHolesDistance : InnerWidth_y - VentingHolesDistance]) {
-            translate([-1, Wall + VentingHolesOffset + y, x + Inner_Height/2])
+            translate([-1, Wall + VentingHolesOffset + y, x + zOffset])
                 rotate([0, 90, 0])
                     cylinder(h=10, d=VentingHolesDiameter);
         }
@@ -109,10 +120,23 @@ module VentingHoles() {
 
     for (x = [0 : VentingHolesDistance : Inner_Height/2 - VentingHolesDistance]) {
         for (y = [0 : VentingHolesDistance : ESPInnerWidth_x - VentingHolesDistance]) {
-            translate([Wall + VentingHolesOffset + y, -1, x + Inner_Height/2])
+            translate([Wall + VentingHolesOffset + y, -1, x + zOffset])
                 rotate([0, 90, 90])
                     cylinder(h=OuterWidth_y+10, d=VentingHolesDiameter);
         }
+    }
+
+    if (bottom) {
+        for (x = [0 : VentingHolesDistance : InnerWidth_x - VentingHolesDistance]) {
+            for (y = [0 : VentingHolesDistance : InnerWidth_y - VentingHolesDistance]) {
+                if (((x != 9*VentingHolesDistance && x != 10 * VentingHolesDistance) || (y != 0 && y!=10*VentingHolesDistance))
+                    && ((x != 17*VentingHolesDistance && x != 18*VentingHolesDistance) || (y != 0 && y!=10*VentingHolesDistance))) {
+                    translate([x + VentingHolesOffset, Wall + VentingHolesOffset + y, -1 ])
+                        rotate([0, 0, 0])
+                            cylinder(h=10, d=VentingHolesDiameter);
+                }
+            }
+        }       
     }
 }
 
@@ -146,28 +170,29 @@ module Holder() {
 }
 
 module CaseHolders(createHolepins) {
-    translate([Wall, Wall+CaseHolderWidth, OuterHeight-CaseHolderHeight]) 
+    translate([Wall, Wall/2+CaseHolderWidth, OuterHeight-CaseHolderHeight]) 
         rotate([0,0,-90])
             CaseHolder(CaseHolderWidth, CaseHolderWidth, CaseHolderHeight, createHolepins);
-    translate([Wall, OuterWidth_y-Wall, OuterHeight-CaseHolderHeight]) 
+    translate([Wall, OuterWidth_y-Wall/2, OuterHeight-CaseHolderHeight]) 
         rotate([0,0,-90])
             CaseHolder(CaseHolderWidth, CaseHolderWidth, CaseHolderHeight, createHolepins);
 
-    translate([Wall+ESPInnerWidth_x-CaseHolderWidth, Wall, OuterHeight-CaseHolderHeight]) 
+    translate([Wall+ESPInnerWidth_x-CaseHolderWidth, Wall/2, OuterHeight-CaseHolderHeight]) 
         rotate([0,0,0])
             CaseHolder(CaseHolderWidth, CaseHolderWidth, CaseHolderHeight, createHolepins);
-    translate([Wall+ESPInnerWidth_x, OuterWidth_y-Wall, OuterHeight-CaseHolderHeight]) 
+    translate([Wall+ESPInnerWidth_x, OuterWidth_y-Wall/2, OuterHeight-CaseHolderHeight]) 
         rotate([0,0,180])
             CaseHolder(CaseHolderWidth, CaseHolderWidth, CaseHolderHeight, createHolepins);       
 }
 
-module CaseHolder(widthX, widthY, height, createHolepins)
-{
+module CaseHolder(widthX, widthY, height, createHolepins, bevel = true) {
     difference()
     {
         cube([widthX, widthY, height]);
-        rotate([-45,0,0])
-            cube([widthX*2, widthY*2, height*2]);
+        if (bevel) {
+            rotate([-45,0,0])
+                cube([widthX*2, widthY*2, height*2]);
+        }
         translate([widthX/2, widthY/2, 0])
             cylinder(h=100, d=ScrewDiameter);        
     }
@@ -179,8 +204,7 @@ module CaseHolder(widthX, widthY, height, createHolepins)
             cylinder(h=100, d=ScrewDiameter+1); 
 }
 
-module USBHole()
-{
+module USBHole() {
     translate([USBHoleXOffset+USBHoleHeight/2, 10, USBHoleZOffset])
     {
         hull()
@@ -203,8 +227,18 @@ module ACConnector()
     p5 = [5, 19];
     p6 = [0, 14];
 
-    translate([-5, ACConnectorYOffset, ACConnectorZOffset])
-        rotate([90,0,90])
+    translate([0, 5, 0])
+        rotate([90,0,0])
             linear_extrude(height=10)
                 polygon([p1, p2, p3, p4, p5, p6]);
+}
+
+module ACConnectorHolder() {
+    xOffset = (ACConnectorHoleDistance-27+CaseHolderWidth)/2;
+    translate([-xOffset,0, ACConnectorHoleOffsetZ])
+        rotate([90, 0, 0])
+            CaseHolder(CaseHolderWidth, CaseHolderWidth, HolderHeight, false, false);
+    translate([ACConnectorHoleDistance - xOffset,0, ACConnectorHoleOffsetZ])
+        rotate([90, 0, 0])
+            CaseHolder(CaseHolderWidth, CaseHolderWidth, HolderHeight, false, false);
 }
