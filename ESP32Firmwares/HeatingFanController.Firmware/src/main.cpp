@@ -2,16 +2,21 @@
 #include <OneWire.h>
 #include <cstdio>
 
-// OneWire DS18S20, DS18B20, DS1822 Temperature Example
-//
-// http://www.pjrc.com/teensy/td_libs_OneWire.html
-//
-// The DallasTemperature library can do all this work for you!
-// https://github.com/milesburton/Arduino-Temperature-Control-Library
+const int fanPWM = 4; // GPIO pin connected to the base of the transistor
+const int tachPin = 21; // GPIO pin connected to the tachometer pin of the fan (optional)
+const int ds18b20Pin = 5; // GPIO pin connected to the DS18B20 sensor data pin
+const int freq = 5000; // PWM frequency
+const int resolution = 8; // 8-bit resolution (0-255)
 
-OneWire  ds(5);  // on pin 5 (a 4.7K resistor is necessary)
+OneWire  ds(ds18b20Pin);  // on pin 5 (a 4.7K resistor is necessary)
+volatile int pulseCount = 0;
 
 static uint8_t previousLineCount = 0;
+static uint32_t lastRpmSampleMs = 0; // Tracks time of last RPM calculation
+
+void IRAM_ATTR pulseCounter() {
+  pulseCount = pulseCount + 1;
+}
 
 static void moveCursorUp(uint8_t lines) {
   if (lines == 0) {
@@ -30,7 +35,12 @@ static void clearLine() {
 }
 
 void setup(void) {
+  if (tachPin != -1) {
+    pinMode(tachPin, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(tachPin), pulseCounter, FALLING);
+  }
   Serial.begin(115200);
+  ledcAttach(fanPWM, freq, resolution);
 }
 
 void loop(void) {
@@ -39,6 +49,7 @@ void loop(void) {
   bool headerPrinted = false;
   uint8_t lineCount = 0;
 
+  ledcWrite(fanPWM, 255);
   moveCursorUp(previousLineCount);
   ds.reset_search();
 
@@ -142,6 +153,23 @@ void loop(void) {
     lineCount = 1;
   }
 
+  const uint32_t nowMs = millis();
+  uint32_t elapsedMs = 0;
+  if (lastRpmSampleMs != 0) {
+    elapsedMs = nowMs - lastRpmSampleMs;
+  }
+
+  int rpm = 0;
+  if (elapsedMs > 0) {
+    const int pulses = pulseCount;
+    rpm = static_cast<int>((static_cast<int64_t>(pulses) * 30000) / elapsedMs);
+  }
+
+  pulseCount = 0;
+  lastRpmSampleMs = nowMs;
+  Serial.print("Fan RPM: ");
+  Serial.println(rpm);
+  lineCount++;
   previousLineCount = lineCount;
   delay(1000);
 }
