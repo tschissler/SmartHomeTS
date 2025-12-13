@@ -1,147 +1,300 @@
 #include <Arduino.h>
 #include <OneWire.h>
 #include <cstdio>
+#include <DallasTemperature.h>
+#include <ArduinoJson.h>
+#include <NTPClient.h>
 
-// OneWire DS18S20, DS18B20, DS1822 Temperature Example
-//
-// http://www.pjrc.com/teensy/td_libs_OneWire.html
-//
-// The DallasTemperature library can do all this work for you!
-// https://github.com/milesburton/Arduino-Temperature-Control-Library
+// Shared libaries
+#include "ESP32Helpers.h"
+#include "AzureOTAUpdater.h"
+#include "MQTTClientLib.h"
+#include "WifiLib.h"
+#include "SensorData.h"
+#include "ISensor.h"
+#include "DS18B20Sensor.h"
 
-OneWire  ds(5);  // on pin 5 (a 4.7K resistor is necessary)
+#define DS18B20_PIN 5  // on pin 5 (a 4.7K resistor is necessary)
 
-static uint8_t previousLineCount = 0;
+static std::unique_ptr<ISensor> sensor;
 
-static void moveCursorUp(uint8_t lines) {
-  if (lines == 0) {
+const char *version = FIRMWARE_VERSION;
+String chipID = "";
+
+// WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
+// Set WIFI_PASSWORDS as environment variables on your dev-system following the pattern: WIFI_PASSWORDS="ssid1;password1|ssid2;password2"
+WifiLib wifiLib(WIFI_PASSWORDS);
+WiFiClient wifiClient;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+MQTTClientLib *mqttClientLib = nullptr;
+
+static int otaInProgress = 0;
+static bool otaEnable = OTA_ENABLED != "false";
+static bool sendMQTTMessages = true;
+static bool mqttSuccess = false;
+static int lastMQTTSentMinute = 0;
+
+// Configuration for data collection
+static const int MAX_READINGS = 24;                 // 2.5 seconds * 24 = 60 seconds (1 minute)
+static const unsigned long READING_INTERVAL = 2500; // 5 seconds between readings
+static unsigned long lastReadingTime = 0;
+static std::vector<std::vector<SensorData>> readings;
+
+//static std::vector<std::vector<SensorData>> readings;
+static String baseTopic = "daten";
+static String sensorName = "test";
+static std::unordered_map<std::string, String> sensorNames;
+static String location = "unknown";
+const String mqtt_broker = "smarthomepi2";
+static String mqtt_OTAtopic = "OTAUpdate/HeatingFanController";
+static String mqtt_ConfigTopic = "config/HeatingFanController/{ID}";
+
+String extractVersionFromUrl(String url)
+{
+  int lastUnderscoreIndex = url.lastIndexOf('_');
+  int lastDotIndex = url.lastIndexOf('.');
+
+  if (lastUnderscoreIndex != -1 && lastDotIndex != -1 && lastDotIndex > lastUnderscoreIndex)
+  {
+    return url.substring(lastUnderscoreIndex + 1, lastDotIndex);
+  }
+
+  return "";
+}
+
+bool initializeSensor()
+{
+  sensor.reset(new DS18B20Sensor(DS18B20_PIN));
+  
+  if (!sensor->begin())
+  {
+    Serial.println("Failed to initialize DS18B20 sensor.");
+    sensor.reset();
+    return false;
+  }
+
+  Serial.println("DS18B20 sensor initialized successfully.");
+  return true;
+}
+
+void readSensorData()
+{
+  if (sensorName == "" && sensorNames.empty())
+  {
+    Serial.println("Sensor name not set, skipping sensor reading");
     return;
   }
-  Serial.write(27);  // ESC
-  Serial.print("[");
-  Serial.print(lines);
-  Serial.print("A");
+
+  if (!sensor)
+  {
+    Serial.println("Sensor not initialized, skipping sensor reading");
+    return;
+  }
+
+  if (readings.size() >= MAX_READINGS)
+  {
+    Serial.println("Maximum readings reached, skipping sensor reading");
+    return;
+  }
+
+  auto sensorReadings = sensor->read();
+  if (sensorReadings.empty())
+  {
+    Serial.println("Failed to read from sensor (no readings returned)!");
+    return;
+  }
+
+  std::vector<SensorData> successfulReadings;
+  for (size_t i = 0; i < sensorReadings.size(); ++i)
+  {
+    const auto &reading = sensorReadings[i];
+    if (reading.success)
+    {
+      Serial.printf("Sensor reading[%u] (id: %s): %.2f°C\n",
+                    static_cast<unsigned>(i),
+                    sensor->formatSensorId(reading.sensorId).c_str(),
+                    reading.temperature);
+      successfulReadings.push_back(reading);
+    }
+    else
+    {
+      String formattedId = sensor->formatSensorId(reading.sensorId);
+      Serial.printf("Sensor reading[%u] (id: %s): failed\n",
+                    static_cast<unsigned>(i),
+                    formattedId.c_str());
+    }
+  }
+
+  if (!successfulReadings.empty())
+  {
+    readings.push_back(successfulReadings);
+  }
+
+  lastReadingTime = millis();
 }
 
-static void clearLine() {
-  Serial.write(27);  // ESC
-  Serial.print("[2K");
-  Serial.write('\r');
+void parseConfigJSON(String jsonPayload)
+{
+  JsonDocument doc;
+
+  DeserializationError error = deserializeJson(doc, jsonPayload);
+
+  if (error)
+  {
+    Serial.print("JSON parsing failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  if (!doc["Location"].isNull())
+  {
+    location = doc["Location"].as<String>();
+    Serial.println("Location set to: " + location);
+  }
+
+  if (!doc["Fanspeed"].isNull())
+  {
+    int fanSpeed = doc["Fanspeed"].as<int>();
+    Serial.println("Fan speed set to: " + String(fanSpeed));
+    // Here you would add code to actually set the fan speed
+  }
+
+  if (!doc["SensorNames"].isNull())
+  {
+    JsonVariant sensorNamesVariant = doc["SensorNames"];
+    if (sensorNamesVariant.is<JsonArray>())
+    {
+      sensorNames.clear();
+      JsonArray namesArray = sensorNamesVariant.as<JsonArray>();
+      for (JsonObject nameEntry : namesArray)
+      {
+        for (JsonPair kv : nameEntry)
+        {
+          String idKey = String(kv.key().c_str());
+          String displayName = kv.value().as<String>();
+          idKey.trim();
+          displayName.trim();
+          idKey.toUpperCase();
+          if (idKey.length() == 0 || displayName.length() == 0)
+          {
+            continue;
+          }
+          sensorNames[std::string(idKey.c_str())] = displayName;
+          Serial.println("Sensor name override added: " + idKey + " -> " + displayName);
+        }
+      }
+      Serial.println("Sensor names loaded: " + String(static_cast<unsigned long>(sensorNames.size())));
+    }
+    else
+    {
+      Serial.println("SensorNames in JSON is not an array; ignoring configuration.");
+    }
+  }
 }
 
-void setup(void) {
+void mqttCallback(String &topic, String &payload)
+{
+  Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
+
+  if (topic == mqtt_ConfigTopic)
+  {
+    parseConfigJSON(payload);
+    return;
+  }
+
+  if (topic == mqtt_OTAtopic)
+  {
+    if (otaInProgress || !otaEnable)
+    {
+      if (otaInProgress)
+        Serial.println("OTA in progress, ignoring message");
+      if (!otaEnable)
+        Serial.println("OTA disabled, ignoring message");
+      return;
+    }
+
+    String updateVersion = extractVersionFromUrl(payload);
+    Serial.println("Current firmware version is " + String(version));
+    Serial.println("New firmware version is " + updateVersion);
+    if (strcmp(version, updateVersion.c_str()))
+    {
+      // Trigger OTA Update
+      String firmwareUrlStr = payload;
+      const char *firmwareUrl = firmwareUrlStr.c_str();
+      Serial.println("New firmware available, starting OTA Update from " + String(firmwareUrl));
+      otaInProgress = true;
+      bool result = AzureOTAUpdater::UpdateFirmwareFromUrl(firmwareUrl);
+      if (result)
+      {
+        Serial.println("OTA Update successful initiated, waiting to be finished");
+      }
+    }
+    else
+    {
+      Serial.println("Firmware is up to date");
+    }
+  }
+  else
+  {
+    Serial.println("Unknown topic, ignoring message");
+  }
+}
+
+void connectToMQTT(bool cleanSession)
+{
+  Serial.print("WiFi Status: ");
+  Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("WiFi not connected, attempting to reconnect...");
+    wifiLib.connect();
+  }
+
+  mqttClientLib->connect(cleanSession);
+  mqttClientLib->subscribe({mqtt_ConfigTopic, mqtt_OTAtopic});
+  Serial.println("### MQTT Client is connected and subscribed to topics");
+  Serial.println("Config Topic: " + mqtt_ConfigTopic);
+  Serial.println("OTA Topic: " + mqtt_OTAtopic);
+}
+
+void setup()
+{
+  // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
   Serial.begin(115200);
+  Serial.print("Heatingfan Controller version ");
+  Serial.println(version);
+
+  chipID = ESP32Helpers::getChipId();
+  Serial.print("ESP32 Chip ID: ");
+  Serial.println(chipID);
+  mqtt_ConfigTopic.replace("{ID}", chipID);
+
+  // Connect to WiFi
+  Serial.print("Connecting to WiFi ");
+  wifiLib.scanAndSelectNetwork();
+  wifiLib.connect();
+  String ssid = wifiLib.getSSID();
+
+  timeClient.begin();
+  timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
+  timeClient.update();
+
+  readings.clear();
+  readings.reserve(MAX_READINGS);
+
+  initializeSensor();
+
+  // Set up MQTT
+  String mqttClientID = "ESP32HeatingFanControllerClient_" + chipID;
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  connectToMQTT(true);
+  mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + sensorName + "/version").c_str(), String(version), true, 2);
 }
 
 void loop(void) {
-  byte addr[8];
-  byte data[9];
-  bool headerPrinted = false;
-  uint8_t lineCount = 0;
+  readSensorData();
 
-  moveCursorUp(previousLineCount);
-  ds.reset_search();
-
-  while (ds.search(addr)) {
-    if (!headerPrinted) {
-      clearLine();
-      Serial.println("Chip     | Resolution | Data (hex)                               | Celsius");
-      lineCount++;
-      clearLine();
-      Serial.println("----------------------------------------------------------------------------");
-      lineCount++;
-      headerPrinted = true;
-    }
-
-    if (OneWire::crc8(addr, 7) != addr[7]) {
-      Serial.println("Invalid address CRC, skipping sensor.");
-      continue;
-    }
-
-    byte type_s = 0;
-    const char *chipName = nullptr;
-
-    switch (addr[0]) {
-      case 0x10:
-        chipName = "DS18S20";
-        type_s = 1;
-        break;
-      case 0x28:
-        chipName = "DS18B20";
-        break;
-      case 0x22:
-        chipName = "DS1822";
-        break;
-      default:
-        Serial.println("Unknown sensor family, skipping device.");
-        continue;
-    }
-
-    ds.reset();
-    ds.select(addr);
-    ds.write(0x44, 1);  // start conversion, parasite power on at the end
-
-    delay(750);
-
-    ds.reset();
-    ds.select(addr);
-    ds.write(0xBE);  // read scratchpad
-
-    for (byte i = 0; i < 9; i++) {
-      data[i] = ds.read();
-    }
-
-    int16_t raw = (data[1] << 8) | data[0];
-    uint8_t resolutionBits = 12;
-    if (type_s) {
-      raw <<= 3;  // 9 bit resolution default for DS18S20
-      resolutionBits = 9;
-      if (data[7] == 0x10) {
-        raw = (raw & 0xFFF0) + 12 - data[6];
-      }
-    } else {
-      byte cfg = (data[4] & 0x60);
-      if (cfg == 0x00) {
-        raw &= ~7;
-        resolutionBits = 9;
-      } else if (cfg == 0x20) {
-        raw &= ~3;
-        resolutionBits = 10;
-      } else if (cfg == 0x40) {
-        raw &= ~1;
-        resolutionBits = 11;
-      } else {
-        resolutionBits = 12;
-      }
-    }
-
-    float celsius = static_cast<float>(raw) / 16.0f;
-
-    char dataHex[3 * 9];
-    char *cursor = dataHex;
-    for (byte i = 0; i < 9; i++) {
-      sprintf(cursor, "%02X", data[i]);
-      cursor += 2;
-      if (i < 8) {
-        *cursor++ = ' ';
-      }
-    }
-    *cursor = '\0';
-
-    char resolutionBuf[12];
-    snprintf(resolutionBuf, sizeof(resolutionBuf), "%u-bit", resolutionBits);
-
-    clearLine();
-    Serial.printf("%-8s | %-10s | %-40s | %6.2f\r\n", chipName, resolutionBuf, dataHex, celsius);
-    lineCount++;
-  }
-
-  if (!headerPrinted) {
-    clearLine();
-    Serial.println("No DS18x20 sensors found.");
-    lineCount = 1;
-  }
-
-  previousLineCount = lineCount;
   delay(1000);
 }
