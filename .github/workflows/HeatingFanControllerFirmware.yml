@@ -1,4 +1,4 @@
-name: TemperatureDisplay CD
+name: HeatingFanController CD
 
 on:
   push:
