@@ -57,7 +57,7 @@ static std::vector<std::vector<SensorData>> readings;
 
 //static std::vector<std::vector<SensorData>> readings;
 static String baseTopic = "daten";
-static String sensorName = "test";
+static String sensorName = "Heizkörperlüfter";
 static std::unordered_map<std::string, String> sensorNames;
 static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
@@ -293,6 +293,112 @@ void readFanSpeed()
   Serial.println(rpm);
 }
 
+String getSensorDisplayName(uint64_t sensorId)
+{
+  String idKey = sensor->formatSensorId(sensorId);
+  idKey.toUpperCase();
+  std::string lookupKey(idKey.c_str());
+  auto it = sensorNames.find(lookupKey);
+  if (it != sensorNames.end()) {
+    return it->second;
+  }
+  return idKey;
+}
+
+void publishSensorData()
+{
+  String sensorDisplayName = "";
+  if (readings.empty())
+  {
+    Serial.println("No sensor data to publish");
+    return;
+  }
+
+  if (!sensor)
+  {
+    Serial.println("Sensor not initialized, cannot publish data");
+    return;
+  }
+
+  struct Aggregate
+  {
+    float temperatureSum = 0.0f;
+    float humiditySum = 0.0f;
+    size_t temperatureCount = 0;
+    size_t humidityCount = 0;
+  };
+  std::unordered_map<uint64_t, Aggregate> aggregates;
+
+  for (const auto &batch : readings)
+  {
+    for (const auto &reading : batch)
+    {
+      Aggregate &agg = aggregates[reading.sensorId];
+      agg.temperatureSum += reading.temperature;
+      agg.temperatureCount++;
+    }
+  }
+
+  if (aggregates.empty())
+  {
+    Serial.println("No successful sensor data to publish");
+    readings.clear();
+    return;
+  }
+
+  if (!(sensorNames.size() == aggregates.size()))
+  {
+    Serial.println("Warning: Not all sensors have a configured name.");
+    Serial.println("Sensor names configured: " + String(static_cast<unsigned long>(sensorNames.size())));
+    Serial.println("Sensors detected: " + String(static_cast<unsigned long>(aggregates.size())));
+    Serial.println("SensorName : '" + sensorName + "'");
+  }
+
+  for (const auto &entry : aggregates)
+  {
+    const uint64_t id = entry.first;
+    const Aggregate &agg = entry.second;
+    float avgTemperature = agg.temperatureSum / static_cast<float>(agg.temperatureCount);
+    float avgHumidity = agg.humidityCount > 0 ? (agg.humiditySum / static_cast<float>(agg.humidityCount)) : NAN;
+
+    if (agg.humidityCount > 0)
+    {
+      Serial.printf("Average sensor (id: %s): %.2f°C, %.2f%%\n",
+                    getSensorDisplayName(id).c_str(),
+                    avgTemperature,
+                    avgHumidity);
+    }
+    else
+    {
+      Serial.printf("Average sensor (id: %s): %.2f°C, humidity unavailable\n",
+                    getSensorDisplayName(id).c_str(),
+                    avgTemperature);
+    }
+
+    if (sendMQTTMessages)
+    {
+      char tempString[8];
+      char humString[8];
+
+      dtostrf(avgTemperature, 1, 2, tempString);
+      dtostrf(avgHumidity, 1, 2, humString);
+
+      sensorDisplayName = getSensorDisplayName(id);
+      String temperatureTopic = baseTopic + "/temperatur/" + location + "/" + sensorName + "_" + sensorDisplayName;
+
+      mqttSuccess = mqttClientLib->publish(temperatureTopic.c_str(), String(tempString), true, 2);
+    }
+    else
+    {
+      Serial.println("MQTT messages disabled, not publishing data");
+    }
+  }
+
+  Serial.println("Version: " + String(version));
+
+  readings.clear();
+}
+
 void setup()
 {
   // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
@@ -335,6 +441,11 @@ void setup()
 
 void loop(void) {
   readSensorData();
+  // Transmit data every minute
+  if (readings.size() >= MAX_READINGS)
+  {
+    publishSensorData();
+  }
 
   readFanSpeed();
   
