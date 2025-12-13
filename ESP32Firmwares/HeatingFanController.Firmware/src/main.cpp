@@ -14,6 +14,20 @@
 #include "ISensor.h"
 #include "DS18B20Sensor.h"
 
+
+const int fanPWM = 4; // GPIO pin connected to the base of the transistor
+const int tachPin = 21; // GPIO pin connected to the tachometer pin of the fan (optional)
+const int ds18b20Pin = 5; // GPIO pin connected to the DS18B20 sensor data pin
+const int freq = 5000; // PWM frequency
+const int resolution = 8; // 8-bit resolution (0-255)
+volatile int pulseCount = 0;
+
+static uint32_t lastRpmSampleMs = 0; // Tracks time of last RPM calculation
+
+void IRAM_ATTR pulseCounter() {
+  pulseCount = pulseCount + 1;
+}
+
 #define DS18B20_PIN 5  // on pin 5 (a 4.7K resistor is necessary)
 
 static std::unique_ptr<ISensor> sensor;
@@ -259,6 +273,26 @@ void connectToMQTT(bool cleanSession)
   Serial.println("OTA Topic: " + mqtt_OTAtopic);
 }
 
+void readFanSpeed() 
+{
+  const uint32_t nowMs = millis();
+  uint32_t elapsedMs = 0;
+  if (lastRpmSampleMs != 0) {
+    elapsedMs = nowMs - lastRpmSampleMs;
+  }
+
+  int rpm = 0;
+  if (elapsedMs > 0) {
+    const int pulses = pulseCount;
+    rpm = static_cast<int>((static_cast<int64_t>(pulses) * 30000) / elapsedMs);
+  }
+
+  pulseCount = 0;
+  lastRpmSampleMs = nowMs;
+  Serial.print("Fan RPM: ");
+  Serial.println(rpm);
+}
+
 void setup()
 {
   // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
@@ -291,10 +325,18 @@ void setup()
   mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT(true);
   mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + sensorName + "/version").c_str(), String(version), true, 2);
+
+  if (tachPin != -1) {
+    pinMode(tachPin, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(tachPin), pulseCounter, FALLING);
+  }
+  ledcAttach(fanPWM, freq, resolution);
 }
 
 void loop(void) {
   readSensorData();
+
+  readFanSpeed();
 
   delay(1000);
 }
