@@ -17,7 +17,15 @@ Screw_Distance = 67.2 + Screw_Diameter;
 OuterWidth_x = InnerWidth_x + 2*Wall;
 OuterWidth_y = InnerWidth_y + 2*Bottom;
 
-Plate();
+difference() {
+    Plate();
+
+    // uncomment for endpiece
+    translate([0, -100 - Height/2, -0.1])
+        cube([200, 100, 100]);
+    translate([Wall, -100, Bottom])
+        cube([InnerWidth_x, 100, 10]);
+}
 
 translate([0,Fan_Outer,0]) {
     Plate();
