@@ -18,7 +18,7 @@
 const int fanPWM = 4; // GPIO pin connected to the base of the transistor
 const int tachPin = 21; // GPIO pin connected to the tachometer pin of the fan (optional)
 const int ds18b20Pin = 5; // GPIO pin connected to the DS18B20 sensor data pin
-const int freq = 5000; // PWM frequency
+const int freq = 25000; // 25kHz PWM frequency (standard for 4-wire PC fans)
 const int resolution = 8; // 8-bit resolution (0-255)
 volatile int pulseCount = 0;
 
@@ -171,7 +171,7 @@ void parseConfigJSON(String jsonPayload)
   {
     int fanSpeed = doc["Fanspeed"].as<int>();
     Serial.println("Fan speed set to: " + String(fanSpeed));
-    // Here you would add code to actually set the fan speed
+    ledcWrite(fanPWM, 255-fanSpeed);
   }
 
   if (!doc["SensorNames"].isNull())
@@ -337,6 +337,8 @@ void loop(void) {
   readSensorData();
 
   readFanSpeed();
+  
+  mqttClientLib->loop();
 
   delay(1000);
 }
