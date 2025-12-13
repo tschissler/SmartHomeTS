@@ -44,7 +44,7 @@ NTPClient timeClient(ntpUDP);
 MQTTClientLib *mqttClientLib = nullptr;
 
 static int otaInProgress = 0;
-static bool otaEnable = OTA_ENABLED != "false";
+static bool otaEnable = OTA_ENABLED != "false!";
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
@@ -440,16 +440,21 @@ void setup()
 }
 
 void loop(void) {
-  readSensorData();
-  // Transmit data every minute
-  if (readings.size() >= MAX_READINGS)
+  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
+
+  if (otaInProgress != 1)
   {
-    publishSensorData();
+    timeClient.update();
+    readSensorData();
+    // Transmit data every minute
+    if (readings.size() >= MAX_READINGS)
+    {
+      publishSensorData();
+    }
+
+    readFanSpeed();
+    
+    mqttClientLib->loop();
   }
-
-  readFanSpeed();
-  
-  mqttClientLib->loop();
-
   delay(1000);
 }
