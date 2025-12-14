@@ -11,13 +11,22 @@ using System.Globalization;
 using System.Text.Json;
 using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
 
-const string influxUrl = "http://smarthomepi2:32086";
+// Move the logger initialization before its first usage
+var builder = WebApplication.CreateBuilder(args);
+var loggerFactory = LoggerFactory.Create(logging =>
+{
+    logging.AddConsole();
+    logging.AddDebug();
+});
+var logger = loggerFactory.CreateLogger("Program");
+
+//const string influxUrl = "http://smarthomepi2:32086";
 const string influx3Url = "http://smarthomepi2:32087";
 
-const string chargingBucket = "Smarthome_ChargingData";
-const string electricityBucket = "Smarthome_ElectricityData";
-const string environmentDataBucket = "Smarthome_EnvironmentData";
-const string heatingDataBucket = "Smarthome_HeatingData";
+//const string chargingBucket = "Smarthome_ChargingData";
+//const string electricityBucket = "Smarthome_ElectricityData";
+//const string environmentDataBucket = "Smarthome_EnvironmentData";
+//const string heatingDataBucket = "Smarthome_HeatingData";
 
 GeoPosition positionChargingStationStellplatz = new GeoPosition(Latitude: 48.412758, Longitude: 9.875185);
 GeoPosition positionChargingStationGarage = new GeoPosition(Latitude: 48.412750277777775, Longitude: 9.875374444444445);
@@ -25,45 +34,44 @@ GeoPosition? bmwPosition = null;
 GeoPosition? miniPosition = null;
 GeoPosition? vwPosition = null;
 string[] cars = new string[] { "BMW", "Mini", "VW" };
-Dictionary<string, decimal> previousValues = new ();
+Dictionary<string, decimal> previousValues = new();
 
-string? influxToken = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
-if (string.IsNullOrEmpty(influxToken))
-{
-    ConsoleHelpers.PrintErrorMessage("Environmentvariable INFLUXDB_TOKEN not set. Please set it to your InfluxDB token.");
-    return;
-}
+//string? influxToken = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
+//if (string.IsNullOrEmpty(influxToken))
+//{
+//    logger.LogError("Environmentvariable INFLUXDB_TOKEN not set. Please set it to your InfluxDB token.");
+//    return;
+//}
 
 string? influx3Token = Environment.GetEnvironmentVariable("SMARTHOME__INFLUXDB3_TOKEN");
 if (string.IsNullOrEmpty(influx3Token))
 {
-    ConsoleHelpers.PrintErrorMessage("Environmentvariable SMARTHOME__INFLUXDB3_TOKEN not set. Please set it to your InfluxDB token.");
+    logger.LogError("Environmentvariable SMARTHOME__INFLUXDB3_TOKEN not set. Please set it to your InfluxDB token.");
     return;
 }
 
 string? dataHubEnvironment = Environment.GetEnvironmentVariable("SMARTHOME__DATAHUB_ENVIRONMENT");
 if (string.IsNullOrEmpty(dataHubEnvironment))
 {
-    ConsoleHelpers.PrintErrorMessage("Environmentvariable SMARTHOME__DATAHUB_ENVIRONMENT not set. Please set it to the environment you are running (Prod, Dev).");
+    logger.LogError("Environmentvariable SMARTHOME__DATAHUB_ENVIRONMENT not set. Please set it to the environment you are running (Prod, Dev).");
     return;
 }
 
 string? influxOrg = Environment.GetEnvironmentVariable("INFLUXDB_ORG");
 if (string.IsNullOrEmpty(influxOrg))
 {
-    ConsoleHelpers.PrintErrorMessage("Environmentvariable INFLUXDB_ORG not set. Please set it to your Influx organization.");
+    logger.LogError("Environmentvariable INFLUXDB_ORG not set. Please set it to your Influx organization.");
     return;
 }
 
 string influx3Database = "Smarthome_" + dataHubEnvironment;
-ConsoleHelpers.PrintInformation($"Using org: {influxOrg} at {influxUrl}");
-ConsoleHelpers.PrintInformation($"Using InfluxDB 3 at {influx3Url} with database {influx3Database}");
+//logger.LogInformation($"Using org: {influxOrg} at {influxUrl}");
+logger.LogInformation($"Using InfluxDB 3 at {influx3Url} with database {influx3Database}");
 
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment)); 
-builder.Services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, influxOrg, influxToken)); 
-builder.Services.AddSingleton<Converters>(); 
-builder.Services.AddSignalR(); 
+builder.Services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment));
+//builder.Services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, influxOrg, influxToken));
+builder.Services.AddSingleton<Converters>();
+builder.Services.AddSignalR();
 builder.Services.AddLogging();
 
 var app = builder.Build();
@@ -82,56 +90,168 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("data/thermostat/M3/shelly/#");
     await mqttClient.SubscribeToTopic("cangateway/#");
 
-    var influxConnector = scope.ServiceProvider.GetRequiredService<InfluxDbConnector>();
-
-    var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token);
+    //var influxConnector = scope.ServiceProvider.GetRequiredService<InfluxDbConnector>();
+    var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token, logger);
     var converters = scope.ServiceProvider.GetRequiredService<Converters>();
 
     // Setup MQTT client options
-    ConsoleHelpers.PrintInformation(" ### Subscribing to MQTT topics");
+    logger.LogInformation(" ### Subscribing to MQTT topics");
     mqttClient.OnMessageReceived += async (sender, e) =>
     {
         Dictionary<string, string> tags;
-        //ConsoleHelpers.PrintInformation($"Message received: {e.Topic}");
+        //logger.LogInformation($"Message received: {e.Topic}");
 
         string topic = e.Topic;
         string payload = e.Payload;
+        var topicParts = topic.Split('/');
 
         try
         {
-            if (topic == "data/charging/KebaGarage_ChargingSessionEnded")
+            
+            //if (topic == "data/charging/KebaGarage_ChargingSessionEnded")
+            //{
+            //    var car = cars[positionChargingStationGarage.GetClosestNearby([bmwPosition, miniPosition, vwPosition]) ?? 0];
+            //    var json = JObject.Parse(payload);
+            //    json["car"] = car;
+            //    WriteChargingSessionEndedData(chargingBucket, influxConnector, "Garage", json.ToString());
+            //    return;
+            //}
+            //if (topic == "data/charging/KebaOutside_ChargingSessionEnded")
+            //{
+            //    var car = cars[positionChargingStationStellplatz.GetClosestNearby([bmwPosition, miniPosition, vwPosition]) ?? 2];
+            //    var json = JObject.Parse(payload);
+            //    json["car"] = car;
+            //    WriteChargingSessionEndedData(chargingBucket, influxConnector, "Stellplatz", json.ToString());
+            //    return;
+            //}
+            //if (topic.StartsWith("data/charging/BMW"))
+            //{
+            //    bmwPosition = ExtractPositionFromPayload(payload) ?? bmwPosition;
+            //}
+            //if (topic.StartsWith("data/charging/Mini"))
+            //{
+            //    miniPosition = ExtractPositionFromPayload(payload) ?? miniPosition;
+            //}
+            //if (topic.StartsWith("data/charging/VW"))
+            //{
+            //    vwPosition = ExtractPositionFromPayload(payload) ?? vwPosition;
+            //}
+            //if (topic.StartsWith("data/charging"))
+            //{
+            //    WriteJsonPropertiesAsFields(chargingBucket, influxConnector, topic, topic.Replace("data/charging/", ""), payload, new Dictionary<string, string>());
+            //    return;
+            //}
+
+            if (topic == "data/charging/KebaOutside" ||
+                topic == "data/charging/KebaGarage")
             {
-                var car = cars[positionChargingStationGarage.GetClosestNearby([bmwPosition, miniPosition, vwPosition]) ?? 0];
-                var json = JObject.Parse(payload);
-                json["car"] = car;
-                WriteChargingSessionEndedData(chargingBucket, influxConnector, "Garage", json.ToString());
+                ChargingGetData? chargingData;
+                try
+                {
+                    chargingData = JsonSerializer.Deserialize<ChargingGetData>(payload);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError($"####Error deserializing charging chargingData for topic {topic}: {ex.Message}");
+                    logger.LogError($"Payload: {payload}");
+                    chargingData = null;
+                }
+                if (chargingData != null)
+                {
+                    tags = new Dictionary<string, string>();
+                    var location = "M3";
+                    var device = topicParts[2];
+                    var measurement = "AutoIstEingesteckt";
+                    influx3Connector.WriteStatusValue(
+                        new InfluxStatusRecord
+                        {
+                            MeasurementId = $"Status_{location}_{device}_{measurement}",
+                            Category = MeasurementCategory.Laden,
+                            SubCategory = "Verbindungsstatus",
+                            SensorType = "Wallbox",
+                            Location = location,
+                            Device = device,
+                            Measurement = measurement,
+                            Value_Status = chargingData.CarIsPlugedIn ? 1m : 0m,
+                        },
+                        DateTimeOffset.UtcNow);
+                    measurement = "AktuelleLadeleistung";
+                    influx3Connector.WritePowerValue(
+                        new InfluxPowerRecord
+                        {
+                            MeasurementId = $"Leistung_{location}_{device}_{measurement}",
+                            Category = MeasurementCategory.Laden,
+                            SubCategory = "Ladeleistung",
+                            SensorType = "Wallbox",
+                            Location = location,
+                            Device = device,
+                            Measurement = measurement,
+                            Value_W = chargingData.CurrentChargingPower,
+                        },
+                        DateTimeOffset.UtcNow);
+
+                    decimal currentValue = chargingData.EnergyCurrentChargingSession / 1000m;
+                    measurement = "EnergieAktuelleLadesitzung";
+                    var measurementId = $"Energie_{location}_{device}_{measurement}";
+                    var delta = 0m;
+                    var previousValue = previousValues.FirstOrDefault(kv => kv.Key == measurementId);
+                    if (previousValue.Key != null)
+                    {
+                        delta = currentValue - previousValue.Value;
+                        previousValues[measurementId] = currentValue;
+                    }
+                    else
+                    {
+                        previousValues.Add(measurementId, currentValue);
+                    }
+
+                    influx3Connector.WriteEnergyValue(
+                        new InfluxEnergyRecord
+                        {
+                            MeasurementId = measurementId,
+                            Category = MeasurementCategory.Laden,
+                            SubCategory = MeasurementSubCategory.Consumption,
+                            SensorType = "Wallbox",
+                            Location = location,
+                            Device = device,
+                            Measurement = measurement,
+                            Value_Cumulated_KWh = currentValue,
+                            Value_Delta_KWh = delta,
+                        },
+                        DateTimeOffset.UtcNow);
+
+                    currentValue = chargingData.EnergyTotal / 1000m;
+                    measurement = "EnergieGesamt";
+                    measurementId = $"Energie_{location}_{device}_{measurement}";
+                    delta = 0m;
+                    previousValue = previousValues.FirstOrDefault(kv => kv.Key == measurementId);
+                    if (previousValue.Key != null)
+                    {
+                        delta = currentValue - previousValue.Value;
+                        previousValues[measurementId] = currentValue;
+                    }
+                    else
+                    {
+                        previousValues.Add(measurementId, currentValue);
+                    }
+                    influx3Connector.WriteEnergyValue(
+                        new InfluxEnergyRecord
+                        {
+                            MeasurementId = measurementId,
+                            Category = MeasurementCategory.Laden,
+                            SubCategory = MeasurementSubCategory.Consumption,
+                            SensorType = "Wallbox",
+                            Location = location,
+                            Device = device,
+                            Measurement = measurement,
+                            Value_Cumulated_KWh = currentValue,
+                            Value_Delta_KWh = delta,
+                        },
+                        DateTimeOffset.UtcNow);
+                }
                 return;
             }
-            if (topic == "data/charging/KebaOutside_ChargingSessionEnded")
-            {
-                var car = cars[positionChargingStationStellplatz.GetClosestNearby([bmwPosition, miniPosition, vwPosition]) ?? 2];
-                var json = JObject.Parse(payload);
-                json["car"] = car;
-                WriteChargingSessionEndedData(chargingBucket, influxConnector, "Stellplatz", json.ToString());
-                return;
-            }
-            if (topic.StartsWith("data/charging/BMW"))
-            {
-                bmwPosition = ExtractPositionFromPayload(payload) ?? bmwPosition;
-            }
-            if (topic.StartsWith("data/charging/Mini"))
-            {
-                miniPosition = ExtractPositionFromPayload(payload) ?? miniPosition;
-            }
-            if (topic.StartsWith("data/charging/VW"))
-            {
-                vwPosition = ExtractPositionFromPayload(payload) ?? vwPosition;
-            }
-            if (topic.StartsWith("data/charging"))
-            {
-                WriteJsonPropertiesAsFields(chargingBucket, influxConnector, topic, topic.Replace("data/charging/", ""), payload, new Dictionary<string, string>());
-                return;
-            }
+
             if (topic == "data/electricity/envoym1")
             {
                 //tags = new Dictionary<string, string>();
@@ -155,7 +275,6 @@ using (var scope = app.Services.CreateScope())
             if (topic.StartsWith("data/electricity/M1")
                 || topic.StartsWith("data/electricity/M3"))
             {
-                var topicParts = topic.Split('/');
                 var location = topicParts[2];
                 var device = topicParts[4];
                 //tags = new Dictionary<string, string>();
@@ -176,7 +295,7 @@ using (var scope = app.Services.CreateScope())
                     }
                     catch (Exception ex)
                     {
-                        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Smartmeter data: {ex.Message}");
+                        logger.LogError($"####Error deserializing Smartmeter data: {ex.Message}");
                     }
                 }
                 else if (topicParts[3] == "shelly")
@@ -191,7 +310,7 @@ using (var scope = app.Services.CreateScope())
                     }
                     catch (Exception ex)
                     {
-                        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Shelly data: {ex.Message}");
+                        logger.LogError($"####Error deserializing Shelly data: {ex.Message}");
                     }
                 }
                 return;
@@ -199,7 +318,6 @@ using (var scope = app.Services.CreateScope())
 
             if (topic.StartsWith("daten/temperatur/"))
             {
-                var topicParts = topic.Split('/');
                 var location = topicParts[2];
                 var measurement = topicParts[3];
                 var measurementId = "Temperatur_" + location + "_" + measurement;
@@ -221,7 +339,6 @@ using (var scope = app.Services.CreateScope())
 
             if (topic.StartsWith("daten/luftfeuchtigkeit/") && payload != "nan")
             {
-                var topicParts = topic.Split('/');
                 var location = topicParts[2];
                 var measurement = topicParts[3];
                 var measurementId = "Luftfeuchtigkeit_" + location + "_" + measurement;
@@ -250,15 +367,14 @@ using (var scope = app.Services.CreateScope())
                 }
                 catch (Exception ex)
                 {
-                    ConsoleHelpers.PrintErrorMessage($"####Error deserializing ShellyThermostat data for topic {topic}: {ex.Message}");
-                    ConsoleHelpers.PrintErrorMessage($"Payload: {payload}");
+                    logger.LogError($"####Error deserializing ShellyThermostat data for topic {topic}: {ex.Message}");
+                    logger.LogError($"Payload: {payload}");
                     data = null;
                 }
 
                 if (data != null)
                 {
                     tags = new Dictionary<string, string>();
-                    var topicParts = topic.Split('/');
                     var location = topicParts[2];
                     var device = topicParts[4];
                     influx3Connector.WriteTemperatureValue(
@@ -320,16 +436,15 @@ using (var scope = app.Services.CreateScope())
             if (topic.StartsWith("cangateway"))
             {
                 tags = new Dictionary<string, string>();
-                var topicParts = topic.Split('/');
                 WriteCangatewayDataToDB(influx3Connector, payload, topicParts);
                 return;
             }
         }
         catch (Exception ex)
         {
-            ConsoleHelpers.PrintErrorMessage($"####Error processing message: {ex.Message}");
-            ConsoleHelpers.PrintErrorMessage(topic);
-            ConsoleHelpers.PrintErrorMessage(payload);
+            logger.LogError($"####Error processing message: {ex.Message}");
+            logger.LogError(topic);
+            logger.LogError(payload);
         }
     };
 }
@@ -413,7 +528,7 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
             var currentValue = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture);
             if (meassurement.Contains("MWh"))
             {
-                currentValue = currentValue * 1000m; 
+                currentValue = currentValue * 1000m;
             }
             var delta = 0m;
             var previousValue = previousValues.FirstOrDefault(kv => kv.Key == measurementId);
@@ -472,123 +587,123 @@ void WriteEnphaseDataToDB(InfluxDB3Connector influx3Connector, string payload, s
     }
     catch (Exception ex)
     {
-        ConsoleHelpers.PrintErrorMessage($"####Error deserializing Enphase data: {ex.Message}");
+        logger.LogError($"####Error deserializing Enphase data: {ex.Message}");
     }
 }
 
-static void WriteChargingSessionEndedData(string bucket, InfluxDbConnector influxConnector, string wallbox, string payload)
-{
-    var fields = new Dictionary<string, object>();
-    var data = JsonSerializer.Deserialize<ChargingSession>(payload);
-    if (data != null)
-    {
-        if (!CheckIfSessionWithIdExists(influxConnector, bucket, data.SessionId, wallbox))
-        {
-            fields = new Dictionary<string, object>
-                    {
-                        { "SessionId", data.SessionId },
-                        { "StartTime", data.StartTime },
-                        { "EndTime", data.EndTime },
-                        { "TatalEnergyAtStart", data.TatalEnergyAtStart },
-                        { "EnergyOfChargingSession", data.EnergyOfChargingSession }
-                    };
-            influxConnector.WritePointDataToInfluxDb(
-                bucket,
-                "ChargingSessionEnded",
-                fields,
-                new Dictionary<string, string>() { { "Wallbox", wallbox } });
-        }
-    }
-    else
-    {
-        ConsoleHelpers.PrintErrorMessage("Failed to deserialize ChargingSession data.");
-    }
-}
+//static void WriteChargingSessionEndedData(string bucket, InfluxDbConnector influxConnector, string wallbox, string payload)
+//{
+//    var fields = new Dictionary<string, object>();
+//    var data = JsonSerializer.Deserialize<ChargingSession>(payload);
+//    if (data != null)
+//    {
+//        if (!CheckIfSessionWithIdExists(influxConnector, bucket, data.SessionId, wallbox))
+//        {
+//            fields = new Dictionary<string, object>
+//                    {
+//                        { "SessionId", data.SessionId },
+//                        { "StartTime", data.StartTime },
+//                        { "EndTime", data.EndTime },
+//                        { "TatalEnergyAtStart", data.TatalEnergyAtStart },
+//                        { "EnergyOfChargingSession", data.EnergyOfChargingSession }
+//                    };
+//            influxConnector.WritePointDataToInfluxDb(
+//                bucket,
+//                "ChargingSessionEnded",
+//                fields,
+//                new Dictionary<string, string>() { { "Wallbox", wallbox } });
+//        }
+//    }
+//    else
+//    {
+//        logger.LogError("Failed to deserialize ChargingSession data.");
+//    }
+//}
 
-static bool CheckIfSessionWithIdExists(InfluxDbConnector influxConnector, string bucket, int sessionId, string wallbox)
-{
-    string query = $"""
-            from(bucket: "{bucket}")
-            |> range(start: -1mo)
-            |> filter(fn: (r) => r["_measurement"] == "ChargingSessionEnded")
-            |> filter(fn: (r) => r["Wallbox"] == "{wallbox}")
-            |> filter(fn: (r) => r["_field"] == "SessionId")
-            |> filter(fn: (r) => r["_value"] == {sessionId})
-        """;
+//static bool CheckIfSessionWithIdExists(InfluxDbConnector influxConnector, string bucket, int sessionId, string wallbox)
+//{
+//    string query = $"""
+//            from(bucket: "{bucket}")
+//            |> range(start: -1mo)
+//            |> filter(fn: (r) => r["_measurement"] == "ChargingSessionEnded")
+//            |> filter(fn: (r) => r["Wallbox"] == "{wallbox}")
+//            |> filter(fn: (r) => r["_field"] == "SessionId")
+//            |> filter(fn: (r) => r["_value"] == {sessionId})
+//        """;
 
-    try
-    {
-        var result = influxConnector.QueryDataAsync(query).Result;
-        if (result != null && result.Count > 0 && result[0].Records.Count > 0)
-        {
-            ConsoleHelpers.PrintInformation($"Session with ID {sessionId} already exists in InfluxDB, ignoring new data.");
-            return true;
-        }
-    }
-    catch(Exception _)
-    { }
-    return false;
-}
+//    try
+//    {
+//        var result = influxConnector.QueryDataAsync(query).Result;
+//        if (result != null && result.Count > 0 && result[0].Records.Count > 0)
+//        {
+//            logger.LogInformation($"Session with ID {sessionId} already exists in InfluxDB, ignoring new data.");
+//            return true;
+//        }
+//    }
+//    catch(Exception _)
+//    { }
+//    return false;
+//}
 
-static void WriteJsonPropertiesAsFields(string chargingBucket, InfluxDbConnector influxConnector, string topic, string measurementName, string payload, Dictionary<string, string> tags, bool enforceFloatValues = false)
-{
-    var fields = new Dictionary<string, object>();
-    var jsonData = JObject.Parse(payload);
+//static void WriteJsonPropertiesAsFields(string chargingBucket, InfluxDbConnector influxConnector, string topic, string measurementName, string payload, Dictionary<string, string> tags, bool enforceFloatValues = false)
+//{
+//    var fields = new Dictionary<string, object>();
+//    var jsonData = JObject.Parse(payload);
 
-    foreach (var property in jsonData.Properties())
-    {
-        var value = property.Value;
-        if (value.Type == JTokenType.Object)
-        {
-            foreach (var subProp in ((JObject)value).Properties())
-            {
-                var fieldName = $"{property.Name}_{subProp.Name}";
-                var subValue = subProp.Value;
-                if (enforceFloatValues && subValue.Type == JTokenType.Integer)
-                {
-                    fields.Add(fieldName, Convert.ToDouble(subValue));
-                    continue;
-                }
-                fields.Add(fieldName, subValue);
-            }
-        }
-        else
-        {
-            if (enforceFloatValues && value.Type == JTokenType.Integer)
-            {
-                fields.Add(property.Name, Convert.ToDouble(value));
-                continue;
-            }
-            fields.Add(property.Name, value);
-        }
-    }
+//    foreach (var property in jsonData.Properties())
+//    {
+//        var value = property.Value;
+//        if (value.Type == JTokenType.Object)
+//        {
+//            foreach (var subProp in ((JObject)value).Properties())
+//            {
+//                var fieldName = $"{property.Name}_{subProp.Name}";
+//                var subValue = subProp.Value;
+//                if (enforceFloatValues && subValue.Type == JTokenType.Integer)
+//                {
+//                    fields.Add(fieldName, Convert.ToDouble(subValue));
+//                    continue;
+//                }
+//                fields.Add(fieldName, subValue);
+//            }
+//        }
+//        else
+//        {
+//            if (enforceFloatValues && value.Type == JTokenType.Integer)
+//            {
+//                fields.Add(property.Name, Convert.ToDouble(value));
+//                continue;
+//            }
+//            fields.Add(property.Name, value);
+//        }
+//    }
 
-    tags.Add("topic", topic);
+//    tags.Add("topic", topic);
 
-    influxConnector.WritePointDataToInfluxDb(
-        chargingBucket,
-        measurementName,
-        fields,
-        tags);
-}
+//    influxConnector.WritePointDataToInfluxDb(
+//        chargingBucket,
+//        measurementName,
+//        fields,
+//        tags);
+//}
 
-static void WriteFloatAsFields(string chargingBucket, InfluxDbConnector influxConnector, string topic, string measurementName, string payload, Dictionary<string, string> tags)
-{
-    var fields = new Dictionary<string, object>
-    {
-        { "value", Convert.ToDouble(payload, CultureInfo.InvariantCulture) }
-    };
- 
-    tags.Add("topic", topic);
+//static void WriteFloatAsFields(string chargingBucket, InfluxDbConnector influxConnector, string topic, string measurementName, string payload, Dictionary<string, string> tags)
+//{
+//    var fields = new Dictionary<string, object>
+//    {
+//        { "value", Convert.ToDouble(payload, CultureInfo.InvariantCulture) }
+//    };
 
-    influxConnector.WritePointDataToInfluxDb(
-        chargingBucket,
-        measurementName,
-        fields,
-        tags);
-}
+//    tags.Add("topic", topic);
 
-static GeoPosition? ExtractPositionFromPayload(string payload)
+//    influxConnector.WritePointDataToInfluxDb(
+//        chargingBucket,
+//        measurementName,
+//        fields,
+//        tags);
+//}
+
+GeoPosition? ExtractPositionFromPayload(string payload)
 {
     var json = JObject.Parse(payload);
     var position = json["position"];
@@ -602,12 +717,12 @@ static GeoPosition? ExtractPositionFromPayload(string payload)
         }
         else
         {
-            ConsoleHelpers.PrintErrorMessage("Latitude or longitude missing in position payload.");
+            logger.LogError("Latitude or longitude missing in position payload.");
         }
     }
     else
     {
-        ConsoleHelpers.PrintErrorMessage("Position object missing in payload.");
+        logger.LogError("Position object missing in payload.");
     }
 
     return null;

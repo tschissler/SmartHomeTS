@@ -1,5 +1,6 @@
 ﻿using InfluxDB3.Client;
 using InfluxDB3.Client.Write;
+using Microsoft.Extensions.Logging;
 using SharedContracts;
 using System.Diagnostics.Metrics;
 
@@ -11,10 +12,12 @@ namespace Influx3Connector
         private readonly List<PointData> pointsBatch = new List<PointData>();
         private const int batchIntervalSeconds = 5;
         private DateTimeOffset nextBatchTime = DateTimeOffset.UtcNow.AddSeconds(batchIntervalSeconds); // Define batch interval
+        private readonly ILogger logger;
 
 
-        public InfluxDB3Connector(string influxUrl, string database, string token)
+        public InfluxDB3Connector(string influxUrl, string database, string token, ILogger logger)
         {
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             client = new InfluxDBClient(influxUrl, token: token, database: database);
             Task.Run(async () => await ProcessBatchAsync());
         }
@@ -239,6 +242,7 @@ namespace Influx3Connector
                 {
                     await FlushBatchAsync();
                     nextBatchTime = DateTimeOffset.UtcNow.AddSeconds(batchIntervalSeconds); // Reset timer
+                    logger.LogInformation("InfluxDB3Connector: Flushed batch to InfluxDB.");
                 }
             }
         }
