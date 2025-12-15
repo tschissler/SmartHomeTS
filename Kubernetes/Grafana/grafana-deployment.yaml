@@ -58,13 +58,7 @@ spec:
           volumeMounts:
             - name: grafana-storage
               mountPath: /var/lib/grafana
-            - name: influxdb-token
-              mountPath: /etc/grafana/provisioning/datasources/secrets
-              readOnly: true
       volumes:
         - name: grafana-storage
           persistentVolumeClaim:
             claimName: grafana-pvc
-        - name: influxdb-token
-          secret:
-            secretName: influxdb-token

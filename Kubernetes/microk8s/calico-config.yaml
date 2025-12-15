@@ -1,0 +1,50 @@
+apiVersion: v1
+data:
+  calico_backend: none
+  cni_network_config: |-
+    {
+      "name": "k8s-pod-network",
+      "cniVersion": "0.3.1",
+      "plugins": [
+        {
+          "type": "calico",
+          "log_level": "info",
+          "log_file_path": "/var/snap/microk8s/common/var/log/calico/cni/cni.log",
+          "datastore_type": "kubernetes",
+          "nodename": "__KUBERNETES_NODE_NAME__",
+          "nodename_file": "/var/snap/microk8s/current/var/lib/calico/nodename",
+          "mtu": __CNI_MTU__,
+          "ipam": {
+              "assign_ipv4": "true",
+              "type": "calico-ipam"
+          },
+          "policy": {
+              "type": "k8s"
+          },
+          "kubernetes": {
+              "kubeconfig": "__KUBECONFIG_FILEPATH__"
+          }
+        },
+        {
+          "type": "portmap",
+          "snat": true,
+          "capabilities": {"portMappings": true}
+        },
+        {
+          "type": "bandwidth",
+          "capabilities": {"bandwidth": true}
+        }
+      ]
+    }
+  typha_service_name: none
+  veth_mtu: "1500"
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"calico_backend":"vxlan","cni_network_config":"{\n  \"name\": \"k8s-pod-network\",\n  \"cniVersion\": \"0.3.1\",\n  \"plugins\": [\n    {\n      \"type\": \"calico\",\n      \"log_level\": \"info\",\n      \"log_file_path\": \"/var/snap/microk8s/common/var/log/calico/cni/cni.log\",\n      \"datastore_type\": \"kubernetes\",\n      \"nodename\": \"__KUBERNETES_NODE_NAME__\",\n      \"nodename_file\": \"/var/snap/microk8s/current/var/lib/calico/nodename\",\n      \"mtu\": __CNI_MTU__,\n      \"ipam\": {\n          \"assign_ipv4\": \"true\",\n          \"type\": \"calico-ipam\"\n      },\n      \"policy\": {\n          \"type\": \"k8s\"\n      },\n      \"kubernetes\": {\n          \"kubeconfig\": \"__KUBECONFIG_FILEPATH__\"\n      }\n    },\n    {\n      \"type\": \"portmap\",\n      \"snat\": true,\n      \"capabilities\": {\"portMappings\": true}\n    },\n    {\n      \"type\": \"bandwidth\",\n      \"capabilities\": {\"bandwidth\": true}\n    }\n  ]\n}","typha_service_name":"none","veth_mtu":"0"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"calico-config","namespace":"kube-system"}}
+  creationTimestamp: "2024-03-18T19:45:24Z"
+  name: calico-config
+  namespace: kube-system
+  resourceVersion: "132"
+  uid: 2780da8b-89c7-4ea4-944a-399a61d54f4f

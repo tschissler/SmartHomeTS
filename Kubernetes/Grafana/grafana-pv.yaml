@@ -8,6 +8,9 @@ spec:
   accessModes:
     - ReadWriteOnce
   storageClassName: influxdb-storage
-  hostPath:
+  persistentVolumeReclaimPolicy: Retain
+  mountOptions:
+    - nfsvers=4.2
+  nfs:
     path: /mnt/ssd/grafana
-    type: DirectoryOrCreate
+    server: smarthomeclusternode2

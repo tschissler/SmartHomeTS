@@ -21,6 +21,8 @@ spec:
         runAsUser: 1500
         runAsGroup: 1500
         fsGroupChangePolicy: OnRootMismatch
+      nodeSelector:
+        kubernetes.io/hostname: smarthomeclusternode2
       containers:
         - name: influxdb3
           image: influxdb:3-core
@@ -32,6 +34,8 @@ spec:
             - "file"
             - "--data-dir"
             - "/var/lib/influxdb3"
+            - "--plugin-dir"
+            - /var/lib/influxdb3/plugins
             - "--node-id"
             - "1"
             - "--log-filter"
@@ -42,6 +46,8 @@ spec:
             - name: flight
               containerPort: 8182
           env:
+            - name: PLUGIN_DIR
+              value: /var/lib/influxdb3/plugins
             # InfluxDB 3 Core uses the same one-shot init pattern (similar to v2) with DOCKER_INFLUXDB_INIT_* variables.
             - name: DOCKER_INFLUXDB_INIT_MODE
               value: setup
@@ -50,7 +56,7 @@ spec:
                 secretKeyRef:
                   name: influxdb-secret
                   key: INFLUXDB_ADMIN_USER
-            - name: DOCKER_INFLUXDB_INIT_PASSWORD
+            - name: DOCKER_INFLUXDB_INIT_PASSWORDcd 
               valueFrom:
                 secretKeyRef:
                   name: influxdb-secret
