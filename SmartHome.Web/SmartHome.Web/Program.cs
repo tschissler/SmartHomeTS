@@ -1,4 +1,3 @@
-using InfluxConnector;
 using Microsoft.AspNetCore.DataProtection;
 using SmartHome.Web.Components;
 using SmartHome.Web.Services;
@@ -26,18 +25,7 @@ builder.Services.AddSyncfusionBlazor();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<MqttService>();
-builder.Services.AddScoped<IChargingSessionService, ChargingSessionService>();
-builder.Services.AddScoped<IInfluxDBConnector>(provider =>
-{
-    var influxUrl = Environment.GetEnvironmentVariable("INFLUXDB_URL");
-    var org = Environment.GetEnvironmentVariable("INFLUXDB_ORG");
-    var token = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
-    if (string.IsNullOrEmpty(influxUrl) || string.IsNullOrEmpty(org) || string.IsNullOrEmpty(token))
-    {
-        throw new InvalidOperationException("InfluxDB connection details are not set in environment variables.");
-    }
-    return new InfluxDbConnector(influxUrl, org, token);
-});
+//builder.Services.AddScoped<IChargingSessionService, ChargingSessionService>();
 
 builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
 

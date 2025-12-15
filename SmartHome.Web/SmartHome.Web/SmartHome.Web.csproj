@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <PackageReference Include="ColorHelper" Version="1.8.1" />
-    <PackageReference Include="InfluxDB.Client" Version="4.19.0-dev.15190" />
 	<PackageReference Include="MQTTnet" Version="5.0.1.1416" />
 	<PackageReference Include="Syncfusion.Blazor.Calendars" Version="29.1.38" />
     <PackageReference Include="Syncfusion.Blazor.Charts" Version="29.1.38" />
@@ -29,7 +28,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\DataContracts\DataContracts.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
-    <ProjectReference Include="..\..\SmartHome.DataHub\InfluxConnector\InfluxConnector.csproj" />
     <ProjectReference Include="..\..\SmartHomeHelpers\SmartHomeHelpers.csproj" />
     <ProjectReference Include="..\SmartHomeWebManagers\SmartHomeWebManagers.csproj" />
     <ProjectReference Include="..\UIComponentsLib\UIComponentsLib.csproj" />

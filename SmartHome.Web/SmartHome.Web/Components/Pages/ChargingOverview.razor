@@ -20,7 +20,7 @@
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
 @inject MqttService MqttService
-@inject IChargingSessionService ChargingSessionService
+@* @inject IChargingSessionService ChargingSessionService *@
 
 
 <h3>Lade-Einstellungen</h3>
@@ -210,7 +210,7 @@
 
         MqttService.OnMessageReceived += UpdateData;
         await LoadChargingSessions();
-        await FillMonthSelectionList();
+        //await FillMonthSelectionList();
 
         ApplyCarFilter();
     }
@@ -231,21 +231,21 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task FillMonthSelectionList()
-    {
-        Months = new List<string>();
-        var timerange = await ChargingSessionService.GetChargingSessionsTimeRange();
+    // private async Task FillMonthSelectionList()
+    // {
+    //     Months = new List<string>();
+    //     var timerange = await ChargingSessionService.GetChargingSessionsTimeRange();
 
-        // Create a Month/Year entry for each month between start and end in timerange
-        if (timerange.EarliestStartTime is null || timerange.LatestStartTime is null)
-            return;
-        var startDate = new DateTime(timerange.EarliestStartTime.Value.Year, timerange.EarliestStartTime.Value.Month, 1);
-        var endDate = new DateTime(timerange.LatestStartTime.Value.Year, timerange.LatestStartTime.Value.Month, 1);
-        for (var date = startDate; date <= endDate; date = date.AddMonths(1))
-        {
-            Months.Add(date.ToString("MMMM yyyy"));
-        }
-    }
+    //     // Create a Month/Year entry for each month between start and end in timerange
+    //     if (timerange.EarliestStartTime is null || timerange.LatestStartTime is null)
+    //         return;
+    //     var startDate = new DateTime(timerange.EarliestStartTime.Value.Year, timerange.EarliestStartTime.Value.Month, 1);
+    //     var endDate = new DateTime(timerange.LatestStartTime.Value.Year, timerange.LatestStartTime.Value.Month, 1);
+    //     for (var date = startDate; date <= endDate; date = date.AddMonths(1))
+    //     {
+    //         Months.Add(date.ToString("MMMM yyyy"));
+    //     }
+    // }
 
     private async Task LoadChargingSessions()
     {
@@ -257,7 +257,7 @@
         }
         var monthEnd = monthStart.AddMonths(1).AddSeconds(-1);
 
-        ChargingSessions = await ChargingSessionService.GetChargingSessionsAsync(monthStart, monthEnd);
+        //ChargingSessions = await ChargingSessionService.GetChargingSessionsAsync(monthStart, monthEnd);
     }
 
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
