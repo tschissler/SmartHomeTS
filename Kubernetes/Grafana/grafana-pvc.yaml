@@ -9,4 +9,4 @@ spec:
     requests:
       storage: 50Gi
   storageClassName: influxdb-storage
-  volumeName: grafana-pv
+  volumeName: grafana-pv-node2
