@@ -1,15 +1,9 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Influx3Connector;
-using InfluxConnector;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using Influx3Connector;
 using Newtonsoft.Json.Linq;
 using SharedContracts;
 using SmartHome.DataHub;
-using SmartHomeHelpers.Logging;
 using System.Globalization;
 using System.Text.Json;
-using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
 
 // Move the logger initialization before its first usage
 var builder = WebApplication.CreateBuilder(args);
