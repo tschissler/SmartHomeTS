@@ -63,6 +63,7 @@ namespace Influx3Connector
             DateTimeOffset timestamp)
         {
             var point = PointData.Measurement("percent_values")
+                .SetTag("measurement_id", record.MeasurementId)
                 .SetTag("category", record.Category.ToString())
                 .SetTag("sub_category", record.SubCategory.ToString())
                 .SetTag("sensor_type", record.SensorType)
