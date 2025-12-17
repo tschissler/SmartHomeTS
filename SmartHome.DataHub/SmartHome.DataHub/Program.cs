@@ -5,6 +5,11 @@ using SmartHome.DataHub;
 using System.Globalization;
 using System.Text.Json;
 
+var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+{
+    PropertyNameCaseInsensitive = true
+};
+
 // Move the logger initialization before its first usage
 var builder = WebApplication.CreateBuilder(args);
 var loggerFactory = LoggerFactory.Create(logging =>
@@ -83,6 +88,7 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("data/thermostat/M1/shelly/#");
     await mqttClient.SubscribeToTopic("data/thermostat/M3/shelly/#");
     await mqttClient.SubscribeToTopic("cangateway/#");
+    await mqttClient.SubscribeToTopic("daten/Heizkörperlüfter/#");
 
     //var influxConnector = scope.ServiceProvider.GetRequiredService<InfluxDbConnector>();
     var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token, logger);
@@ -101,40 +107,15 @@ using (var scope = app.Services.CreateScope())
 
         try
         {
-            
-            //if (topic == "data/charging/KebaGarage_ChargingSessionEnded")
-            //{
-            //    var car = cars[positionChargingStationGarage.GetClosestNearby([bmwPosition, miniPosition, vwPosition]) ?? 0];
-            //    var json = JObject.Parse(payload);
-            //    json["car"] = car;
-            //    WriteChargingSessionEndedData(chargingBucket, influxConnector, "Garage", json.ToString());
-            //    return;
-            //}
-            //if (topic == "data/charging/KebaOutside_ChargingSessionEnded")
-            //{
-            //    var car = cars[positionChargingStationStellplatz.GetClosestNearby([bmwPosition, miniPosition, vwPosition]) ?? 2];
-            //    var json = JObject.Parse(payload);
-            //    json["car"] = car;
-            //    WriteChargingSessionEndedData(chargingBucket, influxConnector, "Stellplatz", json.ToString());
-            //    return;
-            //}
-            //if (topic.StartsWith("data/charging/BMW"))
-            //{
-            //    bmwPosition = ExtractPositionFromPayload(payload) ?? bmwPosition;
-            //}
-            //if (topic.StartsWith("data/charging/Mini"))
-            //{
-            //    miniPosition = ExtractPositionFromPayload(payload) ?? miniPosition;
-            //}
-            //if (topic.StartsWith("data/charging/VW"))
-            //{
-            //    vwPosition = ExtractPositionFromPayload(payload) ?? vwPosition;
-            //}
-            //if (topic.StartsWith("data/charging"))
-            //{
-            //    WriteJsonPropertiesAsFields(chargingBucket, influxConnector, topic, topic.Replace("data/charging/", ""), payload, new Dictionary<string, string>());
-            //    return;
-            //}
+            if (topic.StartsWith("daten/Heizkörperlüfter/"))
+            {
+                var genericSensorData = JsonSerializer.Deserialize<GenericSensorJsonData>(payload, jsonOptions);
+                if (genericSensorData != null)
+                {
+                    influx3Connector.WriteInfluxRecords(converters.GenericSensorJsonDataToInfluxRecords(genericSensorData));
+                }
+                return;
+            }
 
             if (topic == "data/charging/KebaOutside" ||
                 topic == "data/charging/KebaGarage")
@@ -142,7 +123,7 @@ using (var scope = app.Services.CreateScope())
                 ChargingGetData? chargingData;
                 try
                 {
-                    chargingData = JsonSerializer.Deserialize<ChargingGetData>(payload);
+                    chargingData = JsonSerializer.Deserialize<ChargingGetData>(payload, jsonOptions);
                 }
                 catch (Exception ex)
                 {
@@ -248,21 +229,11 @@ using (var scope = app.Services.CreateScope())
 
             if (topic == "data/electricity/envoym1")
             {
-                //tags = new Dictionary<string, string>();
-                //tags.Add("location", "M1");
-                //tags.Add("device", "EnvoyM1");
-                //WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM1", payload, tags, true);
-
                 WriteEnphaseDataToDB(influx3Connector, payload, "M1", "EnvoyM1");
                 return;
             }
             if (topic == "data/electricity/envoym3")
             {
-                //tags = new Dictionary<string, string>();
-                //tags.Add("location", "M3");
-                //tags.Add("device", "EnvoyM3");
-                //WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, "EnvoyM3", payload, tags, true);
-
                 WriteEnphaseDataToDB(influx3Connector, payload, "M3", "EnvoyM3");
                 return;
             }
@@ -271,17 +242,12 @@ using (var scope = app.Services.CreateScope())
             {
                 var location = topicParts[2];
                 var device = topicParts[4];
-                //tags = new Dictionary<string, string>();
-                //tags.Add("location", location);
-                //tags.Add("group", topicParts[3]);
-                //tags.Add("device", device);
-                //WriteJsonPropertiesAsFields(electricityBucket, influxConnector, topic, device, payload, tags, true);
 
                 if (topicParts[3] == "Smartmeter")
                 {
                     try
                     {
-                        var smartmeterData = JsonSerializer.Deserialize<SmartmeterData>(payload);
+                        var smartmeterData = JsonSerializer.Deserialize<SmartmeterData>(payload, jsonOptions);
                         if (smartmeterData != null)
                         {
                             influx3Connector.WriteInfluxRecords(converters.SmartmeterDataToInfluxRecords(smartmeterData, location, device));
@@ -296,7 +262,7 @@ using (var scope = app.Services.CreateScope())
                 {
                     try
                     {
-                        var shellyPowerData = JsonSerializer.Deserialize<ShellyPowerData>(payload);
+                        var shellyPowerData = JsonSerializer.Deserialize<ShellyPowerData>(payload, jsonOptions);
                         if (shellyPowerData != null)
                         {
                             influx3Connector.WriteInfluxRecords(converters.ShellyPowerDataToInfluxRecords(shellyPowerData, location, device));
@@ -357,7 +323,7 @@ using (var scope = app.Services.CreateScope())
                 ShellyThermostatData? data;
                 try
                 {
-                    data = JsonSerializer.Deserialize<ShellyThermostatData>(payload);
+                    data = JsonSerializer.Deserialize<ShellyThermostatData>(payload, jsonOptions);
                 }
                 catch (Exception ex)
                 {
@@ -572,7 +538,7 @@ void WriteEnphaseDataToDB(InfluxDB3Connector influx3Connector, string payload, s
 {
     try
     {
-        var enphaseData = JsonSerializer.Deserialize<EnphaseData>(payload);
+        var enphaseData = JsonSerializer.Deserialize<EnphaseData>(payload, jsonOptions);
         if (enphaseData != null)
         {
             var converters = app.Services.GetRequiredService<Converters>();
@@ -585,117 +551,7 @@ void WriteEnphaseDataToDB(InfluxDB3Connector influx3Connector, string payload, s
     }
 }
 
-//static void WriteChargingSessionEndedData(string bucket, InfluxDbConnector influxConnector, string wallbox, string payload)
-//{
-//    var fields = new Dictionary<string, object>();
-//    var data = JsonSerializer.Deserialize<ChargingSession>(payload);
-//    if (data != null)
-//    {
-//        if (!CheckIfSessionWithIdExists(influxConnector, bucket, data.SessionId, wallbox))
-//        {
-//            fields = new Dictionary<string, object>
-//                    {
-//                        { "SessionId", data.SessionId },
-//                        { "StartTime", data.StartTime },
-//                        { "EndTime", data.EndTime },
-//                        { "TatalEnergyAtStart", data.TatalEnergyAtStart },
-//                        { "EnergyOfChargingSession", data.EnergyOfChargingSession }
-//                    };
-//            influxConnector.WritePointDataToInfluxDb(
-//                bucket,
-//                "ChargingSessionEnded",
-//                fields,
-//                new Dictionary<string, string>() { { "Wallbox", wallbox } });
-//        }
-//    }
-//    else
-//    {
-//        logger.LogError("Failed to deserialize ChargingSession data.");
-//    }
-//}
 
-//static bool CheckIfSessionWithIdExists(InfluxDbConnector influxConnector, string bucket, int sessionId, string wallbox)
-//{
-//    string query = $"""
-//            from(bucket: "{bucket}")
-//            |> range(start: -1mo)
-//            |> filter(fn: (r) => r["_measurement"] == "ChargingSessionEnded")
-//            |> filter(fn: (r) => r["Wallbox"] == "{wallbox}")
-//            |> filter(fn: (r) => r["_field"] == "SessionId")
-//            |> filter(fn: (r) => r["_value"] == {sessionId})
-//        """;
-
-//    try
-//    {
-//        var result = influxConnector.QueryDataAsync(query).Result;
-//        if (result != null && result.Count > 0 && result[0].Records.Count > 0)
-//        {
-//            logger.LogInformation($"Session with ID {sessionId} already exists in InfluxDB, ignoring new data.");
-//            return true;
-//        }
-//    }
-//    catch(Exception _)
-//    { }
-//    return false;
-//}
-
-//static void WriteJsonPropertiesAsFields(string chargingBucket, InfluxDbConnector influxConnector, string topic, string measurementName, string payload, Dictionary<string, string> tags, bool enforceFloatValues = false)
-//{
-//    var fields = new Dictionary<string, object>();
-//    var jsonData = JObject.Parse(payload);
-
-//    foreach (var property in jsonData.Properties())
-//    {
-//        var value = property.Value;
-//        if (value.Type == JTokenType.Object)
-//        {
-//            foreach (var subProp in ((JObject)value).Properties())
-//            {
-//                var fieldName = $"{property.Name}_{subProp.Name}";
-//                var subValue = subProp.Value;
-//                if (enforceFloatValues && subValue.Type == JTokenType.Integer)
-//                {
-//                    fields.Add(fieldName, Convert.ToDouble(subValue));
-//                    continue;
-//                }
-//                fields.Add(fieldName, subValue);
-//            }
-//        }
-//        else
-//        {
-//            if (enforceFloatValues && value.Type == JTokenType.Integer)
-//            {
-//                fields.Add(property.Name, Convert.ToDouble(value));
-//                continue;
-//            }
-//            fields.Add(property.Name, value);
-//        }
-//    }
-
-//    tags.Add("topic", topic);
-
-//    influxConnector.WritePointDataToInfluxDb(
-//        chargingBucket,
-//        measurementName,
-//        fields,
-//        tags);
-//}
-
-//static void WriteFloatAsFields(string chargingBucket, InfluxDbConnector influxConnector, string topic, string measurementName, string payload, Dictionary<string, string> tags)
-//{
-//    var fields = new Dictionary<string, object>
-//    {
-//        { "value", Convert.ToDouble(payload, CultureInfo.InvariantCulture) }
-//    };
-
-//    tags.Add("topic", topic);
-
-//    influxConnector.WritePointDataToInfluxDb(
-//        chargingBucket,
-//        measurementName,
-//        fields,
-//        tags);
-//}
 
 GeoPosition? ExtractPositionFromPayload(string payload)
 {

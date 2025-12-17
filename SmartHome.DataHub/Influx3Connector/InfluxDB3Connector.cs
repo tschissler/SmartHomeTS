@@ -28,6 +28,11 @@ namespace Influx3Connector
             {
                 switch (record.MeasurementType)
                 {
+                    case MeasurementType.Temperature:
+                        WriteTemperatureValue(
+                            (InfluxTemperatureRecord)record,
+                            DateTimeOffset.UtcNow);
+                        break;
                     case MeasurementType.Percent:
                         WritePercentageValue(
                             (InfluxPercentageRecord)record,

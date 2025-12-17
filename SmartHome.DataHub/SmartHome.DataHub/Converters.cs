@@ -249,5 +249,50 @@ namespace SmartHome.DataHub
             };
             return records;
         }
+        
+        public IEnumerable<InfluxRecord> GenericSensorJsonDataToInfluxRecords(GenericSensorJsonData data)
+        {
+            var records = new List<InfluxRecord>();
+
+            foreach (var temperatureEntry in data.Temperatures ?? Enumerable.Empty<Dictionary<string, decimal>>())
+            {
+                foreach (var (measurement, value) in temperatureEntry)
+                {
+                    records.Add(new InfluxTemperatureRecord
+                    {
+                        MeasurementId = $"{data.SensorType}_{data.Device}_{data.Location}_{measurement}",
+                        Category = MeasurementCategory.Temperature,
+                        SubCategory = data.SubCategory,
+                        SensorType = data.SensorType,
+                        Location = data.Location,
+                        Device = data.Device,
+                        Measurement = measurement,
+                        Value_DegreeC = value
+                    });
+                }
+            }
+
+            foreach (var percentageEntry in data.Percentages ?? Enumerable.Empty<Dictionary<string, decimal>>())
+            {
+                foreach (var (measurement, value) in percentageEntry)
+                {
+                    records.Add(new InfluxPercentageRecord
+                    {
+                        MeasurementId = $"{data.SensorType}_{data.Device}_{data.Location}_{measurement}",
+                        Category = MeasurementCategory.Ventil,
+                        SubCategory = data.SubCategory,
+                        SensorType = data.SensorType,
+                        Location = data.Location,
+                        Device = data.Device,
+                        Measurement = measurement,
+                        Value_Percent = value
+                    });
+                }
+            }
+
+            return records;
+        }
+
+        
     }
 }
