@@ -1,0 +1,16 @@
+{
+    "location": "M1",
+    "device": "Heizkörperlüfter_Kinderzimmer",
+    "sensorType": "Heizkörperlüfter",
+    "sub_category": "Ist",
+    "temperatures" : [
+        { "Sensor1": 22.5 },
+        { "Sensor2": 23.0 },
+        { "Sensor3": 21.8 },
+        { "Sensor4": 22.1 }
+    ],
+    "percentages" : [
+        { "Fanspeed": 55 }
+    ]
+
+}

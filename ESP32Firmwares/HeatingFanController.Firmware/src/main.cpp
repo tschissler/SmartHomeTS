@@ -48,6 +48,7 @@ static bool otaEnable = OTA_ENABLED != "false";
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
+static int lastFanPercent = 0; 
 
 // Configuration for data collection
 static const int MAX_READINGS = 24;                 // 2.5 seconds * 24 = 60 seconds (1 minute)
@@ -169,9 +170,22 @@ void parseConfigJSON(String jsonPayload)
 
   if (!doc["Fanspeed"].isNull())
   {
-    int fanSpeed = doc["Fanspeed"].as<int>();
-    Serial.println("Fan speed set to: " + String(fanSpeed));
-    ledcWrite(fanPWM, 255-fanSpeed);
+    // Config now sends fan speed as percent: 0% = off, 100% = full speed
+    int fanSpeedPercent = doc["Fanspeed"].as<int>();
+    if (fanSpeedPercent < 0)
+    {
+      fanSpeedPercent = 0;
+    }
+    if (fanSpeedPercent > 100)
+    {
+      fanSpeedPercent = 100;
+    }
+
+    // Hardware expects PWM where 0=full speed, 255=off
+    const int pwmValue = 255 - (fanSpeedPercent * 255) / 100;
+    lastFanPercent = fanSpeedPercent;
+    Serial.println("Fan speed set to (percent): " + String(fanSpeedPercent) + ", PWM: " + String(pwmValue));
+    ledcWrite(fanPWM, pwmValue);
   }
 
   if (!doc["SensorNames"].isNull())
@@ -354,41 +368,39 @@ void publishSensorData()
     Serial.println("SensorName : '" + sensorName + "'");
   }
 
+  DynamicJsonDocument doc(1024 + aggregates.size() * 128);
+  doc["location"] = location;
+  doc["device"] = sensorName;
+  doc["sensorType"] = "Heizkörperlüfter";
+  doc["sub_category"] = "Ist";
+
+  JsonArray temperaturesArray = doc.createNestedArray("temperatures");
   for (const auto &entry : aggregates)
   {
     const uint64_t id = entry.first;
     const Aggregate &agg = entry.second;
     float avgTemperature = agg.temperatureSum / static_cast<float>(agg.temperatureCount);
-    float avgHumidity = agg.humidityCount > 0 ? (agg.humiditySum / static_cast<float>(agg.humidityCount)) : NAN;
 
-    if (agg.humidityCount > 0)
-    {
-      Serial.printf("Average sensor (id: %s): %.2f°C, %.2f%%\n",
-                    getSensorDisplayName(id).c_str(),
-                    avgTemperature,
-                    avgHumidity);
-    }
-    else
-    {
-      Serial.printf("Average sensor (id: %s): %.2f°C, humidity unavailable\n",
-                    getSensorDisplayName(id).c_str(),
-                    avgTemperature);
-    }
+    JsonObject tempObject = temperaturesArray.createNestedObject();
+    sensorDisplayName = getSensorDisplayName(id);
+    tempObject[sensorDisplayName] = avgTemperature;
+  }
 
-    if (sendMQTTMessages)
-    {
-      char tempString[8];
-      dtostrf(avgTemperature, 1, 2, tempString);
+  JsonArray percentagesArray = doc.createNestedArray("percentages");
+  JsonObject fanObject = percentagesArray.createNestedObject();
+  fanObject["Fanspeed"] = lastFanPercent;
 
-      sensorDisplayName = getSensorDisplayName(id);
-      String temperatureTopic = baseTopic + "/temperatur/" + location + "/" + sensorName + "_" + sensorDisplayName;
+  String payload;
+  serializeJson(doc, payload);
 
-      mqttSuccess = mqttClientLib->publish(temperatureTopic.c_str(), String(tempString), true, 2);
-    }
-    else
-    {
-      Serial.println("MQTT messages disabled, not publishing data");
-    }
+  if (sendMQTTMessages)
+  {
+    String jsonTopic = "daten/Heizkörperlüfter/" + sensorName;
+    mqttSuccess = mqttClientLib->publish(jsonTopic.c_str(), payload, true, 2);
+  }
+  else
+  {
+    Serial.println("MQTT messages disabled, not publishing data");
   }
 
   Serial.println("Version: " + String(version));
