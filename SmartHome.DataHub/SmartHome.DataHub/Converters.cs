@@ -279,7 +279,7 @@ namespace SmartHome.DataHub
                     records.Add(new InfluxPercentageRecord
                     {
                         MeasurementId = $"{data.SensorType}_{data.Device}_{data.Location}_{measurement}",
-                        Category = MeasurementCategory.Ventil,
+                        Category = MeasurementCategory.Drehzahl,
                         SubCategory = data.SubCategory,
                         SensorType = data.SensorType,
                         Location = data.Location,
