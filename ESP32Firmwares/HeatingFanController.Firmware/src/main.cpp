@@ -188,6 +188,12 @@ void parseConfigJSON(String jsonPayload)
     ledcWrite(fanPWM, pwmValue);
   }
 
+   if (!doc["SensorName"].isNull())
+  {
+    sensorName = doc["SensorName"].as<String>();
+    Serial.println("Sensor name set to: " + sensorName);
+  }
+
   if (!doc["SensorNames"].isNull())
   {
     JsonVariant sensorNamesVariant = doc["SensorNames"];
