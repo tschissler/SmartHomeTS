@@ -9,4 +9,4 @@ spec:
     requests:
       storage: 1Gi
   storageClassName: mosquitto-storage
-  volumeName: mosquitto-pv-node2
+  volumeName: mosquitto-pv

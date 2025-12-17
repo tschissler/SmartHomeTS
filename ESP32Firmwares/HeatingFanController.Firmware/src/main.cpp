@@ -44,14 +44,14 @@ NTPClient timeClient(ntpUDP);
 MQTTClientLib *mqttClientLib = nullptr;
 
 static int otaInProgress = 0;
-static bool otaEnable = OTA_ENABLED != "false!";
+static bool otaEnable = OTA_ENABLED != "false";
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
 
 // Configuration for data collection
 static const int MAX_READINGS = 24;                 // 2.5 seconds * 24 = 60 seconds (1 minute)
-static const unsigned long READING_INTERVAL = 2500; // 5 seconds between readings
+static const unsigned long READING_INTERVAL = 2500; // 2.5 seconds between readings
 static unsigned long lastReadingTime = 0;
 static std::vector<std::vector<SensorData>> readings;
 
@@ -378,10 +378,7 @@ void publishSensorData()
     if (sendMQTTMessages)
     {
       char tempString[8];
-      char humString[8];
-
       dtostrf(avgTemperature, 1, 2, tempString);
-      dtostrf(avgHumidity, 1, 2, humString);
 
       sensorDisplayName = getSensorDisplayName(id);
       String temperatureTopic = baseTopic + "/temperatur/" + location + "/" + sensorName + "_" + sensorDisplayName;

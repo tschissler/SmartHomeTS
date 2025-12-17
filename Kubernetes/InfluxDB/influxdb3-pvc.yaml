@@ -9,4 +9,4 @@ spec:
     requests:
       storage: 50Gi
   storageClassName: influxdb3-storage
-  volumeName: influxdb3-pv-node2
+  volumeName: influxdb3-pv

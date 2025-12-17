@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: grafana-pv-node2
+  name: grafana-pv
 spec:
   capacity:
     storage: 50Gi
@@ -12,5 +12,5 @@ spec:
   mountOptions:
     - nfsvers=4.2
   nfs:
-    path: /grafana
-    server: smarthomeclusternode2
+    path: /mnt/ssd/grafana
+    server: smarthomepi2
