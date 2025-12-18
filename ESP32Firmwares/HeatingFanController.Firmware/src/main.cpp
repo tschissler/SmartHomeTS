@@ -468,8 +468,31 @@ void loop(void) {
     }
 
     readFanSpeed();
-    
-    mqttClientLib->loop();
+
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      Serial.println("WiFi disconnected, attempting to reconnect...");
+      wifiLib.connect();
+    }
+    bool mqttConnected = mqttClientLib->loop();
+    if (!mqttConnected)
+    {
+      // Log detailed information about the disconnection
+      int lastErr = mqttClientLib->lastError();
+      Serial.print("MQTT loop() returned false! Last Error Code: ");
+      Serial.println(lastErr);
+      Serial.print("WiFi Status: ");
+      Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+      Serial.print("WiFi RSSI: ");
+      Serial.println(WiFi.RSSI());
+      Serial.print("Free Heap: ");
+      Serial.println(ESP.getFreeHeap());
+      Serial.print("Uptime: ");
+      Serial.println(millis() / 1000);
+
+      Serial.println("MQTT Client not connected, reconnecting in loop...");
+      connectToMQTT(false);
+    }
   }
   delay(1000);
 }
