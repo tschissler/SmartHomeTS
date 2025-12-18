@@ -61,8 +61,8 @@ static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
 
 // Configuration for data collection
-static const int MAX_READINGS = 5;                
-static const unsigned long READING_INTERVAL = 20000; 
+static const int MAX_READINGS = 24;                 // 5 seconds * 24 = 120 seconds (2 minutes)
+static const unsigned long READING_INTERVAL = 5000; // 5 seconds between readings
 static unsigned long lastReadingTime = 0;
 
 static std::vector<std::vector<SensorData>> readings;
