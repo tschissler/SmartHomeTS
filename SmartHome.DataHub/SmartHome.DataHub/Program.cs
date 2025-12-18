@@ -69,11 +69,19 @@ logger.LogInformation($"Using InfluxDB 3 at {influx3Url} with database {influx3D
 
 builder.Services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment));
 //builder.Services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, influxOrg, influxToken));
+builder.Services.AddSingleton<InfluxDB3Connector>(_ => new InfluxDB3Connector(influx3Url, influx3Database, influx3Token, logger));
 builder.Services.AddSingleton<Converters>();
 builder.Services.AddSignalR();
 builder.Services.AddLogging();
 
 var app = builder.Build();
+
+app.MapGet("/health", (InfluxDB3Connector connector) => 
+{
+    if (connector.TimeSinceLastWrite > TimeSpan.FromMinutes(3))
+        return Results.StatusCode(503); // Unhealthy
+    return Results.Ok();
+});
 
 using (var scope = app.Services.CreateScope())
 {
@@ -91,7 +99,7 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("daten/Heizkörperlüfter/#");
 
     //var influxConnector = scope.ServiceProvider.GetRequiredService<InfluxDbConnector>();
-    var influx3Connector = new InfluxDB3Connector(influx3Url, influx3Database, influx3Token, logger);
+    var influx3Connector = scope.ServiceProvider.GetRequiredService<InfluxDB3Connector>();
     var converters = scope.ServiceProvider.GetRequiredService<Converters>();
 
     // Setup MQTT client options

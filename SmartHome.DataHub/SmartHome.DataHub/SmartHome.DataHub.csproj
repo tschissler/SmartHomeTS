@@ -17,7 +17,6 @@
     <ProjectReference Include="..\..\MQTTClient\MQTTClient.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
     <ProjectReference Include="..\Influx3Connector\Influx3Connector.csproj" />
-    <ProjectReference Include="..\InfluxConnector\InfluxConnector.csproj" />
   </ItemGroup>
 
 </Project>
