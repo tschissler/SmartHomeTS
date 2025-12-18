@@ -61,8 +61,8 @@ static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
 
 // Configuration for data collection
-static const int MAX_READINGS = 24;                 // 2.5 seconds * 24 = 60 seconds (1 minute)
-static const unsigned long READING_INTERVAL = 2500; // 5 seconds between readings
+static const int MAX_READINGS = 5;                
+static const unsigned long READING_INTERVAL = 20000; 
 static unsigned long lastReadingTime = 0;
 
 static std::vector<std::vector<SensorData>> readings;
@@ -562,13 +562,11 @@ void loop()
   {
     timeClient.update();
 
-    // Read sensor data every 5 seconds
     if (millis() - lastReadingTime >= READING_INTERVAL)
     {
       readSensorData();
     }
 
-    // Transmit data every minute
     if (readings.size() >= MAX_READINGS)
     {
       publishSensorData();
