@@ -1,0 +1,3 @@
+cluster-init: true
+tls-san:
+  - "192.168.178.220"

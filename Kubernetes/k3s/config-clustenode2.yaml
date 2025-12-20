@@ -1,0 +1,6 @@
+server: https://192.168.178.126:6443
+token: "K10ed9f872d36d55877c326e2b60e12d7a027212a9743f16fb46c8ad05dded90495::server:60957924bf8372f23bec1bcbcac4b516"
+tls-san:
+  - "192.168.178.220"
+etcd-expose-metrics: true
+write-kubeconfig-mode: 644
