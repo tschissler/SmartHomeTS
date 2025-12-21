@@ -44,8 +44,8 @@ USBHoleZOffset = 14 + Wall + PCBLevel;
 ACBladeRadius = 2;
 ACConnectorXOffset = (ESPInnerWidth_x-27)/2;
 ACConnectorZOffset = Inner_Height - 21;
-ACConnectorHoleOffsetZ = 9;
-ACConnectorHoleDistance = 40;
+ACConnectorHoleOffsetZ = 9-HolderWidth/2;
+ACConnectorHoleDistance = 40; 
 
 VentingHolesDiameter = 4;
 VentingHolesDistance = 6;
@@ -99,7 +99,7 @@ module PowersupplyPart(createHolepins) {
 
         // Venting Holes
         zOffset = 2*Wall + VentingHolesOffset;
-        VentingHoles(zOffset, true);
+        VentingHoles(zOffset, false);
 
         translate([ACConnectorXOffset, 0, ACConnectorZOffset])
             ACConnector();    
