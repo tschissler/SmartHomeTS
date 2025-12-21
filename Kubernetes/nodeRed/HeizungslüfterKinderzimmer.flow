@@ -1,0 +1,206 @@
+[
+    {
+        "id": "8684ca96891aab07",
+        "type": "tab",
+        "label": "Heizungslüfter Kinderzimmer",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "bf0d58d9ad7aadc7",
+        "type": "mqtt in",
+        "z": "8684ca96891aab07",
+        "name": "Thermostat Kinderzimmer M1",
+        "topic": "data/thermostat/M1/shelly/Kinderzimmer",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "e2d504a193562ce5",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 60,
+        "wires": [
+            [
+                "596b9db48f9dd932"
+            ]
+        ]
+    },
+    {
+        "id": "5aad756626d68e5c",
+        "type": "mqtt out",
+        "z": "8684ca96891aab07",
+        "name": "Parameterisierung HeatingFanController",
+        "topic": "config/HeatingFanController/d48c49697754",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "e2d504a193562ce5",
+        "x": 760,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "9b5457426d4598aa",
+        "type": "mqtt in",
+        "z": "8684ca96891aab07",
+        "name": "HeatingFanController Kinderzimmer M1",
+        "topic": "config/HeatingFanController/d48c49697754",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "e2d504a193562ce5",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 300,
+        "wires": [
+            [
+                "508427ad648b676d"
+            ]
+        ]
+    },
+    {
+        "id": "508427ad648b676d",
+        "type": "json",
+        "z": "8684ca96891aab07",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 410,
+        "y": 300,
+        "wires": [
+            [
+                "53a84680625a2488",
+                "9f48fc55459d684d"
+            ]
+        ]
+    },
+    {
+        "id": "596b9db48f9dd932",
+        "type": "json",
+        "z": "8684ca96891aab07",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 410,
+        "y": 60,
+        "wires": [
+            [
+                "7b6cfb07430e0b2c",
+                "51b099cb1d3369d8"
+            ]
+        ]
+    },
+    {
+        "id": "53a84680625a2488",
+        "type": "function",
+        "z": "8684ca96891aab07",
+        "name": "fanControlJson speichern",
+        "func": "// Speichere das gesamte JSON-Objekt im Flow-Context\nflow.set('fanControlJson', msg.payload);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7b6cfb07430e0b2c",
+        "type": "function",
+        "z": "8684ca96891aab07",
+        "name": "fanControlJson anpassen",
+        "func": "// 1. ValvePosition aus dem ersten JSON lesen\nconst valvePosition = msg.payload.ValvePosition;\n\n// 2. Zweites JSON aus dem Flow-Context laden\nlet fanControlJson = flow.get('fanControlJson') || {\n  \"SensorName\": \"Heizkörperlüfter_Kinderzimmer\",\n  \"SensorNames\": [\n    {\"28-F8-D3-46-00-00-00-34\": \"Rücklauf_HK\"},\n    {\"28-D6-39-46-00-00-00-F6\": \"Vorlauf_HK\"},\n    {\"28-4D-EF-46-00-00-00-7D\": \"Luftaustritt\"},\n    {\"28-23-C3-45-00-00-00-FC\": \"Aussen_HK\"}\n  ],\n  \"Location\": \"M1\",\n  \"Fanspeed\": 0\n};\n\n// 3. Neuen Fanspeed berechnen\nconst newFanspeed = Math.round(valvePosition / 2);\n\n// 4. Nur senden, wenn sich Fanspeed geändert hat\nif (fanControlJson.Fanspeed !== newFanspeed) {\n    fanControlJson.Fanspeed = newFanspeed;\n    msg.payload = fanControlJson;\n    return msg;\n} else {\n    // Keine Änderung → Nachricht nicht weiterleiten\n    return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 60,
+        "wires": [
+            [
+                "5aad756626d68e5c"
+            ]
+        ]
+    },
+    {
+        "id": "51b099cb1d3369d8",
+        "type": "debug",
+        "z": "8684ca96891aab07",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 420,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "9f48fc55459d684d",
+        "type": "debug",
+        "z": "8684ca96891aab07",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 420,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "e2d504a193562ce5",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "smarthomepi2",
+        "port": "32004",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]
