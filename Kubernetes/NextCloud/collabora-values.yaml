@@ -1,0 +1,63 @@
+# Anzahl der Pods (im offiziellen Chart oft kleingeschrieben)
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+
+image:
+  repository: collabora/code
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# WICHTIG: Im offiziellen Chart liegen diese Werte unter 'collabora' oder im Pod-Template
+# Für dieses Chart setzen wir die Security-Optionen so:
+containerSecurityContext:
+  privileged: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+      - MKNOD
+      - FOWNER
+
+# NodeSelector auf oberster Ebene ist korrekt
+nodeSelector:
+  node-role.kubernetes.io/storage: "true"
+
+# Umgebungsvariablen müssen in diesem Chart oft explizit definiert werden
+env:
+  - name: aliasgroup1
+    value: "http://nextcloud\\.local(:[0-9]+)?"
+  - name: server_name
+    value: "office.local"
+  - name: DONT_GEN_SSL_CERT
+    value: "true"
+  - name: extra_params
+    value: "--o:ssl.enable=false --o:ssl.termination=false --o:admin_console.enable=true --o:net.post_allow.host[0]=.*"
+  # Admin-Zugang (IaC-Stil: Hier festlegen, damit das Secret befüllt wird)
+  - name: username
+    value: "admin"
+  - name: password
+    value: "DeinSicheresPasswort123"
+
+service:
+  type: ClusterIP
+  port: 9980
+
+ingress:
+  enabled: true
+  # In neueren Charts nutzt man 'ingressClassName' statt der Annotation
+  ingressClassName: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # Wichtig: Traefik muss wissen, dass der Service auf 9980 hört
+    traefik.ingress.kubernetes.io/service.serversscheme: http
+    # Entferne den Redirect-Middleware für den Test, falls es Probleme mit Websockets gibt
+    # traefik.ingress.kubernetes.io/router.middlewares: "nextcloud-nextcloud-redirect@kubernetescrd"
+  hosts:
+    - host: office.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 9980

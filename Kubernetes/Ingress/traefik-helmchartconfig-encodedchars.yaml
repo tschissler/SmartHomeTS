@@ -1,0 +1,16 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    additionalArguments:
+      # Collabora /cool/ WebSocket URLs contain encoded slashes (%2F) and question marks (%3F)
+      # inside the path segment. Traefik v3 blocks those by default and responds with 400.
+      - "--entrypoints.web.http.encodedcharacters.allowencodedslash=true"
+      - "--entrypoints.web.http.encodedcharacters.allowencodedquestionmark=true"
+      - "--entrypoints.web.http.sanitizepath=false"
+      - "--entrypoints.websecure.http.encodedcharacters.allowencodedslash=true"
+      - "--entrypoints.websecure.http.encodedcharacters.allowencodedquestionmark=true"
+      - "--entrypoints.websecure.http.sanitizepath=false"
