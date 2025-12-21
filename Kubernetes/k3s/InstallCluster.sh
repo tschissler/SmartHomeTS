@@ -49,49 +49,54 @@ sudo rm -rf /var/lib/rancher/k3s/server/db
 sudo systemctl daemon-reload
 sudo systemctl start k3s
 
-sudo cat /var/lib/rancher/k3s/server/node-token
 
-## on clusternode2
 
 sudo mkdir -p /etc/rancher/k3s
 # copy config.yaml into /etc/rancer/k3s/config.yaml
-sudo systemctl restart k3s
+sudo nano /etc/rancher/k3s/config.yaml
+curl -sfL https://get.k3s.io | sh -
 
-curl -sfL https://get.k3s.io | K3S_TOKEN="<DEIN_TOKEN_VON_NODE1>" sh -s - server \
-  --server https://192.168.178.126:6443 \
-  --tls-san 192.168.178.220 \
-  --etcd-expose-metrics true \
-  --write-kubeconfig-mode 644
+sudo cat /var/lib/rancher/k3s/server/node-token
 
-# clusternode3
-curl -sfL https://get.k3s.io | K3S_TOKEN="<TOKEN>" sh -s - server \
-  --server https://192.168.178.126:6443 \
-  --tls-san 192.168.178.220 \
-  --node-ip 192.168.178.75 \
-  --advertise-address 192.168.178.75 \
-  --node-external-ip 192.168.178.75 \
-  --disable traefik \
-  --disable local-storage \
-  --write-kubeconfig-mode 644
+
+
+
+
+
+
+
+
+
+
+
 
 ## Fix when kubectl does not work correctly
-# 1. Sicherstellen, dass das Verzeichnis existiert
+cat /etc/rancher/k3s/k3s.yaml
 mkdir -p $HOME/.kube
-
-# 2. Die k3s Konfiguration in dein Home-Verzeichnis kopieren
 sudo cp /etc/rancher/k3s/k3s.yaml $HOME/.kube/config
-
-# 3. Rechte anpassen, damit dein User darauf zugreifen darf
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-# 4. (Optional) In der Datei localhost durch die echte IP ersetzen, 
-# falls du Kube-VIP auch lokal ansprechen willst:
-sed -i 's/127.0.0.1/192.168.178.220/g' $HOME/.kube/config
-
-# 5. KUBECONFIG permanent in die .bashrc eintragen
 if ! grep -q "KUBECONFIG" ~/.bashrc; then
   echo 'export KUBECONFIG=$HOME/.kube/config' >> ~/.bashrc
 fi
-
-# 6. Die aktuelle Session aktualisieren
+chmod 600 ~/.kube/config
 export KUBECONFIG=$HOME/.kube/config
+
+
+kubectl label node clusternode1 node-role.kubernetes.io/storage=true capability/architecture=x86
+kubectl label node clusternode2 node-role.kubernetes.io/storage=true capability/architecture=x86
+kubectl label node clusternode3 capability/architecture=arm64 node-role.kubernetes.io/worker=worker
+
+
+## Health check
+sudo systemctl status k3s
+sudo k3s etcd-snapshot list
+sudo k3s kubectl get componentstatuses
+sudo k3s kubectl get nodes -o custom-columns=NAME:.metadata.name,IP:.status.addresses[0].address
+
+
+
+
+## Traefik
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+helm install traefik traefik/traefik --namespace kube-system --create-namespace -f traefik-values.yaml

@@ -1,0 +1,37 @@
+# Traefik Values für Hybrid-HA-Cluster
+deployment:
+  kind: DaemonSet
+
+service:
+  enabled: true
+  type: LoadBalancer
+  annotations:
+    # Saubere Trennung: Traffic auf .221 (Control-Plane bleibt auf .220)
+    kube-vip.io/loadbalancerIPs: "192.168.178.221"
+
+# Hybrid-Cluster Logik: Traefik nur auf den starken x86-Nodes betreiben
+nodeSelector:
+  capability/architecture: "x86"
+
+# Tolerations, damit Traefik auf den Control-Plane Nodes trotz Taints starten darf
+tolerations:
+  - key: "node-role.kubernetes.io/master"
+    operator: "Exists"
+    effect: "NoSchedule"
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
+
+# Dashboard für die interne Analyse (über IngressRoute erreichbar)
+ingressRoute:
+  dashboard:
+    enabled: true
+
+# Ressourcen-Limits (Empfehlung für Stabilität)
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"

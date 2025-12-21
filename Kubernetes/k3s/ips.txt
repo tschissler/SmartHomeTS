@@ -1,0 +1,5 @@
+VIP (K3s API)       192.168.178.220 Virtuell (HA)
+Traefik (Ingress)   192.168.178.221 Virtuell (HA)
+clusternode1        192.168.178.211 Statisch (Host)
+clusternode2        192.168.178.212 Statisch (Host)
+clusternode3        192.168.178.213 Statisch (Host)

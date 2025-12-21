@@ -1,0 +1,22 @@
+# longhorn-values.yaml
+defaultSettings:
+  defaultDataPath: /var/lib/longhorn-data
+  createDefaultDiskLabeledNodes: true
+  defaultReplicaCount: 2
+  replicaSoftAntiAffinity: false
+  
+  # Ermöglicht Longhorn-Komponenten den Lauf auf allen Master-Nodes (x86 & ARM)
+  taintToleration: "node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
+
+# Backup-Einstellungen (Platzhalter für deinen NFS-Pi)
+# Sobald du die IP hast, hier eintragen: nfs://192.168.178.x:/export/backups
+#   backupTarget: nfs://<IP-DEINES-PIS>:/path
+
+persistence:
+  defaultClass: true
+  defaultClassReplicaCount: 2
+
+# Deaktiviert das automatische Erstellen von Frontends, da wir das später 
+# sicher via Ingress/Traefik lösen wollen.
+ingress:
+  enabled: false

@@ -1,7 +1,0 @@
-cluster-init: true
-tls-san:
-  - 192.168.178.220
-  - clusternode1.fritz.box
-  - "*.cluster.fritz.box"        # Erlaubt nextcloud.cluster.fritz.box etc.
-  - "cluster.fritz.box"          # Der Hauptname für die VIP
-write-kubeconfig-mode: "0644"

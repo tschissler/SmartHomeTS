@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: longhorn-ui-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn # Nutzt dein Longhorn-System
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage-ui-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storage-tester
+  template:
+    metadata:
+      labels:
+        app: storage-tester
+    spec:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      tolerations:
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      containers:
+      - name: filebrowser
+        image: filebrowser/filebrowser:latest
+        args:
+          - --database=/config/filebrowser.db
+          - --root=/data
+          - --port=80
+          - --noauth=false
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: storage
+          mountPath: /data
+        - name: storage
+          mountPath: /config
+          subPath: config
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: longhorn-ui-pvc

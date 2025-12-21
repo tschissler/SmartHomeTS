@@ -10,8 +10,8 @@ metadata:
   name: kube-vip-role
 rules:
   - apiGroups: [""]
-    resources: ["nodes", "services", "endpoints", "pods"]
-    verbs: ["list", "get", "watch", "update"]
+    resources: ["nodes", "services", "endpoints", "pods", "services/status"] 
+    verbs: ["list", "get", "watch", "update", "patch"] 
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
@@ -53,9 +53,6 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: node-role.kubernetes.io/master
-                operator: Exists
-            - matchExpressions:
               - key: node-role.kubernetes.io/control-plane
                 operator: Exists
       hostNetwork: true
@@ -72,6 +69,8 @@ spec:
           value: "24"
         - name: vip_interfaceless
           value: "true"
+        - name: vip_servicespriority
+          value: "true"
         - name: vip_arp
           value: "true"
         - name: vip_leaderelection
@@ -86,6 +85,8 @@ spec:
           value: "true"
         - name: svc_enable
           value: "true"
+        - name: svc_leaderelection
+          value: "true"          
         - name: KUBECONFIG
           value: "/etc/rancher/k3s/k3s.yaml"
         securityContext:

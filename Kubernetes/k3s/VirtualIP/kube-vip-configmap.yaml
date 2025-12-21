@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubevip
+  namespace: kube-system
+data:
+  # Hier definierst du den Bereich, den kube-vip kontrollieren darf.
+  # Da du die .221 fest für Traefik willst, setzen wir Start und Ende identisch.
+  range-global: "192.168.178.221-192.168.178.221"
