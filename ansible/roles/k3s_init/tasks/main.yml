@@ -1,0 +1,37 @@
+---
+- name: Ensure /etc/rancher/k3s exists
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+- name: Write k3s server config (cluster-init)
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0644'
+
+- name: Install k3s server
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if systemctl list-unit-files | grep -q '^k3s\.service'; then
+      echo "k3s already installed"
+      exit 0
+    fi
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='{{ k3s_version }}' sh -
+  args:
+    executable: /bin/bash
+
+- name: Ensure k3s service is running
+  ansible.builtin.service:
+    name: k3s
+    state: started
+    enabled: true
+
+- name: Wait for Kubernetes API to be reachable on node
+  ansible.builtin.command: /usr/local/bin/k3s kubectl get nodes
+  register: k3s_nodes_check
+  retries: 30
+  delay: 5
+  until: k3s_nodes_check.rc == 0
+  changed_when: false

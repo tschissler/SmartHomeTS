@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubevip
+  namespace: kube-system
+data:
+  range-global: "{{ traefik_lb_ip }}-{{ traefik_lb_ip }}"

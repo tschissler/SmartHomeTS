@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-vip-sa
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-vip-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "services", "endpoints", "pods", "services/status"]
+    verbs: ["list", "get", "watch", "update", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-vip-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-vip-role
+subjects:
+- kind: ServiceAccount
+  name: kube-vip-sa
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-vip-ds
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: kube-vip-ds
+  template:
+    metadata:
+      labels:
+        name: kube-vip-ds
+    spec:
+      serviceAccountName: kube-vip-sa
+      hostAliases:
+      - ip: "127.0.0.1"
+        hostnames:
+        - "kubernetes"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      hostNetwork: true
+      containers:
+      - name: kube-vip
+        image: ghcr.io/kube-vip/kube-vip:v0.8.9
+        imagePullPolicy: IfNotPresent
+        args:
+        - manager
+        env:
+        - name: vip_address
+          value: "{{ k3s_api_vip }}"
+        - name: vip_cidr
+          value: "24"
+        - name: vip_interfaceless
+          value: "true"
+        - name: vip_servicespriority
+          value: "true"
+        - name: vip_arp
+          value: "true"
+        - name: vip_leaderelection
+          value: "true"
+        - name: vip_leaseduration
+          value: "5"
+        - name: vip_renewdeadline
+          value: "3"
+        - name: vip_retryperiod
+          value: "1"
+        - name: cp_enable
+          value: "true"
+        - name: svc_enable
+          value: "true"
+        - name: svc_leaderelection
+          value: "true"
+        - name: KUBECONFIG
+          value: "/etc/rancher/k3s/k3s.yaml"
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN", "NET_RAW"]
+      volumes:
+      - hostPath:
+          path: /etc/rancher/k3s/k3s.yaml
+        name: kubeconfig
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists

@@ -1,0 +1,21 @@
+---
+- name: Ensure base packages are installed
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - jq
+      - iputils-ping
+    state: present
+    update_cache: true
+
+- name: Disable swap (required by Kubernetes)
+  ansible.builtin.command: swapoff -a
+  changed_when: false
+  failed_when: false
+
+- name: Comment swap entries in /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(.*\sswap\s.*)$'
+    replace: '# \1'

@@ -1,0 +1,61 @@
+replicaCount: 1
+
+nodeSelector:
+  node-role.kubernetes.io/storage: "true"
+
+tolerations:
+  - key: "node-role.kubernetes.io/master"
+    operator: "Exists"
+    effect: "NoSchedule"
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
+
+nextcloud:
+  host: {{ nextcloud_hostname }}
+  configs:
+    proxy.config.php: |-
+      <?php
+      $CONFIG = array (
+        'trusted_proxies' => array('10.42.0.0/16'),
+        'trusted_domains' => array('{{ nextcloud_hostname }}', '{{ office_hostname }}'),
+        'overwriteprotocol' => 'http',
+      );
+    office.config.php: |-
+      <?php
+      $CONFIG = array (
+        'richdocuments_url' => 'http://{{ office_hostname }}',
+        'richdocuments_wopi_allowlist' => '10.42.0.0/16,192.168.178.0/24',
+        'richdocuments_verify_peer_off' => true,
+      );
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: {{ nextcloud_hostname }}
+      paths:
+        - path: /
+          pathType: Prefix
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+
+persistence:
+  enabled: true
+  storageClass: "longhorn"
+  size: 50Gi
+
+mariadb:
+  enabled: true
+  primary:
+    nodeSelector:
+      node-role.kubernetes.io/storage: "true"
+    tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+    persistence:
+      enabled: true
+      storageClass: "longhorn"
+      size: 10Gi
