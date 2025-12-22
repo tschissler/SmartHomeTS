@@ -1,0 +1,55 @@
+# Cluster networking
+k3s_api_vip: "192.168.178.220"   # kube-vip control-plane VIP
+traefik_lb_ip: "192.168.178.221" # kube-vip service LB IP for Traefik
+
+# DNS names used by Ingress
+nextcloud_hostname: "nextcloud.local"
+office_hostname: "office.local"
+longhorn_hostname: "longhorn.local"
+
+# k3s install
+k3s_version: "v1.33.6+k3s1"
+k3s_disable_components:
+  - servicelb
+  - traefik
+
+# Longhorn
+longhorn_namespace: "longhorn-system"
+longhorn_chart_version: "1.10.1"
+longhorn_data_path: "/var/lib/longhorn-data"
+longhorn_replica_count: 2
+longhorn_fs_type: "ext4"
+longhorn_mount_opts: "defaults,nofail"
+
+# If true, Ansible will partition/format/mount a dedicated device for Longhorn.
+# IMPORTANT: Configure longhorn_disk_device_by_host before running, otherwise the play will fail.
+longhorn_manage_disk: false
+longhorn_disk_device_by_host: {}
+
+# Example (current state):
+# longhorn_manage_disk: true
+# longhorn_disk_device_by_host:
+#   clusternode1: /dev/sda3
+#   clusternode2: /dev/sda3
+
+# Traefik (installed via Helm)
+traefik_namespace: "kube-system"
+traefik_chart_version: "38.0.1"
+
+# Nextcloud / Collabora
+nextcloud_namespace: "nextcloud"
+nextcloud_chart_version: "8.7.0"
+collabora_chart_version: "1.1.54"
+
+# Collabora admin creds (put real values into vault)
+collabora_admin_user: "admin"
+collabora_admin_password: "CHANGE_ME_IN_VAULT"
+
+# Convenience on nodes: configure plain `kubectl` for a normal user (off by default)
+setup_kubectl_for_user: false
+kubectl_symlink_to_k3s: true
+# kubeconfig_user: "thomas"  # optional override
+
+# Postflight validation at end of playbook
+postflight_enabled: true
+postflight_rollout_timeout: "600s"

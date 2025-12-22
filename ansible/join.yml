@@ -1,0 +1,113 @@
+---
+# Join new nodes to an existing cluster.
+# Usage examples:
+#   ansible-playbook -i inventories/home/hosts.ini join.yml --limit newworker1
+#   ansible-playbook -i inventories/home/hosts.ini join.yml --limit newserver1
+
+- name: Base OS prerequisites (new nodes)
+  hosts: k3s_servers:k3s_agents
+  become: true
+  pre_tasks:
+    - name: Remember join targets (use --limit for join runs)
+      ansible.builtin.set_fact:
+        join_targets: "{{ ansible_play_hosts }}"
+      delegate_to: localhost
+      delegate_facts: true
+      run_once: true
+  roles:
+    - common
+
+- name: Fetch join token from init server (no changes on init node)
+  hosts: localhost
+  gather_facts: false
+  vars:
+    k3s_init_host: "{{ groups['k3s_init'][0] }}"
+  tasks:
+    - name: Read server node-token from init node
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_node_token_file
+      delegate_to: "{{ k3s_init_host }}"
+      become: true
+      no_log: true
+
+    - name: Store join token for subsequent plays
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ (k3s_node_token_file.content | b64decode) | trim }}"
+      no_log: true
+
+- name: Join additional control-plane nodes (optional)
+  hosts: k3s_servers:!k3s_init
+  become: true
+  vars:
+    k3s_join_token: "{{ hostvars['localhost'].k3s_join_token }}"
+  roles:
+    - k3s_server_join
+
+- name: Configure kubectl for user on server nodes (optional)
+  hosts: k3s_servers
+  become: true
+  roles:
+    - kubectl_userconfig
+
+- name: Join worker nodes
+  hosts: k3s_agents
+  become: true
+  vars:
+    k3s_join_token: "{{ hostvars['localhost'].k3s_join_token }}"
+  roles:
+    - k3s_agent
+
+- name: Update node labels (architecture + storage)
+  hosts: k3s_init
+  become: true
+  roles:
+    - node_labels
+
+- name: Configure Longhorn node settings (only labels/annotations)
+  hosts: k3s_init
+  become: true
+  roles:
+    - longhorn_node_config
+
+- name: Prepare Longhorn dependencies on storage nodes (optional)
+  hosts: storage_nodes
+  become: true
+  roles:
+    - longhorn_node_prep
+
+- name: Prepare Longhorn dedicated disk on storage nodes (optional)
+  hosts: storage_nodes
+  become: true
+  roles:
+    - longhorn_disk
+
+- name: Wait for joined nodes to become Ready
+  hosts: k3s_init
+  become: true
+  vars:
+    join_targets: "{{ hostvars['localhost'].join_targets | default([]) }}"
+  tasks:
+    - name: Ensure we have join targets
+      ansible.builtin.assert:
+        that:
+          - join_targets | length > 0
+        fail_msg: "No join targets detected. Run with --limit <newnode> and ensure the host exists in the inventory."
+
+    - name: Wait until node object exists
+      ansible.builtin.command: /usr/local/bin/k3s kubectl get node {{ item }}
+      register: node_exists
+      retries: 60
+      delay: 5
+      until: node_exists.rc == 0
+      changed_when: false
+      loop: "{{ join_targets }}"
+
+    - name: Wait until node is Ready
+      ansible.builtin.command: /usr/local/bin/k3s kubectl wait --for=condition=Ready node/{{ item }} --timeout=10s
+      register: node_ready
+      retries: 90
+      delay: 5
+      until: node_ready.rc == 0
+      changed_when: false
+      loop: "{{ join_targets }}"

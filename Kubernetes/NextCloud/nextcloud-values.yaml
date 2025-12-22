@@ -1,0 +1,85 @@
+# Nextcloud Helm Chart Values (Optimiert für vorhandene Labels)
+
+replicaCount: 1
+
+hostAliases:
+  - ip: "192.168.178.221" # Die IP deines Mini-PCs
+    hostnames:
+      - "office.local"
+      - "nextcloud.local"
+
+# Nutzt deine bestehende Rolle "storage" der Mini-PCs
+nodeSelector:
+  node-role.kubernetes.io/storage: "true"
+
+# Da deine Mini-PCs auch "master" sind, haben sie eventuell Taints.
+# Wir setzen Tolerations, damit Nextcloud dort sicher starten darf.
+tolerations:
+  - key: "node-role.kubernetes.io/master"
+    operator: "Exists"
+    effect: "NoSchedule"
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
+
+nextcloud:
+  host: nextcloud.local
+  extraHosts:
+    - ip: "192.168.178.221"
+      hostnames:
+        - "office.local"
+        - "nextcloud.local"
+  # Wichtig: Diese Werte helfen dem Pod beim Starten
+  configs:
+    proxy.config.php: |-
+      <?php
+      $CONFIG = array (
+        'trusted_proxies' => array('10.42.0.0/16'),
+        'trusted_domains' => array('nextcloud.local', 'office.local'), # office.local sicherheitshalber mit rein
+        'overwriteprotocol' => 'http',
+      );
+    office.config.php: |-
+      <?php
+      $CONFIG = array (
+        # Nextcloud nutzt jetzt für die Kommunikation den gleichen Namen wie dein Browser
+        'richdocuments_url' => 'http://office.local',
+        
+        # Die allowlist ist wichtig, damit Collabora zurückfunken darf
+        'richdocuments_wopi_allowlist' => '10.42.0.0/16,192.168.178.0/24',
+        
+        # Deaktiviert die Zertifikatsprüfung (wichtig im .local Umfeld ohne echtes SSL)
+        'richdocuments_verify_peer_off' => true,
+      );
+
+# Falls du Traefik (K3s Default) nutzt, kann hier der Ingress aktiviert werden:
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+  - host: nextcloud.local
+    paths:
+      - path: /
+        pathType: Prefix
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+
+persistence:
+  enabled: true
+  storageClass: "longhorn"
+  size: 50Gi
+
+mariadb:
+  enabled: true
+  primary:
+    # Auch die Datenbank muss auf die Storage-Nodes
+    nodeSelector:
+      node-role.kubernetes.io/storage: "true"
+    tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+    persistence:
+      enabled: true
+      storageClass: "longhorn"
+      size: 10Gi

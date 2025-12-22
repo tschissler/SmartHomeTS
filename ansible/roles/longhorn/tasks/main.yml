@@ -1,0 +1,70 @@
+---
+- name: Ensure helm is installed
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if command -v helm >/dev/null 2>&1; then
+      exit 0
+    fi
+    apt-get update
+    apt-get install -y helm
+  args:
+    executable: /bin/bash
+
+- name: Ensure Longhorn namespace exists
+  ansible.builtin.shell: |
+    set -euo pipefail
+    /usr/local/bin/k3s kubectl create namespace {{ longhorn_namespace }} --dry-run=client -o yaml | /usr/local/bin/k3s kubectl apply -f -
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Label Longhorn default disk nodes
+  ansible.builtin.command: >-
+    /usr/local/bin/k3s kubectl label node {{ item }} node.longhorn.io/create-default-disk=true --overwrite
+  loop: "{{ groups['storage_nodes'] | default([]) }}"
+  changed_when: false
+
+- name: Disable Longhorn default disk on non-storage nodes
+  ansible.builtin.command: >-
+    /usr/local/bin/k3s kubectl label node {{ item }} node.longhorn.io/create-default-disk=false --overwrite
+  loop: "{{ (groups['k3s_servers'] | default([])) | difference(groups['storage_nodes'] | default([])) }}"
+  changed_when: false
+  failed_when: false
+
+- name: Add Longhorn helm repo
+  ansible.builtin.command: helm repo add longhorn https://charts.longhorn.io
+  register: longhorn_repo
+  changed_when: "'has been added' in longhorn_repo.stdout or 'already exists' not in longhorn_repo.stdout"
+  failed_when: false
+
+- name: Helm repo update
+  ansible.builtin.command: helm repo update
+  changed_when: false
+
+- name: Render Longhorn values
+  ansible.builtin.template:
+    src: values.yaml.j2
+    dest: /tmp/longhorn-values.yaml
+    mode: '0644'
+
+- name: Install/upgrade Longhorn
+  ansible.builtin.command: >-
+    helm upgrade --install longhorn longhorn/longhorn
+    --namespace {{ longhorn_namespace }}
+    --create-namespace
+    --version {{ longhorn_chart_version }}
+    -f /tmp/longhorn-values.yaml
+  changed_when: true
+
+- name: Wait for Longhorn UI deployment
+  ansible.builtin.command: /usr/local/bin/k3s kubectl -n {{ longhorn_namespace }} rollout status deploy/longhorn-ui --timeout=300s
+  changed_when: false
+  failed_when: false
+
+- name: Annotate Longhorn default disk path on storage nodes
+  ansible.builtin.command: >-
+    /usr/local/bin/k3s kubectl annotate node {{ item }}
+    node.longhorn.io/default-disks-config='[{"path":"{{ longhorn_data_path }}","allowScheduling":true}]'
+    --overwrite
+  loop: "{{ groups['storage_nodes'] | default([]) }}"
+  changed_when: false

@@ -1,0 +1,53 @@
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+
+image:
+  repository: collabora/code
+  tag: "25.04.8.1.1"
+  pullPolicy: IfNotPresent
+
+containerSecurityContext:
+  privileged: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+      - MKNOD
+      - FOWNER
+
+nodeSelector:
+  node-role.kubernetes.io/storage: "true"
+
+env:
+  - name: aliasgroup1
+    value: "http://{{ nextcloud_hostname | replace('.', '\\.') }}(:[0-9]+)?"
+  - name: server_name
+    value: "{{ office_hostname }}"
+  - name: DONT_GEN_SSL_CERT
+    value: "true"
+  - name: extra_params
+    value: "--o:ssl.enable=false --o:ssl.termination=false --o:admin_console.enable=true --o:net.post_allow.host[0]=.*"
+  - name: username
+    value: "{{ collabora_admin_user }}"
+  - name: password
+    value: "{{ collabora_admin_password }}"
+
+service:
+  type: ClusterIP
+  port: 9980
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/service.serversscheme: http
+  hosts:
+    - host: {{ office_hostname }}
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 9980

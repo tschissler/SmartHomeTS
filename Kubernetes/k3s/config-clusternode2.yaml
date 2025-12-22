@@ -1,5 +1,5 @@
 server: https://192.168.178.211:6443
-token: K108a5345f15d3f60c67d14bf431890cace6a51e230e3b6d6307cb049f4bd14886b::server:04a5a24c27743c29b1e248a3917c2471
+token: "<K3S_JOIN_TOKEN>"
 node-ip: "192.168.178.212" # Die IP dieses zweiten PCs
 advertise-address: "192.168.178.212"
 node-external-ip: "192.168.178.212"

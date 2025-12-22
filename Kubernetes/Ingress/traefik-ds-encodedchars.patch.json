@@ -1,0 +1,8 @@
+[
+  {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--entryPoints.web.http.encodedcharacters.allowencodedslash=true"},
+  {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--entryPoints.web.http.encodedcharacters.allowencodedquestionmark=true"},
+  {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--entryPoints.web.http.sanitizepath=false"},
+  {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--entryPoints.websecure.http.encodedcharacters.allowencodedslash=true"},
+  {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--entryPoints.websecure.http.encodedcharacters.allowencodedquestionmark=true"},
+  {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--entryPoints.websecure.http.sanitizepath=false"}
+]

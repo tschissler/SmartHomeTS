@@ -1,0 +1,33 @@
+---
+- name: Ensure k3s manifest directory exists
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/server/manifests
+    state: directory
+    mode: '0755'
+
+- name: Install kube-vip manifests (static)
+  ansible.builtin.template:
+    src: kube-vip.yaml.j2
+    dest: /var/lib/rancher/k3s/server/manifests/kube-vip.yaml
+    mode: '0644'
+
+- name: Install kube-vip ConfigMap for service LB range (static)
+  ansible.builtin.template:
+    src: kube-vip-configmap.yaml.j2
+    dest: /var/lib/rancher/k3s/server/manifests/kube-vip-configmap.yaml
+    mode: '0644'
+
+- name: Install kube-vip cloud provider (static)
+  ansible.builtin.copy:
+    src: kube-vip-cloud-provider.yaml
+    dest: /var/lib/rancher/k3s/server/manifests/kube-vip-cloud-provider.yaml
+    mode: '0644'
+
+- name: Wait for kube-vip to be ready
+  ansible.builtin.command: /usr/local/bin/k3s kubectl -n kube-system rollout status ds/kube-vip-ds --timeout=180s
+  register: kubevip_rollout
+  retries: 10
+  delay: 10
+  until: kubevip_rollout.rc == 0
+  changed_when: false
+  failed_when: false

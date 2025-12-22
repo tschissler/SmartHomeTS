@@ -1,0 +1,30 @@
+---
+- name: Ensure /etc/rancher/k3s exists
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+- name: Write k3s agent config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0600'
+  no_log: true
+
+- name: Install k3s agent
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if systemctl list-unit-files | grep -q '^k3s-agent\.service'; then
+      echo "k3s-agent already installed"
+      exit 0
+    fi
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='{{ k3s_version }}' INSTALL_K3S_EXEC='agent' sh -
+  args:
+    executable: /bin/bash
+
+- name: Ensure k3s-agent service is running
+  ansible.builtin.service:
+    name: k3s-agent
+    state: started
+    enabled: true

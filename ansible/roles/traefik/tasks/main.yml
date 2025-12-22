@@ -1,0 +1,41 @@
+---
+- name: Ensure helm is installed
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if command -v helm >/dev/null 2>&1; then
+      exit 0
+    fi
+    apt-get update
+    apt-get install -y helm
+  args:
+    executable: /bin/bash
+
+- name: Render Traefik values
+  ansible.builtin.template:
+    src: values.yaml.j2
+    dest: /tmp/traefik-values.yaml
+    mode: '0644'
+
+- name: Add Traefik helm repo
+  ansible.builtin.command: helm repo add traefik https://traefik.github.io/charts
+  register: traefik_repo
+  changed_when: "'has been added' in traefik_repo.stdout"
+  failed_when: false
+
+- name: Helm repo update
+  ansible.builtin.command: helm repo update
+  changed_when: false
+
+- name: Install/upgrade Traefik
+  ansible.builtin.command: >-
+    helm upgrade --install traefik traefik/traefik
+    --namespace {{ traefik_namespace }}
+    --create-namespace
+    --version {{ traefik_chart_version }}
+    -f /tmp/traefik-values.yaml
+  changed_when: true
+
+- name: Wait for Traefik DaemonSet rollout
+  ansible.builtin.command: /usr/local/bin/k3s kubectl -n {{ traefik_namespace }} rollout status ds/traefik --timeout=240s
+  changed_when: false
+  failed_when: false
