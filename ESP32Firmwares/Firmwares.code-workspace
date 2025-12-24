@@ -1,0 +1,50 @@
+{
+	"folders": [
+		{
+			"name": "TemperatureSensor2.Firmware",
+			"path": "TemperatureSensor2.Firmware"
+		},
+		{
+			"name": "SharedLibs",
+			"path": "SharedLibs"
+		},
+		{
+			"name": "LEDStripe.Firmware",
+			"path": "LEDStripe.Firmware"
+		},
+		{
+			"name": "RelaisBoard.Firmware",
+			"path": "RelaisBoard.Firmware"
+		},
+		{
+			"name": "HeatingFanController.Firmware",
+			"path": "HeatingFanController.Firmware"
+		},
+		{
+			"name": "HeatmeterSensor.Firmware",
+			"path": "HeatmeterSensor.Firmware"
+		},
+		{
+			"name": "Kellerdevice.Firmware",
+			"path": "Kellerdevice.Firmware"
+		},
+		{
+			"path": "SMLSensor.Firmware"
+		},
+		{
+			"path": "TemperatureDisplay.Firmware"
+		},
+		{
+			"path": "TemperatureSensor.Firmware"
+		},
+		{
+			"path": "WebRadio"
+		},
+		{
+			"path": "../.github/workflows"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "LEDStripe.Firmware"
+	}
+}
