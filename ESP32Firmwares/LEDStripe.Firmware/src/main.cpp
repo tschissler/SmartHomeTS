@@ -33,7 +33,7 @@ static bool otaEnable = String(OTA_ENABLED) != "false";
 
 // MQTT settings (kept compatible with existing backend topics)
 static const String mqtt_broker = "smarthomepi2";
-static const String mqtt_update_topic = "OTAUpdate/OTAUpdateLEDStripeTopic";
+static const String mqtt_update_topic = "OTAUpdate/LEDStripe";
 static const String mqtt_data_topic = "commands/illumination/LEDStripe/setColor";
 
 static void mqttCallback(String &topic, String &payload);
