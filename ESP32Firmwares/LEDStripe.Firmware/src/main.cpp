@@ -80,7 +80,7 @@ void clear(Panel panel) {
 
 void setColorFromJson(String jsonPayload) {
   // Parse JSON
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
   DeserializationError error = deserializeJson(doc, jsonPayload);
   if (error) {
     Serial.print("deserializeJson() failed: ");
