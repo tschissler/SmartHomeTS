@@ -28,7 +28,8 @@ WiFiClient wifiClient;
 static MQTTClientLib *mqttClientLib = nullptr;
 static String chipID = "";
 
-static int otaInProgress = 0;
+static bool otaActive = false;
+static unsigned long otaStartMs = 0;
 static bool otaEnable = String(OTA_ENABLED) != "false";
 
 // MQTT settings (kept compatible with existing backend topics)
@@ -153,9 +154,9 @@ static void mqttCallback(String &topic, String &payload)
 
   if (topic == mqtt_update_topic)
   {
-    if (otaInProgress || !otaEnable)
+    if (otaActive || !otaEnable)
     {
-      if (otaInProgress)
+      if (otaActive)
         Serial.println("OTA in progress, ignoring message");
       if (!otaEnable)
         Serial.println("OTA disabled, ignoring message");
@@ -173,7 +174,8 @@ static void mqttCallback(String &topic, String &payload)
     }
 
     Serial.println("OTA Update Triggered");
-    otaInProgress = 1;
+    otaActive = true;
+    otaStartMs = millis();
     AzureOTAUpdater::UpdateFirmwareFromUrl(payload.c_str());
     return;
   }
@@ -246,9 +248,28 @@ void setup() {
 }
 
 void loop() {
-  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
+  if (otaActive)
+  {
+    const int otaStatus = AzureOTAUpdater::CheckUpdateStatus();
+    if (otaStatus < 0)
+    {
+      Serial.println("OTA failed; resuming normal operation. Next OTA will trigger on new MQTT message.");
+      otaActive = false;
+    }
+    else if (otaStatus == 0)
+    {
+      // If OTA didn't transition to UPDATING within a reasonable time, give up and stay functional.
+      if (millis() - otaStartMs > 120000)
+      {
+        Serial.println("OTA did not succeed within timeout; resuming normal operation.");
+        otaActive = false;
+      }
+    }
 
-  if (otaInProgress != 1)
+    delay(200);
+    return;
+  }
+
   {
     bool mqttConnected = mqttClientLib->loop();
     if (!mqttConnected)

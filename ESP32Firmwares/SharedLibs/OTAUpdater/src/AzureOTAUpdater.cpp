@@ -4,6 +4,10 @@
 
 static HttpsOTAStatus_t otastatus;
 
+// HttpsOTA may use the URL pointer beyond the call to begin();
+// keep a stable copy to avoid dangling pointers (e.g., when source is an MQTT payload buffer).
+static String otaUrl;
+
 // Root Certificate for Azure Blob Storage
 // DigiCert Global Root G2 as defined in the Azure Portal certificate chain
 // Downloaded from https://www.digicert.com/kb/digicert-root-certificates.htm
@@ -61,12 +65,15 @@ void HttpEvent(HttpEvent_t *event)
 }
 
 bool AzureOTAUpdater::UpdateFirmwareFromUrl(const char* firmwareUrl) {
+    otaUrl = String(firmwareUrl);
+    otaUrl.trim();
+
     Serial.print("Downloading new firmware from: ");
-    Serial.println(firmwareUrl);
+    Serial.println(otaUrl);
     
     HttpsOTA.onHttpEvent(HttpEvent);
-    Serial.println("Starting OTA Update from Azure Blob Storage " + String(firmwareUrl) + " ...");
-    HttpsOTA.begin(firmwareUrl, server_certificate); 
+    Serial.println("Starting OTA Update from Azure Blob Storage " + otaUrl + " ...");
+    HttpsOTA.begin(otaUrl.c_str(), server_certificate);
     Serial.println("OTA Update in progress...");
     return true;
 }
