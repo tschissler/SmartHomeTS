@@ -13,8 +13,8 @@ Width_X = 153;
 Height = 26;
 
 OuterWidth_x = Width_X + Wall * 2;
-OuterWidth_y = FanDiameter+2*Wall;
-OuterHeight = Height + Wall;
+OuterWidth_y = FanDiameter+Wall;
+OuterHeight = Height + Wall/2;
 
 CanbleOffsetX = 20;
 CableWidth = 7.5;
@@ -26,7 +26,7 @@ difference()
     translate([OuterWidth_x/2, OuterWidth_y/2, -1])
         cylinder(h=100, d=FanDiameter);
 
-    translate([(OuterWidth_x-FanDiameter)/2, (OuterWidth_y-FanDiameter)/2, Wall])
+    translate([(OuterWidth_x-FanDiameter)/2, (OuterWidth_y-FanDiameter)/2, Wall/2])
         cube([FanDiameter, FanDiameter, 100]);
 
     translate([CanbleOffsetX+(OuterWidth_x-FanDiameter)/2, 0, OuterHeight-CableHeight])
