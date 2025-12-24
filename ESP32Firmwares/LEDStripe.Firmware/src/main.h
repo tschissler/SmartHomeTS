@@ -6,4 +6,4 @@ enum Panel {
   BOTH
 };
 
-void setLEDColor(int d, int r, int g, int b, Panel panel);
+void setLEDColor(int r, int g, int b, int d, Panel panel);

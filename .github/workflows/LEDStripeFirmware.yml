@@ -19,6 +19,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Generating version 
+      run: echo "version=0.0.$(( ${{ github.run_number }} ))" >> $GITHUB_ENV
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -31,8 +34,9 @@ jobs:
 
     - name: Build with PlatformIO  
       env:
-        WIFI_SSID: ${{ secrets.WIFI_SSID }}
-        WIFI_PASSWORD: ${{ secrets.WIFI_PASSWORD }}
+        WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
+        FIRMWARE_VERSION: ${{ env.version }}
+        OTA_ENABLED: "true"
       run: |
         pio run
 
@@ -40,13 +44,13 @@ jobs:
       run: |
         az storage blob upload --account-name iotstoragem1 \
                                --container-name firmwareupdates \
-                               --name LEDStripefirmware_${{ github.run_id }}.bin \
+                               --name LEDStripefirmware_$version.bin \
                                --file .pio/build/esp32dev/firmware.bin \
                                --account-key ${{ secrets.AZURE_STORAGE_KEY }}
                                
     - name: Construct Blob URL
       id: construct_blob_url
-      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/LEDStripefirmware_${{ github.run_id }}.bin" >> $GITHUB_OUTPUT
+      run: echo "blob_url=https://iotstoragem1.blob.core.windows.net/firmwareupdates/LEDStripefirmware_$version.bin" >> $GITHUB_OUTPUT
                            
   triggerupdate:
     needs: build
