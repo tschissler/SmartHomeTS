@@ -61,4 +61,4 @@ jobs:
 
     - name: Trigger MQTT Update Message
       run: |
-        mosquitto_pub -h smarthomepi2 -p 32004 -t OTAUpdateLEDStripeTopic -m ${{ needs.build.outputs.blob_url }} -i buildrunner
+        mosquitto_pub -h smarthomepi2 -p 32004 -t OTAUpdate/OTAUpdateLEDStripeTopic -m ${{ needs.build.outputs.blob_url }} -i buildrunner
