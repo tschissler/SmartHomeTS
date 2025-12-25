@@ -218,6 +218,7 @@ bool parseConfigJSON(String jsonPayload)
     Serial.println("Device name set to: " + deviceName);
     mqttClientLib->unsubscribe({mqtt_CommandTopic});
     mqtt_CommandTopic.replace("{DeviceName}", deviceName);
+    Serial.println("Subscribing to command topic: " + mqtt_CommandTopic);
     mqttClientLib->subscribe({mqtt_CommandTopic});
   }
 
@@ -257,10 +258,10 @@ bool parseConfigJSON(String jsonPayload)
 
 void parseCommandJSON(String jsonPayload)
 {
+  Serial.println("Parsing command JSON: " + jsonPayload);
   JsonDocument doc;
 
   DeserializationError error = deserializeJson(doc, jsonPayload);
-
   if (error)
   {
     Serial.print("JSON parsing failed: ");
@@ -365,10 +366,11 @@ void connectToMQTT(bool cleanSession)
   }
 
   mqttClientLib->connect(cleanSession);
-  mqttClientLib->subscribe({mqtt_ConfigTopic, mqtt_OTAtopic});
+  mqttClientLib->subscribe({mqtt_OTAtopic, mqtt_ConfigTopic, mqtt_CommandTopic});
   Serial.println("### MQTT Client is connected and subscribed to topics");
   Serial.println("Config Topic: " + mqtt_ConfigTopic);
   Serial.println("OTA Topic: " + mqtt_OTAtopic);
+  Serial.println("Command Topic: " + mqtt_CommandTopic);
 }
 
 void readFanSpeed() 
@@ -539,25 +541,24 @@ void loop(void) {
   if (mqttClientLib != nullptr)
   {
     bool mqttConnected = mqttClientLib->loop();
-    if (!mqttConnected)
-    {
-      int lastErr = mqttClientLib->lastError();
-      Serial.print("MQTT loop() returned false early. Last Error Code: ");
-      Serial.println(lastErr);
-      Serial.println("MQTT Client not connected, reconnecting...");
-      // IMPORTANT: Don't block forever here; try a few times and continue.
-      mqttClientLib->tryConnect(false, 3, 1000);
-      mqttClientLib->subscribe({mqtt_ConfigTopic, mqtt_OTAtopic});
-    }
+    // if (!mqttConnected)
+    // {
+    //   int lastErr = mqttClientLib->lastError();
+    //   Serial.print("MQTT loop() returned false early. Last Error Code: ");
+    //   Serial.println(lastErr);
+    //   Serial.println("MQTT Client not connected, reconnecting...");
+    //   // IMPORTANT: Don't block forever here; try a few times and continue.
+    //   mqttClientLib->tryConnect(false, 3, 1000);
+    // }
 
-    // Retained status for MQTT Explorer (no Serial needed)
-    static uint32_t lastStatusMs = 0;
-    const uint32_t nowStatusMs = millis();
-    if (nowStatusMs - lastStatusMs >= 5000)
-    {
-      lastStatusMs = nowStatusMs;
-      publishStatus();
-    }
+    // // Retained status for MQTT Explorer (no Serial needed)
+    // static uint32_t lastStatusMs = 0;
+    // const uint32_t nowStatusMs = millis();
+    // if (nowStatusMs - lastStatusMs >= 5000)
+    // {
+    //   lastStatusMs = nowStatusMs;
+    //   publishStatus();
+    // }
 
     if (debug)
       mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_loop").c_str(), "Main Loop " + String(otaInProgress), true, 2, false);
