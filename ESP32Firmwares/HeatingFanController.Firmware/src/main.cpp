@@ -94,6 +94,38 @@ bool initializeSensor()
   return true;
 }
 
+static void publishStatus()
+{
+  if (mqttClientLib == nullptr)
+  {
+    return;
+  }
+  if (!mqttClientLib->connected())
+  {
+    return;
+  }
+
+  JsonDocument doc;
+  doc["uptime_s"] = millis() / 1000;
+  doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
+  doc["wifi_rssi"] = WiFi.RSSI();
+  doc["ip"] = WiFi.localIP().toString();
+  doc["mqtt_connected"] = mqttClientLib->connected();
+  doc["mqtt_last_error"] = mqttClientLib->lastError();
+  doc["mqtt_return_code"] = mqttClientLib->returnCode();
+  doc["readings"] = static_cast<unsigned long>(readings.size());
+
+  String payload;
+  serializeJson(doc, payload);
+
+  mqttClientLib->publish(
+      ("meta/HeatingFanController/" + location + "/" + deviceName + "/status").c_str(),
+      payload,
+      true,
+      1,
+      false);
+}
+
 void readSensorData()
 {
   // Retained so tools like MQTT Explorer can show the latest state even if they connect later.
@@ -344,38 +376,6 @@ void connectToMQTT(bool cleanSession)
   Serial.println("### MQTT Client is connected and subscribed to topics");
   Serial.println("Config Topic: " + mqtt_ConfigTopic);
   Serial.println("OTA Topic: " + mqtt_OTAtopic);
-}
-
-static void publishStatus()
-{
-  if (mqttClientLib == nullptr)
-  {
-    return;
-  }
-  if (!mqttClientLib->connected())
-  {
-    return;
-  }
-
-  JsonDocument doc;
-  doc["uptime_s"] = millis() / 1000;
-  doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
-  doc["wifi_rssi"] = WiFi.RSSI();
-  doc["ip"] = WiFi.localIP().toString();
-  doc["mqtt_connected"] = mqttClientLib->connected();
-  doc["mqtt_last_error"] = mqttClientLib->lastError();
-  doc["mqtt_return_code"] = mqttClientLib->returnCode();
-  doc["readings"] = static_cast<unsigned long>(readings.size());
-
-  String payload;
-  serializeJson(doc, payload);
-
-  mqttClientLib->publish(
-      ("meta/HeatingFanController/" + location + "/" + deviceName + "/status").c_str(),
-      payload,
-      true,
-      1,
-      false);
 }
 
 void readFanSpeed() 
