@@ -262,7 +262,25 @@ void mqttCallback(String &topic, String &payload)
   if (topic == mqtt_ConfigTopic)
   {
     if (parseConfigJSON(payload))
-      mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/version").c_str(), String(version), true, 2);
+    {
+      // This is the one topic you currently observe in MQTT Explorer.
+      mqttClientLib->publish(
+          ("meta/HeatingFanController/" + location + "/" + deviceName + "/version").c_str(),
+          String(version),
+          true,
+          2);
+
+      // Publish status right next to version so we can diagnose without Serial.
+      publishStatus();
+
+      // Also publish a monotonic boot/uptime marker.
+      mqttClientLib->publish(
+          ("meta/HeatingFanController/" + location + "/" + deviceName + "/uptime_s").c_str(),
+          String(millis() / 1000),
+          true,
+          2,
+          false);
+    }
     return;
   }
 
@@ -394,7 +412,7 @@ String getSensorDisplayName(uint64_t sensorId)
 
 void publishSensorData()
 {
-  mqttClientLib->publish("debug/HeatingFanController", String(static_cast<unsigned long>(readings.size())), true, 1, false);
+  mqttClientLib->publish("debug/HeatingFanController", String(static_cast<unsigned long>(readings.size())), true, 2, false);
   String sensorDisplayName = "";
   if (readings.empty())
   {
@@ -554,7 +572,7 @@ void loop(void) {
     if (nowMs - lastHeartbeatMs >= 5000)
     {
       lastHeartbeatMs = nowMs;
-      mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop " + String(otaInProgress), true, 1, false);
+      mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop " + String(otaInProgress), true, 2, false);
     }
   }
 
