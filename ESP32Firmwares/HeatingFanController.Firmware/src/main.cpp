@@ -96,7 +96,15 @@ bool initializeSensor()
 
 void readSensorData()
 {
-  mqttClientLib->publish("debug/HeatingFanController/readsensordata", "Readings size: " + String(static_cast<unsigned long>(readings.size())) + "Device: " + deviceName + "SensorNames: " + String(static_cast<unsigned long>(sensorNames.size())), false, 0, false);
+  // Retained so tools like MQTT Explorer can show the latest state even if they connect later.
+  mqttClientLib->publish(
+      "debug/HeatingFanController/readsensordata",
+      "Readings size: " + String(static_cast<unsigned long>(readings.size())) +
+          " Device: " + deviceName +
+          " SensorNames: " + String(static_cast<unsigned long>(sensorNames.size())),
+      true,
+      1,
+      false);
   if (deviceName == "" && sensorNames.empty())
   {
     Serial.println("Sensor name not set, skipping sensor reading");
@@ -354,7 +362,7 @@ String getSensorDisplayName(uint64_t sensorId)
 
 void publishSensorData()
 {
-  mqttClientLib->publish("debug/HeatingFanController", String(static_cast<unsigned long>(readings.size())), false, 0, false);
+  mqttClientLib->publish("debug/HeatingFanController", String(static_cast<unsigned long>(readings.size())), true, 1, false);
   String sensorDisplayName = "";
   if (readings.empty())
   {
@@ -497,8 +505,14 @@ void loop(void) {
       connectToMQTT(false);
     }
 
-    // Log publish outcome to Serial (otherwise failures are completely silent).
-    mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop " + String(otaInProgress), false, 0, true);
+    // Retain the last heartbeat so MQTT Explorer shows it even if it connects later.
+    static uint32_t lastHeartbeatMs = 0;
+    const uint32_t nowMs = millis();
+    if (nowMs - lastHeartbeatMs >= 5000)
+    {
+      lastHeartbeatMs = nowMs;
+      mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop " + String(otaInProgress), true, 1, false);
+    }
   }
 
   if (otaInProgress != 1)
