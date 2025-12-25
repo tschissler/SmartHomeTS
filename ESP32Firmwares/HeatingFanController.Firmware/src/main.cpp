@@ -483,7 +483,7 @@ void setup()
 
 void loop(void) {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
-
+  mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop" + String(otaInProgress), false, 0, false);
   if (otaInProgress != 1)
   {
     timeClient.update();
