@@ -96,6 +96,7 @@ bool initializeSensor()
 
 void readSensorData()
 {
+  mqttClientLib->publish("debug/HeatingFanController/readsensordata", "Readings size: " + String(static_cast<unsigned long>(readings.size())) + "Device: " + deviceName + "SensorNames: " + String(static_cast<unsigned long>(sensorNames.size())), false, 0, false);
   if (deviceName == "" && sensorNames.empty())
   {
     Serial.println("Sensor name not set, skipping sensor reading");
