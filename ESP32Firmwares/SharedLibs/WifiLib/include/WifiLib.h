@@ -7,6 +7,7 @@ public:
     WifiLib(const String& wifiPasswords);
     void scanAndSelectNetwork();
     void connect();
+    bool connect(uint32_t timeoutMs);
     String getSSID() const;
     String getPassword() const;
     String getLocalIP() const;

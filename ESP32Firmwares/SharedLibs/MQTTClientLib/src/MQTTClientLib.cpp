@@ -7,33 +7,54 @@ MQTTClientLib::MQTTClientLib(const String& mqtt_broker, const String& clientId, 
     mqttClient.setOptions(60, false, 10000);
 }
 
-void MQTTClientLib::connect(bool cleanSession) {
-    while (!mqttClient.connected()) {
+bool MQTTClientLib::tryConnect(bool cleanSession, uint8_t maxAttempts, uint32_t delayBetweenAttemptsMs) {
+    if (mqttClient.connected()) {
+        return true;
+    }
+
+    mqttClient.setCleanSession(cleanSession);
+
+    for (uint8_t attempt = 0; attempt < maxAttempts; ++attempt) {
         Serial.println("=== MQTT Connection Attempt ===");
+        Serial.print("Attempt: ");
+        Serial.print(attempt + 1);
+        Serial.print("/");
+        Serial.println(maxAttempts);
         Serial.print("Clean Session: ");
         Serial.println(cleanSession ? "true" : "false");
-
-        mqttClient.setCleanSession(cleanSession);
         Serial.print("Connecting to MQTT Broker ");
         Serial.print(mqtt_broker);
         Serial.print(" with ClientId ");
         Serial.println(clientId);
+
         if (mqttClient.connect(clientId.c_str())) {
             Serial.println("Connected to MQTT Broker");
-        } else {
+            return true;
+        }
+
         Serial.print("Failed to connect to MQTT Broker ");
         Serial.print(mqtt_broker);
         Serial.print(" with Last Error: ");
         Serial.println(mqttClient.lastError());
-        delay(1000);
-        }
+        delay(delayBetweenAttemptsMs);
     }
 
-    Serial.println("Connected to MQTT Broker");
+    return mqttClient.connected();
+}
+
+void MQTTClientLib::connect(bool cleanSession) {
+    while (!tryConnect(cleanSession, 1, 1000)) {
+        // Retry forever (legacy behavior) but keep the logic in one place.
+        delay(0);
+    }
 }
 
 bool MQTTClientLib::loop() {
     return mqttClient.loop();
+}
+
+bool MQTTClientLib::connected() {
+    return mqttClient.connected();
 }
 
 bool MQTTClientLib::publish(const String& topic, const String& payload, bool retained, int qos, bool printLogMessages) {
@@ -88,4 +109,8 @@ bool MQTTClientLib::unsubscribe(const String& topic) {
 
 int MQTTClientLib::lastError() {
     return mqttClient.lastError();
+}
+
+int MQTTClientLib::returnCode() {
+    return mqttClient.returnCode();
 }

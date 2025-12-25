@@ -318,7 +318,7 @@ void connectToMQTT(bool cleanSession)
   if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("WiFi not connected, attempting to reconnect...");
-    wifiLib.connect();
+    wifiLib.connect(15000);
   }
 
   mqttClientLib->connect(cleanSession);
@@ -326,6 +326,38 @@ void connectToMQTT(bool cleanSession)
   Serial.println("### MQTT Client is connected and subscribed to topics");
   Serial.println("Config Topic: " + mqtt_ConfigTopic);
   Serial.println("OTA Topic: " + mqtt_OTAtopic);
+}
+
+static void publishStatus()
+{
+  if (mqttClientLib == nullptr)
+  {
+    return;
+  }
+  if (!mqttClientLib->connected())
+  {
+    return;
+  }
+
+  JsonDocument doc;
+  doc["uptime_s"] = millis() / 1000;
+  doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
+  doc["wifi_rssi"] = WiFi.RSSI();
+  doc["ip"] = WiFi.localIP().toString();
+  doc["mqtt_connected"] = mqttClientLib->connected();
+  doc["mqtt_last_error"] = mqttClientLib->lastError();
+  doc["mqtt_return_code"] = mqttClientLib->returnCode();
+  doc["readings"] = static_cast<unsigned long>(readings.size());
+
+  String payload;
+  serializeJson(doc, payload);
+
+  mqttClientLib->publish(
+      ("meta/HeatingFanController/" + location + "/" + deviceName + "/status").c_str(),
+      payload,
+      true,
+      1,
+      false);
 }
 
 void readFanSpeed() 
@@ -502,7 +534,18 @@ void loop(void) {
       Serial.print("MQTT loop() returned false early. Last Error Code: ");
       Serial.println(lastErr);
       Serial.println("MQTT Client not connected, reconnecting...");
-      connectToMQTT(false);
+      // IMPORTANT: Don't block forever here; try a few times and continue.
+      mqttClientLib->tryConnect(false, 3, 1000);
+      mqttClientLib->subscribe({mqtt_ConfigTopic, mqtt_OTAtopic});
+    }
+
+    // Retained status for MQTT Explorer (no Serial needed)
+    static uint32_t lastStatusMs = 0;
+    const uint32_t nowStatusMs = millis();
+    if (nowStatusMs - lastStatusMs >= 5000)
+    {
+      lastStatusMs = nowStatusMs;
+      publishStatus();
     }
 
     // Retain the last heartbeat so MQTT Explorer shows it even if it connects later.
@@ -530,7 +573,7 @@ void loop(void) {
     if (WiFi.status() != WL_CONNECTED)
     {
       Serial.println("WiFi disconnected, attempting to reconnect...");
-      wifiLib.connect();
+      wifiLib.connect(15000);
     }
     // MQTT loop/reconnect handled at the start of loop().
   }

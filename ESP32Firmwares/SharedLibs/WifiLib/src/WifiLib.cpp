@@ -69,15 +69,27 @@ void WifiLib::scanAndSelectNetwork() {
 }
 
 void WifiLib::connect() {
-    while (ssid == "" || password == "") {
-        Serial.println("No WiFi network found, retrying...");
+    // Backward compatible: block forever.
+    while (!connect(0)) {
         delay(1000);
-        scanAndSelectNetwork();
     }
-    
+}
+
+bool WifiLib::connect(uint32_t timeoutMs) {
+    if (WiFi.status() == WL_CONNECTED) {
+        return true;
+    }
+
+    if (ssid == "" || password == "") {
+        scanAndSelectNetwork();
+        if (ssid == "" || password == "") {
+            return false;
+        }
+    }
+
     Serial.print("Connecting to WiFi ");
     Serial.println(ssid);
-    
+
     // Connect with specific BSSID if available to ensure connection to the strongest AP
     if (bssidSet) {
         Serial.printf("Connecting to specific access point with BSSID: %02X:%02X:%02X:%02X:%02X:%02X\n",
@@ -86,14 +98,20 @@ void WifiLib::connect() {
     } else {
         WiFi.begin(ssid.c_str(), password.c_str());
     }
-    
+
+    const uint32_t startMs = millis();
     while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Could not connect to Wifi " + ssid + " - password might be incorrect, retrying...");
+        delay(250);
+        if (timeoutMs != 0 && (millis() - startMs) >= timeoutMs) {
+            Serial.println("WiFi connect timeout");
+            return false;
+        }
     }
+
     Serial.println("Connected to WiFi");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
+    return true;
 }
 
 void WifiLib::parseWifis(std::map<String, String> &knownWifis) {
