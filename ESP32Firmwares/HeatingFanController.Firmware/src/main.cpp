@@ -130,7 +130,7 @@ void readSensorData()
 {
   // Retained so tools like MQTT Explorer can show the latest state even if they connect later.
   mqttClientLib->publish(
-      "debug/HeatingFanController/readsensordata",
+      ("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_readsensordata").c_str(),
       "Readings size: " + String(static_cast<unsigned long>(readings.size())) +
           " Device: " + deviceName +
           " SensorNames: " + String(static_cast<unsigned long>(sensorNames.size())),
@@ -412,7 +412,7 @@ String getSensorDisplayName(uint64_t sensorId)
 
 void publishSensorData()
 {
-  mqttClientLib->publish("debug/HeatingFanController", String(static_cast<unsigned long>(readings.size())), true, 2, false);
+  mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_readsensordata").c_str(), String(static_cast<unsigned long>(readings.size())), true, 2, false);
   String sensorDisplayName = "";
   if (readings.empty())
   {
@@ -572,7 +572,7 @@ void loop(void) {
     if (nowMs - lastHeartbeatMs >= 5000)
     {
       lastHeartbeatMs = nowMs;
-      mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop " + String(otaInProgress), true, 2, false);
+      mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_loop").c_str(), "Main Loop " + String(otaInProgress), true, 2, false);
     }
   }
 
