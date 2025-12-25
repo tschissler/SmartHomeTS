@@ -150,7 +150,7 @@ void readSensorData()
   lastReadingTime = millis();
 }
 
-void parseConfigJSON(String jsonPayload)
+bool parseConfigJSON(String jsonPayload)
 {
   JsonDocument doc;
 
@@ -160,7 +160,7 @@ void parseConfigJSON(String jsonPayload)
   {
     Serial.print("JSON parsing failed: ");
     Serial.println(error.c_str());
-    return;
+    return false;
   }
 
   if (!doc["Location"].isNull())
@@ -209,6 +209,7 @@ void parseConfigJSON(String jsonPayload)
       Serial.println("SensorNames in JSON is not an array; ignoring configuration.");
     }
   }
+  return true;
 }
 
 void parseCommandJSON(String jsonPayload)
@@ -251,7 +252,8 @@ void mqttCallback(String &topic, String &payload)
 
   if (topic == mqtt_ConfigTopic)
   {
-    parseConfigJSON(payload);
+    if (parseConfigJSON(payload))
+      mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/version").c_str(), String(version), true, 2);
     return;
   }
 
@@ -469,7 +471,6 @@ void setup()
   String mqttClientID = "ESP32HeatingFanControllerClient_" + chipID;
   mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT(true);
-  mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/version").c_str(), String(version), true, 2);
 
   if (tachPin != -1) {
     pinMode(tachPin, INPUT_PULLUP);
