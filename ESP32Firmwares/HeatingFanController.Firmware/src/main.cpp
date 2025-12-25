@@ -580,7 +580,6 @@ void loop(void) {
       Serial.println("WiFi disconnected, attempting to reconnect...");
       wifiLib.connect(15000);
     }
-    // MQTT loop/reconnect handled at the start of loop().
   }
   delay(1000);
 }
