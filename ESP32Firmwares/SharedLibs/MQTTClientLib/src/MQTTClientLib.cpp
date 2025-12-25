@@ -70,6 +70,22 @@ bool MQTTClientLib::subscribe(const std::vector<String>& topics) {
     return allSubscribed;
 }
 
+bool MQTTClientLib::unsubscribe(const String& topic) {
+    if (topic.isEmpty()) return false; 
+
+    bool unsubscribeSuccess = mqttClient.unsubscribe(topic.c_str());
+    if (unsubscribeSuccess) {
+        Serial.print("Unsubscribed from topic: ");
+        Serial.println(topic);
+    } else {
+        Serial.print("Failed to unsubscribe from topic: ");
+        Serial.println(topic);
+        Serial.print("Last Error: ");
+        Serial.println(mqttClient.lastError());
+    }
+    return unsubscribeSuccess;
+}
+
 int MQTTClientLib::lastError() {
     return mqttClient.lastError();
 }

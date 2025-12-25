@@ -19,6 +19,7 @@ public:
     bool publish(const String &topic, const String &payload, bool retained, int qos, bool printLogMessages = true);
     bool subscribe(const String& topic);
     bool subscribe(const std::vector<String>& topics);
+    bool unsubscribe(const String &topic);
     int lastError();
 
 private:

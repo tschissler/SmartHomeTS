@@ -42,6 +42,9 @@
 		},
 		{
 			"path": "../.github/workflows"
+		},
+		{
+			"path": "DS18B20Monitor.Firmware"
 		}
 	],
 	"settings": {

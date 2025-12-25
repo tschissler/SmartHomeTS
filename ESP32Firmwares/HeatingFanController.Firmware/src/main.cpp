@@ -58,12 +58,13 @@ static std::vector<std::vector<SensorData>> readings;
 
 //static std::vector<std::vector<SensorData>> readings;
 static String baseTopic = "daten";
-static String sensorName = "Heizkörperlüfter";
+static String deviceName = "Heizkörperlüfter";
 static std::unordered_map<std::string, String> sensorNames;
 static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/HeatingFanController";
 static String mqtt_ConfigTopic = "config/HeatingFanController/{ID}";
+static String mqtt_CommandTopic = "commands/Heating/{SensorName}";
 
 String extractVersionFromUrl(String url)
 {
@@ -95,7 +96,7 @@ bool initializeSensor()
 
 void readSensorData()
 {
-  if (sensorName == "" && sensorNames.empty())
+  if (deviceName == "" && sensorNames.empty())
   {
     Serial.println("Sensor name not set, skipping sensor reading");
     return;
@@ -168,30 +169,13 @@ void parseConfigJSON(String jsonPayload)
     Serial.println("Location set to: " + location);
   }
 
-  if (!doc["Fanspeed"].isNull())
+  if (!doc["DeviceName"].isNull())
   {
-    // Config now sends fan speed as percent: 0% = off, 100% = full speed
-    int fanSpeedPercent = doc["Fanspeed"].as<int>();
-    if (fanSpeedPercent < 0)
-    {
-      fanSpeedPercent = 0;
-    }
-    if (fanSpeedPercent > 100)
-    {
-      fanSpeedPercent = 100;
-    }
-
-    // Hardware expects PWM where 0=full speed, 255=off
-    const int pwmValue = 255 - (fanSpeedPercent * 255) / 100;
-    lastFanPercent = fanSpeedPercent;
-    Serial.println("Fan speed set to (percent): " + String(fanSpeedPercent) + ", PWM: " + String(pwmValue));
-    ledcWrite(fanPWM, pwmValue);
-  }
-
-   if (!doc["SensorName"].isNull())
-  {
-    sensorName = doc["SensorName"].as<String>();
-    Serial.println("Sensor name set to: " + sensorName);
+    deviceName = doc["DeviceName"].as<String>();
+    Serial.println("Device name set to: " + deviceName);
+    mqttClientLib->unsubscribe({mqtt_CommandTopic});
+    mqtt_CommandTopic.replace("{DeviceName}", deviceName);
+    mqttClientLib->subscribe({mqtt_CommandTopic});
   }
 
   if (!doc["SensorNames"].isNull())
@@ -227,6 +211,40 @@ void parseConfigJSON(String jsonPayload)
   }
 }
 
+void parseCommandJSON(String jsonPayload)
+{
+  JsonDocument doc;
+
+  DeserializationError error = deserializeJson(doc, jsonPayload);
+
+  if (error)
+  {
+    Serial.print("JSON parsing failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  if (!doc["Fanspeed"].isNull())
+  {
+    // Config now sends fan speed as percent: 0% = off, 100% = full speed
+    int fanSpeedPercent = doc["Fanspeed"].as<int>();
+    if (fanSpeedPercent < 0)
+    {
+      fanSpeedPercent = 0;
+    }
+    if (fanSpeedPercent > 100)
+    {
+      fanSpeedPercent = 100;
+    }
+
+    // Hardware expects PWM where 0=full speed, 255=off
+    const int pwmValue = 255 - (fanSpeedPercent * 255) / 100;
+    lastFanPercent = fanSpeedPercent;
+    Serial.println("Fan speed set to (percent): " + String(fanSpeedPercent) + ", PWM: " + String(pwmValue));
+    ledcWrite(fanPWM, pwmValue);
+  }
+}
+
 void mqttCallback(String &topic, String &payload)
 {
   Serial.println("Message arrived on topic: " + topic + ". Message: " + payload);
@@ -234,6 +252,12 @@ void mqttCallback(String &topic, String &payload)
   if (topic == mqtt_ConfigTopic)
   {
     parseConfigJSON(payload);
+    return;
+  }
+
+  if (topic == mqtt_CommandTopic)
+  {
+    parseCommandJSON(payload);
     return;
   }
 
@@ -371,12 +395,12 @@ void publishSensorData()
     Serial.println("Warning: Not all sensors have a configured name.");
     Serial.println("Sensor names configured: " + String(static_cast<unsigned long>(sensorNames.size())));
     Serial.println("Sensors detected: " + String(static_cast<unsigned long>(aggregates.size())));
-    Serial.println("SensorName : '" + sensorName + "'");
+    Serial.println("SensorName : '" + deviceName + "'");
   }
 
   DynamicJsonDocument doc(1024 + aggregates.size() * 128);
   doc["location"] = location;
-  doc["device"] = sensorName;
+  doc["device"] = deviceName;
   doc["sensorType"] = "Heizkörperlüfter";
   doc["sub_category"] = "Ist";
 
@@ -401,7 +425,7 @@ void publishSensorData()
 
   if (sendMQTTMessages)
   {
-    String jsonTopic = "daten/Heizkörperlüfter/" + sensorName;
+    String jsonTopic = "daten/Heizkörperlüfter/" + deviceName;
     mqttSuccess = mqttClientLib->publish(jsonTopic.c_str(), payload, true, 2);
   }
   else
@@ -445,7 +469,7 @@ void setup()
   String mqttClientID = "ESP32HeatingFanControllerClient_" + chipID;
   mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT(true);
-  mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + sensorName + "/version").c_str(), String(version), true, 2);
+  mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/version").c_str(), String(version), true, 2);
 
   if (tachPin != -1) {
     pinMode(tachPin, INPUT_PULLUP);
