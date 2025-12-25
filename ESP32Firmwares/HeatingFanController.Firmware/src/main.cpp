@@ -353,6 +353,7 @@ String getSensorDisplayName(uint64_t sensorId)
 
 void publishSensorData()
 {
+  mqttClientLib->publish("debug/HeatingFanController", String(static_cast<unsigned long>(readings.size())), false, 0, false);
   String sensorDisplayName = "";
   if (readings.empty())
   {
