@@ -45,6 +45,7 @@ MQTTClientLib *mqttClientLib = nullptr;
 
 static int otaInProgress = 0;
 static bool otaEnable = OTA_ENABLED != "false";
+static bool debug = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static int lastMQTTSentMinute = 0;
@@ -128,15 +129,16 @@ static void publishStatus()
 
 void readSensorData()
 {
-  // Retained so tools like MQTT Explorer can show the latest state even if they connect later.
-  mqttClientLib->publish(
-      ("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_readsensordata").c_str(),
-      "Readings size: " + String(static_cast<unsigned long>(readings.size())) +
-          " Device: " + deviceName +
-          " SensorNames: " + String(static_cast<unsigned long>(sensorNames.size())),
-      true,
-      1,
-      false);
+  if (debug)
+    mqttClientLib->publish(
+        ("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_readsensordata").c_str(),
+        "Readings size: " + String(static_cast<unsigned long>(readings.size())) +
+            " Device: " + deviceName +
+            " SensorNames: " + String(static_cast<unsigned long>(sensorNames.size())),
+        true,
+        2,
+        false);
+
   if (deviceName == "" && sensorNames.empty())
   {
     Serial.println("Sensor name not set, skipping sensor reading");
@@ -295,23 +297,14 @@ void mqttCallback(String &topic, String &payload)
   {
     if (parseConfigJSON(payload))
     {
-      // This is the one topic you currently observe in MQTT Explorer.
       mqttClientLib->publish(
           ("meta/HeatingFanController/" + location + "/" + deviceName + "/version").c_str(),
           String(version),
           true,
           2);
 
-      // Publish status right next to version so we can diagnose without Serial.
-      publishStatus();
-
-      // Also publish a monotonic boot/uptime marker.
-      mqttClientLib->publish(
-          ("meta/HeatingFanController/" + location + "/" + deviceName + "/uptime_s").c_str(),
-          String(millis() / 1000),
-          true,
-          2,
-          false);
+      if (debug)
+        publishStatus();
     }
     return;
   }
@@ -412,7 +405,8 @@ String getSensorDisplayName(uint64_t sensorId)
 
 void publishSensorData()
 {
-  mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_readsensordata").c_str(), String(static_cast<unsigned long>(readings.size())), true, 2, false);
+  if (debug)
+    mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_readsensordata").c_str(), String(static_cast<unsigned long>(readings.size())), true, 2, false);
   String sensorDisplayName = "";
   if (readings.empty())
   {
@@ -542,7 +536,6 @@ void setup()
 void loop(void) {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
 
-  // Keep MQTT connection alive and reconnect early so debug publishes don't silently fail.
   if (mqttClientLib != nullptr)
   {
     bool mqttConnected = mqttClientLib->loop();
@@ -566,14 +559,8 @@ void loop(void) {
       publishStatus();
     }
 
-    // Retain the last heartbeat so MQTT Explorer shows it even if it connects later.
-    static uint32_t lastHeartbeatMs = 0;
-    const uint32_t nowMs = millis();
-    if (nowMs - lastHeartbeatMs >= 5000)
-    {
-      lastHeartbeatMs = nowMs;
+    if (debug)
       mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/debug_loop").c_str(), "Main Loop " + String(otaInProgress), true, 2, false);
-    }
   }
 
   if (otaInProgress != 1)
