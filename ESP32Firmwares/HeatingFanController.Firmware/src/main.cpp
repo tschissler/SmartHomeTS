@@ -64,7 +64,7 @@ static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/HeatingFanController";
 static String mqtt_ConfigTopic = "config/HeatingFanController/{ID}";
-static String mqtt_CommandTopic = "commands/Heating/{SensorName}";
+static String mqtt_CommandTopic = "commands/Heating/{DeviceName}";
 
 String extractVersionFromUrl(String url)
 {
