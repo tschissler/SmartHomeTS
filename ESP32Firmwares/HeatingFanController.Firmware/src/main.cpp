@@ -483,7 +483,24 @@ void setup()
 
 void loop(void) {
   otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
-  mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop" + String(otaInProgress), false, 0, false);
+
+  // Keep MQTT connection alive and reconnect early so debug publishes don't silently fail.
+  if (mqttClientLib != nullptr)
+  {
+    bool mqttConnected = mqttClientLib->loop();
+    if (!mqttConnected)
+    {
+      int lastErr = mqttClientLib->lastError();
+      Serial.print("MQTT loop() returned false early. Last Error Code: ");
+      Serial.println(lastErr);
+      Serial.println("MQTT Client not connected, reconnecting...");
+      connectToMQTT(false);
+    }
+
+    // Log publish outcome to Serial (otherwise failures are completely silent).
+    mqttClientLib->publish("debug/HeatingFanController/ota", "Main Loop " + String(otaInProgress), false, 0, true);
+  }
+
   if (otaInProgress != 1)
   {
     timeClient.update();
@@ -501,25 +518,7 @@ void loop(void) {
       Serial.println("WiFi disconnected, attempting to reconnect...");
       wifiLib.connect();
     }
-    bool mqttConnected = mqttClientLib->loop();
-    if (!mqttConnected)
-    {
-      // Log detailed information about the disconnection
-      int lastErr = mqttClientLib->lastError();
-      Serial.print("MQTT loop() returned false! Last Error Code: ");
-      Serial.println(lastErr);
-      Serial.print("WiFi Status: ");
-      Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
-      Serial.print("WiFi RSSI: ");
-      Serial.println(WiFi.RSSI());
-      Serial.print("Free Heap: ");
-      Serial.println(ESP.getFreeHeap());
-      Serial.print("Uptime: ");
-      Serial.println(millis() / 1000);
-
-      Serial.println("MQTT Client not connected, reconnecting in loop...");
-      connectToMQTT(false);
-    }
+    // MQTT loop/reconnect handled at the start of loop().
   }
   delay(1000);
 }
