@@ -64,7 +64,11 @@ static String location = "unknown";
 const String mqtt_broker = "smarthomepi2";
 static String mqtt_OTAtopic = "OTAUpdate/HeatingFanController";
 static String mqtt_ConfigTopic = "config/HeatingFanController/{ID}";
-static String mqtt_CommandTopic = "commands/Heating/{SensorName}";
+static const String mqtt_CommandTopicTemplate = "commands/Heating/{DeviceName}";
+static String mqtt_CommandTopic = mqtt_CommandTopicTemplate;
+
+static bool mqttConfigReceived = false;
+static bool mqttCommandSubscribed = false;
 
 String extractVersionFromUrl(String url)
 {
@@ -173,9 +177,6 @@ void parseConfigJSON(String jsonPayload)
   {
     deviceName = doc["DeviceName"].as<String>();
     Serial.println("Device name set to: " + deviceName);
-    mqttClientLib->unsubscribe({mqtt_CommandTopic});
-    mqtt_CommandTopic.replace("{DeviceName}", deviceName);
-    mqttClientLib->subscribe({mqtt_CommandTopic});
   }
 
   if (!doc["SensorNames"].isNull())
@@ -209,6 +210,45 @@ void parseConfigJSON(String jsonPayload)
       Serial.println("SensorNames in JSON is not an array; ignoring configuration.");
     }
   }
+
+  mqttConfigReceived = true;
+}
+
+void ensureCommandTopicSubscription()
+{
+  if (!mqttClientLib)
+  {
+    return;
+  }
+
+  if (!mqttConfigReceived)
+  {
+    return;
+  }
+
+  if (deviceName.length() == 0)
+  {
+    return;
+  }
+
+  String desiredTopic = mqtt_CommandTopicTemplate;
+  desiredTopic.replace("{DeviceName}", deviceName);
+
+  if (desiredTopic == mqtt_CommandTopic && mqttCommandSubscribed)
+  {
+    return;
+  }
+
+  if (mqttCommandSubscribed)
+  {
+    mqttClientLib->unsubscribe(mqtt_CommandTopic);
+  }
+
+  mqtt_CommandTopic = desiredTopic;
+  mqttClientLib->subscribe(mqtt_CommandTopic);
+  mqttCommandSubscribed = true;
+
+  Serial.println("Command Topic: " + mqtt_CommandTopic);
 }
 
 void parseCommandJSON(String jsonPayload)
@@ -252,6 +292,7 @@ void mqttCallback(String &topic, String &payload)
   if (topic == mqtt_ConfigTopic)
   {
     parseConfigJSON(payload);
+    ensureCommandTopicSubscription();
     return;
   }
 
@@ -312,9 +353,23 @@ void connectToMQTT(bool cleanSession)
 
   mqttClientLib->connect(cleanSession);
   mqttClientLib->subscribe({mqtt_ConfigTopic, mqtt_OTAtopic});
+
+  if (!mqttConfigReceived)
+  {
+    Serial.println("Waiting briefly for retained MQTT config...");
+    const uint32_t startMs = millis();
+    while (!mqttConfigReceived && (millis() - startMs) < 2000)
+    {
+      mqttClientLib->loop();
+      delay(10);
+    }
+  }
+
+  ensureCommandTopicSubscription();
   Serial.println("### MQTT Client is connected and subscribed to topics");
   Serial.println("Config Topic: " + mqtt_ConfigTopic);
   Serial.println("OTA Topic: " + mqtt_OTAtopic);
+  Serial.println("Command Topic: " + mqtt_CommandTopic);
 }
 
 void readFanSpeed() 
