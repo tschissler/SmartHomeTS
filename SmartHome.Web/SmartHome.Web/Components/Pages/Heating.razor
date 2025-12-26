@@ -1,0 +1,169 @@
+﻿@page "/heating"
+@implements IDisposable
+@using SharedContracts
+@using SmartHome.Web.Services
+@using MQTTnet.Protocol
+@using System.Text.Json
+@inject MqttService MqttService
+
+<h3>Heizung Kinderzimmer M1</h3>
+
+<div class="btn-group" role="group" aria-label="Heating modes">
+    @foreach (var mode in HeatingModes)
+    {
+        var isActive = SelectedModeKinderzimmer == mode;
+        <button type="button"
+                class="@GetButtonClass(isActive)"
+                aria-pressed="@isActive"
+                @onclick="() => SelectKinderzimmerModeAsync(mode)">
+            @mode
+        </button>
+    }
+</div>
+
+<p class="mt-3">Aktueller Modus: <strong>@SelectedModeKinderzimmer</strong> | Lüfter: <strong>@GetFanspeedText(CurrentFanspeedKinderzimmer)</strong></p>
+
+<h3 class="mt-4">Heizung Esszimmer M3</h3>
+
+<div class="btn-group" role="group" aria-label="Heating modes Esszimmer">
+    @foreach (var mode in HeatingModes)
+    {
+        var isActive = SelectedModeEsszimmer == mode;
+        <button type="button"
+                class="@GetButtonClass(isActive)"
+                aria-pressed="@isActive"
+                @onclick="() => SelectEsszimmerModeAsync(mode)">
+            @mode
+        </button>
+    }
+</div>
+
+<p class="mt-3">Aktueller Modus: <strong>@SelectedModeEsszimmer</strong> | Lüfter: <strong>@GetFanspeedText(CurrentFanspeedEsszimmer)</strong></p>
+
+@code {
+    private readonly string[] HeatingModes = [
+        "Aus",
+        "25%",
+        "50%",
+        "75%",
+        "100%",
+        "Auto Low",
+        "Auto High",
+        "Auto"
+    ];
+
+    private string SelectedModeKinderzimmer { get; set; } = "Auto";
+    private string SelectedModeEsszimmer { get; set; } = "Auto";
+    private int? CurrentFanspeedKinderzimmer { get; set; }
+    private int? CurrentFanspeedEsszimmer { get; set; }
+
+    private const string KinderzimmerM1Topic = "commands/Heating/Heizkörperlüfter_Kinderzimmer";
+    private const string EsszimmerM3Topic = "commands/Heating/Heizkörperlüfter_Esszimmer";
+
+    protected override void OnInitialized()
+    {
+        MqttService.OnMessageReceived += HandleMqttMessage;
+        SetModesFromService();
+    }
+
+    private void SetModesFromService()
+    {
+        if (MqttService.HeatingKinderzimmerCommand is { } kz)
+        {
+            SelectedModeKinderzimmer = MapCommandToMode(kz) ?? SelectedModeKinderzimmer;
+            CurrentFanspeedKinderzimmer = kz.Fanspeed;
+        }
+
+        if (MqttService.HeatingEsszimmerCommand is { } ez)
+        {
+            SelectedModeEsszimmer = MapCommandToMode(ez) ?? SelectedModeEsszimmer;
+            CurrentFanspeedEsszimmer = ez.Fanspeed;
+        }
+    }
+
+    private async void HandleMqttMessage(object sender, MqttMessageReceivedEventArgs args)
+    {
+        var stateChanged = false;
+        if (args.Topic == KinderzimmerM1Topic && MqttService.HeatingKinderzimmerCommand is { } kz)
+        {
+            SelectedModeKinderzimmer = MapCommandToMode(kz) ?? SelectedModeKinderzimmer;
+            CurrentFanspeedKinderzimmer = kz.Fanspeed;
+            stateChanged = true;
+        }
+        else if (args.Topic == EsszimmerM3Topic && MqttService.HeatingEsszimmerCommand is { } ez)
+        {
+            SelectedModeEsszimmer = MapCommandToMode(ez) ?? SelectedModeEsszimmer;
+            CurrentFanspeedEsszimmer = ez.Fanspeed;
+            stateChanged = true;
+        }
+
+        if (stateChanged)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        MqttService.OnMessageReceived -= HandleMqttMessage;
+    }
+
+    private async Task SelectKinderzimmerModeAsync(string mode) =>
+        await SelectModeAsync(mode, KinderzimmerM1Topic, v => SelectedModeKinderzimmer = v, f => CurrentFanspeedKinderzimmer = f);
+
+    private async Task SelectEsszimmerModeAsync(string mode) =>
+        await SelectModeAsync(mode, EsszimmerM3Topic, v => SelectedModeEsszimmer = v, f => CurrentFanspeedEsszimmer = f);
+
+    private async Task SelectModeAsync(string mode, string topic, Action<string> setSelected, Action<int> setFanspeed)
+    {
+        var command = BuildCommand(mode);
+        setSelected(mode);
+        setFanspeed(command.Fanspeed);
+
+        var payload = JsonSerializer.Serialize(command);
+
+        await MqttService.PublishAsync(
+            topic,
+            payload,
+            MqttQualityOfServiceLevel.AtLeastOnce,
+            retain: true);
+    }
+
+    private static HeatingCommandData BuildCommand(string mode) => mode switch
+    {
+        "Aus" => new HeatingCommandData("Manual", 0),
+        "25%" => new HeatingCommandData("Manual", 25),
+        "50%" => new HeatingCommandData("Manual", 50),
+        "75%" => new HeatingCommandData("Manual", 75),
+        "100%" => new HeatingCommandData("Manual", 100),
+        "Auto Low" => new HeatingCommandData("AutoLow", 50),
+        "Auto High" => new HeatingCommandData("AutoHigh", 100),
+        "Auto" => new HeatingCommandData("Auto", 50),
+        _ => new HeatingCommandData("Manual", 0)
+    };
+
+    private static string? MapCommandToMode(HeatingCommandData payload)
+    {
+        return payload.Mode switch
+        {
+            "Manual" => payload.Fanspeed switch
+            {
+                0 => "Aus",
+                25 => "25%",
+                50 => "50%",
+                75 => "75%",
+                100 => "100%",
+                _ => null
+            },
+            "AutoLow" => "Auto Low",
+            "AutoHigh" => "Auto High",
+            "Auto" => "Auto",
+            _ => null
+        };
+    }
+
+    private static string GetFanspeedText(int? fanspeed) => fanspeed.HasValue ? $"{fanspeed.Value}%" : "?";
+
+    private string GetButtonClass(bool isActive) =>
+        isActive ? "btn btn-outline-primary active" : "btn btn-outline-primary";
+}

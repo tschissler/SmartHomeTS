@@ -10,7 +10,6 @@ var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
     PropertyNameCaseInsensitive = true
 };
 
-// Move the logger initialization before its first usage
 var builder = WebApplication.CreateBuilder(args);
 var loggerFactory = LoggerFactory.Create(logging =>
 {
@@ -19,13 +18,7 @@ var loggerFactory = LoggerFactory.Create(logging =>
 });
 var logger = loggerFactory.CreateLogger("Program");
 
-//const string influxUrl = "http://smarthomepi2:32086";
 const string influx3Url = "http://smarthomepi2:32087";
-
-//const string chargingBucket = "Smarthome_ChargingData";
-//const string electricityBucket = "Smarthome_ElectricityData";
-//const string environmentDataBucket = "Smarthome_EnvironmentData";
-//const string heatingDataBucket = "Smarthome_HeatingData";
 
 GeoPosition positionChargingStationStellplatz = new GeoPosition(Latitude: 48.412758, Longitude: 9.875185);
 GeoPosition positionChargingStationGarage = new GeoPosition(Latitude: 48.412750277777775, Longitude: 9.875374444444445);
@@ -34,13 +27,6 @@ GeoPosition? miniPosition = null;
 GeoPosition? vwPosition = null;
 string[] cars = new string[] { "BMW", "Mini", "VW" };
 Dictionary<string, decimal> previousValues = new();
-
-//string? influxToken = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
-//if (string.IsNullOrEmpty(influxToken))
-//{
-//    logger.LogError("Environmentvariable INFLUXDB_TOKEN not set. Please set it to your InfluxDB token.");
-//    return;
-//}
 
 string? influx3Token = Environment.GetEnvironmentVariable("SMARTHOME__INFLUXDB3_TOKEN");
 if (string.IsNullOrEmpty(influx3Token))
@@ -98,7 +84,6 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("cangateway/#");
     await mqttClient.SubscribeToTopic("daten/Heizkörperlüfter/#");
 
-    //var influxConnector = scope.ServiceProvider.GetRequiredService<InfluxDbConnector>();
     var influx3Connector = scope.ServiceProvider.GetRequiredService<InfluxDB3Connector>();
     var converters = scope.ServiceProvider.GetRequiredService<Converters>();
 

@@ -1,7 +1,6 @@
 ﻿using MQTTnet;
 using MQTTnet.Protocol;
 using SharedContracts;
-using SmartHome.Web.Components.Pages;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -21,6 +20,8 @@ namespace SmartHome.Web.Services
         public CarStatusData BmwStatusData { get; set; }
         public CarStatusData MiniStatusData { get; set; }
         public CarStatusData VwStatusData { get; set; }
+        public HeatingCommandData? HeatingKinderzimmerCommand { get; private set; }
+        public HeatingCommandData? HeatingEsszimmerCommand { get; private set; }
 
 
         public MqttService()
@@ -52,6 +53,7 @@ namespace SmartHome.Web.Services
                 await _client.SubscribeAsync("config/charging/settings");
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
                 await _client.SubscribeAsync("commands/shelly/Lampe");
+                await _client.SubscribeAsync("commands/Heating/#");
             };
 
             _client.ApplicationMessageReceivedAsync += e =>
@@ -199,6 +201,16 @@ namespace SmartHome.Web.Services
                         }
                         else
                             IluminationSituation.LampOn = payload == "on";
+                        break;
+                    }
+                case "commands/Heating/Heizkörperlüfter_Kinderzimmer":
+                    {
+                        HeatingKinderzimmerCommand = JsonSerializer.Deserialize<HeatingCommandData>(payload);
+                        break;
+                    }
+                case "commands/Heating/Heizkörperlüfter_Esszimmer":
+                    {
+                        HeatingEsszimmerCommand = JsonSerializer.Deserialize<HeatingCommandData>(payload);
                         break;
                     }
             }
