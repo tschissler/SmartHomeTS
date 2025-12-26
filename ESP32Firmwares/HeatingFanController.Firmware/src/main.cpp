@@ -56,7 +56,6 @@ static const unsigned long READING_INTERVAL = 2500; // 2.5 seconds between readi
 static unsigned long lastReadingTime = 0;
 static std::vector<std::vector<SensorData>> readings;
 
-//static std::vector<std::vector<SensorData>> readings;
 static String baseTopic = "daten";
 static String deviceName = "Heizkörperlüfter";
 static std::unordered_map<std::string, String> sensorNames;
