@@ -1,0 +1,14 @@
+---
+- name: Installiere nano auf Ubuntu-Servern
+  hosts: all
+  become: true
+  tasks:
+    - name: Aktualisiere apt-Cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Installiere nano
+      apt:
+        name: nano
+        state: present

@@ -1,0 +1,42 @@
+---
+- name: Deploy control host SSH public key for Ansible access
+  hosts: all
+  become: yes
+  vars:
+    pubkey: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') | trim }}"
+  tasks:
+    - name: Ensure .ssh directory exists for user
+      file:
+        path: "/home/thomasschissler/.ssh"
+        state: directory
+        owner: thomasschissler
+        group: thomasschissler
+        mode: '0700'
+
+    - name: Ensure authorized_keys exists
+      file:
+        path: "/home/thomasschissler/.ssh/authorized_keys"
+        state: touch
+        owner: thomasschissler
+        group: thomasschissler
+        mode: '0600'
+
+    - name: Add public key if missing (shell fallback)
+      shell: "grep -qxF '{{ pubkey }}' /home/thomasschissler/.ssh/authorized_keys || echo '{{ pubkey }}' >> /home/thomasschissler/.ssh/authorized_keys"
+      args:
+        executable: /bin/bash
+      become: yes
+      become_user: thomasschissler
+      register: addkey
+      changed_when: addkey.rc == 1
+      failed_when: addkey.rc > 1
+
+    - name: Wait briefly for key to be written
+      ansible.builtin.pause:
+        seconds: 1
+
+    - name: Reset connection so Ansible reconnects (use new key)
+      meta: reset_connection
+
+    - name: Verify SSH access with Ansible ping
+      ansible.builtin.ping:

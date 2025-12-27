@@ -1,0 +1,2 @@
+- import_playbook: plays/deploy-ssh-key.yml
+- import_playbook: plays/install-nano.yml
