@@ -1,0 +1,67 @@
+---
+- name: Prepare Realtek Ethernet driver and interface
+  hosts: prod_ethernet
+  become: yes
+  tasks:
+    - name: Blacklist r8169 to allow r8125 driver
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/blacklist-r8169.conf
+        content: "blacklist r8169\n"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Install packages required to build the driver
+      ansible.builtin.apt:
+        name:
+          - dkms
+          - build-essential
+          - linux-headers-{{ ansible_kernel }}
+        state: present
+
+    - name: Check if r8125 module is already installed
+      ansible.builtin.command: modinfo r8125
+      register: r8125_info
+      ignore_errors: yes
+
+    - name: Unload r8169 if loaded
+      ansible.builtin.shell: modprobe -r r8169 || true
+      args:
+        executable: /bin/bash
+
+    - name: Copy r8125 driver tarball to remote host
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/r8125-9.016.01.tar.bz2"
+        dest: /tmp/r8125-9.016.01.tar.bz2
+        owner: root
+        group: root
+        mode: '0644'
+      when: r8125_info.rc != 0
+
+    - name: Extract r8125 tarball
+      ansible.builtin.unarchive:
+        src: /tmp/r8125-9.016.01.tar.bz2
+        dest: /tmp/
+        remote_src: yes
+      when: r8125_info.rc != 0
+
+    - name: Run driver installer (autorun.sh) from extracted directory
+      ansible.builtin.command: ./autorun.sh
+      args:
+        chdir: /tmp/r8125-9.016.01
+      become: yes
+      when: r8125_info.rc != 0
+
+    - name: Reboot host to load new driver
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+      when: r8125_info.rc != 0
+
+    - name: Verify r8125 module now exists
+      ansible.builtin.command: modinfo r8125
+      register: r8125_verify
+      failed_when: r8125_verify.rc != 0
+      ignore_errors: no

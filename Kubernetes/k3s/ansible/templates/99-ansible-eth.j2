@@ -1,0 +1,16 @@
+network:
+  version: 2
+  ethernets:
+    "{{ ether_iface }}":
+      dhcp4: false
+      addresses:
+        - "{{ static_ip }}/24"
+      routes:
+        - to: default
+          via: "{{ gateway | default('192.168.178.1') }}"
+      nameservers:
+        addresses:
+{% for ns in nameservers | default(["1.1.1.1","8.8.8.8"]) %}
+          - "{{ ns }}"
+{% endfor %}
+      optional: true

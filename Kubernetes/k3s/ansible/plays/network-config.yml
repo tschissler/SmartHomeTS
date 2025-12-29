@@ -1,0 +1,145 @@
+---
+- name: Configure static Ethernet and disable WiFi
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    netplan_file: /etc/netplan/99-ansible-eth.yaml
+    reboot_after: true
+  pre_tasks:
+    - name: Ensure controller /etc/hosts has no entry for this host (DHCP phase)
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: "^\\s*\\d{1,3}(?:\\.\\d{1,3}){3}\\s+{{ inventory_hostname }}(?:\\s|$)"
+        state: absent
+      delegate_to: localhost
+      become: yes
+
+    - name: Ensure host has a `static_ip` variable set (or pass via -e)
+      ansible.builtin.assert:
+        that: static_ip is defined
+        fail_msg: "Host {{ inventory_hostname }} requires variable 'static_ip' (set in host_vars or via -e static_ip=...)"
+
+    - name: Determine primary ethernet interface name (or use host var override)
+      ansible.builtin.set_fact:
+        ether_iface: >-
+          {{
+            hostvars[inventory_hostname].ether_iface
+            | default(
+              (
+                (ansible_facts.interfaces | select('match','^(en|eth|ens|eno|enp|enx)') | list)
+              )[0] if (ansible_facts.interfaces | select('match','^(en|eth|ens|eno|enp|enx)') | list) | length > 0
+              else None
+            )
+          }}
+
+    - name: Fail if no ethernet interface found
+      ansible.builtin.fail:
+        msg: "Could not detect an ethernet interface on {{ inventory_hostname }}. Set 'ether_iface' host var to override."
+      when: (ether_iface is none) or (ether_iface | trim == '')
+
+  tasks:
+    - name: Render netplan file for static IP
+      ansible.builtin.template:
+        src: ../templates/99-ansible-eth.j2
+        dest: "{{ netplan_file }}"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Apply netplan
+      ansible.builtin.shell: netplan apply
+      register: netplan_apply
+      failed_when: netplan_apply.rc != 0
+
+
+    - name: Reboot (async) if requested
+      ansible.builtin.shell: reboot
+      async: 1
+      poll: 0
+      ignore_errors: yes
+      when: reboot_after | bool
+
+- name: Verify new networking (ping)
+  hosts: all
+  gather_facts: no
+  serial: 1
+  vars:
+    netplan_file: /etc/netplan/99-ansible-eth.yaml
+  tasks:
+    - name: Wait for SSH on new IP
+      ansible.builtin.wait_for:
+        host: "{{ static_ip }}"
+        port: 22
+        timeout: 120
+        state: started
+      delegate_to: localhost
+
+    - name: Register hostname -> static IP on controller /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: "^\\s*\\d{1,3}(?:\\.\\d{1,3}){3}\\s+{{ inventory_hostname }}(?:\\s|$)"
+        line: "{{ static_ip }} {{ inventory_hostname }}"
+        state: present
+        create: false
+      delegate_to: localhost
+      become: yes
+
+    - name: Force Ansible to reconnect using updated name resolution
+      meta: reset_connection
+
+    - name: Bring down wireless interface if present
+      vars:
+        wlan_iface: "{{ (ansible_facts.interfaces | select('match','^wl') | list | first) | default(None) }}"
+      ansible.builtin.shell: "ip link set dev {{ wlan_iface }} down || true"
+      when: wlan_iface is not none
+      args:
+        executable: /bin/bash
+
+    - name: Stop and mask wpa_supplicant if present (prevent WiFi on boot)
+      ansible.builtin.shell: |
+        systemctl stop wpa_supplicant.service >/dev/null 2>&1 || true
+        systemctl disable wpa_supplicant.service >/dev/null 2>&1 || true
+        systemctl mask wpa_supplicant.service >/dev/null 2>&1 || true
+      args:
+        executable: /bin/bash
+      ignore_errors: yes
+
+    - name: Ping static IP to verify networking
+      ansible.builtin.command: ping -c 3 {{ static_ip }}
+      delegate_to: localhost
+      changed_when: false
+
+    - name: Create backup timestamp (on host)
+      ansible.builtin.set_fact:
+        backup_timestamp: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+    - name: Create backup directory for existing netplan files
+      ansible.builtin.file:
+        path: "/etc/netplan/backup-{{ backup_timestamp }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Find existing netplan yaml files
+      ansible.builtin.find:
+        paths: /etc/netplan
+        patterns: "*.yaml"
+        file_type: file
+        recurse: no
+      register: netplan_files
+
+    - name: Move old netplan files to backup (keep new file)
+      ansible.builtin.command: mv {{ item.path }} /etc/netplan/backup-{{ backup_timestamp }}/
+      loop: "{{ netplan_files.files }}"
+      when: item.path != netplan_file
+      args:
+        warn: false
+
+    - name: Re-apply netplan to remove old configs
+      ansible.builtin.shell: netplan apply
+      args:
+        executable: /bin/bash
+      register: netplan_reapply
+      failed_when: netplan_reapply.rc != 0
