@@ -1,0 +1,6 @@
+---
+# Configure the external API VIP for the production cluster.
+kubevip_api_vip: 192.168.178.222
+# Traefik service LB range (can be a single address when start == end).
+kubevip_service_range_start: 192.168.178.223
+kubevip_service_range_end: 192.168.178.223

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubevip
+  namespace: kube-system
+data:
+  range-global: "{{ kubevip_service_range_start }}-{{ kubevip_service_range_end_final }}"

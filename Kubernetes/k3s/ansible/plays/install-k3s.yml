@@ -62,9 +62,20 @@
         mode: '0644'
       when: ansible_facts is defined
 
+    - name: Ensure kubectl symlink to k3s exists (init)
+      ansible.builtin.file:
+        src: /usr/local/bin/k3s
+        dest: /usr/local/bin/kubectl
+        state: link
+        force: yes
+      become: yes
+      when: ansible_facts is defined
+
 - name: Join additional control-plane servers
   hosts: k3s_servers:!k3s_init
   become: yes
+  vars:
+    k3s_version: ""
   tasks:
     - name: Install k3s server join (idempotent) using specific version
       ansible.builtin.shell: |
@@ -75,6 +86,13 @@
         fi
       args:
         executable: /bin/bash
+    - name: Ensure kubectl symlink to k3s exists (servers)
+      ansible.builtin.file:
+        src: /usr/local/bin/k3s
+        dest: /usr/local/bin/kubectl
+        state: link
+        force: yes
+      become: yes
       when: k3s_version is defined and (k3s_version | trim) != ''
 
     - name: Install k3s server join (idempotent) using latest
@@ -91,6 +109,8 @@
 - name: Install k3s agents (workers)
   hosts: k3s_agents
   become: yes
+  vars:
+    k3s_version: ""
   tasks:
     - name: Install k3s agent (idempotent) using specific version
       ansible.builtin.shell: |

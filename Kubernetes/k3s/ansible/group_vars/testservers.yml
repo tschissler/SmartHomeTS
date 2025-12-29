@@ -1,0 +1,6 @@
+---
+# Configure the external API VIP for the test cluster (adjust to your lab network).
+kubevip_api_vip: 192.168.178.220
+# Traefik service LB range for test runs.
+kubevip_service_range_start: 192.168.178.221
+kubevip_service_range_end: 192.168.178.221

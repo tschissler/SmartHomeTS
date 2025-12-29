@@ -1,0 +1,52 @@
+---
+- name: Deploy kube-vip manifests
+  hosts: prodservers,testservers
+  become: yes
+  vars:
+    kubevip_manifests_dir: /var/lib/rancher/k3s/server/manifests
+  pre_tasks:
+    - name: Validate kube-vip VIP and range variables
+      ansible.builtin.assert:
+        that:
+          - kubevip_api_vip is defined
+          - kubevip_api_vip | trim != ''
+          - kubevip_service_range_start is defined
+          - kubevip_service_range_start | trim != ''
+        fail_msg: "Set kubevip_api_vip and kubevip_service_range_start via group_vars or -e before running this play."
+    - name: Compute service range end address
+      ansible.builtin.set_fact:
+        kubevip_service_range_end_final: "{{ kubevip_service_range_end | default(kubevip_service_range_start) }}"
+  tasks:
+    - name: Ensure kube-vip manifest directory exists
+      ansible.builtin.file:
+        path: "{{ kubevip_manifests_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Deploy kube-vip DaemonSet
+      ansible.builtin.template:
+        src: ../templates/kube-vip.yaml.j2
+        dest: "{{ kubevip_manifests_dir }}/kube-vip.yaml"
+        mode: '0644'
+
+    - name: Deploy kube-vip service range ConfigMap
+      ansible.builtin.template:
+        src: ../templates/kube-vip-configmap.yaml.j2
+        dest: "{{ kubevip_manifests_dir }}/kube-vip-configmap.yaml"
+        mode: '0644'
+
+    - name: Deploy kube-vip cloud provider manifest
+      ansible.builtin.copy:
+        src: ../files/kube-vip-cloud-provider.yaml
+        dest: "{{ kubevip_manifests_dir }}/kube-vip-cloud-provider.yaml"
+        mode: '0644'
+
+    - name: Wait for kube-vip daemonset to roll out
+      ansible.builtin.command: /usr/local/bin/k3s kubectl -n kube-system rollout status ds/kube-vip-ds --timeout=180s
+      register: kubevip_rollout
+      retries: 10
+      delay: 10
+      until: kubevip_rollout.rc == 0
+      changed_when: false
