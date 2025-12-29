@@ -63,6 +63,7 @@
 - name: Verify new networking (ping)
   hosts: all
   gather_facts: no
+  become: yes
   serial: 1
   vars:
     netplan_file: /etc/netplan/99-ansible-eth.yaml
@@ -75,6 +76,16 @@
         state: started
       delegate_to: localhost
 
+    - name: Verify SSH is accepting connections from controller (retry)
+      ansible.builtin.shell: |
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 {{ ansible_user | default('thomasschissler') }}@{{ static_ip }} echo ok
+      delegate_to: localhost
+      register: ssh_check
+      ignore_errors: yes
+      until: ssh_check.rc == 0
+      retries: 12
+      delay: 5
+
     - name: Register hostname -> static IP on controller /etc/hosts
       ansible.builtin.lineinfile:
         path: /etc/hosts
@@ -84,6 +95,32 @@
         create: false
       delegate_to: localhost
       become: yes
+
+    - name: Remove old known_hosts entries for static IP
+      ansible.builtin.command: ssh-keygen -R {{ static_ip }}
+      delegate_to: localhost
+      become: false
+      ignore_errors: yes
+
+    - name: Remove old known_hosts entries for hostname
+      ansible.builtin.command: ssh-keygen -R {{ inventory_hostname }}
+      delegate_to: localhost
+      become: false
+      ignore_errors: yes
+
+    - name: Add current host key for static IP to known_hosts
+      ansible.builtin.shell: ssh-keyscan -H {{ static_ip }} >> ~/.ssh/known_hosts
+      delegate_to: localhost
+      become: false
+      ignore_errors: yes
+      register: keyscan_result
+      args:
+        executable: /bin/bash
+
+    - name: Debug keyscan failure if it occurred
+      ansible.builtin.debug:
+        msg: "Warning: ssh-keyscan failed for {{ static_ip }}. Connection may require manual host key acceptance."
+      when: keyscan_result is defined and keyscan_result.rc != 0
 
     - name: Force Ansible to reconnect using updated name resolution
       meta: reset_connection
