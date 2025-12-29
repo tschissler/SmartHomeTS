@@ -27,6 +27,6 @@ ansible-playbook cluster.yml -i inventory.ini --limit testservers
 
 # Oder mit den Wrapper-Skripten
 chmod +x *.sh
-./run-on-test.sh -K -K
-./run-on-prod.sh -K -K
+./run-on-test.sh -K -k
+./run-on-prod.sh -K -k
 ```
