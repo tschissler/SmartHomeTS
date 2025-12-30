@@ -17,6 +17,23 @@
       ansible.builtin.set_fact:
         kubevip_service_range_end_final: "{{ kubevip_service_range_end | default(kubevip_service_range_start) }}"
   tasks:
+    - name: Ensure k3s config.d directory exists
+      ansible.builtin.file:
+        path: /etc/rancher/k3s/config.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      when: inventory_hostname in groups.get('k3s_servers', [])
+
+    - name: Render TLS SAN fragment for kubeVIP
+      ansible.builtin.template:
+        src: ../templates/k3s-vip-tls-san.yaml.j2
+        dest: /etc/rancher/k3s/config.d/10-vip-tls-san.yaml
+        mode: '0644'
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      notify: restart k3s
+
     - name: Ensure kube-vip manifest directory exists
       ansible.builtin.file:
         path: "{{ kubevip_manifests_dir }}"
@@ -50,3 +67,10 @@
       delay: 10
       until: kubevip_rollout.rc == 0
       changed_when: false
+
+  handlers:
+    - name: restart k3s
+      ansible.builtin.systemd:
+        name: k3s
+        state: restarted
+      become: yes
