@@ -133,3 +133,29 @@
       args:
         executable: /bin/bash
       when: k3s_version is not defined or (k3s_version | trim) == ''
+
+- name: Share kubeconfig with the Ansible user
+  hosts: k3s_servers
+  become: yes
+  tasks:
+    - name: Discover ansible user home directory
+      ansible.builtin.command: "getent passwd {{ ansible_user | default('thomasschissler') }} | cut -d: -f6"
+      register: ansible_user_home
+      changed_when: false
+      failed_when: ansible_user_home.rc != 0
+
+    - name: Ensure user kube directory exists
+      ansible.builtin.file:
+        path: "{{ ansible_user_home.stdout.rstrip('\n') | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube"
+        state: directory
+        owner: "{{ ansible_user | default('thomasschissler') }}"
+        group: "{{ ansible_user | default('thomasschissler') }}"
+        mode: '0755'
+
+    - name: Copy kubeconfig into user's home
+      ansible.builtin.copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ ansible_user_home.stdout.rstrip('\n') | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube/config"
+        owner: "{{ ansible_user | default('thomasschissler') }}"
+        group: "{{ ansible_user | default('thomasschissler') }}"
+        mode: '0644'
