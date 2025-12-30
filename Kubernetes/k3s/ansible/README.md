@@ -12,14 +12,38 @@
 sudo dpkg-reconfigure console-setup
 ```
 
-## Enable SSH access for audible
+## Enable SSH access for ansible
 
 - Generate key file
 ```
 ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
 ```
 
-- Run playbook
+## Enable sudo access for Raspberry Pi OS
+Open a root shell (needs a TTY):
+
+``` bash
+ssh -t thomasschissler@k3snode3 'sudo -s'
+ssh -t thomasschissler@k3snode4 'sudo -s'
+```
+
+Create a sudoers drop-in (use visudo so you don’t brick sudo):
+``` bash
+EDITOR=nano visudo -f /etc/sudoers.d/90-ansible
+```
+Put exactly this content (adjust username if needed):
+
+```
+thomasschissler ALL=(ALL) NOPASSWD: ALL
+```
+
+Validate and test:
+``` bash
+visudo -c
+sudo -n true && echo OK
+```
+
+# Run playbook
 
 ```bash
 # Site auf Test-Cluster

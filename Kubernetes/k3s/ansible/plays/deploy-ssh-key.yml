@@ -1,7 +1,9 @@
 ---
 - name: Deploy control host SSH public key for Ansible access
   hosts: all
+  gather_facts: yes
   become: yes
+  any_errors_fatal: true
   vars:
     pubkey: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') | trim }}"
   tasks:

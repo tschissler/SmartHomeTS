@@ -1,7 +1,7 @@
-# - import_playbook: plays/deploy-ssh-key.yml
-# - import_playbook: plays/prepare-ethernet.yml
-# - import_playbook: plays/install-nano.yml
-# - import_playbook: plays/network-config.yml
-# - import_playbook: plays/install-k3s.yml
-
+- import_playbook: plays/check-connectivity.yml
+- import_playbook: plays/deploy-ssh-key.yml
+- import_playbook: plays/prepare-ethernet.yml
+- import_playbook: plays/install-nano.yml
+- import_playbook: plays/network-config.yml
+- import_playbook: plays/install-k3s.yml
 - import_playbook: plays/configure-kubevip.yml

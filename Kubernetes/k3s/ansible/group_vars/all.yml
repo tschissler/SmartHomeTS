@@ -4,3 +4,7 @@ gateway: 192.168.178.1
 nameservers:
   - 192.168.178.1
   - 1.1.1.1
+
+# Some nodes can be slow to present the sudo prompt on first connection.
+# Default Ansible become timeout is ~12s; increase to avoid false failures.
+ansible_become_timeout: 60
