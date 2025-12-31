@@ -60,12 +60,25 @@
   hosts: k3s_servers:!k3s_init
   become: yes
   tasks:
+    - name: Read k3s join token from init server
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      register: k3s_init_token
+      retries: 20
+      delay: 3
+      until: k3s_init_token is succeeded
+
+    - name: Set join token fact for this host
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ (k3s_init_token.content | b64decode) | trim }}"
+
     - name: Install k3s server join (idempotent) using latest
       ansible.builtin.shell: |
         if systemctl list-unit-files | grep -q '^k3s\.service'; then
           echo "k3s already installed"
         else
-          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ hostvars[groups['k3s_init'][0]].k3s_join_token }}" sh -s - server --write-kubeconfig-mode '0644'
+          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ k3s_join_token }}" sh -s - server --write-kubeconfig-mode '0644'
         fi
       args:
         executable: /bin/bash
@@ -82,12 +95,25 @@
   hosts: k3s_agents
   become: yes
   tasks:
+    - name: Read k3s join token from init server
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      register: k3s_init_token
+      retries: 20
+      delay: 3
+      until: k3s_init_token is succeeded
+
+    - name: Set join token fact for this host
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ (k3s_init_token.content | b64decode) | trim }}"
+
     - name: Install k3s agent (idempotent) using latest
       ansible.builtin.shell: |
         if systemctl list-unit-files | grep -q '^k3s-agent\.service'; then
           echo "k3s-agent already installed"
         else
-          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ hostvars[groups['k3s_init'][0]].k3s_join_token }}" INSTALL_K3S_EXEC='agent' sh -s -
+          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ k3s_join_token }}" INSTALL_K3S_EXEC='agent' sh -s -
         fi
       args:
         executable: /bin/bash
