@@ -1,3 +1,4 @@
+- import_playbook: plays/bootstrap-passwordless-sudo.yml
 - import_playbook: plays/check-connectivity.yml
 - import_playbook: plays/deploy-ssh-key.yml
 - import_playbook: plays/prepare-ethernet.yml
