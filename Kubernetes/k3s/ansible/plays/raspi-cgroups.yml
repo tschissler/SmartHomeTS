@@ -1,72 +1,109 @@
 ---
-- name: Enable memory cgroups on Raspberry Pi (Ubuntu)
+- name: Prepare Raspberry Pi for k3s (disable swap + enable cgroups)
   hosts: all
   become: yes
   gather_facts: yes
   vars:
-    cgroup_flags: "cgroup_enable=memory cgroup_memory=1"
-    cmdline_candidates:
-      - /boot/firmware/cmdline.txt
-      - /boot/cmdline.txt
+    cgroup_flags: "cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory"
+    cmdline_path: /boot/firmware/cmdline.txt
   tasks:
-    - name: Check cmdline.txt candidate paths
-      ansible.builtin.stat:
-        path: "{{ item }}"
-      loop: "{{ cmdline_candidates }}"
-      register: cmdline_stats
-
-    - name: Select cmdline.txt path (first existing)
-      ansible.builtin.set_fact:
-        cmdline_path: "{{ (cmdline_stats.results | selectattr('stat.exists') | map(attribute='stat.path') | list | first) | default('') }}"
-
-    - name: Skip if not ARM or cmdline file not found
+    - name: Skip if not ARM architecture
       ansible.builtin.meta: end_host
-      when: cmdline_path == '' or (ansible_facts.architecture not in ['aarch64', 'arm64', 'armv7l', 'armv6l'])
+      when: ansible_facts.architecture not in ['aarch64', 'arm64', 'armv7l', 'armv6l']
 
-    - name: Read current cmdline
+    # Disable swap
+    - name: Check if dphys-swapfile exists
+      ansible.builtin.stat:
+        path: /etc/dphys-swapfile
+      register: dphys_swapfile_stat
+
+    - name: Disable swap in dphys-swapfile
+      ansible.builtin.lineinfile:
+        path: /etc/dphys-swapfile
+        regexp: '^CONF_SWAPSIZE='
+        line: 'CONF_SWAPSIZE=0'
+        state: present
+      register: swap_disabled
+      when: dphys_swapfile_stat.stat.exists
+
+    - name: Stop and disable dphys-swapfile service
+      ansible.builtin.systemd:
+        name: dphys-swapfile
+        state: stopped
+        enabled: no
+      when: dphys_swapfile_stat.stat.exists
+      failed_when: false
+
+    - name: Turn off all swap immediately
+      ansible.builtin.command: swapoff -a
+      changed_when: false
+      failed_when: false
+
+    # Enable cgroups
+    - name: Check if cmdline.txt exists
+      ansible.builtin.stat:
+        path: "{{ cmdline_path }}"
+      register: cmdline_stat
+
+    - name: Read current cmdline.txt
       ansible.builtin.slurp:
         path: "{{ cmdline_path }}"
       register: cmdline_file
+      when: cmdline_stat.stat.exists
 
-    - name: Compute updated cmdline
+    - name: Check if cgroup flags are already present
       ansible.builtin.set_fact:
-        cmdline_current: "{{ (cmdline_file.content | b64decode) | trim }}"
-        cmdline_updated: >-
+        cgroup_already_present: >-
           {{
-            ((cmdline_file.content | b64decode) | trim)
-            ~ (
-              ''
-              if (
-                ((cmdline_file.content | b64decode) is search('(^|\\s)cgroup_enable=memory(\\s|$)'))
-                and ((cmdline_file.content | b64decode) is search('(^|\\s)cgroup_memory=1(\\s|$)'))
-              )
-              else ' ' ~ cgroup_flags
-            )
+            (cmdline_file.content | b64decode) is search('cgroup_enable=cpuset')
+            and (cmdline_file.content | b64decode) is search('cgroup_memory=1')
+            and (cmdline_file.content | b64decode) is search('cgroup_enable=memory')
           }}
+      when: cmdline_stat.stat.exists
 
-    - name: Update cmdline (single line)
-      ansible.builtin.copy:
-        dest: "{{ cmdline_path }}"
-        content: "{{ cmdline_updated }}\n"
-        owner: root
-        group: root
-        mode: '0644'
-      register: cmdline_write
-      when: cmdline_updated != cmdline_current
+    - name: Append cgroup flags to cmdline.txt if not present
+      ansible.builtin.lineinfile:
+        path: "{{ cmdline_path }}"
+        regexp: '^(.*)$'
+        line: '\1 {{ cgroup_flags }}'
+        backrefs: yes
+      register: cmdline_updated
+      when: cmdline_stat.stat.exists and not cgroup_already_present
 
-    - name: Reboot if cmdline changed
+    - name: Reboot if configuration changed
       ansible.builtin.reboot:
         reboot_timeout: 600
-      when: cmdline_write is defined and cmdline_write.changed
+      when: >
+        (swap_disabled is defined and swap_disabled.changed)
+        or
+        (cmdline_updated is defined and cmdline_updated.changed)
 
-    - name: Verify flags present after reboot
+    # Verify after reboot
+    - name: Verify swap is disabled
+      ansible.builtin.command: swapon --show
+      register: swap_check
+      changed_when: false
+      failed_when: false
+
+    - name: Assert swap is disabled
+      ansible.builtin.assert:
+        that: swap_check.stdout == ''
+        fail_msg: "Swap is still enabled on {{ inventory_hostname }}"
+        success_msg: "Swap is disabled"
+
+    - name: Verify cgroup flags in /proc/cmdline
       ansible.builtin.command: cat /proc/cmdline
       register: proc_cmdline
       changed_when: false
 
-    - name: Assert memory cgroup flags are present
+    - name: Assert cgroup flags are present
       ansible.builtin.assert:
         that:
-          - proc_cmdline.stdout is search('(^|\\s)cgroup_enable=memory(\\s|$)')
-          - proc_cmdline.stdout is search('(^|\\s)cgroup_memory=1(\\s|$)')
-        fail_msg: "Kernel cmdline does not include required flags after reboot on {{ inventory_hostname }}. File used: {{ cmdline_path }}"
+          - proc_cmdline.stdout is search('cgroup_enable=cpuset')
+          - proc_cmdline.stdout is search('cgroup_memory=1')
+          - proc_cmdline.stdout is search('cgroup_enable=memory')
+        fail_msg: >-
+          Cgroup flags not found in /proc/cmdline on {{ inventory_hostname }}.
+          Expected: {{ cgroup_flags }}
+          Actual: {{ proc_cmdline.stdout }}
+        success_msg: "Cgroup flags are present in kernel cmdline"

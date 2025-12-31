@@ -83,6 +83,29 @@
       args:
         executable: /bin/bash
 
+    - name: Wait for k3s service to become active on joined server
+      ansible.builtin.command: systemctl is-active k3s
+      register: k3s_active
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: k3s_active.rc == 0 and (k3s_active.stdout | trim) == 'active'
+
+    - name: Wait for kubeconfig to exist on joined server
+      ansible.builtin.stat:
+        path: /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_stat
+      retries: 30
+      delay: 2
+      until: kubeconfig_stat.stat.exists
+
+    - name: Show k3s logs if service is not active
+      ansible.builtin.command: journalctl -u k3s --no-pager -n 200
+      register: k3s_journal
+      changed_when: false
+      failed_when: true
+      when: k3s_active is defined and (k3s_active.rc != 0 or (k3s_active.stdout | trim) != 'active')
+
     - name: Ensure kubectl symlink to k3s exists (servers)
       ansible.builtin.file:
         src: /usr/local/bin/k3s
@@ -122,24 +145,39 @@
   hosts: k3s_servers
   become: yes
   tasks:
-    - name: Discover ansible user home directory
-      ansible.builtin.command: "getent passwd {{ ansible_user | default('thomasschissler') }} | cut -d: -f6"
-      register: ansible_user_home
+    - name: Look up ansible user passwd entry
+      ansible.builtin.command: "getent passwd {{ ansible_user | default('thomasschissler') }}"
+      register: ansible_user_passwd
       changed_when: false
-      failed_when: ansible_user_home.rc != 0
+      failed_when: ansible_user_passwd.rc != 0
+
+    - name: Derive ansible user home directory
+      ansible.builtin.set_fact:
+        ansible_user_home: "{{ (ansible_user_passwd.stdout.split(':'))[5] }}"
+      failed_when:
+        - ansible_user_home is not defined or (ansible_user_home | trim) == ''
 
     - name: Ensure user kube directory exists
       ansible.builtin.file:
-        path: "{{ ansible_user_home.stdout.rstrip('\n') | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube"
+        path: "{{ ansible_user_home | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube"
         state: directory
         owner: "{{ ansible_user | default('thomasschissler') }}"
         group: "{{ ansible_user | default('thomasschissler') }}"
         mode: '0755'
 
+    - name: Wait for kubeconfig to exist
+      ansible.builtin.stat:
+        path: /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_stat
+      retries: 30
+      delay: 2
+      until: kubeconfig_stat.stat.exists
+
     - name: Copy kubeconfig into user's home
       ansible.builtin.copy:
         src: /etc/rancher/k3s/k3s.yaml
-        dest: "{{ ansible_user_home.stdout.rstrip('\n') | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube/config"
+        remote_src: true
+        dest: "{{ ansible_user_home | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube/config"
         owner: "{{ ansible_user | default('thomasschissler') }}"
         group: "{{ ansible_user | default('thomasschissler') }}"
         mode: '0644'
