@@ -1,0 +1,5 @@
+---
+# Post-provision cluster configuration (add-ons).
+# Add new configuration playbooks here over time.
+
+- import_playbook: plays/configure-kubevip.yml

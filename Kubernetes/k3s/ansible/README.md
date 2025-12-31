@@ -43,7 +43,7 @@ visudo -c
 sudo -n true && echo OK
 ```
 
-# Run playbook
+# Install k3s
 
 ```bash
 # Site auf Test-Cluster
@@ -53,4 +53,23 @@ ansible-playbook cluster.yml -i inventory.ini --limit testservers
 chmod +x *.sh
 ./run-on-test.sh -K -k
 ./run-on-prod.sh -K -k
+
+# Add-ons (kube-vip, later more)
+./run-addons-test.sh -K -k
+./run-addons-prod.sh -K -k
+```
+
+# Install kube-VIP
+```bash
+ansible-playbook plays/configure-kubevip.yml -i inventory.ini --limit k3s_servers -K -k
+```
+
+# Fix kube-VIP / API VIP certificate SANs (only)
+```bash
+ansible-playbook plays/configure-kubevip.yml -i inventory.ini --limit k3s_servers -K -k --tags cert
+```
+
+Check kube-VIP
+```bash
+kubectl get nodes --server=https://192.168.178.222:6443
 ```

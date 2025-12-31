@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-PLAYBOOK=${1:-cluster.yml}
 cd "$(dirname "$0")"
 if [[ "${1:-}" == -* ]]; then
 	EXTRA_ARGS="$*"

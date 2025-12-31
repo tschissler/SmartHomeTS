@@ -2,8 +2,11 @@
 - name: Deploy kube-vip manifests
   hosts: prodservers,testservers
   become: yes
+  serial: 1
   vars:
     kubevip_manifests_dir: /var/lib/rancher/k3s/server/manifests
+    kubevip_fail_if_vip_in_use: true
+    kubevip_force_rotate_api_cert: false
   pre_tasks:
     - name: Validate kube-vip VIP and range variables
       ansible.builtin.assert:
@@ -28,30 +31,134 @@
             )
         fail_msg: "kubevip_api_vip ({{ kubevip_api_vip }}) overlaps a node static_ip. Pick an unused address."
 
-    - name: Fail if VIP already responds to ping (likely already in use)
+    - name: Check if VIP responds to ping (best-effort)
       ansible.builtin.command: "ping -c 1 -W 1 {{ kubevip_api_vip }}"
       delegate_to: localhost
       become: false
       register: vip_ping
       changed_when: false
-      failed_when: vip_ping.rc == 0
+      failed_when: false
+
+    - name: Check whether VIP is currently assigned on this node (best-effort)
+      ansible.builtin.shell: "ip -4 -o addr show | grep -w '{{ kubevip_api_vip }}'"
+      register: vip_assigned_here
+      changed_when: false
+      failed_when: false
+      when: inventory_hostname in groups.get('k3s_servers', [])
+
+    - name: Initialize VIP holder list
+      ansible.builtin.set_fact:
+        kubevip_vip_assigned_hosts: []
+      run_once: true
+      changed_when: false
+
+    - name: Build list of servers that currently hold the VIP
+      ansible.builtin.set_fact:
+        kubevip_vip_assigned_hosts: "{{ kubevip_vip_assigned_hosts | default([]) + ([item] if ((hostvars[item].vip_assigned_here is defined) and (hostvars[item].vip_assigned_here.rc | default(1) == 0)) else []) }}"
+      run_once: true
+      loop: "{{ groups.get('k3s_servers', []) }}"
+      changed_when: false
+
+    - name: Fail if VIP responds but is not assigned on any cluster server (likely conflict)
+      ansible.builtin.assert:
+        that:
+          - not (vip_ping.rc == 0 and (kubevip_vip_assigned_hosts | default([]) | length == 0) and (kubevip_fail_if_vip_in_use | bool))
+        fail_msg: >-
+          kubevip_api_vip ({{ kubevip_api_vip }}) responds to ping but is not currently assigned on any k3s server.
+          This suggests the IP is already in use on the LAN. Pick a different VIP or set kubevip_fail_if_vip_in_use=false.
+      run_once: true
+
+    - name: Info when VIP is already active on the cluster
+      ansible.builtin.debug:
+        msg: "VIP {{ kubevip_api_vip }} already active on: {{ kubevip_vip_assigned_hosts | default([]) }}"
+      when: vip_ping.rc == 0 and (kubevip_vip_assigned_hosts | default([]) | length) > 0
+      run_once: true
   tasks:
-    - name: Ensure k3s config.d directory exists
+    - name: Ensure k3s config directory exists
       ansible.builtin.file:
-        path: /etc/rancher/k3s/config.d
+        path: /etc/rancher/k3s
         state: directory
         owner: root
         group: root
         mode: '0755'
       when: inventory_hostname in groups.get('k3s_servers', [])
 
-    - name: Render TLS SAN fragment for kubeVIP
-      ansible.builtin.template:
-        src: ../templates/k3s-vip-tls-san.yaml.j2
-        dest: /etc/rancher/k3s/config.d/10-vip-tls-san.yaml
+    - name: Read existing k3s config.yaml (if present)
+      ansible.builtin.slurp:
+        path: /etc/rancher/k3s/config.yaml
+      register: k3s_config_yaml
+      failed_when: false
+      changed_when: false
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [cert]
+
+    - name: Extract k3s config.yaml text
+      ansible.builtin.set_fact:
+        k3s_config_text: "{{ (k3s_config_yaml.content | default('') | b64decode) | trim }}"
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [cert]
+
+    - name: Parse k3s config.yaml into a raw object
+      ansible.builtin.set_fact:
+        k3s_config_current_raw: "{{ (k3s_config_text | length > 0) | ternary((k3s_config_text | from_yaml), {}) }}"
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [cert]
+
+    - name: Normalize parsed k3s config to a dict
+      ansible.builtin.set_fact:
+        k3s_config_current: "{{ (k3s_config_current_raw is mapping) | ternary(k3s_config_current_raw, {}) }}"
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [cert]
+
+    - name: Compute whether VIP is missing from tls-san
+      ansible.builtin.set_fact:
+        kubevip_tls_san_missing: "{{ kubevip_api_vip not in (k3s_config_current['tls-san'] | default([])) }}"
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [cert]
+
+    - name: Ensure kubeVIP API VIP is in k3s tls-san list
+      ansible.builtin.set_fact:
+        k3s_config_updated: >-
+          {{
+            k3s_config_current
+            | combine(
+                {
+                  'tls-san': ((k3s_config_current['tls-san'] | default([])) + [kubevip_api_vip]) | unique
+                },
+                recursive=True
+              )
+          }}
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [cert]
+
+    - name: Write k3s config.yaml (with kubeVIP TLS SAN)
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        content: "{{ k3s_config_updated | to_nice_yaml(indent=2, width=9999) }}"
+        owner: root
+        group: root
         mode: '0644'
+      register: k3s_config_write
       when: inventory_hostname in groups.get('k3s_servers', [])
       notify: restart k3s
+      tags: [cert]
+
+    - name: Rotate k3s API server certificate when needed
+      ansible.builtin.command: /usr/local/bin/k3s certificate rotate -s api-server
+      register: cert_rotate_needed
+      changed_when: true
+      when:
+        - inventory_hostname in groups.get('k3s_servers', [])
+        - (kubevip_force_rotate_api_cert | bool) or (kubevip_tls_san_missing | default(true) | bool)
+      notify: restart k3s
+      tags: [cert]
+
+    - name: Remove legacy kubeVIP TLS SAN fragment (no longer used)
+      ansible.builtin.file:
+        path: /etc/rancher/k3s/config.d/10-vip-tls-san.yaml
+        state: absent
+      when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [cert]
 
     - name: Ensure kube-vip manifest directory exists
       ansible.builtin.file:
@@ -61,6 +168,7 @@
         group: root
         mode: '0755'
       when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [manifests]
 
     - name: Deploy kube-vip DaemonSet
       ansible.builtin.template:
@@ -68,6 +176,7 @@
         dest: "{{ kubevip_manifests_dir }}/kube-vip.yaml"
         mode: '0644'
       when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [manifests]
 
     - name: Deploy kube-vip service range ConfigMap
       ansible.builtin.template:
@@ -75,6 +184,7 @@
         dest: "{{ kubevip_manifests_dir }}/kube-vip-configmap.yaml"
         mode: '0644'
       when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [manifests]
 
     - name: Deploy kube-vip cloud provider manifest
       ansible.builtin.copy:
@@ -82,6 +192,7 @@
         dest: "{{ kubevip_manifests_dir }}/kube-vip-cloud-provider.yaml"
         mode: '0644'
       when: inventory_hostname in groups.get('k3s_servers', [])
+      tags: [manifests]
 
     - name: Wait for kube-vip daemonset to roll out
       ansible.builtin.command: /usr/local/bin/k3s kubectl -n kube-system rollout status ds/kube-vip-ds --timeout=180s
@@ -93,6 +204,7 @@
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) | default(inventory_hostname) }}"
       when: (groups.get('k3s_servers', []) | length) > 0
+      tags: [manifests]
 
   handlers:
     - name: restart k3s
