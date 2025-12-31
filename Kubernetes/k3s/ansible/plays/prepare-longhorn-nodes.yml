@@ -1,0 +1,40 @@
+---
+- name: Prepare nodes for Longhorn storage
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tasks:
+    - name: Install Longhorn dependencies (iSCSI, NFS client, utilities)
+      ansible.builtin.apt:
+        name:
+          - jq
+          - open-iscsi
+          - nfs-common
+          - util-linux
+          - parted
+        state: present
+        update_cache: yes
+
+    - name: Load iSCSI kernel module
+      ansible.builtin.shell: modprobe iscsi_tcp
+      changed_when: false
+
+    - name: Ensure iSCSI module loads on boot
+      ansible.builtin.lineinfile:
+        path: /etc/modules
+        line: iscsi_tcp
+        create: yes
+
+    - name: Enable and start iSCSI daemon
+      ansible.builtin.systemd:
+        name: iscsid
+        enabled: yes
+        state: started
+
+    - name: Create Longhorn data directory
+      ansible.builtin.file:
+        path: /var/lib/longhorn-data
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'

@@ -1,0 +1,304 @@
+---
+- name: Deploy AdGuard Home DNS server
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    adguard_namespace: adguard-home
+    adguard_storage_size: 1Gi
+    adguard_lb_ip: "{{ adguard_home_lb_ip | default('') }}"
+    adguard_upstream_dns: "{{ adguard_home_upstream_dns | default('192.168.178.1') }}"
+  pre_tasks:
+    - name: Validate AdGuard Home LoadBalancer IP is set
+      ansible.builtin.assert:
+        that:
+          - adguard_lb_ip is defined
+          - adguard_lb_ip | trim != ''
+        fail_msg: "adguard_home_lb_ip must be set in group_vars or via -e adguard_home_lb_ip=..."
+      run_once: true
+
+    - name: Ensure AdGuard LB IP is in kube-vip service range
+      ansible.builtin.assert:
+        that:
+          - adguard_lb_ip | ipaddr
+        fail_msg: "adguard_home_lb_ip={{ adguard_lb_ip }} is not a valid IP address"
+      run_once: true
+
+  tasks:
+    - name: Create AdGuard Home namespace
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl create namespace {{ adguard_namespace }} --dry-run=client -o yaml | /usr/local/bin/k3s kubectl apply -f -
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create AdGuard Home PersistentVolumeClaim
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: adguard-data
+          namespace: {{ adguard_namespace }}
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: longhorn
+          resources:
+            requests:
+              storage: {{ adguard_storage_size }}
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create AdGuard Home ConfigMap (initial config)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: adguard-config
+          namespace: {{ adguard_namespace }}
+        data:
+          AdGuardHome.yaml: |
+            bind_host: 0.0.0.0
+            bind_port: 3000
+            users: []
+            http_proxy: ""
+            language: de
+            theme: auto
+            dns:
+              bind_hosts:
+                - 0.0.0.0
+              port: 53
+              upstream_dns:
+                - "{{ adguard_upstream_dns }}"
+              bootstrap_dns:
+                - "{{ adguard_upstream_dns }}"
+              protection_enabled: true
+              blocking_mode: default
+              blocked_response_ttl: 10
+              querylog_enabled: true
+              ratelimit: 20
+              refuse_any: true
+              upstream_mode: load_balance
+              cache_size: 4194304
+              cache_ttl_min: 0
+              cache_ttl_max: 0
+              cache_optimistic: false
+              bogus_nxdomain: []
+              aaaa_disabled: false
+              enable_dnssec: false
+              edns_client_subnet: false
+              max_goroutines: 300
+              ipset: []
+              filtering_enabled: true
+              filters_update_interval: 24
+              parental_enabled: false
+              safesearch_enabled: false
+              safebrowsing_enabled: false
+              safebrowsing_cache_size: 1048576
+              safesearch_cache_size: 1048576
+              parental_cache_size: 1048576
+              cache_time: 30
+              rewrites: []
+              blocked_services: []
+              local_domain_name: lan
+              resolve_clients: true
+              use_private_ptr_resolvers: true
+              local_ptr_upstreams: []
+            tls:
+              enabled: false
+            filters:
+              - enabled: true
+                url: https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+                name: AdGuard DNS filter
+                id: 1
+              - enabled: true
+                url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.txt
+                name: HaGeZi Pro Blocklist
+                id: 2
+            querylog:
+              enabled: true
+              interval: 2160h
+              size_memory: 1000
+              ignored: []
+            statistics:
+              enabled: true
+              interval: 24h
+              ignored: []
+            log_file: ""
+            log_max_backups: 0
+            log_max_size: 100
+            log_max_age: 3
+            log_compress: false
+            log_localtime: false
+            verbose: false
+            schema_version: 20
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Deploy AdGuard Home Deployment
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: adguard-home
+          namespace: {{ adguard_namespace }}
+          labels:
+            app: adguard-home
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: adguard-home
+          template:
+            metadata:
+              labels:
+                app: adguard-home
+            spec:
+              containers:
+              - name: adguard-home
+                image: adguard/adguardhome:latest
+                ports:
+                - containerPort: 53
+                  name: dns-tcp
+                  protocol: TCP
+                - containerPort: 53
+                  name: dns-udp
+                  protocol: UDP
+                - containerPort: 3000
+                  name: http
+                  protocol: TCP
+                volumeMounts:
+                - name: adguard-data
+                  mountPath: /opt/adguardhome/work
+                - name: adguard-config
+                  mountPath: /opt/adguardhome/conf/AdGuardHome.yaml
+                  subPath: AdGuardHome.yaml
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 128Mi
+                  limits:
+                    cpu: 500m
+                    memory: 512Mi
+              volumes:
+              - name: adguard-data
+                persistentVolumeClaim:
+                  claimName: adguard-data
+              - name: adguard-config
+                configMap:
+                  name: adguard-config
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create AdGuard Home DNS Service (LoadBalancer)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: adguard-dns
+          namespace: {{ adguard_namespace }}
+          annotations:
+            kube-vip.io/loadbalancerIPs: {{ adguard_lb_ip }}
+        spec:
+          type: LoadBalancer
+          selector:
+            app: adguard-home
+          ports:
+          - name: dns-tcp
+            port: 53
+            targetPort: 53
+            protocol: TCP
+          - name: dns-udp
+            port: 53
+            targetPort: 53
+            protocol: UDP
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create AdGuard Home Web UI Service (LoadBalancer)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: adguard-web
+          namespace: {{ adguard_namespace }}
+          annotations:
+            kube-vip.io/loadbalancerIPs: {{ adguard_lb_ip }}
+        spec:
+          type: LoadBalancer
+          selector:
+            app: adguard-home
+          ports:
+          - name: http
+            port: 3000
+            targetPort: 3000
+            protocol: TCP
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait for AdGuard Home deployment to be ready
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} rollout status deployment/adguard-home --timeout=180s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      retries: 5
+      delay: 10
+      register: adguard_rollout
+      until: adguard_rollout.rc == 0
+
+    - name: Display AdGuard Home access information
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          AdGuard Home Installation Complete
+          ========================================================
+          Web UI:       http://{{ adguard_lb_ip }}:3000
+          DNS Server:   {{ adguard_lb_ip }}:53
+          Upstream DNS: {{ adguard_upstream_dns }} (FritzBox)
+          
+          VIP-Architektur:
+          - 192.168.178.222 → Cluster API (kubectl, k3s intern)
+          - {{ adguard_lb_ip }} → Shared Service VIP (DNS, später Ingress etc.)
+                        AdGuard nutzt Ports 53 + 3000
+                        Weitere Services teilen sich diese IP auf anderen Ports
+          
+          Next Steps:
+          1. Open http://{{ adguard_lb_ip }}:3000 in your browser
+          2. Complete the initial setup wizard
+          3. Test DNS: nslookup google.de {{ adguard_lb_ip }}
+          
+          Migration Strategy (no ESP32 restart needed):
+          ---------------------------------------------
+          Phase 1 (Current): All devices use FritzBox DNS ({{ adguard_upstream_dns }})
+          Phase 2 (Testing): Test einzelne Geräte manuell auf {{ adguard_lb_ip }}
+          Phase 3 (Rollout): FritzBox DHCP → DNS Server auf {{ adguard_lb_ip }} ändern
+                             (Geräte migrieren schrittweise bei DHCP-Renewal)
+          
+          FritzBox DHCP Einstellung:
+          - Melde dich an: http://192.168.178.1
+          - Heimnetz → Netzwerk → Netzwerkeinstellungen
+          - IPv4-Adressen → "Lokaler DNS-Server" → {{ adguard_lb_ip }}
+          - Speichern (neue DHCP-Leases nutzen dann AdGuard)
+          
+          Bestehende ESP32-Sensoren arbeiten weiter mit {{ adguard_upstream_dns }}
+          bis zur nächsten DHCP-Renewal (typisch 24h) oder manueller Neustart.
+          ========================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

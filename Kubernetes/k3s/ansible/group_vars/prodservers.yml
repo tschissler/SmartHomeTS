@@ -1,6 +1,12 @@
 ---
 # Configure the external API VIP for the production cluster.
 kubevip_api_vip: 192.168.178.222
-# Traefik service LB range (can be a single address when start == end).
+
+# Shared VIP for all user-facing services (DNS, Ingress, Web UIs, etc.)
+# Services share this IP on different ports via kube-vip LoadBalancer
 kubevip_service_range_start: 192.168.178.223
 kubevip_service_range_end: 192.168.178.223
+
+# AdGuard Home DNS server (uses shared service VIP .223)
+adguard_home_lb_ip: 192.168.178.223
+adguard_home_upstream_dns: 192.168.178.1

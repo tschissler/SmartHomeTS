@@ -1,0 +1,33 @@
+---
+- name: Debug disk space calculation
+  hosts: k3snode1,k3snode2
+  become: yes
+  gather_facts: no
+  vars:
+    longhorn_device: /dev/nvme0n1
+  tasks:
+    - name: Method 1 - parted free space
+      ansible.builtin.shell: |
+        parted {{ longhorn_device }} unit GB print free 2>&1
+      register: parted_output
+      changed_when: false
+      failed_when: false
+      
+    - name: Display parted output
+      ansible.builtin.debug:
+        var: parted_output.stdout_lines
+        
+    - name: Method 2 - lsblk with size calculation
+      ansible.builtin.shell: |
+        lsblk {{ longhorn_device }} -b -n -o SIZE,TYPE | awk '
+          BEGIN { total=0; used=0 }
+          /disk/ { total=$1 }
+          /part/ { used+=$1 }
+          END { free=(total-used)/1024/1024/1024; printf "%.1f\n", free }
+        '
+      register: lsblk_free_calc
+      changed_when: false
+      
+    - name: Display calculated free space
+      ansible.builtin.debug:
+        msg: "Free space (GB): {{ lsblk_free_calc.stdout }}"
