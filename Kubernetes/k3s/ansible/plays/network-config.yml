@@ -49,8 +49,9 @@
 
     - name: Apply netplan
       ansible.builtin.shell: netplan apply
+      async: 10
+      poll: 0
       register: netplan_apply
-      failed_when: netplan_apply.rc != 0
 
 
     - name: Reboot (async) if requested
@@ -83,7 +84,7 @@
       register: ssh_check
       ignore_errors: yes
       until: ssh_check.rc == 0
-      retries: 4
+      retries: 10
       delay: 5
 
     - name: Register hostname -> static IP on controller /etc/hosts

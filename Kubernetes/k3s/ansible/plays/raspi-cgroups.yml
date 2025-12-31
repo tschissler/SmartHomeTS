@@ -5,7 +5,11 @@
   gather_facts: yes
   vars:
     cgroup_flags: "cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory"
-    cmdline_path: /boot/firmware/cmdline.txt
+    cmdline_candidates:
+      # With os_prefix=current/ and cmdline=cmdline.txt in config.txt, this is the active one.
+      - /boot/firmware/current/cmdline.txt
+      - /boot/firmware/cmdline.txt
+      - /boot/cmdline.txt
   tasks:
     - name: Skip if not ARM architecture
       ansible.builtin.meta: end_host
@@ -40,35 +44,69 @@
       failed_when: false
 
     # Enable cgroups
-    - name: Check if cmdline.txt exists
+    - name: Find active cmdline.txt
       ansible.builtin.stat:
-        path: "{{ cmdline_path }}"
-      register: cmdline_stat
+        path: "{{ item }}"
+      loop: "{{ cmdline_candidates }}"
+      register: cmdline_stats
+
+    - name: Select active cmdline path
+      ansible.builtin.set_fact:
+        cmdline_path: "{{ (cmdline_stats.results | selectattr('stat.exists') | map(attribute='stat.path') | list | first) | default('') }}"
+
+    - name: Fail if no cmdline.txt was found
+      ansible.builtin.fail:
+        msg: "No cmdline.txt found in {{ cmdline_candidates }} on {{ inventory_hostname }}"
+      when: cmdline_path | trim == ''
 
     - name: Read current cmdline.txt
       ansible.builtin.slurp:
         path: "{{ cmdline_path }}"
       register: cmdline_file
-      when: cmdline_stat.stat.exists
 
-    - name: Check if cgroup flags are already present
+    - name: Compute updated cmdline (remove cgroup_disable=memory; ensure required flags)
       ansible.builtin.set_fact:
-        cgroup_already_present: >-
+        cmdline_current: "{{ (cmdline_file.content | b64decode) | trim }}"
+        cmdline_sanitized: >-
           {{
-            (cmdline_file.content | b64decode) is search('cgroup_enable=cpuset')
-            and (cmdline_file.content | b64decode) is search('cgroup_memory=1')
-            and (cmdline_file.content | b64decode) is search('cgroup_enable=memory')
+            ((cmdline_file.content | b64decode) | trim)
+            | regex_replace('(^|\\s)cgroup_disable=memory(\\s|$)', ' ')
+            | regex_replace('\\s+', ' ')
+            | trim
           }}
-      when: cmdline_stat.stat.exists
+        cmdline_updated: >-
+          {{
+            (
+              (
+                ((cmdline_file.content | b64decode) | trim)
+                | regex_replace('(^|\\s)cgroup_disable=memory(\\s|$)', ' ')
+                | regex_replace('\\s+', ' ')
+                | trim
+              )
+              ~
+              (
+                ''
+                if (
+                  (((cmdline_file.content | b64decode) | trim) is search('(^|\\s)cgroup_enable=cpuset(\\s|$)'))
+                  and (((cmdline_file.content | b64decode) | trim) is search('(^|\\s)cgroup_memory=1(\\s|$)'))
+                  and (((cmdline_file.content | b64decode) | trim) is search('(^|\\s)cgroup_enable=memory(\\s|$)'))
+                )
+                else ' ' ~ cgroup_flags
+              )
+            )
+            | regex_replace('\\s+', ' ')
+            | trim
+          }}
 
-    - name: Append cgroup flags to cmdline.txt if not present
-      ansible.builtin.lineinfile:
-        path: "{{ cmdline_path }}"
-        regexp: '^(.*)$'
-        line: '\1 {{ cgroup_flags }}'
-        backrefs: yes
-      register: cmdline_updated
-      when: cmdline_stat.stat.exists and not cgroup_already_present
+    - name: Write cmdline.txt if needed
+      ansible.builtin.copy:
+        dest: "{{ cmdline_path }}"
+        content: "{{ cmdline_updated }}\n"
+        owner: root
+        group: root
+        mode: '0755'
+      register: cmdline_updated_result
+      when: cmdline_updated != cmdline_current
 
     - name: Reboot if configuration changed
       ansible.builtin.reboot:
@@ -76,7 +114,7 @@
       when: >
         (swap_disabled is defined and swap_disabled.changed)
         or
-        (cmdline_updated is defined and cmdline_updated.changed)
+        (cmdline_updated_result is defined and cmdline_updated_result.changed)
 
     # Verify after reboot
     - name: Verify swap is disabled
@@ -96,14 +134,40 @@
       register: proc_cmdline
       changed_when: false
 
-    - name: Assert cgroup flags are present
+    - name: Check cgroup v2 controllers (best effort)
+      ansible.builtin.command: cat /sys/fs/cgroup/cgroup.controllers
+      register: cgroup2_controllers
+      changed_when: false
+      failed_when: false
+
+    - name: Check /proc/cgroups (cgroup v1 fallback)
+      ansible.builtin.command: cat /proc/cgroups
+      register: proc_cgroups
+      changed_when: false
+      failed_when: false
+
+    - name: Assert cgroup flags are present and memory controller is available
       ansible.builtin.assert:
         that:
           - proc_cmdline.stdout is search('cgroup_enable=cpuset')
           - proc_cmdline.stdout is search('cgroup_memory=1')
           - proc_cmdline.stdout is search('cgroup_enable=memory')
+          - >-
+            (
+              (cgroup2_controllers is defined)
+              and (cgroup2_controllers.rc == 0)
+              and ((cgroup2_controllers.stdout | default('')) is search('(^|\\s)memory(\\s|$)'))
+            )
+            or
+            (
+              (proc_cgroups is defined)
+              and (proc_cgroups.rc == 0)
+              and ((proc_cgroups.stdout | default('')) is search('^memory\\s+\\d+\\s+1\\s+1\\s*$', multiline=True))
+            )
         fail_msg: >-
           Cgroup flags not found in /proc/cmdline on {{ inventory_hostname }}.
           Expected: {{ cgroup_flags }}
           Actual: {{ proc_cmdline.stdout }}
-        success_msg: "Cgroup flags are present in kernel cmdline"
+          cmdline file used: {{ cmdline_path | default('unknown') }}
+          cgroup.controllers: {{ cgroup2_controllers.stdout | default('') }}
+        success_msg: "Swap disabled and memory cgroups available"
