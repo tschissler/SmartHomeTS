@@ -1,3 +1,4 @@
 {
-    "cmake.ignoreCMakeListsMissing": true
+    "cmake.ignoreCMakeListsMissing": true,
+    "ansible.python.interpreterPath": "/home/tschissler/.venvs/ansible/bin/python"
 }

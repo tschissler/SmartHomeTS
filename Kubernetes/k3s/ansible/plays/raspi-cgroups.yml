@@ -1,0 +1,72 @@
+---
+- name: Enable memory cgroups on Raspberry Pi (Ubuntu)
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    cgroup_flags: "cgroup_enable=memory cgroup_memory=1"
+    cmdline_candidates:
+      - /boot/firmware/cmdline.txt
+      - /boot/cmdline.txt
+  tasks:
+    - name: Check cmdline.txt candidate paths
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ cmdline_candidates }}"
+      register: cmdline_stats
+
+    - name: Select cmdline.txt path (first existing)
+      ansible.builtin.set_fact:
+        cmdline_path: "{{ (cmdline_stats.results | selectattr('stat.exists') | map(attribute='stat.path') | list | first) | default('') }}"
+
+    - name: Skip if not ARM or cmdline file not found
+      ansible.builtin.meta: end_host
+      when: cmdline_path == '' or (ansible_facts.architecture not in ['aarch64', 'arm64', 'armv7l', 'armv6l'])
+
+    - name: Read current cmdline
+      ansible.builtin.slurp:
+        path: "{{ cmdline_path }}"
+      register: cmdline_file
+
+    - name: Compute updated cmdline
+      ansible.builtin.set_fact:
+        cmdline_current: "{{ (cmdline_file.content | b64decode) | trim }}"
+        cmdline_updated: >-
+          {{
+            ((cmdline_file.content | b64decode) | trim)
+            ~ (
+              ''
+              if (
+                ((cmdline_file.content | b64decode) is search('(^|\\s)cgroup_enable=memory(\\s|$)'))
+                and ((cmdline_file.content | b64decode) is search('(^|\\s)cgroup_memory=1(\\s|$)'))
+              )
+              else ' ' ~ cgroup_flags
+            )
+          }}
+
+    - name: Update cmdline (single line)
+      ansible.builtin.copy:
+        dest: "{{ cmdline_path }}"
+        content: "{{ cmdline_updated }}\n"
+        owner: root
+        group: root
+        mode: '0644'
+      register: cmdline_write
+      when: cmdline_updated != cmdline_current
+
+    - name: Reboot if cmdline changed
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+      when: cmdline_write is defined and cmdline_write.changed
+
+    - name: Verify flags present after reboot
+      ansible.builtin.command: cat /proc/cmdline
+      register: proc_cmdline
+      changed_when: false
+
+    - name: Assert memory cgroup flags are present
+      ansible.builtin.assert:
+        that:
+          - proc_cmdline.stdout is search('(^|\\s)cgroup_enable=memory(\\s|$)')
+          - proc_cmdline.stdout is search('(^|\\s)cgroup_memory=1(\\s|$)')
+        fail_msg: "Kernel cmdline does not include required flags after reboot on {{ inventory_hostname }}. File used: {{ cmdline_path }}"

@@ -2,8 +2,6 @@
 - name: Install k3s initial server
   hosts: k3s_init
   become: yes
-  vars:
-    k3s_version: ""
   tasks:
     - name: Ensure /etc/rancher exists
       ansible.builtin.file:
@@ -12,18 +10,6 @@
         owner: root
         group: root
         mode: '0755'
-
-    - name: Install k3s server (idempotent) using specific version
-      ansible.builtin.shell: |
-        if systemctl list-unit-files | grep -q '^k3s\.service'; then
-          echo "k3s already installed"
-        else
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='{{ k3s_version }}' sh -s - server --cluster-init --write-kubeconfig-mode '0644'
-        fi
-      args:
-        executable: /bin/bash
-      register: k3s_install
-      when: k3s_version is defined and (k3s_version | trim) != ''
 
     - name: Install k3s server (idempotent) using latest
       ansible.builtin.shell: |
@@ -35,7 +21,6 @@
       args:
         executable: /bin/bash
       register: k3s_install
-      when: k3s_version is not defined or (k3s_version | trim) == ''
 
     - name: Wait for k3s to be healthy
       ansible.builtin.command: /usr/local/bin/k3s kubectl get nodes
@@ -74,27 +59,7 @@
 - name: Join additional control-plane servers
   hosts: k3s_servers:!k3s_init
   become: yes
-  vars:
-    k3s_version: ""
   tasks:
-    - name: Install k3s server join (idempotent) using specific version
-      ansible.builtin.shell: |
-        if systemctl list-unit-files | grep -q '^k3s\.service'; then
-          echo "k3s already installed"
-        else
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='{{ k3s_version }}' K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ hostvars[groups['k3s_init'][0]].k3s_join_token }}" sh -s - server --write-kubeconfig-mode '0644'
-        fi
-      args:
-        executable: /bin/bash
-    - name: Ensure kubectl symlink to k3s exists (servers)
-      ansible.builtin.file:
-        src: /usr/local/bin/k3s
-        dest: /usr/local/bin/kubectl
-        state: link
-        force: yes
-      become: yes
-      when: k3s_version is defined and (k3s_version | trim) != ''
-
     - name: Install k3s server join (idempotent) using latest
       ansible.builtin.shell: |
         if systemctl list-unit-files | grep -q '^k3s\.service'; then
@@ -104,25 +69,19 @@
         fi
       args:
         executable: /bin/bash
-      when: k3s_version is not defined or (k3s_version | trim) == ''
+
+    - name: Ensure kubectl symlink to k3s exists (servers)
+      ansible.builtin.file:
+        src: /usr/local/bin/k3s
+        dest: /usr/local/bin/kubectl
+        state: link
+        force: yes
+      become: yes
 
 - name: Install k3s agents (workers)
   hosts: k3s_agents
   become: yes
-  vars:
-    k3s_version: ""
   tasks:
-    - name: Install k3s agent (idempotent) using specific version
-      ansible.builtin.shell: |
-        if systemctl list-unit-files | grep -q '^k3s-agent\.service'; then
-          echo "k3s-agent already installed"
-        else
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='{{ k3s_version }}' K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ hostvars[groups['k3s_init'][0]].k3s_join_token }}" INSTALL_K3S_EXEC='agent' sh -s -
-        fi
-      args:
-        executable: /bin/bash
-      when: k3s_version is defined and (k3s_version | trim) != ''
-
     - name: Install k3s agent (idempotent) using latest
       ansible.builtin.shell: |
         if systemctl list-unit-files | grep -q '^k3s-agent\.service'; then
@@ -132,7 +91,6 @@
         fi
       args:
         executable: /bin/bash
-      when: k3s_version is not defined or (k3s_version | trim) == ''
 
 - name: Share kubeconfig with the Ansible user
   hosts: k3s_servers

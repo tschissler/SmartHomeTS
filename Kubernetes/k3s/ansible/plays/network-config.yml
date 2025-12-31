@@ -83,7 +83,7 @@
       register: ssh_check
       ignore_errors: yes
       until: ssh_check.rc == 0
-      retries: 12
+      retries: 4
       delay: 5
 
     - name: Register hostname -> static IP on controller /etc/hosts

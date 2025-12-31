@@ -66,7 +66,7 @@ spec:
         - name: vip_address
           value: "{{ kubevip_api_vip }}"
         - name: vip_cidr
-          value: "24"
+          value: "{{ kubevip_api_vip_cidr | default('32') }}"
         - name: vip_servicespriority
           value: "true"
         - name: vip_arp
@@ -82,7 +82,7 @@ spec:
         - name: cp_enable
           value: "true"
         - name: svc_enable
-          value: "true"
+          value: "{{ kubevip_enable_services | default(false) | ternary('true','false') }}"
         - name: svc_leaderelection
           value: "true"
         - name: KUBECONFIG

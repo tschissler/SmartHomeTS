@@ -16,6 +16,25 @@
     - name: Compute service range end address
       ansible.builtin.set_fact:
         kubevip_service_range_end_final: "{{ kubevip_service_range_end | default(kubevip_service_range_start) }}"
+
+    - name: Fail if VIP overlaps a node static IP
+      ansible.builtin.assert:
+        that:
+          - kubevip_api_vip not in (
+              (groups.get('prodservers', []) + groups.get('testservers', []))
+              | map('extract', hostvars, 'static_ip')
+              | select('defined')
+              | list
+            )
+        fail_msg: "kubevip_api_vip ({{ kubevip_api_vip }}) overlaps a node static_ip. Pick an unused address."
+
+    - name: Fail if VIP already responds to ping (likely already in use)
+      ansible.builtin.command: "ping -c 1 -W 1 {{ kubevip_api_vip }}"
+      delegate_to: localhost
+      become: false
+      register: vip_ping
+      changed_when: false
+      failed_when: vip_ping.rc == 0
   tasks:
     - name: Ensure k3s config.d directory exists
       ansible.builtin.file:
@@ -41,24 +60,28 @@
         owner: root
         group: root
         mode: '0755'
+      when: inventory_hostname in groups.get('k3s_servers', [])
 
     - name: Deploy kube-vip DaemonSet
       ansible.builtin.template:
         src: ../templates/kube-vip.yaml.j2
         dest: "{{ kubevip_manifests_dir }}/kube-vip.yaml"
         mode: '0644'
+      when: inventory_hostname in groups.get('k3s_servers', [])
 
     - name: Deploy kube-vip service range ConfigMap
       ansible.builtin.template:
         src: ../templates/kube-vip-configmap.yaml.j2
         dest: "{{ kubevip_manifests_dir }}/kube-vip-configmap.yaml"
         mode: '0644'
+      when: inventory_hostname in groups.get('k3s_servers', [])
 
     - name: Deploy kube-vip cloud provider manifest
       ansible.builtin.copy:
         src: ../files/kube-vip-cloud-provider.yaml
         dest: "{{ kubevip_manifests_dir }}/kube-vip-cloud-provider.yaml"
         mode: '0644'
+      when: inventory_hostname in groups.get('k3s_servers', [])
 
     - name: Wait for kube-vip daemonset to roll out
       ansible.builtin.command: /usr/local/bin/k3s kubectl -n kube-system rollout status ds/kube-vip-ds --timeout=180s
@@ -67,6 +90,9 @@
       delay: 10
       until: kubevip_rollout.rc == 0
       changed_when: false
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) | default(inventory_hostname) }}"
+      when: (groups.get('k3s_servers', []) | length) > 0
 
   handlers:
     - name: restart k3s
