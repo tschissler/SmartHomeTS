@@ -1,11 +1,29 @@
 ---
 # Post-provision cluster configuration (add-ons).
-# Add new configuration playbooks here over time.
+# Run this AFTER cluster.yml has completed successfully and k3s is stable.
+#
+# Two-Phase Install Strategy:
+#   Phase 1: cluster.yml      → OS prep, k3s install
+#   Phase 2: configure-cluster.yml → kube-vip, storage, services
+#
+# Order matters:
+# 0. kube-vip (MUST be first - provides VIPs for LoadBalancer services)
+# 1. Longhorn storage (prep nodes → prep storage → install)
+# 2. Services that need storage (AdGuard with PVC)
+# 3. Ingress configuration (needs Traefik + services ready)
 
-#- import_playbook: plays/configure-kubevip.yml
-# - import_playbook: plays/prepare-longhorn-nodes.yml
-# - import_playbook: plays/prepare-longhorn-storage.yml
-# - import_playbook: plays/install-longhorn.yml
+# Step 0: kube-vip for API and Service VIPs
+# Must run BEFORE any LoadBalancer services (AdGuard, Traefik, etc.)
+- import_playbook: plays/configure-kubevip.yml
+
+# Step 1: Longhorn replicated storage
+- import_playbook: plays/prepare-longhorn-nodes.yml
+- import_playbook: plays/prepare-longhorn-storage.yml
+- import_playbook: plays/install-longhorn.yml
 - import_playbook: plays/expose-longhorn-ui.yml
+
+# Step 2: Core services
 - import_playbook: plays/install-adguard-home.yml
+
+# Step 3: Ingress routes (host-based routing on shared VIP)
 - import_playbook: plays/configure-ingress-hostnames.yml

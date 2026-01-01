@@ -1,6 +1,9 @@
 ---
+# Deploy kube-vip for API and Service VIPs.
+# Runs on control-plane nodes only (k3s_servers).
+# For test cluster, ensure testservers are reachable or run with --limit prodservers.
 - name: Deploy kube-vip manifests
-  hosts: prodservers,testservers
+  hosts: k3s_servers
   become: yes
   serial: 1
   vars:

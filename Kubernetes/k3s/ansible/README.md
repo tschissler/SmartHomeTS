@@ -45,6 +45,43 @@ sudo -n true && echo OK
 
 # Install k3s
 
+## Full Cluster Setup (Fresh Install)
+
+From a fresh Ubuntu Server install, run these in order:
+
+```bash
+cd Kubernetes/k3s/ansible
+
+# Step 1: Bootstrap cluster (OS prep + k3s install)
+# Wait for this to complete and verify k3s is stable before continuing
+ansible-playbook cluster.yml -i inventory.ini --limit prodservers -K -k
+
+# Verify k3s is healthy before proceeding:
+ssh k3snode1 'kubectl get nodes'
+# All nodes should show Ready status
+
+# Step 2: Install kube-vip + add-ons (Longhorn, AdGuard, Ingress)
+# Note: prepare-longhorn-storage.yml will pause for confirmation before partitioning
+ansible-playbook configure-cluster.yml -i inventory.ini --limit prodservers -K -k
+```
+
+### Why Two Phases?
+
+Running kube-vip immediately after k3s install can cause IP confusion and
+certificate issues. The two-phase approach ensures k3s is fully stable before
+adding VIP management.
+
+## What Gets Deployed
+
+| Component | VIP/Access | Notes |
+|-----------|------------|-------|
+| k3s API | 192.168.178.222:6443 | HA API endpoint via kube-vip |
+| Longhorn UI | http://longhorn.intern/ | Replicated storage on NVMe |
+| AdGuard Home | http://adguard.intern/ | DNS on port 53, UI on 3000 |
+| Traefik Ingress | 192.168.178.223:80/443 | Shared VIP for all HTTP services |
+
+## Individual Playbook Runs
+
 ```bash
 # Site auf Test-Cluster
 ansible-playbook cluster.yml -i inventory.ini --limit testservers
