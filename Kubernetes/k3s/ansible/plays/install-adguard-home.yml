@@ -8,6 +8,8 @@
     adguard_storage_size: 1Gi
     adguard_lb_ip: "{{ adguard_home_lb_ip | default('') }}"
     adguard_upstream_dns: "{{ adguard_home_upstream_dns | default('192.168.178.1') }}"
+    adguard_longhorn_domain: "{{ adguard_home_longhorn_domain | default('longhorn.intern') }}"
+    adguard_ui_domain: "{{ adguard_home_ui_domain | default('adguard.intern') }}"
   pre_tasks:
     - name: Validate AdGuard Home LoadBalancer IP is set
       ansible.builtin.assert:
@@ -104,7 +106,11 @@
               safesearch_cache_size: 1048576
               parental_cache_size: 1048576
               cache_time: 30
-              rewrites: []
+              rewrites:
+                - domain: "{{ adguard_longhorn_domain }}"
+                  answer: "{{ adguard_lb_ip }}"
+                - domain: "{{ adguard_ui_domain }}"
+                  answer: "{{ adguard_lb_ip }}"
               blocked_services: []
               local_domain_name: lan
               resolve_clients: true
@@ -265,6 +271,14 @@
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
+
+    - name: Restart AdGuard Home to apply config changes
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} rollout restart deployment/adguard-home
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      failed_when: false
 
     - name: Wait for AdGuard Home deployment to be ready
       ansible.builtin.shell: |

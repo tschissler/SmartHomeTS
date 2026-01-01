@@ -6,4 +6,5 @@
 # - import_playbook: plays/prepare-longhorn-nodes.yml
 # - import_playbook: plays/prepare-longhorn-storage.yml
 # - import_playbook: plays/install-longhorn.yml
+- import_playbook: plays/expose-longhorn-ui.yml
 - import_playbook: plays/install-adguard-home.yml
