@@ -8,3 +8,4 @@
 # - import_playbook: plays/install-longhorn.yml
 - import_playbook: plays/expose-longhorn-ui.yml
 - import_playbook: plays/install-adguard-home.yml
+- import_playbook: plays/configure-ingress-hostnames.yml

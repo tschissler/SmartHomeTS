@@ -1,0 +1,114 @@
+---
+- name: Configure Traefik VIP and host-based Ingress routes
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    ingress_vip: "{{ kubevip_service_range_start }}"
+    adguard_domain: "{{ adguard_home_ui_domain | default('adguard.intern') }}"
+    longhorn_domain: "{{ adguard_home_longhorn_domain | default('longhorn.intern') }}"
+  pre_tasks:
+    - name: Validate ingress VIP is set
+      ansible.builtin.assert:
+        that:
+          - ingress_vip is defined
+          - ingress_vip | trim != ''
+        fail_msg: "kubevip_service_range_start must be set (used as ingress VIP)"
+      run_once: true
+
+  tasks:
+    - name: Configure Traefik Service VIP via HelmChartConfig (k3s-managed Traefik)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: helm.cattle.io/v1
+        kind: HelmChartConfig
+        metadata:
+          name: traefik
+          namespace: kube-system
+        spec:
+          valuesContent: |-
+            service:
+              annotations:
+                kube-vip.io/loadbalancerIPs: '{{ ingress_vip }}'
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait for Traefik Service to be present
+      ansible.builtin.shell: |
+        for i in $(seq 1 60); do
+          /usr/local/bin/k3s kubectl -n kube-system get svc traefik >/dev/null 2>&1 && exit 0
+          sleep 2
+        done
+        echo "Timed out waiting for kube-system/traefik Service" >&2
+        exit 1
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create Ingress for AdGuard UI (http://adguard.intern)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: adguard-ui
+          namespace: adguard-home
+          annotations:
+            traefik.ingress.kubernetes.io/router.entrypoints: web
+        spec:
+          ingressClassName: traefik
+          rules:
+          - host: {{ adguard_domain }}
+            http:
+              paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: adguard-web
+                    port:
+                      number: 3000
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create Ingress for Longhorn UI (http://longhorn.intern)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: longhorn-ui
+          namespace: longhorn-system
+          annotations:
+            traefik.ingress.kubernetes.io/router.entrypoints: web
+        spec:
+          ingressClassName: traefik
+          rules:
+          - host: {{ longhorn_domain }}
+            http:
+              paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: longhorn-frontend
+                    port:
+                      number: 80
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Show access information
+      ansible.builtin.debug:
+        msg: |
+          Traefik VIP (HTTP/HTTPS): {{ ingress_vip }}
+          AdGuard UI:              http://{{ adguard_domain }}/
+          Longhorn UI:             http://{{ longhorn_domain }}/
+      run_once: true
+      delegate_to: localhost
+      become: false

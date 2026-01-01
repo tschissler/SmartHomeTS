@@ -4,4 +4,5 @@ metadata:
   name: kubevip
   namespace: kube-system
 data:
-  range-global: "{{ kubevip_service_range_start }}-{{ kubevip_service_range_end_final }}"
+  range-global: "{{ kubevip_service_range_start }}-{{ kubevip_service_range_end | default(kubevip_service_range_start) }}"
+  allow-share-global: "true"
