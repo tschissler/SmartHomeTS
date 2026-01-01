@@ -7,6 +7,10 @@ kubevip_api_vip: 192.168.178.222
 kubevip_service_range_start: 192.168.178.223
 kubevip_service_range_end: 192.168.178.223
 
+# Enable kube-vip to announce Service VIPs (e.g. 192.168.178.223)
+# Without this, only the API VIP (.222) is announced and service IPs won't be reachable/pingable.
+kubevip_enable_services: true
+
 # AdGuard Home DNS server (uses shared service VIP .223)
 adguard_home_lb_ip: 192.168.178.223
 adguard_home_upstream_dns: 192.168.178.1

@@ -3,7 +3,7 @@
 # Add new configuration playbooks here over time.
 
 #- import_playbook: plays/configure-kubevip.yml
-- import_playbook: plays/prepare-longhorn-nodes.yml
-- import_playbook: plays/prepare-longhorn-storage.yml
-- import_playbook: plays/install-longhorn.yml
-#- import_playbook: plays/install-adguard-home.yml
+# - import_playbook: plays/prepare-longhorn-nodes.yml
+# - import_playbook: plays/prepare-longhorn-storage.yml
+# - import_playbook: plays/install-longhorn.yml
+- import_playbook: plays/install-adguard-home.yml

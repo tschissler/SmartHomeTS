@@ -10,7 +10,7 @@ metadata:
   name: kube-vip-cloud-provider-role
 rules:
   - apiGroups: [""]
-    resources: ["nodes", "services", "endpoints", "services/status", "events"]
+    resources: ["nodes", "services", "endpoints", "services/status", "events", "configmaps"]
     verbs: ["list", "get", "watch", "update", "patch", "create"]
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]

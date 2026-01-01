@@ -16,7 +16,10 @@
         if systemctl list-unit-files | grep -q '^k3s\.service'; then
           echo "k3s already installed"
         else
-          curl -sfL https://get.k3s.io | sh -s - server --cluster-init --write-kubeconfig-mode '0644'
+          # --disable servicelb: We use kube-vip for LoadBalancer IPs instead
+          # servicelb creates hostNetwork pods that bind to service ports (e.g. port 53)
+          # which can interfere with node-level DNS and other services
+          curl -sfL https://get.k3s.io | sh -s - server --cluster-init --write-kubeconfig-mode '0644' --disable servicelb
         fi
       args:
         executable: /bin/bash
@@ -78,7 +81,8 @@
         if systemctl list-unit-files | grep -q '^k3s\.service'; then
           echo "k3s already installed"
         else
-          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ k3s_join_token }}" sh -s - server --write-kubeconfig-mode '0644'
+          # --disable servicelb: We use kube-vip for LoadBalancer IPs instead
+          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ k3s_join_token }}" sh -s - server --write-kubeconfig-mode '0644' --disable servicelb
         fi
       args:
         executable: /bin/bash
