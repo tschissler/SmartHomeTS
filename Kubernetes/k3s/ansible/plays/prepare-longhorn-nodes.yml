@@ -15,21 +15,45 @@
         state: present
         update_cache: yes
 
-    - name: Load iSCSI kernel module
-      ansible.builtin.shell: modprobe iscsi_tcp
+    - name: Load required kernel modules
+      ansible.builtin.shell: |
+        modprobe iscsi_tcp
+        modprobe dm_crypt
       changed_when: false
 
-    - name: Ensure iSCSI module loads on boot
+    - name: Ensure kernel modules load on boot
       ansible.builtin.lineinfile:
         path: /etc/modules
-        line: iscsi_tcp
+        line: "{{ item }}"
         create: yes
+      loop:
+        - iscsi_tcp
+        - dm_crypt
 
     - name: Enable and start iSCSI daemon
       ansible.builtin.systemd:
         name: iscsid
         enabled: yes
         state: started
+
+    - name: Stop and disable multipathd (conflicts with Longhorn)
+      ansible.builtin.systemd:
+        name: multipathd
+        enabled: no
+        state: stopped
+      failed_when: false
+      # fail_when false because multipathd may not be installed or may be stuck
+
+    - name: Mask multipathd to prevent auto-restart
+      ansible.builtin.systemd:
+        name: multipathd
+        masked: yes
+      failed_when: false
+
+    - name: Kill multipathd if still running (force)
+      ansible.builtin.shell: pkill -9 multipathd || true
+      changed_when: false
+      failed_when: false
 
     - name: Create Longhorn data directory
       ansible.builtin.file:
