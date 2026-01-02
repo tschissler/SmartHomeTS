@@ -5,7 +5,7 @@
   gather_facts: no
   vars:
     longhorn_namespace: longhorn-system
-    longhorn_chart_version: "{{ longhorn_helm_version | default('1.7.2') }}"
+    longhorn_chart_version: "{{ longhorn_helm_version | default('1.10.1') }}"
     longhorn_data_path: /var/lib/longhorn-data
     longhorn_replica_count: "{{ longhorn_default_replica_count | default(2) }}"
   pre_tasks:
