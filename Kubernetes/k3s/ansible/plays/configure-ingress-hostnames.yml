@@ -103,12 +103,50 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
+    - name: Remove Argo CD HTTPS/redirect ingress resources (switch to HTTP only)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n argocd delete ingress argocd-ui-http --ignore-not-found
+        /usr/local/bin/k3s kubectl -n argocd delete ingress argocd-ui --ignore-not-found
+        /usr/local/bin/k3s kubectl -n argocd delete middleware redirect-https --ignore-not-found
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create Ingress for Argo CD UI (http://argocd.intern)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: argocd-ui
+          namespace: argocd
+          annotations:
+            traefik.ingress.kubernetes.io/router.entrypoints: web
+        spec:
+          ingressClassName: traefik
+          rules:
+          - host: {{ argocd_domain | default('argocd.intern') }}
+            http:
+              paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: argocd-server
+                    port:
+                      number: 80
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
     - name: Show access information
       ansible.builtin.debug:
         msg: |
           Traefik VIP (HTTP/HTTPS): {{ ingress_vip }}
           AdGuard UI:              http://{{ adguard_domain }}/
           Longhorn UI:             http://{{ longhorn_domain }}/
+          Argo CD UI:              http://{{ argocd_domain | default('argocd.intern') }}/
       run_once: true
       delegate_to: localhost
       become: false

@@ -1,0 +1,111 @@
+---
+- name: Install Argo CD
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    argocd_namespace: argocd
+    # By default we track the upstream stable branch (latest stable).
+    # For a fully pinned install/upgrade, set argocd_install_version (e.g. 2.12.6).
+    argocd_manifest_url: >-
+      {{ (
+        'https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml'
+        if (argocd_install_version | default('') | trim) == ''
+        else 'https://raw.githubusercontent.com/argoproj/argo-cd/v' ~ (argocd_install_version | default('') | trim) ~ '/manifests/install.yaml'
+      ) }}
+
+  tasks:
+    - name: Create Argo CD namespace
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl create namespace {{ argocd_namespace }} --dry-run=client -o yaml | /usr/local/bin/k3s kubectl apply -f -
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Install/upgrade Argo CD from upstream manifest
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -n {{ argocd_namespace }} -f {{ argocd_manifest_url }}
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Configure Argo CD server to run behind ingress (HTTP, TLS terminated by Traefik)
+      ansible.builtin.shell: |
+        for i in $(seq 1 60); do
+          /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} get configmap argocd-cmd-params-cm >/dev/null 2>&1 && break
+          sleep 2
+        done
+        /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} patch configmap argocd-cmd-params-cm --type merge \
+          -p '{"data":{"server.insecure":"true"}}' || true
+        /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} rollout restart deployment/argocd-server || true
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait for Argo CD server deployment
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} rollout status deployment/argocd-server --timeout=300s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      retries: 10
+      delay: 10
+      register: argocd_server_rollout
+      until: argocd_server_rollout.rc == 0
+
+    - name: Wait for Argo CD repo-server deployment
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} rollout status deployment/argocd-repo-server --timeout=300s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      retries: 10
+      delay: 10
+      register: argocd_repo_rollout
+      until: argocd_repo_rollout.rc == 0
+
+    - name: Wait for Argo CD application controller (StatefulSet)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} rollout status statefulset/argocd-application-controller --timeout=300s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      retries: 10
+      delay: 10
+      register: argocd_controller_rollout
+      until: argocd_controller_rollout.rc == 0
+
+    - name: Try to fetch initial admin password (first install)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} get secret argocd-initial-admin-secret \
+          -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || true
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: argocd_initial_password
+
+    - name: Display Argo CD access information
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          Argo CD Installation Complete
+          ========================================================
+          Namespace: {{ argocd_namespace }}
+          Manifest:  {{ argocd_manifest_url }}
+
+          Access (recommended initially):
+          - Port-forward from your workstation:
+            kubectl -n {{ argocd_namespace }} port-forward svc/argocd-server 8080:443
+          - Open: https://localhost:8080
+            (Argo CD uses a self-signed cert by default)
+
+          Login:
+          - Username: admin
+          - Initial password: {{ (argocd_initial_password.stdout | trim) if (argocd_initial_password.stdout | trim) != '' else 'not shown (secret missing or already rotated)' }}
+
+          Next steps:
+          - Add a Git repo and create an Application (GitOps) to deploy apps.
+          ========================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

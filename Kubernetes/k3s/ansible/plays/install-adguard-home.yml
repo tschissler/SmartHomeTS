@@ -10,6 +10,7 @@
     adguard_upstream_dns: "{{ adguard_home_upstream_dns | default('192.168.178.1') }}"
     adguard_longhorn_domain: "{{ adguard_home_longhorn_domain | default('longhorn.intern') }}"
     adguard_ui_domain: "{{ adguard_home_ui_domain | default('adguard.intern') }}"
+    adguard_argocd_domain: "{{ adguard_home_argocd_domain | default('argocd.intern') }}"
   pre_tasks:
     - name: Validate AdGuard Home LoadBalancer IP is set
       ansible.builtin.assert:
@@ -33,6 +34,8 @@
             answer: "{{ adguard_lb_ip }}"
           - domain: "{{ adguard_ui_domain }}"
             answer: "{{ adguard_lb_ip }}"
+          - domain: "{{ adguard_argocd_domain }}"
+            answer: "{{ adguard_lb_ip }}"
       run_once: true
 
     - name: Append node hostnames to AdGuard rewrites
@@ -53,9 +56,26 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
-    - name: Delete any existing AdGuard Home pod (releases PVC attachment before redeploy)
+    - name: Scale down AdGuard Home Deployment (avoid PVC multi-attach during update)
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} delete pod -l app=adguard-home --ignore-not-found
+        if /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} get deployment adguard-home >/dev/null 2>&1; then
+          /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} scale deployment adguard-home --replicas=0
+        fi
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait until AdGuard Home pods are terminated
+      ansible.builtin.shell: |
+        for i in $(seq 1 90); do
+          if ! /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} get pods -l app=adguard-home --no-headers 2>/dev/null | grep -q .; then
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "Timed out waiting for AdGuard Home pods to terminate" >&2
+        /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} get pods -l app=adguard-home -o wide || true
+        exit 1
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
@@ -109,6 +129,8 @@
             app: adguard-home
         spec:
           replicas: 1
+          strategy:
+            type: Recreate
           selector:
             matchLabels:
               app: adguard-home
