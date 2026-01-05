@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+    release: {{ .Release.Name }}
+data:
+  # MQTT Configuration
+  EnphaseSettings__MqttBroker: {{ .Values.config.mqttBroker | quote }}
+  EnphaseSettings__MqttPort: {{ .Values.config.mqttPort | quote }}
+  # Read interval in milliseconds
+  EnphaseSettings__ReadIntervalMs: {{ .Values.config.readIntervalMs | quote }}
+  # Health check HTTP server port
+  EnphaseSettings__HealthCheckPort: {{ .Values.config.healthCheckPort | quote }}
