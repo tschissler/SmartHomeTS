@@ -8,7 +8,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json;
 
 
-Console.WriteLine("##### Enphase Connector");
+Console.WriteLine("##### Starting Enphase Connector");
 
 // Build configuration from appsettings.json and environment variables
 var configuration = new ConfigurationBuilder()
