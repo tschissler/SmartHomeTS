@@ -1,0 +1,33 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+          - name: SMARTHOME__INFLUX3_URL
+            value: {{ .Values.config.influxUrl | quote }}
+          - name: SMARTHOME__DATAHUB_ENVIRONMENT
+            value: {{ .Values.config.environment | quote }}
+          - name: SMARTHOME__INFLUXDB_ORG
+            value: {{ .Values.config.org | quote }}
+          - name: SMARTHOME__MQTT_BROKER
+            value: {{ .Values.config.mqttBroker | quote }}
+          - name: SMARTHOME__INFLUXDB3_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.secretName }}
+                key: INFLUX3_TOKEN
