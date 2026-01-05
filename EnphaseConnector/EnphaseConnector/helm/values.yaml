@@ -5,8 +5,8 @@ image:
   repository: tschissler/enphaseconnector
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  # Tag is managed by ArgoCD Image Updater - do not set a default here
-  tag: ""
+  # Initial tag - will be automatically updated by ArgoCD Image Updater
+  tag: "20729169921"
 
 imagePullSecrets: []
 nameOverride: ""
