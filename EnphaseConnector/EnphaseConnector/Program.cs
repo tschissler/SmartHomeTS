@@ -24,7 +24,7 @@ configuration.Bind(settings);
 
 
 // Validate required settings
-f (string.IsNullOrEmpty(settings.EnphaseUserName) || 
+if (string.IsNullOrEmpty(settings.EnphaseUserName) || 
     string.IsNullOrEmpty(settings.EnphasePassword) ||
     string.IsNullOrEmpty(settings.EnvoyM1Serial) ||
     string.IsNullOrEmpty(settings.EnvoyM3Serial))
