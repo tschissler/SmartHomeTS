@@ -3,10 +3,11 @@ using MQTTnet.Protocol;
 using SmartHomeHelpers.Logging;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace MQTTClient
 {
-    public class MQTTClient
+    public class MQTTClient : IDisposable
     {
         private IMqttClient _client;
         private MqttClientOptions _options;
@@ -25,7 +26,7 @@ namespace MQTTClient
             Task.Run(async () => await ConnectAsync()).Wait();
         }
 
-        async Task ConnectAsync()
+        public async Task ConnectAsync()
         {
             var factory = new MqttClientFactory();
             _client = factory.CreateMqttClient();
@@ -81,6 +82,11 @@ namespace MQTTClient
                 .Build();
 
             await _client.PublishAsync(message, CancellationToken.None);
+        }
+
+        public async void Dispose()
+        {
+            await MQTTDisconnectAsync();
         }
     }
 

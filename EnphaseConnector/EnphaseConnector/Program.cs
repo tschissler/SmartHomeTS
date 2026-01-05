@@ -1,6 +1,7 @@
 ﻿
 using EnphaseConnector;
-using MQTTnet;
+using MQTTClient;
+using MQTTnet.Protocol;
 using SmartHomeHelpers.Configuration;
 using System.Text.Json;
 
@@ -17,16 +18,8 @@ Thread.Sleep(1000);
 var tokenM3 = enphaseAuth.GetTokenAsync(userName, password, envoySerialM3).Result;
 var Leseintervall = 1000;
 
-var mqttFactory = new MqttClientFactory();
-
-using (var mqttClient = mqttFactory.CreateMqttClient())
+using (var mqttClient = new MQTTClient.MQTTClient("EnphaseConnector", "mosquitto.intern", 1883))
 {
-    var mqttClientOptions = new MqttClientOptionsBuilder()
-        .WithTcpServer("smarthomepi2", 32004)
-        .Build();
-
-    await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
-
     Console.WriteLine("Connected to MQTT broker");
 
     while (true)
@@ -34,28 +27,20 @@ using (var mqttClient = mqttFactory.CreateMqttClient())
         var startTime = DateTime.Now;
         if (!mqttClient.IsConnected)
         {
-            await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
+            await mqttClient.ConnectAsync();
         }
         await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1");
         await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3");
-        Thread.Sleep(Leseintervall- (int)-DateTime.Now.Subtract(startTime).TotalMilliseconds);
+        Thread.Sleep(Leseintervall - (int)-DateTime.Now.Subtract(startTime).TotalMilliseconds);
     }
-
-    await mqttClient.DisconnectAsync();
-
 }
 
-static async Task ReadDataAndSendToMQTT(EnphaseLocalToken token, IMqttClient mqttClient, string deviceName)
+static async Task ReadDataAndSendToMQTT(EnphaseLocalToken token, MQTTClient.MQTTClient mqttClient, string deviceName)
 {
     var data = await new EnphaseLib().FetchDataAsync(token, deviceName);
     if (data != null)
     {
-        var applicationMessage = new MqttApplicationMessageBuilder()
-        .WithTopic($"data/electricity/{deviceName}")
-        .WithPayload(JsonSerializer.Serialize(data))
-        .Build();
-
-        await mqttClient.PublishAsync(applicationMessage, CancellationToken.None);
+        await mqttClient.PublishAsync($"data/electricity/{deviceName}", JsonSerializer.Serialize(data), MqttQualityOfServiceLevel.AtLeastOnce, false);
 
         Console.WriteLine($"{DateTime.Now} --- Data for Device {deviceName} sent via MQTT -> Battery level: {data.BatteryLevel}\t| Production: {data.PowerFromPV}");
     }
