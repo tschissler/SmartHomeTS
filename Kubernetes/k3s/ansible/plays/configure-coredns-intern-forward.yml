@@ -1,0 +1,53 @@
+---
+- name: Configure CoreDNS to resolve .intern via AdGuard
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    coredns_namespace: kube-system
+    coredns_custom_configmap: coredns-custom
+
+  tasks:
+    - name: Read AdGuard DNS ClusterIP (preferred for in-cluster resolution)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ adguard_namespace | default('adguard-home') }} get svc {{ adguard_dns_service | default('adguard-dns') }} -o jsonpath='{.spec.clusterIP}'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: adguard_dns_clusterip
+
+    - name: Configure CoreDNS custom server block for .intern
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} apply -f - <<EOF
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: {{ coredns_custom_configmap }}
+          namespace: {{ coredns_namespace }}
+        data:
+          {{ intern_zone | default('intern') }}.server: |
+            {{ intern_zone | default('intern') }}:53 {
+                errors
+                cache 30
+                forward . {{ adguard_dns_clusterip.stdout | trim }}
+            }
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Restart CoreDNS to pick up custom config
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} rollout restart deployment/coredns
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} rollout status deployment/coredns --timeout=180s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Test DNS resolution from an in-cluster pod (via kube-dns)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n default run dns-intern-test --image=busybox:1.36 --restart=Never --rm -it \
+          --command -- sh -lc 'cat /etc/resolv.conf; echo; nslookup argocd.{{ intern_zone | default('"'"'intern'"'"') }}; nslookup longhorn.{{ intern_zone | default('"'"'intern'"'"') }}'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false

@@ -1,0 +1,187 @@
+---
+- name: Install k3s initial server
+  hosts: k3s_init
+  become: yes
+  tasks:
+    - name: Ensure /etc/rancher exists
+      ansible.builtin.file:
+        path: /etc/rancher
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install k3s server (idempotent) using latest
+      ansible.builtin.shell: |
+        if systemctl list-unit-files | grep -q '^k3s\.service'; then
+          echo "k3s already installed"
+        else
+          # --disable servicelb: We use kube-vip for LoadBalancer IPs instead
+          # servicelb creates hostNetwork pods that bind to service ports (e.g. port 53)
+          # which can interfere with node-level DNS and other services
+          curl -sfL https://get.k3s.io | sh -s - server --cluster-init --write-kubeconfig-mode '0644' --disable servicelb
+        fi
+      args:
+        executable: /bin/bash
+      register: k3s_install
+
+    - name: Wait for k3s to be healthy
+      ansible.builtin.command: /usr/local/bin/k3s kubectl get nodes
+      register: k3s_nodes_check
+      retries: 10
+      delay: 6
+      until: k3s_nodes_check.rc == 0
+
+    - name: Read k3s join token
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_node_token_file
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Set join token fact
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ (k3s_node_token_file.content | b64decode) | trim }}"
+
+    - name: Ensure kubeconfig is readable
+      ansible.builtin.file:
+        path: /etc/rancher/k3s/k3s.yaml
+        owner: root
+        group: root
+        mode: '0644'
+      when: ansible_facts is defined
+
+    - name: Ensure kubectl symlink to k3s exists (init)
+      ansible.builtin.file:
+        src: /usr/local/bin/k3s
+        dest: /usr/local/bin/kubectl
+        state: link
+        force: yes
+      become: yes
+      when: ansible_facts is defined
+
+- name: Join additional control-plane servers
+  hosts: k3s_servers:!k3s_init
+  become: yes
+  tasks:
+    - name: Read k3s join token from init server
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      register: k3s_init_token
+      retries: 20
+      delay: 3
+      until: k3s_init_token is succeeded
+
+    - name: Set join token fact for this host
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ (k3s_init_token.content | b64decode) | trim }}"
+
+    - name: Install k3s server join (idempotent) using latest
+      ansible.builtin.shell: |
+        if systemctl list-unit-files | grep -q '^k3s\.service'; then
+          echo "k3s already installed"
+        else
+          # --disable servicelb: We use kube-vip for LoadBalancer IPs instead
+          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ k3s_join_token }}" sh -s - server --write-kubeconfig-mode '0644' --disable servicelb
+        fi
+      args:
+        executable: /bin/bash
+
+    - name: Wait for k3s service to become active on joined server
+      ansible.builtin.command: systemctl is-active k3s
+      register: k3s_active
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: k3s_active.rc == 0 and (k3s_active.stdout | trim) == 'active'
+
+    - name: Wait for kubeconfig to exist on joined server
+      ansible.builtin.stat:
+        path: /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_stat
+      retries: 30
+      delay: 2
+      until: kubeconfig_stat.stat.exists
+
+    - name: Show k3s logs if service is not active
+      ansible.builtin.command: journalctl -u k3s --no-pager -n 200
+      register: k3s_journal
+      changed_when: false
+      failed_when: true
+      when: k3s_active is defined and (k3s_active.rc != 0 or (k3s_active.stdout | trim) != 'active')
+
+    - name: Ensure kubectl symlink to k3s exists (servers)
+      ansible.builtin.file:
+        src: /usr/local/bin/k3s
+        dest: /usr/local/bin/kubectl
+        state: link
+        force: yes
+      become: yes
+
+- name: Install k3s agents (workers)
+  hosts: k3s_agents
+  become: yes
+  tasks:
+    - name: Read k3s join token from init server
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      register: k3s_init_token
+      retries: 20
+      delay: 3
+      until: k3s_init_token is succeeded
+
+    - name: Set join token fact for this host
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ (k3s_init_token.content | b64decode) | trim }}"
+
+    - name: Install k3s agent (idempotent) using latest
+      ansible.builtin.shell: |
+        if systemctl list-unit-files | grep -q '^k3s-agent\.service'; then
+          echo "k3s-agent already installed"
+        else
+          curl -sfL https://get.k3s.io | K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ k3s_join_token }}" INSTALL_K3S_EXEC='agent' sh -s -
+        fi
+      args:
+        executable: /bin/bash
+
+- name: Share kubeconfig with the Ansible user
+  hosts: k3s_servers
+  become: yes
+  tasks:
+    - name: Look up ansible user passwd entry
+      ansible.builtin.command: "getent passwd {{ ansible_user | default('thomasschissler') }}"
+      register: ansible_user_passwd
+      changed_when: false
+      failed_when: ansible_user_passwd.rc != 0
+
+    - name: Derive ansible user home directory
+      ansible.builtin.set_fact:
+        ansible_user_home: "{{ (ansible_user_passwd.stdout.split(':'))[5] }}"
+      failed_when:
+        - ansible_user_home is not defined or (ansible_user_home | trim) == ''
+
+    - name: Ensure user kube directory exists
+      ansible.builtin.file:
+        path: "{{ ansible_user_home | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube"
+        state: directory
+        owner: "{{ ansible_user | default('thomasschissler') }}"
+        group: "{{ ansible_user | default('thomasschissler') }}"
+        mode: '0755'
+
+    - name: Wait for kubeconfig to exist
+      ansible.builtin.stat:
+        path: /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_stat
+      retries: 30
+      delay: 2
+      until: kubeconfig_stat.stat.exists
+
+    - name: Copy kubeconfig into user's home
+      ansible.builtin.copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        remote_src: true
+        dest: "{{ ansible_user_home | default('/home/' ~ (ansible_user | default('thomasschissler'))) }}/.kube/config"
+        owner: "{{ ansible_user | default('thomasschissler') }}"
+        group: "{{ ansible_user | default('thomasschissler') }}"
+        mode: '0644'

@@ -1,0 +1,15 @@
+- import_playbook: plays/bootstrap-passwordless-sudo.yml
+- import_playbook: plays/check-connectivity.yml
+- import_playbook: plays/deploy-ssh-key.yml
+- import_playbook: plays/prepare-ethernet.yml
+- import_playbook: plays/install-nano.yml
+- import_playbook: plays/network-config.yml
+- import_playbook: plays/raspi-cgroups.yml
+- import_playbook: plays/install-k3s.yml
+
+# NOTE: kube-vip is intentionally NOT included here.
+# Run configure-cluster.yml separately after k3s is stable.
+# Reason: Running kube-vip immediately after k3s install can cause
+# IP confusion and certificate issues. The two-phase approach is safer:
+#   Phase 1: cluster.yml      → k3s install, wait for stability
+#   Phase 2: configure-cluster.yml → kube-vip + add-ons

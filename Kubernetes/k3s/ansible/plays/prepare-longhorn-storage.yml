@@ -1,0 +1,190 @@
+---
+- name: Safely prepare dedicated Longhorn storage partition (k3snode1 & k3snode2 only)
+  hosts: k3snode1,k3snode2
+  become: yes
+  gather_facts: yes
+  vars:
+    longhorn_device: /dev/nvme0n1  # NVMe SSD on k3snode1 & k3snode2
+    longhorn_partition: "{{ longhorn_device }}p3"  # New partition (nvme0n1p3, after p1=EFI, p2=root)
+    longhorn_mount: /var/lib/longhorn-data
+    min_free_space_gb: 200  # Minimum 200GB free space required
+    
+  pre_tasks:
+    - name: Abort if not running on k3snode1 or k3snode2
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname in ['k3snode1', 'k3snode2']
+        fail_msg: "This playbook only runs on k3snode1 and k3snode2 (storage nodes)"
+        
+  tasks:
+    # PHASE 1: PRÜFUNG - Keine Änderungen
+    - name: Get current partition table
+      ansible.builtin.command: lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,FSTYPE -J
+      register: lsblk_output
+      changed_when: false
+      
+    - name: Display current disk layout (for manual review)
+      ansible.builtin.debug:
+        msg: "{{ lsblk_output.stdout | from_json }}"
+        
+    - name: Check if Longhorn mount point already exists and is mounted
+      ansible.builtin.command: mountpoint -q {{ longhorn_mount }}
+      register: mountpoint_check
+      failed_when: false
+      changed_when: false
+      
+    - name: Check if Longhorn partition already exists
+      ansible.builtin.shell: |
+        lsblk -ln -o NAME,MOUNTPOINT | grep -E '(longhorn|{{ longhorn_mount }})' || echo "not-found"
+      register: longhorn_partition_check
+      changed_when: false
+      
+    - name: Get disk size and free space
+      ansible.builtin.shell: |
+        lsblk {{ longhorn_device }} -b -n -o SIZE,TYPE | awk '
+          BEGIN { total=0; used=0 }
+          /disk/ { total=$1 }
+          /part/ { used+=$1 }
+          END { free=(total-used)/1024/1024/1024; printf "%.1f\n", free }
+        '
+      register: free_space_check
+      changed_when: false
+      failed_when: false
+      
+    - name: Set facts about current state
+      ansible.builtin.set_fact:
+        longhorn_already_mounted: "{{ mountpoint_check.rc == 0 }}"
+        longhorn_partition_exists: "{{ 'not-found' not in longhorn_partition_check.stdout }}"
+        free_space_gb: "{{ free_space_check.stdout | default('0') | float }}"
+        
+    - name: Display partition status
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          Longhorn Storage Preparation - {{ inventory_hostname }}
+          ========================================================
+          Device:                  {{ longhorn_device }}
+          Planned Partition:       {{ longhorn_partition }}
+          Mount Point:             {{ longhorn_mount }}
+          
+          Current Status:
+          - Already mounted:       {{ longhorn_already_mounted }}
+          - Partition exists:      {{ longhorn_partition_exists }}
+          - Free space:            {{ free_space_gb }} GB
+          - Required space:        {{ min_free_space_gb }} GB
+          
+          Action Plan:
+          {% if longhorn_already_mounted %}
+          ✓ Longhorn storage already configured and mounted
+          → SKIP partition creation
+          {% elif longhorn_partition_exists %}
+          ✓ Longhorn partition exists but not mounted
+          → MOUNT existing partition
+          {% elif free_space_gb | float >= min_free_space_gb %}
+          ⚠ New partition will be created
+          → CREATE {{ longhorn_partition }} and format as ext4
+          {% else %}
+          ✗ Insufficient free space ({{ free_space_gb }}GB < {{ min_free_space_gb }}GB)
+          → ABORT - manual intervention required
+          {% endif %}
+          ========================================================
+          
+    # PHASE 2: SICHERHEITS-GATES
+    - name: GATE - Abort if insufficient free space for new partition
+      ansible.builtin.assert:
+        that:
+          - longhorn_already_mounted or longhorn_partition_exists or (free_space_gb | float >= min_free_space_gb)
+        fail_msg: |
+          ABORT: Not enough free space to create Longhorn partition.
+          Available: {{ free_space_gb }}GB, Required: {{ min_free_space_gb }}GB
+          
+          Manual steps required:
+          1. Check disk layout: lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,FSTYPE
+          2. Free up space or adjust partition plan
+          3. Re-run this playbook
+          
+    - name: GATE - Final confirmation before partition changes (manual review required)
+      ansible.builtin.pause:
+        prompt: |
+          ⚠️  CRITICAL CONFIRMATION REQUIRED ⚠️
+          
+          About to modify disk partitions on {{ inventory_hostname }}:
+          - Device: {{ longhorn_device }}
+          - Action: {% if longhorn_already_mounted %}SKIP (already mounted){% elif longhorn_partition_exists %}MOUNT existing partition{% else %}CREATE new partition {{ longhorn_partition }}{% endif %}
+          
+          Current partition table:
+          {{ lsblk_output.stdout }}
+          
+          Press ENTER to continue, or Ctrl+C then 'A' to abort.
+      when: not longhorn_already_mounted and not longhorn_partition_exists
+      
+    # PHASE 3: PARTITION CREATION (only if needed and safe)
+    - name: Create new Longhorn partition (ONLY if not exists)
+      ansible.builtin.shell: |
+        parted {{ longhorn_device }} --script mkpart primary ext4 {{ 100 + 12 }}GB 100%
+      when: 
+        - not longhorn_already_mounted
+        - not longhorn_partition_exists
+        - free_space_gb | float >= min_free_space_gb
+      register: partition_created
+      
+    - name: Wait for kernel to recognize new partition
+      ansible.builtin.command: partprobe {{ longhorn_device }}
+      when: partition_created is changed
+      
+    - name: Format new Longhorn partition as ext4 (ONLY if just created)
+      ansible.builtin.command: mkfs.ext4 -L longhorn-data {{ longhorn_partition }}
+      when: partition_created is changed
+      
+    # PHASE 4: MOUNT & FSTAB
+    - name: Create Longhorn mount point directory
+      ansible.builtin.file:
+        path: "{{ longhorn_mount }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      when: not longhorn_already_mounted
+      
+    - name: Get UUID of Longhorn partition
+      ansible.builtin.command: blkid -s UUID -o value {{ longhorn_partition }}
+      register: longhorn_uuid
+      changed_when: false
+      when: not longhorn_already_mounted
+      
+    - name: Add Longhorn partition to /etc/fstab (by UUID for safety)
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: '^UUID={{ longhorn_uuid.stdout }}\s+'
+        line: "UUID={{ longhorn_uuid.stdout }}  {{ longhorn_mount }}  ext4  defaults,noatime  0  2"
+        state: present
+      when: 
+        - not longhorn_already_mounted
+        - longhorn_uuid.stdout is defined
+        
+    - name: Mount Longhorn partition
+      ansible.builtin.command: mount UUID={{ longhorn_uuid.stdout }} {{ longhorn_mount }}
+      when: 
+        - not longhorn_already_mounted
+        - longhorn_uuid.stdout is defined
+        
+    - name: Verify mount is successful
+      ansible.builtin.command: mountpoint -q {{ longhorn_mount }}
+      changed_when: false
+      
+    - name: Display final status
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          ✓ Longhorn Storage Ready - {{ inventory_hostname }}
+          ========================================================
+          Mount Point:  {{ longhorn_mount }}
+          Partition:    {{ longhorn_partition }}
+          {% if longhorn_uuid.stdout is defined %}
+          UUID:         {{ longhorn_uuid.stdout }}
+          {% endif %}
+          
+          Next Steps:
+          - Verify: df -h {{ longhorn_mount }}
+          - Verify: lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,FSTYPE
+          ========================================================

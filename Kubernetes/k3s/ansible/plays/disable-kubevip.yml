@@ -1,0 +1,16 @@
+---
+- name: Disable kube-vip (remove static manifests)
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    kubevip_manifests_dir: /var/lib/rancher/k3s/server/manifests
+  tasks:
+    - name: Remove kube-vip static manifests
+      ansible.builtin.file:
+        path: "{{ kubevip_manifests_dir }}/{{ item }}"
+        state: absent
+      loop:
+        - kube-vip.yaml
+        - kube-vip-configmap.yaml
+        - kube-vip-cloud-provider.yaml

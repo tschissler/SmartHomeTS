@@ -1,0 +1,80 @@
+bind_host: 0.0.0.0
+bind_port: 3000
+users: []
+http_proxy: ""
+language: de
+theme: auto
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: 53
+  upstream_dns:
+    - "{{ adguard_upstream_dns }}"
+  bootstrap_dns:
+    - "{{ adguard_upstream_dns }}"
+  protection_enabled: true
+  blocking_mode: default
+  blocked_response_ttl: 10
+  querylog_enabled: true
+  ratelimit: 20
+  refuse_any: true
+  upstream_mode: load_balance
+  cache_size: 4194304
+  cache_ttl_min: 0
+  cache_ttl_max: 0
+  cache_optimistic: false
+  bogus_nxdomain: []
+  aaaa_disabled: false
+  enable_dnssec: false
+  edns_client_subnet:
+    enabled: false
+    use_custom: false
+  max_goroutines: 300
+  ipset: []
+  filtering_enabled: true
+  filters_update_interval: 24
+  parental_enabled: false
+  safesearch_enabled: false
+  safebrowsing_enabled: false
+  safebrowsing_cache_size: 1048576
+  safesearch_cache_size: 1048576
+  parental_cache_size: 1048576
+  cache_time: 30
+  rewrites:
+{% for entry in adguard_rewrite_list %}
+    - domain: "{{ entry.domain }}"
+      answer: "{{ entry.answer }}"
+{% endfor %}
+  blocked_services: []
+  local_domain_name: lan
+  resolve_clients: true
+  use_private_ptr_resolvers: true
+  local_ptr_upstreams: []
+tls:
+  enabled: false
+filters:
+  - enabled: true
+    url: https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+    name: AdGuard DNS filter
+    id: 1
+  - enabled: true
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.txt
+    name: HaGeZi Pro Blocklist
+    id: 2
+querylog:
+  enabled: true
+  interval: 2160h
+  size_memory: 1000
+  ignored: []
+statistics:
+  enabled: true
+  interval: 24h
+  ignored: []
+log_file: ""
+log_max_backups: 0
+log_max_size: 100
+log_max_age: 3
+log_compress: false
+log_localtime: false
+verbose: false
+schema_version: 20

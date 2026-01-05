@@ -1,0 +1,53 @@
+---
+- name: Expose Longhorn UI via kube-vip LoadBalancer
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    longhorn_namespace: longhorn-system
+    longhorn_ui_lb_ip: "{{ kubevip_service_range_start }}"
+    longhorn_ui_port: 8080
+  pre_tasks:
+    - name: Validate Longhorn UI LoadBalancer IP is set
+      ansible.builtin.assert:
+        that:
+          - longhorn_ui_lb_ip is defined
+          - longhorn_ui_lb_ip | trim != ''
+        fail_msg: "kubevip_service_range_start must be set (used as Longhorn UI VIP)"
+      run_once: true
+
+  tasks:
+    - name: Create Longhorn UI LoadBalancer service
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: longhorn-frontend-lb
+          namespace: {{ longhorn_namespace }}
+          labels:
+            app: longhorn-ui
+          annotations:
+            kube-vip.io/loadbalancerIPs: "{{ longhorn_ui_lb_ip }}"
+        spec:
+          type: LoadBalancer
+          loadBalancerIP: "{{ longhorn_ui_lb_ip }}"
+          selector:
+            app: longhorn-ui
+          ports:
+          - name: http
+            port: {{ longhorn_ui_port }}
+            targetPort: http
+            protocol: TCP
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Show Longhorn UI access information
+      ansible.builtin.debug:
+        msg: |
+          Longhorn UI (via kube-vip): http://{{ longhorn_ui_lb_ip }}:{{ longhorn_ui_port }}
+      run_once: true
+      delegate_to: localhost
+      become: false

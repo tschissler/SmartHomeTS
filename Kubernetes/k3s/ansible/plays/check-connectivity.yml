@@ -1,0 +1,18 @@
+---
+- name: Verify all control hosts are reachable
+  hosts: prodservers,testservers
+  gather_facts: no
+  serial: 1
+  any_errors_fatal: true
+  become: yes
+  tasks:
+    - name: Verify privilege escalation works (sudo)
+      ansible.builtin.command: id -u
+      register: id_u
+      changed_when: false
+
+    - name: Fail if not running as root
+      ansible.builtin.assert:
+        that:
+          - id_u.stdout | trim == '0'
+        fail_msg: "Privilege escalation failed on {{ inventory_hostname }} (expected id -u == 0). Check sudo/become password and sudoers configuration."

@@ -1,0 +1,133 @@
+---
+- name: Install Longhorn storage system
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    longhorn_namespace: longhorn-system
+    longhorn_chart_version: "{{ longhorn_helm_version | default('1.10.1') }}"
+    longhorn_data_path: /var/lib/longhorn-data
+    longhorn_replica_count: "{{ longhorn_default_replica_count | default(2) }}"
+  pre_tasks:
+    - name: Check if helm is installed
+      ansible.builtin.command: /usr/local/bin/k3s kubectl version --client
+      register: helm_check
+      changed_when: false
+      failed_when: false
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+
+  tasks:
+    - name: Add Longhorn Helm repository
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml create namespace {{ longhorn_namespace }} --dry-run=client -o yaml | /usr/local/bin/k3s kubectl apply -f -
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        helm repo add longhorn https://charts.longhorn.io
+        helm repo update
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Create Longhorn values ConfigMap
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: longhorn-values
+          namespace: {{ longhorn_namespace }}
+        data:
+          values.yaml: |
+            defaultSettings:
+              defaultDataPath: {{ longhorn_data_path }}
+              createDefaultDiskLabeledNodes: true
+              defaultReplicaCount: {{ longhorn_replica_count }}
+              replicaSoftAntiAffinity: false
+              taintToleration: "node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
+            persistence:
+              defaultClass: true
+              defaultClassReplicaCount: {{ longhorn_replica_count }}
+            ingress:
+              enabled: false
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Install Longhorn via Helm
+      ansible.builtin.shell: |
+        helm upgrade --install longhorn longhorn/longhorn \
+          --namespace {{ longhorn_namespace }} \
+          --create-namespace \
+          --version {{ longhorn_chart_version }} \
+          --set defaultSettings.defaultDataPath={{ longhorn_data_path }} \
+          --set defaultSettings.createDefaultDiskLabeledNodes=true \
+          --set defaultSettings.defaultReplicaCount={{ longhorn_replica_count }} \
+          --set defaultSettings.replicaSoftAntiAffinity=false \
+          --set defaultSettings.taintToleration="node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule" \
+          --set persistence.defaultClass=true \
+          --set persistence.defaultClassReplicaCount={{ longhorn_replica_count }} \
+          --set ingress.enabled=false
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait for Longhorn deployment to be ready
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ longhorn_namespace }} rollout status deployment/longhorn-driver-deployer --timeout=300s
+        /usr/local/bin/k3s kubectl -n {{ longhorn_namespace }} rollout status daemonset/longhorn-manager --timeout=300s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      retries: 5
+      delay: 10
+      register: longhorn_rollout
+      until: longhorn_rollout.rc == 0
+
+    - name: Annotate storage nodes with Longhorn disk configuration
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl annotate node {{ inventory_hostname }} \
+          node.longhorn.io/default-disks-config='[{"path":"{{ longhorn_data_path }}","allowScheduling":true}]' \
+          --overwrite
+      when: inventory_hostname in ['k3snode1', 'k3snode2']
+
+    - name: Label storage nodes for Longhorn disk creation
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl label node {{ inventory_hostname }} \
+          node.longhorn.io/create-default-disk=true \
+          --overwrite
+      when: inventory_hostname in ['k3snode1', 'k3snode2']
+      
+    - name: Exclude Raspberry Pis from Longhorn storage (insufficient disk space)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl label node {{ inventory_hostname }} \
+          node.longhorn.io/create-default-disk=false \
+          --overwrite
+      when: inventory_hostname in ['k3snode3', 'k3snode4']
+
+    - name: Display Longhorn installation status
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          Longhorn Installation Complete
+          ========================================================
+          Namespace:        {{ longhorn_namespace }}
+          Data Path:        {{ longhorn_data_path }}
+          Replica Count:    {{ longhorn_replica_count }}
+          
+          Check Status:
+          kubectl -n {{ longhorn_namespace }} get pods
+          kubectl get storageclass
+          
+          Longhorn wird jetzt als default StorageClass verwendet.
+          Neue PVCs nutzen automatisch Longhorn für replizierte Speicherung.
+          
+          Optional: Longhorn UI via Port-Forward:
+          kubectl port-forward -n {{ longhorn_namespace }} svc/longhorn-frontend 8080:80
+          Dann erreichbar: http://localhost:8080
+          ========================================================
+      run_once: true
+      delegate_to: localhost
+      become: false
