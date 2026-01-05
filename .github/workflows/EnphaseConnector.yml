@@ -64,3 +64,5 @@ jobs:
           microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnvoyM3Serial="${{ secrets.EnvoyM3Serial }}"
           microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnphaseUserName="${{ secrets.EnphaseUserName }}"
           microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnphasePassword="${{ secrets.EnphasePassword }}"
+          microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__MqttBroker="smarthomepi2"
+          microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__MqttPort="32004"
