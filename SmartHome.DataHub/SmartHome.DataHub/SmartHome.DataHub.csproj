@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Influx3Connector\Influx3Connector.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="SmartHome.DataHub\" />
+  </ItemGroup>
+
 </Project>

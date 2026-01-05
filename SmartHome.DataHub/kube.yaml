@@ -20,10 +20,16 @@ spec:
         - name: smarthomedatahub
           image: tschissler/smarthomedatahub:latest
           env:
-          - name: INFLUX_TOKEN
-            value: "env:INFLUX_TOKEN"
-          - name: INFLUX_ORG
-            value: "env:INFLUX_ORG"
+          - name: SMARTHOME__INFLUX3_URL
+            value: "env:SMARTHOME_INFLUX3_URL"
+          - name: SMARTHOME__INFLUXDB3_TOKEN
+            value: "env:SMARTHOME__INFLUXDB3_TOKEN"
+          - name: "SMARTHOME__DATAHUB_ENVIRONMENT"
+            value: "env:SMARTHOME__DATAHUB_ENVIRONMENT"
+          - name: SMARTHOME__INFLUXDB_ORG
+            value: "env:SMARTHOME_INFLUXDB_ORG"
+          - name: SMARTHOME__MQTT_BROKER
+            value: "env:SMARTHOME__MQTT_BROKER"          
 ---
 apiVersion: v1
 kind: Service

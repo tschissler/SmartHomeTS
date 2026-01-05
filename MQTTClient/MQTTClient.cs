@@ -11,13 +11,17 @@ namespace MQTTClient
         private IMqttClient _client;
         private MqttClientOptions _options;
         public string ClientId { get; init; }
+        public string BrokerName { get; init; }
+        public int BrokerPort { get; init; }
         public bool IsConnected => _client.IsConnected;
 
         public event EventHandler<MqttMessageReceivedEventArgs> OnMessageReceived;
 
-        public MQTTClient(string clientId)
+        public MQTTClient(string clientId, string brokerName, int brokerPort)
         {
             ClientId = clientId + "_" + Environment.MachineName;
+            BrokerName = brokerName;
+            BrokerPort = brokerPort;
             Task.Run(async () => await ConnectAsync()).Wait();
         }
 
@@ -27,7 +31,7 @@ namespace MQTTClient
             _client = factory.CreateMqttClient();
 
             _options = new MqttClientOptionsBuilder()
-            .WithTcpServer("smarthomepi2", 32004)
+            .WithTcpServer(BrokerName, BrokerPort)
             .WithClientId(ClientId)
             .WithKeepAlivePeriod(new TimeSpan(0, 1, 0, 0))
             .Build();

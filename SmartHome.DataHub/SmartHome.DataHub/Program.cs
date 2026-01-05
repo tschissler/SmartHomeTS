@@ -1,4 +1,5 @@
 ﻿using Influx3Connector;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Newtonsoft.Json.Linq;
 using SharedContracts;
 using SmartHome.DataHub;
@@ -18,8 +19,6 @@ var loggerFactory = LoggerFactory.Create(logging =>
 });
 var logger = loggerFactory.CreateLogger("Program");
 
-const string influx3Url = "http://smarthomepi2:32087";
-
 GeoPosition positionChargingStationStellplatz = new GeoPosition(Latitude: 48.412758, Longitude: 9.875185);
 GeoPosition positionChargingStationGarage = new GeoPosition(Latitude: 48.412750277777775, Longitude: 9.875374444444445);
 GeoPosition? bmwPosition = null;
@@ -28,24 +27,56 @@ GeoPosition? vwPosition = null;
 string[] cars = new string[] { "BMW", "Mini", "VW" };
 Dictionary<string, decimal> previousValues = new();
 
-string? influx3Token = Environment.GetEnvironmentVariable("SMARTHOME__INFLUXDB3_TOKEN");
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json")
+    .AddEnvironmentVariables()
+    .Build();
+
+string? influx3Url = configuration["SMARTHOME:INFLUX3_URL"];
+if (string.IsNullOrEmpty(influx3Url))
+{
+    logger.LogError("Environmentvariable SMARTHOME__INFLUX3_URL not set. Please set it to your InfluxDB 3 URL.");
+    return;
+}
+
+string? influx3Token = configuration["SMARTHOME:INFLUXDB3_TOKEN"];
 if (string.IsNullOrEmpty(influx3Token))
 {
     logger.LogError("Environmentvariable SMARTHOME__INFLUXDB3_TOKEN not set. Please set it to your InfluxDB token.");
     return;
 }
 
-string? dataHubEnvironment = Environment.GetEnvironmentVariable("SMARTHOME__DATAHUB_ENVIRONMENT");
+string? dataHubEnvironment = configuration["SMARTHOME:DATAHUB_ENVIRONMENT"];
 if (string.IsNullOrEmpty(dataHubEnvironment))
 {
     logger.LogError("Environmentvariable SMARTHOME__DATAHUB_ENVIRONMENT not set. Please set it to the environment you are running (Prod, Dev).");
     return;
 }
 
-string? influxOrg = Environment.GetEnvironmentVariable("INFLUXDB_ORG");
+string? influxOrg = configuration["SMARTHOME:INFLUXDB_ORG"];
 if (string.IsNullOrEmpty(influxOrg))
 {
-    logger.LogError("Environmentvariable INFLUXDB_ORG not set. Please set it to your Influx organization.");
+    logger.LogError("Environmentvariable SMARTHOME_INFLUXDB_ORG not set. Please set it to your Influx organization.");
+    return;
+}
+
+string? mqttBroker = configuration["SMARTHOME:MQTT_BROKER"];
+if (string.IsNullOrEmpty(mqttBroker))
+{
+    logger.LogError("Environmentvariable SMARTHOME_MQTT_BROKER not set. Please set it to your MQTT broker hostname.");
+    return;
+}
+var brokerParts = mqttBroker.Split(":");
+if (brokerParts.Length != 2)
+{
+    logger.LogError("Environmentvariable SMARTHOME_MQTT_BROKER is not in the correct format. Please set it to your MQTT broker hostname:port.");
+    return;
+}
+string mqttBrokerHost = brokerParts[0];
+if (!int.TryParse(brokerParts[1], out int mqttBrokerPort))
+{
+    logger.LogError("Environmentvariable SMARTHOME_MQTT_BROKER port is not a valid integer. Please set it to your MQTT broker hostname:port.");
     return;
 }
 
@@ -53,12 +84,19 @@ string influx3Database = "Smarthome_" + dataHubEnvironment;
 //logger.LogInformation($"Using org: {influxOrg} at {influxUrl}");
 logger.LogInformation($"Using InfluxDB 3 at {influx3Url} with database {influx3Database}");
 
-builder.Services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment));
+builder.Services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment, mqttBrokerHost, mqttBrokerPort));
 //builder.Services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, influxOrg, influxToken));
 builder.Services.AddSingleton<InfluxDB3Connector>(_ => new InfluxDB3Connector(influx3Url, influx3Database, influx3Token, logger));
 builder.Services.AddSingleton<Converters>();
 builder.Services.AddSignalR();
 builder.Services.AddLogging();
+
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => 
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy();
+        }
+    );
 
 var app = builder.Build();
 
@@ -67,6 +105,15 @@ app.MapGet("/health", (InfluxDB3Connector connector) =>
     if (connector.TimeSinceLastWrite > TimeSpan.FromMinutes(3))
         return Results.StatusCode(503); // Unhealthy
     return Results.Ok();
+});
+
+app.MapHealthChecks("/healthz/live", new HealthCheckOptions
+{
+    Predicate = (check) => check.Tags.Contains("live"),
+});
+app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
+{
+    Predicate = (check) => true,
 });
 
 using (var scope = app.Services.CreateScope())
