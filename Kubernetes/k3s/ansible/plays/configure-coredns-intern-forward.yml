@@ -10,8 +10,154 @@
     adguard_dns_service: adguard-dns
     intern_zone: intern
     fritzbox_dns_ip: 192.168.178.1
+    fritzbox_domain: fritz.box
+    fritzbox_shortnames:
+      - envoym1
+      - envoym3
+    force_coredns_restart: false
+    manage_coredns_corefile: false
 
   tasks:
+    - name: Read current CoreDNS Corefile
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get configmap coredns -o jsonpath='{.data.Corefile}'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: coredns_corefile
+      when: manage_coredns_corefile | bool
+
+    - name: Read current CoreDNS NodeHosts (if present)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get configmap coredns -o jsonpath='{.data.NodeHosts}' 2>/dev/null || true
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: coredns_nodehosts
+      when: manage_coredns_corefile | bool
+
+    - name: Build patched CoreDNS Corefile (default upstream -> FritzBox)
+      ansible.builtin.set_fact:
+        coredns_corefile_patched: "{{ coredns_corefile.stdout | default('') }}"
+      run_once: true
+      when: manage_coredns_corefile | bool
+
+    - name: Patch root forwarder (resolv.conf -> FritzBox)
+      ansible.builtin.set_fact:
+        coredns_corefile_patched: >-
+          {{
+            coredns_corefile_patched
+            | regex_replace('(?m)^(\\s*)forward\\s+\\.\\s+/etc/resolv\\.conf\\s*$', '\\1forward . ' ~ fritzbox_dns_ip)
+            | regex_replace('(?m)^(\\s*)forward\\s+\\.\\s+/etc/resolv\\.conf(\\s+.*)?$', '\\1forward . ' ~ fritzbox_dns_ip)
+          }}
+      run_once: true
+      when: manage_coredns_corefile | bool
+
+    - name: Ensure dedicated shortname server blocks exist (rewrite -> FritzBox)
+      ansible.builtin.set_fact:
+        coredns_corefile_patched: >-
+          {{
+            coredns_corefile_patched
+            | regex_replace(
+                '(?m)^(\\s*import\\s+/etc/coredns/custom/\\*\\.server\\s*)$',
+                fritzbox_shortnames[0] ~ ':53 {\\n'
+                ~ '    errors\\n'
+                ~ '    cache 30\\n'
+                ~ '    rewrite name exact ' ~ fritzbox_shortnames[0] ~ ' ' ~ fritzbox_shortnames[0] ~ '.' ~ fritzbox_domain ~ '\\n'
+                ~ '    forward . ' ~ fritzbox_dns_ip ~ '\\n'
+                ~ '}\\n'
+                ~ '\\n'
+                ~ fritzbox_shortnames[1] ~ ':53 {\\n'
+                ~ '    errors\\n'
+                ~ '    cache 30\\n'
+                ~ '    rewrite name exact ' ~ fritzbox_shortnames[1] ~ ' ' ~ fritzbox_shortnames[1] ~ '.' ~ fritzbox_domain ~ '\\n'
+                ~ '    forward . ' ~ fritzbox_dns_ip ~ '\\n'
+                ~ '}\\n'
+                ~ '\\n'
+                ~ '\\1'
+              )
+          }}
+      when:
+        - coredns_corefile_patched is defined
+        - coredns_corefile_patched is search('import\\s+/etc/coredns/custom/\\*\\.server')
+        - coredns_corefile_patched is not search('^' ~ fritzbox_shortnames[0] ~ ':53\\s*\\{', multiline=True)
+      run_once: true
+      when: manage_coredns_corefile | bool
+
+    - name: Ensure dedicated FritzBox domain server block exists (bypass hosts plugin)
+      ansible.builtin.set_fact:
+        coredns_corefile_patched: >-
+          {{
+            coredns_corefile_patched
+            | regex_replace(
+                '(?m)^(\\s*import\\s+/etc/coredns/custom/\\*\\.server\\s*)$',
+                fritzbox_domain ~ ':53 {\\n'
+                ~ '    errors\\n'
+                ~ '    cache 30\\n'
+                ~ '    forward . ' ~ fritzbox_dns_ip ~ '\\n'
+                ~ '}\\n'
+                ~ '\\n'
+                ~ '\\1'
+              )
+          }}
+      when:
+        - coredns_corefile_patched is defined
+        - coredns_corefile_patched is search('import\\s+/etc/coredns/custom/\\*\\.server')
+        - coredns_corefile_patched is not search('^' ~ fritzbox_domain ~ ':53\\s*\\{', multiline=True)
+      run_once: true
+      when: manage_coredns_corefile | bool
+
+    - name: Show CoreDNS Corefile key lines (debug)
+      ansible.builtin.debug:
+        msg: |
+          --- Corefile (filtered) ---
+          {{
+            (coredns_corefile_patched | default(''))
+            .split('\n')
+            | select('search', 'rewrite\\s+name\\s+exact|forward\\s+\\.|' ~ (fritzbox_domain | regex_escape) ~ ':53')
+            | join('\n')
+          }}
+          --- end ---
+      run_once: true
+      changed_when: false
+      when: manage_coredns_corefile | bool
+
+    - name: Render patched CoreDNS ConfigMap
+      ansible.builtin.template:
+        src: ../templates/coredns-configmap-forward-fritzbox.yaml.j2
+        dest: /tmp/coredns-configmap.yaml
+        mode: '0644'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      when: manage_coredns_corefile | bool
+
+    - name: Apply patched CoreDNS ConfigMap
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} apply -f /tmp/coredns-configmap.yaml
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: coredns_core_cm_apply
+      changed_when: coredns_core_cm_apply.stdout is defined and ("configured" in coredns_core_cm_apply.stdout or "created" in coredns_core_cm_apply.stdout)
+      when: manage_coredns_corefile | bool
+
+    - name: Show active CoreDNS Corefile excerpts (post-apply)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get configmap coredns -o jsonpath='{.data.Corefile}' \
+          | grep -nE '(forward \\.|rewrite name exact|^{{ fritzbox_domain | replace(".", "\\.") }}:53|^{{ fritzbox_shortnames[0] }}:53|^{{ fritzbox_shortnames[1] }}:53)'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: coredns_corefile_excerpt
+      failed_when: false
+      when: manage_coredns_corefile | bool
+
+    - name: Print CoreDNS Corefile excerpts
+      ansible.builtin.debug:
+        msg: "{{ coredns_corefile_excerpt.stdout | default('') }}"
+      run_once: true
+      changed_when: false
+      when: manage_coredns_corefile | bool
+
     - name: Read AdGuard DNS ClusterIP (preferred for in-cluster resolution)
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} get svc {{ adguard_dns_service }} -o jsonpath='{.spec.clusterIP}'
@@ -43,12 +189,52 @@
         /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} rollout status deployment/coredns --timeout=180s
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      when: coredns_custom_cm_apply is defined and coredns_custom_cm_apply.changed
+      when: >-
+        (coredns_custom_cm_apply is defined and coredns_custom_cm_apply.changed)
+        or (manage_coredns_corefile | bool and coredns_core_cm_apply is defined and coredns_core_cm_apply.changed)
+        or (force_coredns_restart | bool)
 
     - name: Test DNS resolution from an in-cluster pod (via kube-dns)
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl -n default run dns-intern-test --image=busybox:1.36 --restart=Never --rm -it \
-          --command -- sh -lc 'cat /etc/resolv.conf; echo; nslookup argocd.{{ intern_zone | default('"'"'intern'"'"') }}; nslookup longhorn.{{ intern_zone | default('"'"'intern'"'"') }}'
+        set -e
+        /usr/local/bin/k3s kubectl -n default delete pod dns-intern-test --ignore-not-found
+        /usr/local/bin/k3s kubectl -n default run dns-intern-test --image=busybox:1.36 --restart=Never \
+          --command -- sh -lc '
+            echo "=== /etc/resolv.conf ==="; cat /etc/resolv.conf; echo
+            echo "=== CoreDNS (.intern -> AdGuard) ===";
+            nslookup argocd.{{ intern_zone }} || true;
+            nslookup longhorn.{{ intern_zone }} || true;
+            echo
+            echo "=== FritzBox direct (A/AAAA) ===";
+            nslookup -type=A envoym1.{{ fritzbox_domain }} {{ fritzbox_dns_ip }} || true;
+            nslookup -type=AAAA envoym1.{{ fritzbox_domain }} {{ fritzbox_dns_ip }} || true;
+            echo
+            echo "=== CoreDNS via kube-dns (A/AAAA) ===";
+            nslookup -type=A envoym1.{{ fritzbox_domain }} 10.43.0.10 || true;
+            nslookup -type=AAAA envoym1.{{ fritzbox_domain }} 10.43.0.10 || true;
+            echo
+            echo "=== Shortname via kube-dns (A/AAAA) ===";
+            nslookup -type=A envoym1 10.43.0.10 || true;
+            nslookup -type=AAAA envoym1 10.43.0.10 || true;
+          '
+
+        # Wait for pod to finish, then print logs
+        for i in $(seq 1 60); do
+          phase=$(/usr/local/bin/k3s kubectl -n default get pod dns-intern-test -o jsonpath='{.status.phase}' 2>/dev/null || true)
+          if [ "$phase" = "Succeeded" ] || [ "$phase" = "Failed" ]; then
+            break
+          fi
+          sleep 1
+        done
+        /usr/local/bin/k3s kubectl -n default logs dns-intern-test || true
+        /usr/local/bin/k3s kubectl -n default delete pod dns-intern-test --ignore-not-found --wait=false
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: dns_test
+
+    - name: Show in-cluster DNS test output
+      ansible.builtin.debug:
+        msg: "{{ dns_test.stdout | default('') }}"
+      run_once: true
       changed_when: false
