@@ -1,0 +1,67 @@
+---
+- name: Configure Traefik with MQTT TCP entrypoint for Mosquitto
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    mqtt_vip: "{{ kubevip_service_range_start }}"  # Use same VIP as HTTP ingress, different port
+  pre_tasks:
+    - name: Validate MQTT VIP is set
+      ansible.builtin.assert:
+        that:
+          - mqtt_vip is defined
+          - mqtt_vip | trim != ''
+        fail_msg: "kubevip_service_range_start must be set (used as MQTT VIP)"
+      run_once: true
+
+  tasks:
+    - name: Configure Traefik with MQTT TCP entrypoint via HelmChartConfig
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: helm.cattle.io/v1
+        kind: HelmChartConfig
+        metadata:
+          name: traefik
+          namespace: kube-system
+        spec:
+          valuesContent: |-
+            service:
+              annotations:
+                kube-vip.io/loadbalancerIPs: '{{ mqtt_vip }}'
+            ports:
+              web:
+                port: 80
+                exposedPort: 80
+              websecure:
+                port: 443
+                exposedPort: 443
+              mqtt:
+                port: 1883
+                exposedPort: 1883
+                protocol: TCP
+            additionalArguments:
+              - "--entrypoints.mqtt.address=:1883/tcp"
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait for Traefik Service to be reconfigured with MQTT port
+      ansible.builtin.shell: |
+        for i in $(seq 1 60); do
+          /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o jsonpath='{.spec.ports[?(@.name=="mqtt")].port}' 2>/dev/null | grep -q 1883 && exit 0
+          sleep 2
+        done
+        echo "Timed out waiting for Traefik MQTT port" >&2
+        exit 1
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Display MQTT access info
+      ansible.builtin.debug:
+        msg: |
+          ✓ Traefik MQTT entrypoint configured
+          ✓ Connect to MQTT at: {{ mqtt_vip }}:1883
+          ✓ Hostname: mosquitto.intern (add to DNS or /etc/hosts pointing to {{ mqtt_vip }})
+      run_once: true
