@@ -42,7 +42,7 @@ jobs:
     - name: Update Kubernetes deployment
       run: |        
         microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnvoyM1Serial="${{ secrets.EnvoyM1Serial }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnvoyM3Serial="${{ secrets.EnvoyM3Serial }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseUserName="${{ secrets.EnphaseUserName }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphasePassword="${{ secrets.EnphasePassword }}"        
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnvoyM1Serial="${{ secrets.EnvoyM1Serial }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnvoyM3Serial="${{ secrets.EnvoyM3Serial }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnphaseUserName="${{ secrets.EnphaseUserName }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnphasePassword="${{ secrets.EnphasePassword }}"        
