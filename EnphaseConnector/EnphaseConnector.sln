@@ -12,6 +12,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4F32465E-CE5C-4BCC-B151-A74F65231F6E}"
 	ProjectSection(SolutionItems) = preProject
 		Dockerfile = Dockerfile
+		..\.github\workflows\EnphaseConnector.yml = ..\.github\workflows\EnphaseConnector.yml
 		kube.yaml = kube.yaml
 	EndProjectSection
 EndProject
