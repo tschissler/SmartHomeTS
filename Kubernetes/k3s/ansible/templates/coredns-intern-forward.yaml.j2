@@ -5,6 +5,32 @@ metadata:
   name: {{ coredns_custom_configmap }}
   namespace: {{ coredns_namespace }}
 data:
+  {{ fritzbox_domain }}.server: |
+    {{ fritzbox_domain }}:53 {
+        errors
+        cache 30
+        forward . {{ fritzbox_dns_ip }}
+        reload 5s
+    }
+
+  {{ fritzbox_shortnames[0] }}.server: |
+    {{ fritzbox_shortnames[0] }}:53 {
+        errors
+        cache 30
+        rewrite name exact {{ fritzbox_shortnames[0] }} {{ fritzbox_shortnames[0] }}.{{ fritzbox_domain }}
+        forward . {{ fritzbox_dns_ip }}
+        reload 5s
+    }
+
+  {{ fritzbox_shortnames[1] }}.server: |
+    {{ fritzbox_shortnames[1] }}:53 {
+        errors
+        cache 30
+        rewrite name exact {{ fritzbox_shortnames[1] }} {{ fritzbox_shortnames[1] }}.{{ fritzbox_domain }}
+        forward . {{ fritzbox_dns_ip }}
+        reload 5s
+    }
+
   {{ intern_zone }}.server: |
     {{ intern_zone }}:53 {
         errors

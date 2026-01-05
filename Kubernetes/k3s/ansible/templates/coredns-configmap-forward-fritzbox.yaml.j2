@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: {{ coredns_namespace }}
+data:
+  Corefile: |
+{{ coredns_corefile_patched | indent(4, true) }}
+{% if coredns_nodehosts is defined and (coredns_nodehosts.stdout | default('') | trim) != '' %}
+  NodeHosts: |
+{{ coredns_nodehosts.stdout | indent(4, true) }}
+{% endif %}
