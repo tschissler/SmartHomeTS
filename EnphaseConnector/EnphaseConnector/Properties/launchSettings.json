@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "EnphaseConnector": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:52218;http://localhost:52219"
+    }
+  }
+}

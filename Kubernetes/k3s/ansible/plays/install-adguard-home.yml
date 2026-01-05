@@ -36,6 +36,8 @@
             answer: "{{ adguard_lb_ip }}"
           - domain: "{{ adguard_argocd_domain }}"
             answer: "{{ adguard_lb_ip }}"
+          - domain: "mosquitto.intern"
+            answer: "{{ kubevip_service_range_start }}"
       run_once: true
 
     - name: Append node hostnames to AdGuard rewrites

@@ -1,0 +1,13 @@
+﻿image:
+  repository: tschissler/smarthomedatahub
+  tag: latest  # Wird von GitHub Action überschrieben
+  pullPolicy: Always
+
+config:
+  influxUrl: "http://influxdb.intern"
+  environment: "Prod"
+  org: "smarthome"
+  mqttBroker: "mosquitto.local:1883"
+
+# Secret-Name, der manuell im Cluster angelegt wurde
+secretName: datahub-secrets

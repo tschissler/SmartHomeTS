@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enphaseconnector
+  namespace: smarthome
+  labels:
+    app: enphaseconnector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enphaseconnector
+  template:
+    metadata:
+      labels:
+        app: enphaseconnector
+    spec:
+      containers:
+        - name: enphaseconnector
+          image: tschissler/enphaseconnector:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # Environment variables from ConfigMap (non-sensitive)
+          envFrom:
+            - configMapRef:
+                name: enphaseconnector-config
+            - secretRef:
+                name: enphaseconnector-secrets
+          # Liveness probe - checks if the application is alive
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # Readiness probe - checks if the application is ready to serve traffic
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Startup probe - gives app time to start before other probes kick in
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
