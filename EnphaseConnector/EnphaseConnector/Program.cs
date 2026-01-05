@@ -14,15 +14,17 @@ Console.WriteLine("##### Enphase Connector");
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddEnvironmentVariables()
+    .AddEnvironmentVariables(prefix: "EnphaseSettings__")
     .Build();
 
 // Bind configuration to settings object
 var settings = new EnphaseSettings();
-configuration.GetSection("EnphaseSettings").Bind(settings);
+configuration.Bind(settings);
+
+
 
 // Validate required settings
-if (string.IsNullOrEmpty(settings.EnphaseUserName) || 
+f (string.IsNullOrEmpty(settings.EnphaseUserName) || 
     string.IsNullOrEmpty(settings.EnphasePassword) ||
     string.IsNullOrEmpty(settings.EnvoyM1Serial) ||
     string.IsNullOrEmpty(settings.EnvoyM3Serial))
@@ -55,8 +57,8 @@ using (var mqttClient = new MQTTClient.MQTTClient("EnphaseConnector", settings.M
             EnphaseConnectorHealthCheck.UpdateMqttConnectionStatus(true);
         }
         
-        await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1");
-        await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3");
+        await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1.fritz.box");
+        await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3.fritz.box");
         
         Thread.Sleep(settings.ReadIntervalMs - (int)-DateTime.Now.Subtract(startTime).TotalMilliseconds);
     }
