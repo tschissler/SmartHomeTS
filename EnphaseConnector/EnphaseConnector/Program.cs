@@ -57,8 +57,8 @@ using (var mqttClient = new MQTTClient.MQTTClient("EnphaseConnector", settings.M
             EnphaseConnectorHealthCheck.UpdateMqttConnectionStatus(true);
         }
         
-        await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1.fritz.box");
-        await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3.fritz.box");
+        await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1");
+        await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3");
         
         Thread.Sleep(settings.ReadIntervalMs - (int)-DateTime.Now.Subtract(startTime).TotalMilliseconds);
     }
