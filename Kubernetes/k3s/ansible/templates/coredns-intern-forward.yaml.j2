@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ coredns_custom_configmap }}
+  namespace: {{ coredns_namespace }}
+data:
+  {{ intern_zone }}.server: |
+    {{ intern_zone }}:53 {
+        errors
+        cache 30
+        forward . {{ adguard_dns_clusterip.stdout | trim }}
+        reload 5s
+    }
