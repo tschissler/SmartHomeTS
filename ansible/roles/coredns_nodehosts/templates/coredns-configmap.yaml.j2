@@ -24,7 +24,7 @@ data:
         reload
         loadbalance
         import /etc/coredns/custom/*.override
-        forward . /etc/resolv.conf
+        forward . {{ fritzbox_dns_ip | default('192.168.178.1') }}
     }
     import /etc/coredns/custom/*.server
   NodeHosts: |

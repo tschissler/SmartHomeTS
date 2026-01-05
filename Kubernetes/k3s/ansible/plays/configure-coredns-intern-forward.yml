@@ -6,35 +6,36 @@
   vars:
     coredns_namespace: kube-system
     coredns_custom_configmap: coredns-custom
+    adguard_namespace: adguard-home
+    adguard_dns_service: adguard-dns
+    intern_zone: intern
+    fritzbox_dns_ip: 192.168.178.1
 
   tasks:
     - name: Read AdGuard DNS ClusterIP (preferred for in-cluster resolution)
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl -n {{ adguard_namespace | default('adguard-home') }} get svc {{ adguard_dns_service | default('adguard-dns') }} -o jsonpath='{.spec.clusterIP}'
+        /usr/local/bin/k3s kubectl -n {{ adguard_namespace }} get svc {{ adguard_dns_service }} -o jsonpath='{.spec.clusterIP}'
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
       register: adguard_dns_clusterip
+      failed_when: adguard_dns_clusterip.stdout | trim == ''
 
-    - name: Configure CoreDNS custom server block for .intern
-      ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} apply -f - <<EOF
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: {{ coredns_custom_configmap }}
-          namespace: {{ coredns_namespace }}
-        data:
-          {{ intern_zone | default('intern') }}.server: |
-            {{ intern_zone | default('intern') }}:53 {
-                errors
-                cache 30
-                forward . {{ adguard_dns_clusterip.stdout | trim }}
-            }
-        EOF
+    - name: Render CoreDNS intern zone config
+      ansible.builtin.template:
+        src: ../templates/coredns-intern-forward.yaml.j2
+        dest: /tmp/coredns-intern-zone.yaml
+        mode: '0644'
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      changed_when: false
+
+    - name: Apply CoreDNS custom server block(s)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} apply -f /tmp/coredns-intern-zone.yaml
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: coredns_custom_cm_apply
+      changed_when: coredns_custom_cm_apply.stdout is defined and ("configured" in coredns_custom_cm_apply.stdout or "created" in coredns_custom_cm_apply.stdout)
 
     - name: Restart CoreDNS to pick up custom config
       ansible.builtin.shell: |
@@ -42,7 +43,7 @@
         /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} rollout status deployment/coredns --timeout=180s
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      changed_when: false
+      when: coredns_custom_cm_apply is defined and coredns_custom_cm_apply.changed
 
     - name: Test DNS resolution from an in-cluster pod (via kube-dns)
       ansible.builtin.shell: |
