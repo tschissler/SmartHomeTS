@@ -14,10 +14,5 @@ data:
   # Environment Configuration
   SMARTHOME__DATAHUB_ENVIRONMENT: {{ .Values.config.environment | quote }}
   
-  # MQTT Configuration
+  # MQTT Configuration (format: hostname:port)
   SMARTHOME__MQTT_BROKER: {{ .Values.config.mqttBroker | quote }}
-  SMARTHOME__MQTT_PORT: {{ .Values.config.mqttPort | quote }}
-  # Read interval in milliseconds
-  SMARTHOME__READ_INTERVAL_MS: {{ .Values.config.readIntervalMs | quote }}
-  # Health check HTTP server port
-  SMARTHOME__HEALTH_CHECK_PORT: {{ .Values.config.healthCheckPort | quote }}

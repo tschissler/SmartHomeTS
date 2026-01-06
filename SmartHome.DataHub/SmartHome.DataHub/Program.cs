@@ -30,38 +30,38 @@ Dictionary<string, decimal> previousValues = new();
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json")
-    .AddEnvironmentVariables(prefix: "SMARTHOME__")
+    .AddEnvironmentVariables()
     .Build();
 
-string? influx3Url = configuration["SMARTHOME:INFLUX3_URL"];
+string? influx3Url = configuration["SMARTHOME__INFLUX3_URL"] ?? configuration["SMARTHOME:INFLUX3_URL"];
 if (string.IsNullOrEmpty(influx3Url))
 {
     logger.LogError("Environmentvariable SMARTHOME__INFLUX3_URL not set. Please set it to your InfluxDB 3 URL.");
     return;
 }
 
-string? influx3Token = configuration["SMARTHOME:INFLUXDB3_TOKEN"];
+string? influx3Token = configuration["SMARTHOME__INFLUXDB3_TOKEN"] ?? configuration["SMARTHOME:INFLUXDB3_TOKEN"];
 if (string.IsNullOrEmpty(influx3Token))
 {
     logger.LogError("Environmentvariable SMARTHOME__INFLUXDB3_TOKEN not set. Please set it to your InfluxDB token.");
     return;
 }
 
-string? dataHubEnvironment = configuration["SMARTHOME:DATAHUB_ENVIRONMENT"];
+string? dataHubEnvironment = configuration["SMARTHOME__DATAHUB_ENVIRONMENT"] ?? configuration["SMARTHOME:DATAHUB_ENVIRONMENT"];
 if (string.IsNullOrEmpty(dataHubEnvironment))
 {
     logger.LogError("Environmentvariable SMARTHOME__DATAHUB_ENVIRONMENT not set. Please set it to the environment you are running (Prod, Dev).");
     return;
 }
 
-string? influxOrg = configuration["SMARTHOME:INFLUXDB_ORG"];
+string? influxOrg = configuration["SMARTHOME__INFLUXDB_ORG"] ?? configuration["SMARTHOME:INFLUXDB_ORG"];
 if (string.IsNullOrEmpty(influxOrg))
 {
-    logger.LogError("Environmentvariable SMARTHOME_INFLUXDB_ORG not set. Please set it to your Influx organization.");
+    logger.LogError("Environmentvariable SMARTHOME__INFLUXDB_ORG not set. Please set it to your Influx organization.");
     return;
 }
 
-string? mqttBroker = configuration["SMARTHOME:MQTT_BROKER"];
+string? mqttBroker = configuration["SMARTHOME__MQTT_BROKER"] ?? configuration["SMARTHOME:MQTT_BROKER"];
 if (string.IsNullOrEmpty(mqttBroker))
 {
     logger.LogError("Environmentvariable SMARTHOME_MQTT_BROKER not set. Please set it to your MQTT broker hostname.");
@@ -83,6 +83,7 @@ if (!int.TryParse(brokerParts[1], out int mqttBrokerPort))
 string influx3Database = "Smarthome_" + dataHubEnvironment;
 //logger.LogInformation($"Using org: {influxOrg} at {influxUrl}");
 logger.LogInformation($"Using InfluxDB 3 at {influx3Url} with database {influx3Database}");
+logger.LogInformation($"Using MQTT broker at {mqttBrokerHost}:{mqttBrokerPort}");
 
 builder.Services.AddSingleton<MQTTClient.MQTTClient>(_ => new MQTTClient.MQTTClient("InfluxImporter_" + dataHubEnvironment, mqttBrokerHost, mqttBrokerPort));
 //builder.Services.AddSingleton<InfluxDbConnector>(_ => new InfluxDbConnector(influxUrl, influxOrg, influxToken));
