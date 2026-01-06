@@ -11,6 +11,18 @@ service:
   type: ClusterIP
   port: 8080
 
+ingress:
+  enabled: false
+  className: "traefik"
+  annotations: {}
+    # traefik.ingress.kubernetes.io/router.entrypoints: web
+  hosts:
+    - host: smarthome.intern
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
 # Health check probes configuration
 probes:
   liveness:

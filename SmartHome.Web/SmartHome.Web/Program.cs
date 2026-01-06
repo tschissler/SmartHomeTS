@@ -63,8 +63,6 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<MqttService>();
 //builder.Services.AddScoped<IChargingSessionService, ChargingSessionService>();
 
-builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
-
 // Add health checks
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => 
@@ -87,11 +85,13 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 //app.UseStaticFiles();
-app.UseAntiforgery();
+// Antiforgery disabled for internal system
+// app.UseAntiforgery();
 app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .DisableAntiforgery(); // Disable antiforgery for internal system
 
 app.MapControllers();
 

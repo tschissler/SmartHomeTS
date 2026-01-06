@@ -147,6 +147,7 @@
           AdGuard UI:              http://{{ adguard_domain }}/
           Longhorn UI:             http://{{ longhorn_domain }}/
           Argo CD UI:              http://{{ argocd_domain | default('argocd.intern') }}/
+          SmartHome Web:           http://smarthome.intern/
       run_once: true
       delegate_to: localhost
       become: false
