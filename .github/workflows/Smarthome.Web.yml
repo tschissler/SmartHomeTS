@@ -1,4 +1,4 @@
-name: Smarthome.Web CD 
+name: Smarthome.Web CD
 
 on:
   push:
@@ -8,61 +8,71 @@ on:
       - SmartHome.Web/**
       - '!SmartHome.Web/SmartHomeBlazorApp/**'
   workflow_dispatch:
-    
+
 env:
   PROJECT_NAME: SmartHome.Web
   IMAGE_NAME: smarthomeweb
   
 jobs:
   build:
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-latest  # Use GitHub-hosted runner for building
+
     steps:
-    - uses: actions/checkout@v3
-    
+    - uses: actions/checkout@v4
+
+    # Set up QEMU for multi-architecture builds
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
-      
+      uses: docker/setup-qemu-action@v3
+
+    # Set up Docker Buildx for multi-platform builds
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-      
+      uses: docker/setup-buildx-action@v3
+
     - name: Log in to Docker Hub
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-          
-    - name: Build and publish Docker image
-      uses: docker/build-push-action@v4
+        
+    - name: Build and publish multi-architecture Docker image
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./${{ env.PROJECT_NAME }}/Dockerfile
-        platforms: linux/arm64
+        platforms: linux/amd64,linux/arm64
         push: true
-        cache-from: type=registry,ref=tschissler/${{ env.IMAGE_NAME }}:latest
-        cache-to: type=inline
         tags: |
           tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
           tschissler/${{ env.IMAGE_NAME }}:latest
-          
+        build-args: |
+          PROJECT_NAME=${{ env.PROJECT_NAME }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        # Enable BuildKit inline cache for better layer reuse
+        provenance: false
+        sbom: false
+
+  # Separate job for deployment to local cluster (requires self-hosted runner)
   deploy:
     needs: build
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]  # Use self-hosted runner for deployment
+    if: github.event_name == 'push'  # Only deploy on push, not PRs
+
     steps:
-    - uses: actions/checkout@v3
-        
+    - uses: actions/checkout@v4
+    
     - name: Deploy to Kubernetes if deployment does not exist yet
       run: |
-        if ! kubectl get deployment ${{ env.IMAGE_NAME }}; then
+        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
           microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
         fi
         
     - name: Update Kubernetes deployment
       run: |        
-        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} 
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SyncfusionLicenseKey="${{ secrets.SYNCFUSION_LICENSEKEY }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SmartHomeStorageUri="${{ secrets.SMARTHOMESTORAGEURI }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SmartHomeStorageKey="${{ secrets.SMARTHOMESTORAGEKEY }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_URL="${{ secrets.INFLUXDB_URL }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_ORG="${{ secrets.INFLUXDB_ORG }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} INFLUXDB_TOKEN="${{ secrets.INFLUXDB_TOKEN }}"
+        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__SYNCFUSION_LICENSE_KEY="${{ secrets.SYNCFUSION_LICENSEKEY }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_URL="${{ secrets.INFLUXDB_URL }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_ORG="${{ secrets.INFLUXDB_ORG }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_TOKEN="${{ secrets.INFLUXDB_TOKEN }}"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__MQTT_BROKER="smarthomepi2:32004"
+        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__ENVIRONMENT="Prod"

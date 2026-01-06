@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+    release: {{ .Release.Name }}
+data:
+  SMARTHOME__MQTT_BROKER: {{ .Values.config.mqttBroker | quote }}
+  SMARTHOME__INFLUXDB_URL: {{ .Values.config.influxUrl | quote }}
+  SMARTHOME__INFLUXDB_ORG: {{ .Values.config.influxOrg | quote }}
+  SMARTHOME__ENVIRONMENT: {{ .Values.config.environment | quote }}
