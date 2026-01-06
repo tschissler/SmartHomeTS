@@ -2,13 +2,13 @@
 ARG PROJECT_NAME=SmartHome.DataHub
 
 # Base image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER app
 WORKDIR /app
 EXPOSE 8080
 
 # Build image
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 # Install dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -25,13 +25,15 @@ WORKDIR "/src/${PROJECT_NAME}/${PROJECT_NAME}"
 RUN dotnet build "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/build
 #We need to set environment variables before being able to run tests in the docker container
 #RUN dotnet test "../${PROJECT_NAME}.sln" -c $BUILD_CONFIGURATION
+
 # Publish image
 FROM build AS publish
-RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+ARG BUILD_CONFIGURATION=Release
+ARG PROJECT_NAME
+RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Final image
-FROM build AS final
+FROM base AS final
 WORKDIR /app
-EXPOSE 8080
 COPY --from=publish /app/publish .
-ENTRYPOINT ["./SmartHome.DataHub"]
+ENTRYPOINT ["dotnet", "${PROJECT_NAME}.dll"]

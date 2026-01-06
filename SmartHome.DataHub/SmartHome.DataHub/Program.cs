@@ -30,7 +30,7 @@ Dictionary<string, decimal> previousValues = new();
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json")
-    .AddEnvironmentVariables()
+    .AddEnvironmentVariables(prefix: "SMARTHOME__")
     .Build();
 
 string? influx3Url = configuration["SMARTHOME:INFLUX3_URL"];
