@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <math.h>
 #include <Adafruit_NeoPixel.h>
+#include <Wire.h>
 
 // Shared libaries
 #include "ESP32Helpers.h"
@@ -27,6 +28,7 @@
 #include "DhtSensor.h"
 #include "Sht45Sensor.h"
 #include "DS18B20Sensor.h"
+#include "Bmp280Sensor.h"
 
 // Pin configuration
 #define NEOPIXEL_PIN 17    // WS2812 connected to GP17
@@ -38,7 +40,8 @@ SensorType sensorType;
 constexpr SensorType candidates[] = {
     SensorType::DHT22,
     SensorType::SHT45,
-    SensorType::DS18B20};
+  SensorType::DS18B20,
+  SensorType::BMP280};
 
 const char *version = TEMPSENSORFW_VERSION;
 String chipID = "";
@@ -261,6 +264,10 @@ void connectToMQTT(bool cleanSession)
 
 bool tryInitializeSensor(SensorType type)
 {
+  // Ensure I2C is in a clean state before probing any sensor.
+  // ESP32-C6 I2C driver can error if begin() is called repeatedly without end().
+  Wire.end();
+
   std::unique_ptr<ISensor> candidate;
 
   switch (type)
@@ -277,20 +284,24 @@ bool tryInitializeSensor(SensorType type)
     Serial.println("Probing for DS18B20 sensor...");
     candidate.reset(new DS18B20Sensor());
     break;
+  case SensorType::BMP280:
+    Serial.println("Probing for BMP280 sensor...");
+    candidate.reset(new Bmp280Sensor());
+    break;
   default:
     return false;
   }
 
   if (!candidate || !candidate->begin())
   {
-    Serial.println("Probe failed for " + String(toString(type)));
+    Serial.println("Begin probe failed for " + String(toString(type)));
     return false;
   }
 
   auto initialReadings = candidate->read();
   if (initialReadings.empty() || !initialReadings.front().success)
   {
-    Serial.println("Probe failed for " + String(toString(type)));
+    Serial.println("Read probe failed for " + String(toString(type)));
     return false;
   }
 
@@ -364,11 +375,41 @@ void readSensorData()
     const auto &reading = sensorReadings[i];
     if (reading.success)
     {
-      Serial.printf("Sensor reading[%u] (id: %s): %.2f°C, %.2f%%\n",
-                    static_cast<unsigned>(i),
-                    getSensorDisplayName(reading.sensorId).c_str(),
-                    reading.temperature,
-                    reading.humidity);
+      const bool hasHumidity = !isnan(reading.humidity);
+      const bool hasPressure = !isnan(reading.pressure);
+
+      if (hasHumidity && hasPressure)
+      {
+        Serial.printf("Sensor reading[%u] (id: %s): %.2f°C, %.2f%%, %.2f hPa\n",
+                      static_cast<unsigned>(i),
+                      getSensorDisplayName(reading.sensorId).c_str(),
+                      reading.temperature,
+                      reading.humidity,
+                      reading.pressure);
+      }
+      else if (hasHumidity)
+      {
+        Serial.printf("Sensor reading[%u] (id: %s): %.2f°C, %.2f%%\n",
+                      static_cast<unsigned>(i),
+                      getSensorDisplayName(reading.sensorId).c_str(),
+                      reading.temperature,
+                      reading.humidity);
+      }
+      else if (hasPressure)
+      {
+        Serial.printf("Sensor reading[%u] (id: %s): %.2f°C, %.2f hPa\n",
+                      static_cast<unsigned>(i),
+                      getSensorDisplayName(reading.sensorId).c_str(),
+                      reading.temperature,
+                      reading.pressure);
+      }
+      else
+      {
+        Serial.printf("Sensor reading[%u] (id: %s): %.2f°C\n",
+                      static_cast<unsigned>(i),
+                      getSensorDisplayName(reading.sensorId).c_str(),
+                      reading.temperature);
+      }
       successfulReadings.push_back(reading);
     }
     else
@@ -416,8 +457,10 @@ void publishSensorData()
   {
     float temperatureSum = 0.0f;
     float humiditySum = 0.0f;
+    float pressureSum = 0.0f;
     size_t temperatureCount = 0;
     size_t humidityCount = 0;
+    size_t pressureCount = 0;
   };
   std::unordered_map<uint64_t, Aggregate> aggregates;
 
@@ -432,6 +475,11 @@ void publishSensorData()
       {
         agg.humiditySum += reading.humidity;
         agg.humidityCount++;
+      }
+      if (!isnan(reading.pressure))
+      {
+        agg.pressureSum += reading.pressure;
+        agg.pressureCount++;
       }
     }
   }
@@ -457,17 +505,35 @@ void publishSensorData()
     const Aggregate &agg = entry.second;
     float avgTemperature = agg.temperatureSum / static_cast<float>(agg.temperatureCount);
     float avgHumidity = agg.humidityCount > 0 ? (agg.humiditySum / static_cast<float>(agg.humidityCount)) : NAN;
+    float avgPressure = agg.pressureCount > 0 ? (agg.pressureSum / static_cast<float>(agg.pressureCount)) : NAN;
 
-    if (agg.humidityCount > 0)
+    const bool hasHumidity = agg.humidityCount > 0;
+    const bool hasPressure = agg.pressureCount > 0;
+    if (hasHumidity && hasPressure)
+    {
+      Serial.printf("Average sensor (id: %s): %.2f°C, %.2f%%, %.2f hPa\n",
+                    getSensorDisplayName(id).c_str(),
+                    avgTemperature,
+                    avgHumidity,
+                    avgPressure);
+    }
+    else if (hasHumidity)
     {
       Serial.printf("Average sensor (id: %s): %.2f°C, %.2f%%\n",
                     getSensorDisplayName(id).c_str(),
                     avgTemperature,
                     avgHumidity);
     }
+    else if (hasPressure)
+    {
+      Serial.printf("Average sensor (id: %s): %.2f°C, %.2f hPa\n",
+                    getSensorDisplayName(id).c_str(),
+                    avgTemperature,
+                    avgPressure);
+    }
     else
     {
-      Serial.printf("Average sensor (id: %s): %.2f°C, humidity unavailable\n",
+      Serial.printf("Average sensor (id: %s): %.2f°C\n",
                     getSensorDisplayName(id).c_str(),
                     avgTemperature);
     }
@@ -476,9 +542,11 @@ void publishSensorData()
     {
       char tempString[8];
       char humString[8];
+      char pressureString[10];
 
       dtostrf(avgTemperature, 1, 2, tempString);
       dtostrf(avgHumidity, 1, 2, humString);
+      dtostrf(avgPressure, 1, 2, pressureString);
 
       if (sensorName != "")
       {
@@ -490,12 +558,17 @@ void publishSensorData()
       }
       String temperatureTopic = baseTopic + "/temperatur/" + location + "/" + sensorDisplayName;
       String humidityTopic = baseTopic + "/luftfeuchtigkeit/" + location + "/" + sensorDisplayName;
+      String pressureTopic = baseTopic + "/luftdruck/" + location + "/" + sensorDisplayName;
 
       mqttSuccess = mqttClientLib->publish(temperatureTopic.c_str(), String(tempString), true, 2);
       mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
       if (!isnan(avgHumidity))
       {
         mqttClientLib->publish(humidityTopic.c_str(), String(humString), true, 2);
+      }
+      if (!isnan(avgPressure))
+      {
+        mqttClientLib->publish(pressureTopic.c_str(), String(pressureString), true, 2);
       }
     }
     else
