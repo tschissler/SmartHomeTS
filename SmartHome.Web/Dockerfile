@@ -12,6 +12,16 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 ARG TARGETARCH
 ARG PROJECT_NAME
+ARG VERSION=0.0.0
+ARG BUILD_DATE=unknown
+ARG GIT_COMMIT=unknown
+ARG BUILD_NUMBER=0
+
+# Set environment variables to speed up builds
+ENV DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
+ENV DOTNET_NOLOGO=true
+
 WORKDIR /src
 
 # Copy solution and project files first for better layer caching
@@ -23,23 +33,46 @@ COPY ["DataContracts/DataContracts.csproj", "DataContracts/"]
 COPY ["SharedContracts/SharedContracts.csproj", "SharedContracts/"]
 COPY ["SmartHomeHelpers/SmartHomeHelpers.csproj", "SmartHomeHelpers/"]
 
-# Restore dependencies - this layer will be cached if project files don't change
-RUN dotnet restore "${PROJECT_NAME}/${PROJECT_NAME}.sln" -a $TARGETARCH
+# Restore dependencies with caching - this layer will be cached if project files don't change
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    dotnet restore "${PROJECT_NAME}/${PROJECT_NAME}.sln" -a $TARGETARCH \
+    --disable-parallel \
+    --verbosity minimal
 
 # Copy remaining source files
 COPY . .
 
-# Publish directly (skip separate build step)
+# Publish directly with version information and optimizations
 WORKDIR "/src/${PROJECT_NAME}/${PROJECT_NAME}"
-RUN dotnet publish "${PROJECT_NAME}.csproj" \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    dotnet publish "${PROJECT_NAME}.csproj" \
     -c $BUILD_CONFIGURATION \
     -a $TARGETARCH \
     -o /app/publish \
     --no-restore \
-    /p:UseAppHost=false
+    --verbosity minimal \
+    -p:UseAppHost=false \
+    -p:Version=${VERSION} \
+    -p:InformationalVersion="${VERSION}+${GIT_COMMIT}" \
+    -p:AssemblyVersion=${VERSION} \
+    -p:FileVersion=${VERSION} \
+    -p:DebugType=None \
+    -p:DebugSymbols=false
+
+# Create version info file
+RUN echo "{ \"version\": \"${VERSION}\", \"buildDate\": \"${BUILD_DATE}\", \"gitCommit\": \"${GIT_COMMIT}\", \"buildNumber\": \"${BUILD_NUMBER}\" }" > /app/publish/version.json
 
 # Final image
 FROM base AS final
+ARG VERSION=0.0.0
+ARG BUILD_DATE=unknown
+ARG GIT_COMMIT=unknown
+
+# Add version labels to the image
+LABEL version="${VERSION}" \
+      build-date="${BUILD_DATE}" \
+      git-commit="${GIT_COMMIT}" \
+      maintainer="tschissler"
 
 # Install locale data
 USER root

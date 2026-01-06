@@ -14,17 +14,11 @@ env:
   IMAGE_NAME: smarthomeweb
   
 jobs:
-  build:
-    runs-on: ubuntu-latest  # Use GitHub-hosted runner for building
-
+  build-amd64:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    # Set up QEMU for multi-architecture builds
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-
-    # Set up Docker Buildx for multi-platform builds
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -33,31 +27,108 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+    
+    - name: Generate version information
+      id: version
+      run: |
+        echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+        echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+        echo "GIT_SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
         
-    - name: Build and publish multi-architecture Docker image
+    - name: Build and push AMD64 image
       uses: docker/build-push-action@v6
       with:
         context: .
         file: ./${{ env.PROJECT_NAME }}/Dockerfile
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         push: true
-        tags: |
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-          tschissler/${{ env.IMAGE_NAME }}:latest
+        tags: tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64
         build-args: |
           PROJECT_NAME=${{ env.PROJECT_NAME }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        # Enable BuildKit inline cache for better layer reuse
+          VERSION=${{ steps.version.outputs.VERSION }}
+          BUILD_DATE=${{ steps.version.outputs.BUILD_DATE }}
+          GIT_COMMIT=${{ steps.version.outputs.GIT_SHORT_SHA }}
+          BUILD_NUMBER=${{ github.run_number }}
+        cache-from: type=gha,scope=amd64
+        cache-to: type=gha,mode=max,scope=amd64
         provenance: false
         sbom: false
 
-  # Separate job for deployment to local cluster (requires self-hosted runner)
-  deploy:
-    needs: build
-    runs-on: [self-hosted, linux]  # Use self-hosted runner for deployment
-    if: github.event_name == 'push'  # Only deploy on push, not PRs
+  build-arm64:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
 
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+    
+    - name: Generate version information
+      id: version
+      run: |
+        echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+        echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+        echo "GIT_SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+        
+    - name: Build and push ARM64 image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./${{ env.PROJECT_NAME }}/Dockerfile
+        platforms: linux/arm64
+        push: true
+        tags: tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
+        build-args: |
+          PROJECT_NAME=${{ env.PROJECT_NAME }}
+          VERSION=${{ steps.version.outputs.VERSION }}
+          BUILD_DATE=${{ steps.version.outputs.BUILD_DATE }}
+          GIT_COMMIT=${{ steps.version.outputs.GIT_SHORT_SHA }}
+          BUILD_NUMBER=${{ github.run_number }}
+        cache-from: type=gha,scope=arm64
+        cache-to: type=gha,mode=max,scope=arm64
+        provenance: false
+        sbom: false
+
+  create-manifest:
+    needs: [build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+    
+    - name: Generate version information
+      id: version
+      run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+    - name: Create and push multi-arch manifest
+      run: |
+        docker buildx imagetools create -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
+          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64 \
+          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
+        
+        docker buildx imagetools create -t tschissler/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }} \
+          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64 \
+          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
+        
+        docker buildx imagetools create -t tschissler/${{ env.IMAGE_NAME }}:latest \
+          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64 \
+          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
+
+  deploy:
+    needs: create-manifest
+    runs-on: [self-hosted, linux]
+    if: github.event_name == 'push'
     steps:
     - uses: actions/checkout@v4
     

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using SmartHome.Web;
 using SmartHome.Web.Components;
 using SmartHome.Web.Services;
 using Syncfusion.Blazor;
@@ -29,6 +30,9 @@ string? influxOrg = configuration["SMARTHOME__INFLUXDB_ORG"] ?? configuration["S
 string? influxToken = configuration["SMARTHOME__INFLUXDB_TOKEN"] ?? configuration["SMARTHOME:INFLUXDB_TOKEN"];
 string? environment = configuration["SMARTHOME__ENVIRONMENT"] ?? configuration["SMARTHOME:ENVIRONMENT"];
 
+// Log version information
+var versionInfo = VersionInfo.GetVersionInfo();
+logger.LogInformation($"SmartHome.Web {versionInfo.GetDisplayString()}");
 logger.LogInformation($"Starting SmartHome.Web in {environment} environment");
 logger.LogInformation($"Using MQTT broker at {mqttBroker}");
 logger.LogInformation($"Using InfluxDB at {influxUrl}");
@@ -90,6 +94,20 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapControllers();
+
+// Add version endpoint
+app.MapGet("/version", () => 
+{
+    var version = VersionInfo.GetVersionInfo();
+    return Results.Ok(new
+    {
+        service = "SmartHome.Web",
+        version = version.Version,
+        buildNumber = version.BuildNumber,
+        buildDate = version.BuildDate,
+        gitCommit = version.GitCommit
+    });
+});
 
 // Add health check endpoints
 app.MapGet("/health", (MqttService mqttService) => 
