@@ -11,9 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Dockerfile = Dockerfile
 		kube-service.yaml = kube-service.yaml
 		kube.yaml = kube.yaml
+		..\.github\workflows\Smarthome.Web.yml = ..\.github\workflows\Smarthome.Web.yml
 	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataContracts", "..\DataContracts\DataContracts.csproj", "{415449C1-670E-4CC0-BADE-BB648F76E808}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartHomeHelpers", "..\SmartHomeHelpers\SmartHomeHelpers.csproj", "{2DBF837D-6F9B-4295-95B1-C4AE49B33380}"
 EndProject
@@ -33,10 +32,6 @@ Global
 		{6597DBE0-9410-4189-9784-C452E02D2B4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6597DBE0-9410-4189-9784-C452E02D2B4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6597DBE0-9410-4189-9784-C452E02D2B4F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{415449C1-670E-4CC0-BADE-BB648F76E808}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{415449C1-670E-4CC0-BADE-BB648F76E808}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{415449C1-670E-4CC0-BADE-BB648F76E808}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{415449C1-670E-4CC0-BADE-BB648F76E808}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2DBF837D-6F9B-4295-95B1-C4AE49B33380}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2DBF837D-6F9B-4295-95B1-C4AE49B33380}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2DBF837D-6F9B-4295-95B1-C4AE49B33380}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -16,17 +16,15 @@
   <ItemGroup>
     <PackageReference Include="ColorHelper" Version="1.8.1" />
 	<PackageReference Include="MQTTnet" Version="5.0.1.1416" />
-	<PackageReference Include="Syncfusion.Blazor.Calendars" Version="29.1.38" />
-    <PackageReference Include="Syncfusion.Blazor.Charts" Version="29.1.38" />
-    <PackageReference Include="Syncfusion.Blazor.Grid" Version="29.1.38" />
-    <PackageReference Include="Syncfusion.Blazor.LinearGauge" Version="29.1.38" />
-    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="29.1.38" />
-    <PackageReference Include="Syncfusion.Blazor.Themes" Version="29.1.38" />
-    <PackageReference Include="System.Text.Json" Version="9.0.4" />
+	<PackageReference Include="Syncfusion.Blazor.Calendars" Version="32.1.22" />
+    <PackageReference Include="Syncfusion.Blazor.Charts" Version="32.1.22" />
+    <PackageReference Include="Syncfusion.Blazor.Grid" Version="32.1.22" />
+    <PackageReference Include="Syncfusion.Blazor.LinearGauge" Version="32.1.22" />
+    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="32.1.22" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="32.1.22" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\DataContracts\DataContracts.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
     <ProjectReference Include="..\..\SmartHomeHelpers\SmartHomeHelpers.csproj" />
     <ProjectReference Include="..\SmartHomeWebManagers\SmartHomeWebManagers.csproj" />

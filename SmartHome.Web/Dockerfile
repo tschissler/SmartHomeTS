@@ -2,13 +2,13 @@
 ARG PROJECT_NAME=SmartHome.Web
 
 # Base image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER app
 WORKDIR /app
 EXPOSE 8080
 
 # Build image
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 # Install dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
