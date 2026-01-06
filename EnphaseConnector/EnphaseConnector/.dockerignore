@@ -1,0 +1,44 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# Documentation
+*.md
+README
+
+# Docker files
+**/Dockerfile*
+**/.dockerignore
+**/docker-compose*
+
+# Build artifacts
+**/bin
+**/obj
+**/out
+
+# IDE and editor files
+.vs
+.vscode
+*.user
+*.suo
+*.userprefs
+.idea
+
+# Test results
+**/TestResults
+
+# Kubernetes and Helm
+**/helm
+**/*.yaml
+**/*.yml
+!**/appsettings*.json
+
+# Node modules (if any)
+**/node_modules
+
+# Logs
+**/*.log
