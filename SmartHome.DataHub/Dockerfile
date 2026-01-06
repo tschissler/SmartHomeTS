@@ -40,5 +40,5 @@ RUN dotnet publish "${PROJECT_NAME}.csproj" \
 # Final image
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "SmartHome.DataHub.dll"]
