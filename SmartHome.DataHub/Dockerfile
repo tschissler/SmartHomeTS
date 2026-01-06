@@ -12,6 +12,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 ARG TARGETARCH
 ARG PROJECT_NAME
+ARG VERSION=0.0.0
+ARG BUILD_DATE=unknown
+ARG GIT_COMMIT=unknown
+ARG BUILD_NUMBER=0
 WORKDIR /src
 
 # Copy solution and project files first for better layer caching
@@ -28,17 +32,34 @@ RUN dotnet restore "${PROJECT_NAME}/${PROJECT_NAME}.sln" -a $TARGETARCH
 # Copy remaining source files
 COPY . .
 
-# Publish directly (skip separate build step)
+# Publish directly with version information
 WORKDIR "/src/${PROJECT_NAME}/${PROJECT_NAME}"
 RUN dotnet publish "${PROJECT_NAME}.csproj" \
     -c $BUILD_CONFIGURATION \
     -a $TARGETARCH \
     -o /app/publish \
     --no-restore \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:Version=${VERSION} \
+    /p:InformationalVersion="${VERSION}+${GIT_COMMIT}" \
+    /p:AssemblyVersion=${VERSION} \
+    /p:FileVersion=${VERSION}
+
+# Create version info file
+RUN echo "{ \"version\": \"${VERSION}\", \"buildDate\": \"${BUILD_DATE}\", \"gitCommit\": \"${GIT_COMMIT}\", \"buildNumber\": \"${BUILD_NUMBER}\" }" > /app/publish/version.json
 
 # Final image
 FROM base AS final
+ARG VERSION=0.0.0
+ARG BUILD_DATE=unknown
+ARG GIT_COMMIT=unknown
+
+# Add version labels to the image
+LABEL version="${VERSION}" \
+      build-date="${BUILD_DATE}" \
+      git-commit="${GIT_COMMIT}" \
+      maintainer="tschissler"
+
 WORKDIR /app
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "SmartHome.DataHub.dll"]

@@ -19,6 +19,14 @@ var loggerFactory = LoggerFactory.Create(logging =>
 });
 var logger = loggerFactory.CreateLogger("Program");
 
+// Display version information on startup
+var versionInfo = VersionInfo.GetVersionInfo();
+logger.LogInformation("╔════════════════════════════════════════════════════════════════════╗");
+logger.LogInformation("║  SmartHome.DataHub Starting                                        ║");
+logger.LogInformation("╠════════════════════════════════════════════════════════════════════╣");
+logger.LogInformation($"║  {versionInfo.GetDisplayString().PadRight(66)}║");
+logger.LogInformation("╚════════════════════════════════════════════════════════════════════╝");
+
 GeoPosition positionChargingStationStellplatz = new GeoPosition(Latitude: 48.412758, Longitude: 9.875185);
 GeoPosition positionChargingStationGarage = new GeoPosition(Latitude: 48.412750277777775, Longitude: 9.875374444444445);
 GeoPosition? bmwPosition = null;
@@ -100,6 +108,19 @@ builder.Services.AddHealthChecks()
     );
 
 var app = builder.Build();
+
+app.MapGet("/version", () => 
+{
+    var version = VersionInfo.GetVersionInfo();
+    return Results.Ok(new
+    {
+        service = "SmartHome.DataHub",
+        version = version.Version,
+        buildNumber = version.BuildNumber,
+        buildDate = version.BuildDate,
+        gitCommit = version.GitCommit
+    });
+});
 
 app.MapGet("/health", (InfluxDB3Connector connector) => 
 {

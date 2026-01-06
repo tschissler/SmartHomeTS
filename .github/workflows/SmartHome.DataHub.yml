@@ -32,6 +32,15 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+    
+    # Generate version info
+    - name: Generate version information
+      id: version
+      run: |
+        echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+        echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+        echo "GIT_SHA=${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "GIT_SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
         
     - name: Build and publish multi-architecture Docker image
       uses: docker/build-push-action@v6
@@ -42,9 +51,14 @@ jobs:
         push: true
         tags: |
           tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+          tschissler/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
           tschissler/${{ env.IMAGE_NAME }}:latest
         build-args: |
           PROJECT_NAME=${{ env.PROJECT_NAME }}
+          VERSION=${{ steps.version.outputs.VERSION }}
+          BUILD_DATE=${{ steps.version.outputs.BUILD_DATE }}
+          GIT_COMMIT=${{ steps.version.outputs.GIT_SHORT_SHA }}
+          BUILD_NUMBER=${{ github.run_number }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         # Enable BuildKit inline cache for better layer reuse
