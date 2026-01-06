@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# Visual Studio / Rider
+**/.vs
+**/.vscode
+**/.idea
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+**/bin/
+**/obj/
+**/out/
+**/TestResults/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Docker
+**/Dockerfile*
+**/.dockerignore
+**/docker-compose*
+
+# Misc
+**/.DS_Store
+**/node_modules
+**/npm-debug.log
+**/*.log
+**/README.md
+**/*.md

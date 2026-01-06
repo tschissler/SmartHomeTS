@@ -9,31 +9,36 @@ EXPOSE 8080
 
 # Build image
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-# Install dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    clang zlib1g-dev
 ARG BUILD_CONFIGURATION=Release
 ARG TARGETARCH
 ARG PROJECT_NAME
 WORKDIR /src
-# COPY ["NuGet.config", "."]
-# COPY ["${PROJECT_NAME}/${PROJECT_NAME}/${PROJECT_NAME}.csproj", "${PROJECT_NAME}/"]
-COPY . .
-RUN dotnet restore "/src/${PROJECT_NAME}/${PROJECT_NAME}.sln"
-WORKDIR "/src/${PROJECT_NAME}/${PROJECT_NAME}"
-RUN dotnet build "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/build
-#We need to set environment variables before being able to run tests in the docker container
-#RUN dotnet test "../${PROJECT_NAME}.sln" -c $BUILD_CONFIGURATION
 
-# Publish image
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-ARG PROJECT_NAME
-RUN dotnet publish "${PROJECT_NAME}.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# Copy solution and project files first for better layer caching
+COPY ["${PROJECT_NAME}/${PROJECT_NAME}.sln", "${PROJECT_NAME}/"]
+COPY ["${PROJECT_NAME}/${PROJECT_NAME}/${PROJECT_NAME}.csproj", "${PROJECT_NAME}/${PROJECT_NAME}/"]
+COPY ["${PROJECT_NAME}/Influx3Connector/Influx3Connector.csproj", "${PROJECT_NAME}/Influx3Connector/"]
+COPY ["MQTTClient/MQTTClient.csproj", "MQTTClient/"]
+COPY ["SharedContracts/SharedContracts.csproj", "SharedContracts/"]
+COPY ["SmartHomeHelpers/SmartHomeHelpers.csproj", "SmartHomeHelpers/"]
+
+# Restore dependencies - this layer will be cached if project files don't change
+RUN dotnet restore "${PROJECT_NAME}/${PROJECT_NAME}.sln" -a $TARGETARCH
+
+# Copy remaining source files
+COPY . .
+
+# Publish directly (skip separate build step)
+WORKDIR "/src/${PROJECT_NAME}/${PROJECT_NAME}"
+RUN dotnet publish "${PROJECT_NAME}.csproj" \
+    -c $BUILD_CONFIGURATION \
+    -a $TARGETARCH \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false
 
 # Final image
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "${PROJECT_NAME}.dll"]
+ENTRYPOINT ["dotnet", "SmartHome.DataHub.dll"]

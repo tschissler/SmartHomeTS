@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest  # Use GitHub-hosted runner for building
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     # Set up QEMU for multi-architecture builds
     - name: Set up QEMU
@@ -34,7 +34,7 @@ jobs:
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
         
     - name: Build and publish multi-architecture Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./${{ env.PROJECT_NAME }}/Dockerfile
@@ -43,8 +43,13 @@ jobs:
         tags: |
           tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
           tschissler/${{ env.IMAGE_NAME }}:latest
+        build-args: |
+          PROJECT_NAME=${{ env.PROJECT_NAME }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        # Enable BuildKit inline cache for better layer reuse
+        provenance: false
+        sbom: false
 
   # Separate job for deployment to local cluster (requires self-hosted runner)
   deploy:
@@ -53,7 +58,7 @@ jobs:
     if: github.event_name == 'push'  # Only deploy on push, not PRs
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Deploy to Kubernetes if deployment does not exist yet
       run: |
