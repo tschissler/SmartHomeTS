@@ -8,6 +8,7 @@
     longhorn_chart_version: "{{ longhorn_helm_version | default('1.10.1') }}"
     longhorn_data_path: /var/lib/longhorn-data
     longhorn_replica_count: "{{ longhorn_default_replica_count | default(2) }}"
+    longhorn_node_down_pod_deletion_policy: "{{ longhorn_node_down_pod_deletion_policy | default('delete-both-statefulset-and-deployment-pod') }}"
   pre_tasks:
     - name: Check if helm is installed
       ansible.builtin.command: /usr/local/bin/k3s kubectl version --client
@@ -43,6 +44,7 @@
               createDefaultDiskLabeledNodes: true
               defaultReplicaCount: {{ longhorn_replica_count }}
               replicaSoftAntiAffinity: false
+              nodeDownPodDeletionPolicy: {{ longhorn_node_down_pod_deletion_policy }}
               taintToleration: "node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
             persistence:
               defaultClass: true
@@ -64,6 +66,7 @@
           --set defaultSettings.createDefaultDiskLabeledNodes=true \
           --set defaultSettings.defaultReplicaCount={{ longhorn_replica_count }} \
           --set defaultSettings.replicaSoftAntiAffinity=false \
+          --set defaultSettings.nodeDownPodDeletionPolicy={{ longhorn_node_down_pod_deletion_policy }} \
           --set defaultSettings.taintToleration="node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule" \
           --set persistence.defaultClass=true \
           --set persistence.defaultClassReplicaCount={{ longhorn_replica_count }} \
