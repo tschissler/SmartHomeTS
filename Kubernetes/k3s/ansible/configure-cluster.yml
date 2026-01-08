@@ -22,6 +22,9 @@
 - import_playbook: plays/install-longhorn.yml
 - import_playbook: plays/expose-longhorn-ui.yml
 
+# Step 1b: Garage object storage service
+- import_playbook: plays/prepare-garage-storage.yml
+
 # Step 2: Core services
 - import_playbook: plays/install-adguard-home.yml
 

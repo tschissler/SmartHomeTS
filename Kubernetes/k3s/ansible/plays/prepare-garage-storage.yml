@@ -1,0 +1,106 @@
+---
+- name: Prepare Garage storage directories on k3snode1 & k3snode2
+  hosts: k3snode1,k3snode2
+  become: yes
+  gather_facts: yes
+  vars:
+    longhorn_mount: /var/lib/longhorn-data
+    garage_base: "{{ longhorn_mount }}/garage-data"
+    garage_data_size_gb: 100  # Allocate 100GB for Garage initially
+    
+  pre_tasks:
+    - name: Abort if not running on k3snode1 or k3snode2
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname in ['k3snode1', 'k3snode2']
+        fail_msg: "This playbook only runs on k3snode1 and k3snode2 (storage nodes)"
+        
+  tasks:
+    - name: Check if Longhorn storage is mounted
+      ansible.builtin.command: mountpoint -q {{ longhorn_mount }}
+      changed_when: false
+      failed_when: false
+      register: longhorn_mounted
+      
+    - name: GATE - Abort if Longhorn storage not ready
+      ansible.builtin.assert:
+        that:
+          - longhorn_mounted.rc == 0
+        fail_msg: |
+          ABORT: Longhorn storage not mounted at {{ longhorn_mount }}
+          
+          Run prepare-longhorn-storage.yml first:
+          ansible-playbook plays/prepare-longhorn-storage.yml -i inventory.ini
+          
+    - name: Get available space on Longhorn partition
+      ansible.builtin.shell: df -BG {{ longhorn_mount }} | awk 'NR==2 {print $4}' | sed 's/G//'
+      register: available_space
+      changed_when: false
+      
+    - name: Display current status
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          Garage Storage Preparation - {{ inventory_hostname }}
+          ========================================================
+          Longhorn Mount:          {{ longhorn_mount }}
+          Garage Base Directory:   {{ garage_base }}
+          Available Space:         {{ available_space.stdout }}G
+          Planned Allocation:      {{ garage_data_size_gb }}G
+          
+          Node-specific paths:
+          - {{ garage_base }}/meta
+          - {{ garage_base }}/data
+          ========================================================
+          
+    - name: GATE - Verify sufficient space for Garage
+      ansible.builtin.assert:
+        that:
+          - available_space.stdout | int >= garage_data_size_gb
+        fail_msg: |
+          ABORT: Insufficient space on {{ longhorn_mount }}
+          Available: {{ available_space.stdout }}G, Required: {{ garage_data_size_gb }}G
+          
+    - name: Create Garage base directory
+      ansible.builtin.file:
+        path: "{{ garage_base }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+        
+    - name: Create Garage metadata directory
+      ansible.builtin.file:
+        path: "{{ garage_base }}/meta"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+        
+    - name: Create Garage data directory
+      ansible.builtin.file:
+        path: "{{ garage_base }}/data"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+        
+    - name: Display final status
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          ✓ Garage Storage Ready - {{ inventory_hostname }}
+          ========================================================
+          Base Directory:   {{ garage_base }}
+          Metadata Path:    {{ garage_base }}/meta
+          Data Path:        {{ garage_base }}/data
+          
+          Verify with:
+          ls -la {{ garage_base }}
+          df -h {{ longhorn_mount }}
+          
+          Next Steps:
+          1. Deploy Garage via ArgoCD
+          2. Initialize Garage cluster
+          3. Create InfluxDB bucket and credentials
+          ========================================================
