@@ -2,7 +2,7 @@
 
 image:
   repository: tschissler/smarthomedatahub
-  tag: '20744427631'  
+  tag: 'latest'  
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
