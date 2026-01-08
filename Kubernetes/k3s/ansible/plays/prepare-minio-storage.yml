@@ -1,12 +1,12 @@
 ---
-- name: Prepare Garage storage directories on k3snode1 & k3snode2
+- name: Prepare MinIO storage directories on k3snode1 & k3snode2
   hosts: k3snode1,k3snode2
   become: yes
   gather_facts: yes
   vars:
     longhorn_mount: /var/lib/longhorn-data
-    garage_base: "{{ longhorn_mount }}/garage-data"
-    garage_data_size_gb: 100  # Allocate 100GB for Garage initially
+    minio_base: "{{ longhorn_mount }}/minio-data"
+    minio_data_size_gb: 100  # Allocate 100GB for MinIO initially
     
   pre_tasks:
     - name: Abort if not running on k3snode1 or k3snode2
@@ -41,45 +41,28 @@
       ansible.builtin.debug:
         msg: |
           ========================================================
-          Garage Storage Preparation - {{ inventory_hostname }}
+          MinIO Storage Preparation - {{ inventory_hostname }}
           ========================================================
           Longhorn Mount:          {{ longhorn_mount }}
-          Garage Base Directory:   {{ garage_base }}
+          MinIO Base Directory:    {{ minio_base }}
           Available Space:         {{ available_space.stdout }}G
-          Planned Allocation:      {{ garage_data_size_gb }}G
+          Planned Allocation:      {{ minio_data_size_gb }}G
           
           Node-specific paths:
-          - {{ garage_base }}/meta
-          - {{ garage_base }}/data
+          - {{ minio_base }}
           ========================================================
           
-    - name: GATE - Verify sufficient space for Garage
+    - name: GATE - Verify sufficient space for MinIO
       ansible.builtin.assert:
         that:
-          - available_space.stdout | int >= garage_data_size_gb
+          - available_space.stdout | int >= minio_data_size_gb
         fail_msg: |
           ABORT: Insufficient space on {{ longhorn_mount }}
-          Available: {{ available_space.stdout }}G, Required: {{ garage_data_size_gb }}G
+          Available: {{ available_space.stdout }}G, Required: {{ minio_data_size_gb }}G
           
-    - name: Create Garage base directory
+    - name: Create MinIO data directory
       ansible.builtin.file:
-        path: "{{ garage_base }}"
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
-        
-    - name: Create Garage metadata directory
-      ansible.builtin.file:
-        path: "{{ garage_base }}/meta"
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
-        
-    - name: Create Garage data directory
-      ansible.builtin.file:
-        path: "{{ garage_base }}/data"
+        path: "{{ minio_base }}"
         state: directory
         owner: root
         group: root
@@ -89,18 +72,16 @@
       ansible.builtin.debug:
         msg: |
           ========================================================
-          ✓ Garage Storage Ready - {{ inventory_hostname }}
+          ✓ MinIO Storage Ready - {{ inventory_hostname }}
           ========================================================
-          Base Directory:   {{ garage_base }}
-          Metadata Path:    {{ garage_base }}/meta
-          Data Path:        {{ garage_base }}/data
+          Base Directory:   {{ minio_base }}
           
           Verify with:
-          ls -la {{ garage_base }}
+          ls -la {{ minio_base }}
           df -h {{ longhorn_mount }}
           
           Next Steps:
-          1. Deploy Garage via ArgoCD
-          2. Initialize Garage cluster
-          3. Create InfluxDB bucket and credentials
+          1. Deploy MinIO via ArgoCD
+          2. MinIO will auto-initialize
+          3. InfluxDB bucket and credentials created automatically
           ========================================================
