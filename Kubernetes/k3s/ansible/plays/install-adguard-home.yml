@@ -142,13 +142,13 @@
                 app: adguard-home
             spec:
               initContainers:
-              # Copy config from ConfigMap to writable volume (AdGuard needs to modify config)
+              # Copy config from ConfigMap to writable PVC (AdGuard needs to modify config)
               - name: init-config
                 image: busybox:1.36
-                command: ['sh', '-c', 'if [ ! -f /opt/adguardhome/conf/AdGuardHome.yaml ]; then cp /config-template/AdGuardHome.yaml /opt/adguardhome/conf/AdGuardHome.yaml; fi']
+                command: ['sh', '-c', 'mkdir -p /mnt/adguard/conf /mnt/adguard/work && if [ ! -f /mnt/adguard/conf/AdGuardHome.yaml ]; then cp /config-template/AdGuardHome.yaml /mnt/adguard/conf/AdGuardHome.yaml; fi']
                 volumeMounts:
-                - name: adguard-conf
-                  mountPath: /opt/adguardhome/conf
+                - name: adguard-storage
+                  mountPath: /mnt/adguard
                 - name: adguard-config-template
                   mountPath: /config-template
               containers:
@@ -165,10 +165,12 @@
                   name: http
                   protocol: TCP
                 volumeMounts:
-                - name: adguard-data
+                - name: adguard-storage
                   mountPath: /opt/adguardhome/work
-                - name: adguard-conf
+                  subPath: work
+                - name: adguard-storage
                   mountPath: /opt/adguardhome/conf
+                  subPath: conf
                 resources:
                   requests:
                     cpu: 100m
@@ -177,11 +179,9 @@
                     cpu: 500m
                     memory: 512Mi
               volumes:
-              - name: adguard-data
+              - name: adguard-storage
                 persistentVolumeClaim:
                   claimName: adguard-data
-              - name: adguard-conf
-                emptyDir: {}
               - name: adguard-config-template
                 configMap:
                   name: adguard-config
