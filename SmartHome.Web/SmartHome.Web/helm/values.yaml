@@ -63,7 +63,7 @@ config:
   influxOrg: "smarthome"
   influxUrl: "http://influxdb.intern"
   environment: "Prod"
-  mqttBroker: "mosquitto.local:1883"
+  mqttBroker: "mosquitto.intern:1883"
 
 secrets:
   # Name of existing secret to use (must be created separately)
