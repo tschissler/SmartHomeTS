@@ -1,0 +1,187 @@
+---
+- name: Prepare additional SSD for Longhorn (k3snode1 & k3snode2)
+  hosts: k3snode1,k3snode2
+  become: yes
+  gather_facts: yes
+
+  vars:
+    # If you know the device name, set it in inventory/group_vars/host_vars, e.g.:
+    # longhorn_extra_disk_device: /dev/sda
+    longhorn_extra_disk_device: ""
+
+    # Safety: only auto-pick disks at/above this size (GiB)
+    longhorn_extra_disk_min_size_gib: 800
+
+    # Longhorn disk name (as it will appear in the Longhorn Node CR)
+    longhorn_extra_disk_name: ssd1
+
+    # Where the new SSD will be mounted
+    longhorn_extra_disk_mount_base: /var/lib/longhorn-disks
+    longhorn_extra_disk_mount_path: "{{ longhorn_extra_disk_mount_base }}/{{ longhorn_extra_disk_name }}"
+
+    # Filesystem label
+    longhorn_extra_disk_fs_label: "longhorn-{{ longhorn_extra_disk_name }}"
+
+    # Longhorn namespace
+    longhorn_namespace: longhorn-system
+
+  pre_tasks:
+    - name: Abort if not running on storage nodes
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname in ['k3snode1', 'k3snode2']
+        fail_msg: "This playbook only runs on k3snode1 and k3snode2"
+
+    - name: Read current block devices (JSON)
+      ansible.builtin.command: lsblk -b -J -o NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,MODEL
+      register: lsblk_json
+      changed_when: false
+
+    - name: Parse lsblk JSON
+      ansible.builtin.set_fact:
+        lsblk_data: "{{ lsblk_json.stdout | from_json }}"
+
+    - name: Build list of candidate SSD disks (only if not provided)
+      ansible.builtin.set_fact:
+        longhorn_extra_disk_candidates: >-
+          {{
+            lsblk_data.blockdevices
+            | selectattr('type','equalto','disk')
+            | selectattr('size','>=',(longhorn_extra_disk_min_size_gib | int) * 1024 * 1024 * 1024)
+            | rejectattr('mountpoint','defined')
+            | rejectattr('mountpoint','truthy')
+            | rejectattr('name','equalto','nvme0n1')
+            | map(attribute='name')
+            | list
+          }}
+      when: longhorn_extra_disk_device | length == 0
+
+    - name: Auto-detect SSD device if exactly one candidate exists
+      ansible.builtin.set_fact:
+        longhorn_extra_disk_device: "/dev/{{ longhorn_extra_disk_candidates[0] }}"
+      when:
+        - longhorn_extra_disk_device | length == 0
+        - longhorn_extra_disk_candidates | length == 1
+
+    - name: Abort if SSD auto-detection is ambiguous
+      ansible.builtin.fail:
+        msg: |
+          Could not uniquely auto-detect the new SSD on {{ inventory_hostname }}.
+          Please set 'longhorn_extra_disk_device' for this host (e.g. /dev/sda or /dev/nvme1n1).
+
+          Auto-detected candidates: {{ longhorn_extra_disk_candidates | default([]) }}
+
+          Current disks:
+          {{ lsblk_json.stdout }}
+      when: longhorn_extra_disk_device | length == 0
+
+    - name: Show selected device and current layout
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          Longhorn extra disk setup - {{ inventory_hostname }}
+          ========================================================
+          Selected device:  {{ longhorn_extra_disk_device }}
+          Mount path:       {{ longhorn_extra_disk_mount_path }}
+          Disk name (LH):   {{ longhorn_extra_disk_name }}
+          ========================================================
+
+  tasks:
+    - name: Determine partition path
+      ansible.builtin.set_fact:
+        longhorn_extra_disk_partition: >-
+          {% set dev = longhorn_extra_disk_device %}
+          {% if dev is match('^/dev/nvme') %}{{ dev }}p1{% else %}{{ dev }}1{% endif %}
+
+    - name: Check if partition exists
+      ansible.builtin.shell: |
+        lsblk -ln -o NAME {{ longhorn_extra_disk_device }} | tail -n +2 | head -n 1 || true
+      register: partition_name
+      changed_when: false
+
+    - name: Create GPT partition table and a single ext4 partition (only if missing)
+      ansible.builtin.shell: |
+        set -e
+        parted -s {{ longhorn_extra_disk_device }} mklabel gpt
+        parted -s {{ longhorn_extra_disk_device }} mkpart primary ext4 0% 100%
+        partprobe {{ longhorn_extra_disk_device }}
+      when: partition_name.stdout | trim == ""
+
+    - name: Check filesystem type on partition
+      ansible.builtin.command: blkid -s TYPE -o value {{ longhorn_extra_disk_partition }}
+      register: fs_type
+      changed_when: false
+      failed_when: false
+
+    - name: Format partition as ext4 (only if not already formatted)
+      ansible.builtin.command: mkfs.ext4 -F -L {{ longhorn_extra_disk_fs_label }} {{ longhorn_extra_disk_partition }}
+      when: fs_type.rc != 0 or (fs_type.stdout | trim) == ""
+
+    - name: Ensure mount base directory exists
+      ansible.builtin.file:
+        path: "{{ longhorn_extra_disk_mount_base }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Ensure mount directory exists
+      ansible.builtin.file:
+        path: "{{ longhorn_extra_disk_mount_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Get UUID for fstab
+      ansible.builtin.command: blkid -s UUID -o value {{ longhorn_extra_disk_partition }}
+      register: disk_uuid
+      changed_when: false
+
+    - name: Add fstab entry (UUID-based)
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: "^UUID={{ disk_uuid.stdout }}\\s+"
+        line: "UUID={{ disk_uuid.stdout }}  {{ longhorn_extra_disk_mount_path }}  ext4  defaults,noatime  0  2"
+        state: present
+
+    - name: Mount the filesystem
+      ansible.builtin.command: mount {{ longhorn_extra_disk_mount_path }}
+      changed_when: false
+      failed_when: false
+
+    - name: Verify mount is successful
+      ansible.builtin.command: mountpoint -q {{ longhorn_extra_disk_mount_path }}
+      changed_when: false
+
+    - name: Patch Longhorn Node CR to add this disk (runs on control machine)
+      delegate_to: localhost
+      become: false
+      vars:
+        disk_patch: >-
+          {{ {
+            'spec': {
+              'disks': {
+                (longhorn_extra_disk_name): {
+                  'path': longhorn_extra_disk_mount_path,
+                  'allowScheduling': True,
+                  'evictionRequested': False,
+                  'storageReserved': 0
+                }
+              }
+            }
+          } | to_json }}
+      ansible.builtin.command: >-
+        kubectl -n {{ longhorn_namespace }} patch nodes.longhorn.io {{ inventory_hostname }} --type=merge -p '{{ disk_patch }}'
+
+    - name: Display final status
+      ansible.builtin.debug:
+        msg: |
+          ========================================================
+          ✓ Extra Longhorn disk ready - {{ inventory_hostname }}
+          ========================================================
+          Device:      {{ longhorn_extra_disk_device }}
+          Partition:   {{ longhorn_extra_disk_partition }}
+          Mount:       {{ longhorn_extra_disk_mount_path }}
+          Longhorn:    nodes.longhorn.io/{{ inventory_hostname }} spec.disks.{{ longhorn_extra_disk_name }}
+          ========================================================
