@@ -9,6 +9,12 @@
     longhorn_data_path: /var/lib/longhorn-data
     longhorn_replica_count: "{{ longhorn_default_replica_count | default(2) }}"
     longhorn_node_down_pod_deletion_policy: "{{ longhorn_node_down_pod_deletion_policy | default('delete-both-statefulset-and-deployment-pod') }}"
+    # Optional: Pin Longhorn system-managed components (manager, CSI plugin, engine-image, etc.)
+    # to specific nodes using a Kubernetes label selector.
+    # Example (matches your existing labels): "node.longhorn.io/create-default-disk=true"
+    # WARNING: If you pin these components away from a node, pods on that node may no longer
+    # be able to mount Longhorn volumes.
+    longhorn_system_managed_components_node_selector: "{{ longhorn_system_managed_components_node_selector | default('') }}"
   pre_tasks:
     - name: Check if helm is installed
       ansible.builtin.command: /usr/local/bin/k3s kubectl version --client
@@ -89,26 +95,58 @@
       register: longhorn_rollout
       until: longhorn_rollout.rc == 0
 
-    - name: Annotate storage nodes with Longhorn disk configuration
+    - name: Optionally pin Longhorn system-managed components to selected nodes
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl annotate node {{ inventory_hostname }} \
+        /usr/local/bin/k3s kubectl -n {{ longhorn_namespace }} patch settings.longhorn.io system-managed-components-node-selector \
+          --type merge \
+          -p '{"value":"{{ longhorn_system_managed_components_node_selector }}"}'
+      when:
+        - longhorn_system_managed_components_node_selector is defined
+        - longhorn_system_managed_components_node_selector | trim != ''
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Compute Longhorn storage/non-storage node lists from inventory
+      ansible.builtin.set_fact:
+        longhorn_storage_nodes: "{{ groups.get('longhorn_storage_nodes', []) }}"
+        longhorn_all_cluster_nodes: "{{ (groups.get('k3s_servers', []) + groups.get('k3s_agents', [])) | unique }}"
+      run_once: true
+
+    - name: Annotate Longhorn storage nodes with disk configuration
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl annotate node {{ item }} \
           node.longhorn.io/default-disks-config='[{"path":"{{ longhorn_data_path }}","allowScheduling":true}]' \
           --overwrite
-      when: inventory_hostname in ['k3snode1', 'k3snode2']
+      loop: "{{ longhorn_storage_nodes }}"
+      when: longhorn_storage_nodes | length > 0
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
 
-    - name: Label storage nodes for Longhorn disk creation
+    - name: Label Longhorn storage nodes for default disk creation
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl label node {{ inventory_hostname }} \
+        /usr/local/bin/k3s kubectl label node {{ item }} \
           node.longhorn.io/create-default-disk=true \
           --overwrite
-      when: inventory_hostname in ['k3snode1', 'k3snode2']
-      
-    - name: Exclude Raspberry Pis from Longhorn storage (insufficient disk space)
+      loop: "{{ longhorn_storage_nodes }}"
+      when: longhorn_storage_nodes | length > 0
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Label non-storage nodes to prevent default disk creation
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl label node {{ inventory_hostname }} \
+        /usr/local/bin/k3s kubectl label node {{ item }} \
           node.longhorn.io/create-default-disk=false \
           --overwrite
-      when: inventory_hostname in ['k3snode3', 'k3snode4']
+      loop: "{{ longhorn_all_cluster_nodes | difference(longhorn_storage_nodes) }}"
+      when:
+        - longhorn_all_cluster_nodes | length > 0
+        - (longhorn_all_cluster_nodes | difference(longhorn_storage_nodes)) | length > 0
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
 
     - name: Display Longhorn installation status
       ansible.builtin.debug:

@@ -1,6 +1,6 @@
 ---
-- name: Safely prepare dedicated Longhorn storage partition (k3snode1 & k3snode2 only)
-  hosts: k3snode1,k3snode2
+- name: Safely prepare dedicated Longhorn storage partition (storage nodes only)
+  hosts: longhorn_storage_nodes
   become: yes
   gather_facts: yes
   vars:
@@ -10,11 +10,11 @@
     min_free_space_gb: 200  # Minimum 200GB free space required
     
   pre_tasks:
-    - name: Abort if not running on k3snode1 or k3snode2
+    - name: Abort if not running on a configured Longhorn storage node
       ansible.builtin.assert:
         that:
-          - inventory_hostname in ['k3snode1', 'k3snode2']
-        fail_msg: "This playbook only runs on k3snode1 and k3snode2 (storage nodes)"
+          - inventory_hostname in (groups.get('longhorn_storage_nodes', []))
+        fail_msg: "This playbook only runs on hosts in group [longhorn_storage_nodes]"
         
   tasks:
     # PHASE 1: PRÜFUNG - Keine Änderungen
