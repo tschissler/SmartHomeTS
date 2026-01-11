@@ -125,25 +125,25 @@ jobs:
           tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64 \
           tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
 
-  deploy:
-    needs: create-manifest
-    runs-on: [self-hosted, linux]
-    if: github.event_name == 'push'
-    steps:
-    - uses: actions/checkout@v4
+  # deploy:
+  #   needs: create-manifest
+  #   runs-on: [self-hosted, linux]
+  #   if: github.event_name == 'push'
+  #   steps:
+  #   - uses: actions/checkout@v4
     
-    - name: Deploy to Kubernetes if deployment does not exist yet
-      run: |
-        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
-          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
-        fi
+  #   - name: Deploy to Kubernetes if deployment does not exist yet
+  #     run: |
+  #       if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
+  #         microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
+  #       fi
         
-    - name: Update Kubernetes deployment
-      run: |        
-        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__SYNCFUSION_LICENSE_KEY="${{ secrets.SYNCFUSION_LICENSEKEY }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_URL="${{ secrets.INFLUXDB_URL }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_ORG="${{ secrets.INFLUXDB_ORG }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_TOKEN="${{ secrets.INFLUXDB_TOKEN }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__MQTT_BROKER="smarthomepi2:32004"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__ENVIRONMENT="Prod"
+  #   - name: Update Kubernetes deployment
+  #     run: |        
+  #       microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+  #       microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__SYNCFUSION_LICENSE_KEY="${{ secrets.SYNCFUSION_LICENSEKEY }}"
+  #       microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_URL="${{ secrets.INFLUXDB_URL }}"
+  #       microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_ORG="${{ secrets.INFLUXDB_ORG }}"
+  #       microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_TOKEN="${{ secrets.INFLUXDB_TOKEN }}"
+  #       microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__MQTT_BROKER="smarthomepi2:32004"
+  #       microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__ENVIRONMENT="Prod"

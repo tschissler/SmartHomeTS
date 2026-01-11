@@ -32,8 +32,20 @@ string? environment = configuration["SMARTHOME__ENVIRONMENT"] ?? configuration["
 
 // Log version information
 var versionInfo = VersionInfo.GetVersionInfo();
-logger.LogInformation($"SmartHome.Web {versionInfo.GetDisplayString()}");
-logger.LogInformation($"Starting SmartHome.Web in {environment} environment");
+const int versionBoxInnerWidth = 66;
+var versionDisplay = versionInfo.GetDisplayString();
+if (versionDisplay.Length > versionBoxInnerWidth)
+{
+    versionDisplay = versionDisplay[..versionBoxInnerWidth];
+}
+
+logger.LogInformation("╔════════════════════════════════════════════════════════════════════╗");
+logger.LogInformation("║  SmartHome.Web Starting                                          ║");
+logger.LogInformation("╠════════════════════════════════════════════════════════════════════╣");
+logger.LogInformation($"║  {versionDisplay.PadRight(versionBoxInnerWidth)}║");
+logger.LogInformation("╚════════════════════════════════════════════════════════════════════╝");
+var environmentName = environment ?? "unknown";
+logger.LogInformation($"Starting SmartHome.Web in {environmentName} environment");
 logger.LogInformation($"Using MQTT broker at {mqttBroker}");
 logger.LogInformation($"Using InfluxDB at {influxUrl}");
 
