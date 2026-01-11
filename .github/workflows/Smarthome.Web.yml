@@ -111,6 +111,9 @@ jobs:
       id: version
       run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
+    - name: Wait to avoid rate limits
+      run: sleep 10
+  
     - name: Create and push multi-arch manifest
       run: |
         docker buildx imagetools create -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
