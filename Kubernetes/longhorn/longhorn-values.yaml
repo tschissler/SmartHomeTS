@@ -4,6 +4,12 @@ defaultSettings:
   createDefaultDiskLabeledNodes: true
   defaultReplicaCount: 2
   replicaSoftAntiAffinity: false
+
+  # Optional: Pin Longhorn system-managed components (manager, CSI plugin, engine-image, etc.)
+  # to a subset of nodes.
+  # Example (matches your Ansible labeling): node.longhorn.io/create-default-disk=true
+  # WARNING: Pods on nodes outside this selector may not be able to mount Longhorn volumes.
+  # systemManagedComponentsNodeSelector: "node.longhorn.io/create-default-disk=true"
   
   # Ermöglicht Longhorn-Komponenten den Lauf auf allen Master-Nodes (x86 & ARM)
   taintToleration: "node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
