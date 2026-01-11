@@ -26,11 +26,39 @@
     longhorn_namespace: longhorn-system
 
   pre_tasks:
+    - name: Validate Longhorn disk name
+      ansible.builtin.assert:
+        that:
+          - longhorn_extra_disk_name is match('^[a-z0-9]([a-z0-9-]*[a-z0-9])?$')
+          - "'{' not in longhorn_extra_disk_name"
+          - "'}' not in longhorn_extra_disk_name"
+        fail_msg: >-
+          Invalid longhorn_extra_disk_name='{{ longhorn_extra_disk_name }}'.
+          Use a DNS-label style name (lowercase letters/digits/hyphen), e.g. 'ssd1'.
+
     - name: Abort if not running on storage nodes
       ansible.builtin.assert:
         that:
           - inventory_hostname in ['k3snode1', 'k3snode2']
         fail_msg: "This playbook only runs on k3snode1 and k3snode2"
+
+    - name: Check if extra disk mount path is already mounted
+      ansible.builtin.command: findmnt -n -o SOURCE --target {{ longhorn_extra_disk_mount_path }}
+      register: existing_mount_source
+      changed_when: false
+      failed_when: false
+
+    - name: Use existing mount to derive disk device (idempotence)
+      ansible.builtin.set_fact:
+        longhorn_extra_disk_device: >-
+          {{
+            (existing_mount_source.stdout | trim)
+            | regex_replace('p?[0-9]+$','')
+          }}
+      when:
+        - longhorn_extra_disk_device | length == 0
+        - existing_mount_source.rc == 0
+        - (existing_mount_source.stdout | trim) is match('^/dev/.+')
 
     - name: Read current block devices (JSON)
       ansible.builtin.command: lsblk -b -J -o NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,MODEL
@@ -47,10 +75,9 @@
           {{
             lsblk_data.blockdevices
             | selectattr('type','equalto','disk')
+            | rejectattr('children','defined')
             | selectattr('size','>=',(longhorn_extra_disk_min_size_gib | int) * 1024 * 1024 * 1024)
-            | rejectattr('mountpoint','defined')
             | rejectattr('mountpoint','truthy')
-            | rejectattr('name','equalto','nvme0n1')
             | map(attribute='name')
             | list
           }}
@@ -154,25 +181,37 @@
       ansible.builtin.command: mountpoint -q {{ longhorn_extra_disk_mount_path }}
       changed_when: false
 
-    - name: Patch Longhorn Node CR to add this disk (runs on control machine)
-      delegate_to: localhost
-      become: false
+    - name: Patch Longhorn Node CR to add this disk (runs on k3s control-plane)
+      delegate_to: "{{ (groups['k3s_init'] | default(['k3snode1']))[0] }}"
+      become: yes
       vars:
-        disk_patch: >-
-          {{ {
-            'spec': {
-              'disks': {
-                (longhorn_extra_disk_name): {
-                  'path': longhorn_extra_disk_mount_path,
-                  'allowScheduling': True,
-                  'evictionRequested': False,
-                  'storageReserved': 0
+        disk_patch_obj: >-
+          {{
+            {
+              'spec': {
+                'disks': {
+                  (longhorn_extra_disk_name): {
+                    'path': longhorn_extra_disk_mount_path,
+                    'allowScheduling': True,
+                    'evictionRequested': False,
+                    'storageReserved': 0
+                  }
                 }
               }
             }
-          } | to_json }}
-      ansible.builtin.command: >-
-        kubectl -n {{ longhorn_namespace }} patch nodes.longhorn.io {{ inventory_hostname }} --type=merge -p '{{ disk_patch }}'
+          }}
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - -n
+          - "{{ longhorn_namespace }}"
+          - patch
+          - nodes.longhorn.io
+          - "{{ inventory_hostname }}"
+          - --type=merge
+          - -p
+          - "{{ disk_patch_obj | to_json }}"
 
     - name: Display final status
       ansible.builtin.debug:
