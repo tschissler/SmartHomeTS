@@ -60,34 +60,6 @@ jobs:
         provenance: false
         sbom: false
 
-  create-manifest:
-    needs: [build-amd64, build-arm64]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-    
-    - name: Generate version information
-      id: version
-      run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
-
-    - name: Create and push multi-arch manifest
-      run: |
-        docker buildx imagetools create -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64 \
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
-        
-        docker buildx imagetools create -t tschissler/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }} \
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64 \
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
-        
-        docker buildx imagetools create -t tschissler/${{ env.IMAGE_NAME }}:latest \
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-amd64 \
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}-arm64
-
   # deploy:
   #   needs: build-and-push
   #   runs-on: [self-hosted, linux]
