@@ -7,14 +7,32 @@ using SharedContracts;
 using ShellyConnector;
 using ShellyConnector.DataContracts;
 using SmartHomeHelpers.Logging;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 ConsoleHelpers.PrintInformation("ShellyConnector started");
+
+// Build configuration from environment variables
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddEnvironmentVariables(prefix: "ShellySettings__")
+    .Build();
+
+// Read configuration values
+var mqttBroker = configuration["MqttBroker"] ?? "smarthomepi2";
+var mqttPort = int.Parse(configuration["MqttPort"] ?? "32004");
+var healthCheckPort = int.Parse(configuration["HealthCheckPort"] ?? "8080");
+
+ConsoleHelpers.PrintInformation($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
+
+// Start health check HTTP server in background
+var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
 
 ConsoleHelpers.PrintInformation(" ### Registering services");
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
-        services.AddSingleton<MQTTClient.MQTTClient>(provider => new MQTTClient.MQTTClient("ShellyConnector"));
+        services.AddSingleton<MQTTClient.MQTTClient>(provider => new MQTTClient.MQTTClient("ShellyConnector", mqttBroker, mqttPort));
     })
     .Build();
 
@@ -22,6 +40,7 @@ using var serviceScope = host.Services.CreateScope();
 var services = serviceScope.ServiceProvider;
 
 var mqttClient = services.GetRequiredService<MQTTClient.MQTTClient>();
+ShellyConnectorHealthCheck.UpdateMqttConnectionStatus(true);
 
 List<ShellyConnector.DataContracts.ShellyDevice> powerDevices, thermostatDevices;
 
@@ -104,6 +123,9 @@ timerPowerDevices.Elapsed += async (sender, e) =>
         }
         var jsonPayload = JsonConvert.SerializeObject(powerData);
         await mqttClient.PublishAsync($"data/electricity/{device.Location}/shelly/{device.DeviceName}", jsonPayload, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, false);
+        
+        // Update health check on successful publish
+        ShellyConnectorHealthCheck.UpdateLastSuccessfulRead();
     });
 
     await Task.WhenAll(tasks);
@@ -176,4 +198,52 @@ static async Task SendUpdatedThermostatData(MQTTClient.MQTTClient mqttClient, Li
     });
 
     await Task.WhenAll(tasks);
+}
+
+static void StartHealthCheckServer(int port)
+{
+    var builder = WebApplication.CreateBuilder();
+    
+    // Add health checks
+    builder.Services.AddHealthChecks()
+        .AddCheck<ShellyConnectorHealthCheck>("shelly_connector");
+    
+    var app = builder.Build();
+    
+    // Configure health check endpoints
+    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description,
+                    duration = e.Value.Duration.TotalMilliseconds
+                }),
+                totalDuration = report.TotalDuration.TotalMilliseconds
+            });
+            await context.Response.WriteAsync(result);
+        }
+    });
+    
+    // Simple liveness probe
+    app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+    
+    // Readiness probe
+    app.MapGet("/ready", async (HealthCheckService healthCheckService) =>
+    {
+        var report = await healthCheckService.CheckHealthAsync();
+        return report.Status == HealthStatus.Healthy 
+            ? Results.Ok(new { status = "ready" })
+            : Results.StatusCode(503);
+    });
+    
+    ConsoleHelpers.PrintInformation($" ### Health check server starting on port {port}");
+    app.Run($"http://0.0.0.0:{port}");
 }
