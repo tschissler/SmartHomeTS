@@ -46,7 +46,6 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: |
-          tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
           tschissler/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
           tschissler/${{ env.IMAGE_NAME }}:latest
         build-args: |
