@@ -7,8 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json;
 
-
-Console.WriteLine("##### Starting Enphase Connector");
+// Display version information on startup
+var versionInfo = VersionInfo.GetVersionInfo();
+Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║  EnphaseConnector Starting                                         ║");
+Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
+Console.WriteLine($"║  {versionInfo.GetDisplayString().PadRight(66)}║");
+Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
 
 // Build configuration from appsettings.json and environment variables
 var configuration = new ConfigurationBuilder()
