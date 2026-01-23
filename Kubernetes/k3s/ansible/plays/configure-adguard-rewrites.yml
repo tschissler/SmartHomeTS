@@ -52,7 +52,7 @@
 
     - name: Parse current AdGuard rewrites
       ansible.builtin.set_fact:
-        adguard_rewrites_current: "{{ adguard_rewrite_list.stdout | trim | from_json | default([]) }}"
+        adguard_rewrites_current: "{{ (adguard_rewrite_list.stdout | trim | splitlines | first | from_json) if (adguard_rewrite_list.stdout | trim | length > 0) else [] }}"
       run_once: true
 
     - name: Add missing AdGuard rewrites via API
