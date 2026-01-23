@@ -39,7 +39,7 @@
           --rm \
           -i \
           --command -- sh -lc \
-          "curl -sS $AUTH_ARGS '$URL/control/rewrite/list'"
+          "curl -sS $AUTH_ARGS '$URL/control/rewrite/list'" 2>/dev/null || echo "[]"
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       register: adguard_rewrite_list
@@ -47,7 +47,7 @@
 
     - name: Parse current AdGuard rewrites
       ansible.builtin.set_fact:
-        adguard_rewrites_current: "{{ (adguard_rewrite_list.stdout | default('[]') | from_json) if (adguard_rewrite_list.stdout | default('') | trim != '') else [] }}"
+        adguard_rewrites_current: "{{ adguard_rewrite_list.stdout | trim | from_json | default([]) }}"
       run_once: true
 
     - name: Add missing AdGuard rewrites via API
