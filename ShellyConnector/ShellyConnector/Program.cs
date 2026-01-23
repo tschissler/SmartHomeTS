@@ -10,7 +10,13 @@ using SmartHomeHelpers.Logging;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json;
 
-ConsoleHelpers.PrintInformation("ShellyConnector started");
+// Display version information on startup
+var versionInfo = VersionInfo.GetVersionInfo();
+ConsoleHelpers.PrintInformation("╔════════════════════════════════════════════════════════════════════╗");
+ConsoleHelpers.PrintInformation("║  ShellyConnector Starting                                          ║");
+ConsoleHelpers.PrintInformation("╠════════════════════════════════════════════════════════════════════╣");
+ConsoleHelpers.PrintInformation($"║  {versionInfo.GetDisplayString().PadRight(66)}║");
+ConsoleHelpers.PrintInformation("╚════════════════════════════════════════════════════════════════════╝");
 
 // Build configuration from environment variables
 var configuration = new ConfigurationBuilder()
