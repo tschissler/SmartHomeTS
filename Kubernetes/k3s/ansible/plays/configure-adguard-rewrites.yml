@@ -43,6 +43,18 @@
       register: adguard_rewrite_list
       changed_when: false
 
+    - name: Parse current AdGuard rewrites
+      ansible.builtin.set_fact:
+        adguard_rewrites_current: >-
+          {%- set raw = (adguard_rewrite_list.stdout | default('[]')) | trim -%}
+          {%- set parsed = (raw if raw != '' else '[]') | from_json -%}
+          {%- if parsed is mapping and (parsed.rewrites is defined) -%}
+          {{ parsed.rewrites }}
+          {%- else -%}
+          {{ parsed }}
+          {%- endif -%}
+      run_once: true
+
     - name: Add missing AdGuard rewrites via API
       ansible.builtin.shell: |
         set -e
@@ -69,10 +81,79 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       loop: "{{ adguard_rewrite_entries }}"
       when: >-
-        (adguard_rewrite_list.stdout is not defined)
-        or (adguard_rewrite_list.stdout | trim == '')
-        or (adguard_rewrite_list.stdout is not search('"domain"\s*:\s*"' ~ (item.domain | regex_escape) ~ '"'))
+        (adguard_rewrites_current | default([])
+          | selectattr('domain','equalto', item.domain)
+          | list
+          | length) == 0
       register: adguard_rewrite_add
+      changed_when: true
+
+    - name: Update AdGuard rewrites when IP changed (delete old + add new)
+      ansible.builtin.shell: |
+        set -e
+        NS={{ adguard_namespace }}
+        URL={{ adguard_api_service_url }}
+
+        AUTH_ARGS=""
+        if [ -n "{{ adguard_api_username | default('') }}" ] && [ -n "{{ adguard_api_password | default('') }}" ]; then
+          AUTH_ARGS="-u {{ adguard_api_username }}:{{ adguard_api_password }}"
+        fi
+
+        domain={{ item.domain | quote }}
+        old_answer={{ (
+          (adguard_rewrites_current | default([])
+            | selectattr('domain','equalto', item.domain)
+            | map(attribute='answer')
+            | list
+          ) | first | default('')
+        ) | quote }}
+        new_answer={{ item.answer | quote }}
+
+        old_payload=$(printf '{"domain":"%s","answer":"%s"}' "$domain" "$old_answer")
+        old_payload_domain_only=$(printf '{"domain":"%s"}' "$domain")
+        new_payload=$(printf '{"domain":"%s","answer":"%s"}' "$domain" "$new_answer")
+
+        # Try delete with domain+answer, then fall back to domain-only
+        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+          --image=curlimages/curl:8.6.0 \
+          --restart=Never \
+          --rm \
+          -i \
+          --command -- sh -lc \
+          "curl -sS $AUTH_ARGS -H 'Content-Type: application/json' -X POST -d '$old_payload' '$URL/control/rewrite/delete' >/dev/null" \
+          || /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+            --image=curlimages/curl:8.6.0 \
+            --restart=Never \
+            --rm \
+            -i \
+            --command -- sh -lc \
+            "curl -sS $AUTH_ARGS -H 'Content-Type: application/json' -X POST -d '$old_payload_domain_only' '$URL/control/rewrite/delete' >/dev/null"
+
+        # Add new
+        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+          --image=curlimages/curl:8.6.0 \
+          --restart=Never \
+          --rm \
+          -i \
+          --command -- sh -lc \
+          "curl -sS $AUTH_ARGS -H 'Content-Type: application/json' -X POST -d '$new_payload' '$URL/control/rewrite/add' >/dev/null"
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      loop: "{{ adguard_rewrite_entries }}"
+      when: >-
+        (adguard_rewrites_current | default([])
+          | selectattr('domain','equalto', item.domain)
+          | list
+          | length) > 0
+        and (
+          (
+            (adguard_rewrites_current | default([])
+              | selectattr('domain','equalto', item.domain)
+              | map(attribute='answer')
+              | list
+            ) | first | default('')
+          ) != (item.answer | default(''))
+        )
       changed_when: true
 
     - name: Info
