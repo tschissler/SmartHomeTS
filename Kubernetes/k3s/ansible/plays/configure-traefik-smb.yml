@@ -6,8 +6,19 @@
   tags:
     - traefik-smb
   vars:
+    traefik_smb_enabled: "{{ enable_traefik_smb | default(false) }}"
     smb_vip: "{{ kubevip_service_range_start }}"  # reuse kube-vip service VIP
   pre_tasks:
+    - name: Skip when Traefik SMB is disabled (using dedicated Samba LoadBalancer instead)
+      ansible.builtin.debug:
+        msg: "Skipping Traefik SMB entrypoint; traefik_smb_enabled=false"
+      when: not traefik_smb_enabled | bool
+      run_once: true
+
+    - name: End play when disabled
+      ansible.builtin.meta: end_play
+      when: not traefik_smb_enabled | bool
+
     - name: Validate SMB VIP is set
       ansible.builtin.assert:
         that:
