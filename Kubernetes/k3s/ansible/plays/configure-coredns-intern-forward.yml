@@ -77,12 +77,12 @@
                 ~ '\\1'
               )
           }}
-      when:
-        - coredns_corefile_patched is defined
-        - coredns_corefile_patched is search('import\\s+/etc/coredns/custom/\\*\\.server')
-        - coredns_corefile_patched is not search('^' ~ fritzbox_shortnames[0] ~ ':53\\s*\\{', multiline=True)
+      when: >-
+        manage_coredns_corefile | bool and
+        coredns_corefile_patched is defined and
+        (coredns_corefile_patched is search('import\\s+/etc/coredns/custom/\\*\\.server')) and
+        (coredns_corefile_patched is not search('^' ~ fritzbox_shortnames[0] ~ ':53\\s*\\{', multiline=True))
       run_once: true
-      when: manage_coredns_corefile | bool
 
     - name: Ensure dedicated FritzBox domain server block exists (bypass hosts plugin)
       ansible.builtin.set_fact:
@@ -100,12 +100,12 @@
                 ~ '\\1'
               )
           }}
-      when:
-        - coredns_corefile_patched is defined
-        - coredns_corefile_patched is search('import\\s+/etc/coredns/custom/\\*\\.server')
-        - coredns_corefile_patched is not search('^' ~ fritzbox_domain ~ ':53\\s*\\{', multiline=True)
+      when: >-
+        manage_coredns_corefile | bool and
+        coredns_corefile_patched is defined and
+        (coredns_corefile_patched is search('import\\s+/etc/coredns/custom/\\*\\.server')) and
+        (coredns_corefile_patched is not search('^' ~ fritzbox_domain ~ ':53\\s*\\{', multiline=True))
       run_once: true
-      when: manage_coredns_corefile | bool
 
     - name: Show CoreDNS Corefile key lines (debug)
       ansible.builtin.debug:
