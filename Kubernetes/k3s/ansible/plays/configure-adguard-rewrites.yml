@@ -1,0 +1,83 @@
+---
+- name: Configure AdGuard DNS rewrites (intern hostnames)
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    adguard_namespace: adguard-home
+    adguard_api_service_url: "http://adguard-web.adguard-home.svc.cluster.local:3000"
+    adguard_rewrite_entries:
+      - domain: "{{ paperless_consume_domain | default('paperless-consume.intern') }}"
+        answer: "{{ paperless_consume_ip | default('') }}"
+  pre_tasks:
+    - name: Validate required variables
+      ansible.builtin.assert:
+        that:
+          - (paperless_consume_ip | default('')) | trim != ''
+        fail_msg: "paperless_consume_ip must be set (e.g., 192.168.178.224)"
+      run_once: true
+
+  tasks:
+    - name: Read current AdGuard rewrites (JSON)
+      ansible.builtin.shell: |
+        set -e
+        NS={{ adguard_namespace }}
+        URL={{ adguard_api_service_url }}
+
+        AUTH_ARGS=""
+        if [ -n "{{ adguard_api_username | default('') }}" ] && [ -n "{{ adguard_api_password | default('') }}" ]; then
+          AUTH_ARGS="-u {{ adguard_api_username }}:{{ adguard_api_password }}"
+        fi
+
+        /usr/local/bin/k3s kubectl -n "$NS" get svc adguard-web >/dev/null
+
+        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-lister \
+          --image=curlimages/curl:8.6.0 \
+          --restart=Never \
+          --rm \
+          -i \
+          --command -- sh -lc \
+          "curl -sS $AUTH_ARGS '$URL/control/rewrite/list'"
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: adguard_rewrite_list
+      changed_when: false
+
+    - name: Add missing AdGuard rewrites via API
+      ansible.builtin.shell: |
+        set -e
+        NS={{ adguard_namespace }}
+        URL={{ adguard_api_service_url }}
+
+        AUTH_ARGS=""
+        if [ -n "{{ adguard_api_username | default('') }}" ] && [ -n "{{ adguard_api_password | default('') }}" ]; then
+          AUTH_ARGS="-u {{ adguard_api_username }}:{{ adguard_api_password }}"
+        fi
+
+        domain={{ item.domain | quote }}
+        answer={{ item.answer | quote }}
+        payload=$(printf '{"domain":"%s","answer":"%s"}' "$domain" "$answer")
+
+        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+          --image=curlimages/curl:8.6.0 \
+          --restart=Never \
+          --rm \
+          -i \
+          --command -- sh -lc \
+          "curl -sS $AUTH_ARGS -H 'Content-Type: application/json' -X POST -d '$payload' '$URL/control/rewrite/add'"
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      loop: "{{ adguard_rewrite_entries }}"
+      when: >-
+        (adguard_rewrite_list.stdout is not defined)
+        or (adguard_rewrite_list.stdout | trim == '')
+        or (adguard_rewrite_list.stdout is not search('"domain"\s*:\s*"' ~ (item.domain | regex_escape) ~ '"'))
+      register: adguard_rewrite_add
+      changed_when: true
+
+    - name: Info
+      ansible.builtin.debug:
+        msg: |
+          If this did not add the rewrite, AdGuard may require auth.
+          Re-run with: -e adguard_api_username=... -e adguard_api_password=...
+      run_once: true

@@ -28,6 +28,9 @@
 # Step 2: Core services
 - import_playbook: plays/install-adguard-home.yml
 
+# Step 2a: DNS rewrites in AdGuard for internal hostnames
+- import_playbook: plays/configure-adguard-rewrites.yml
+
 # Step 2b: In-cluster DNS forwarding for internal hostnames
 # Pods use CoreDNS (kube-dns). This forwards the .intern zone to AdGuard
 # so pods can resolve internal services like argocd.intern/longhorn.intern.

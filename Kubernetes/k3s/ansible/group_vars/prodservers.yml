@@ -5,7 +5,7 @@ kubevip_api_vip: 192.168.178.222
 # Shared VIP for all user-facing services (DNS, Ingress, Web UIs, etc.)
 # Services share this IP on different ports via kube-vip LoadBalancer
 kubevip_service_range_start: 192.168.178.223
-kubevip_service_range_end: 192.168.178.223
+kubevip_service_range_end: 192.168.178.224
 
 # Enable kube-vip to announce Service VIPs (e.g. 192.168.178.223)
 # Without this, only the API VIP (.222) is announced and service IPs won't be reachable/pingable.
@@ -14,3 +14,7 @@ kubevip_enable_services: true
 # AdGuard Home DNS server (uses shared service VIP .223)
 adguard_home_lb_ip: 192.168.178.223
 adguard_home_upstream_dns: 192.168.178.1
+
+# Paperless SMB consume share
+paperless_consume_domain: paperless-consume.intern
+paperless_consume_ip: 192.168.178.224
