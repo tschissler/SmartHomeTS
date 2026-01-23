@@ -6,6 +6,8 @@
   vars:
     adguard_namespace: adguard-home
     adguard_api_service_url: "http://adguard-web.adguard-home.svc.cluster.local:3000"
+    adguard_api_username: ""
+    adguard_api_password: ""
     adguard_rewrite_entries:
       - domain: "{{ paperless_consume_domain | default('paperless-consume.intern') }}"
         answer: "{{ paperless_consume_ip | default('') }}"
