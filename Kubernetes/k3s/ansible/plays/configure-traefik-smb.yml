@@ -3,6 +3,8 @@
   hosts: k3s_servers
   become: yes
   gather_facts: no
+  tags:
+    - traefik-smb
   vars:
     smb_vip: "{{ kubevip_service_range_start }}"  # reuse kube-vip service VIP
   pre_tasks:
@@ -44,7 +46,7 @@
         set -x
         if ! /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o jsonpath='{.spec.ports[?(@.name=="smb")].port}' 2>/dev/null | grep -q 445; then
           echo "Adding SMB port to Traefik service..."
-          /usr/local/bin/k3s kubectl -n kube-system patch svc traefik --type=json -p '[{"op":"add","path":"/spec/ports/-","value":{"name":"smb","port":445,"protocol":"TCP","targetPort":"smb"}}]'
+          /usr/local/bin/k3s kubectl -n kube-system patch svc traefik --type=json -p '[{"op":"add","path":"/spec/ports/-","value":{"name":"smb","port":445,"protocol":"TCP","targetPort":445}}]'
           echo "SMB_PORT_ADDED"
         else
           echo "SMB port already present"
