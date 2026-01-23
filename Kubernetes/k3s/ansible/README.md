@@ -1,112 +1,92 @@
-# Setting up a k3s cluster
+﻿# k3s Cluster Setup via Ansible
 
-## Expected setup for nodes
-- Installed Ubuntu Server (minimized version is OK).
-- Node is connected via Wifi (will be changed during the setup to ethernet). 
-  On the Mini-PCs we have to install a driver before Ethernet will work 
-- SSH is enabled
+Automated provisioning and configuration of a k3s Kubernetes cluster with HA control plane, distributed storage, DNS, and ingress.
 
-## Set console font size
+## Purpose
+This cluster is designed for home lab use rather than an enterprise environment. 
+It emphasizes simplicity, cost-effectiveness, and ease of management while providing essential features.
+To provide a robust and functional Kubernetes experience, the cluster includes:
+- **High Availability (HA)** for the control plane using `kube-vip`
+- **Failover Support** across multiple nodes. The scenario assumes, that short downtimes may occur but ideally the cluster will self-heal into a healthy state.
+- **Distributed Block Storage** with `Longhorn` on NVMe drives
+- **DNS and Network Filtering** via `AdGuard Home`
+- **Host-Based Ingress Routing** using `Traefik` with VIP support
 
-```bash
-sudo dpkg-reconfigure console-setup
-```
+The Ansible playbooks automate the entire setup process for the core cluster, from initial node preparation to final service configuration.
+Applications and services will then be deployed on top of this foundation using GitOps with ArgoCD.
 
-## Enable SSH access for ansible
+## Prerequisites
 
-- Generate key file
-```
-ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
-```
+- Ubuntu Server (20.04+) on all nodes
+- SSH access enabled
+- Passwordless sudo configured for Ansible user
 
-## Enable sudo access for Raspberry Pi OS
-Open a root shell (needs a TTY):
+## Two-Phase Deployment
 
-``` bash
-ssh -t thomasschissler@k3snode3 'sudo -s'
-ssh -t thomasschissler@k3snode4 'sudo -s'
-```
+### Phase 1: Bootstrap (`cluster.yml`)
+Prepares nodes and installs k3s:
+- Passwordless sudo setup
+- Network configuration (Ethernet, cgroups for ARM)
+- k3s installation and stabilization
 
-Create a sudoers drop-in (use visudo so you don’t brick sudo):
-``` bash
-EDITOR=nano visudo -f /etc/sudoers.d/90-ansible
-```
-Put exactly this content (adjust username if needed):
-
-```
-thomasschissler ALL=(ALL) NOPASSWD: ALL
-```
-
-Validate and test:
-``` bash
-visudo -c
-sudo -n true && echo OK
-```
-
-# Install k3s
-
-## Full Cluster Setup (Fresh Install)
-
-From a fresh Ubuntu Server install, run these in order:
+**Run this first and verify cluster is healthy before proceeding.**
 
 ```bash
-cd Kubernetes/k3s/ansible
-
-# Step 1: Bootstrap cluster (OS prep + k3s install)
-# Wait for this to complete and verify k3s is stable before continuing
-ansible-playbook cluster.yml -i inventory.ini --limit prodservers -K -k
-
-# Verify k3s is healthy before proceeding:
-ssh k3snode1 'kubectl get nodes'
-# All nodes should show Ready status
-
-# Step 2: Install kube-vip + add-ons (Longhorn, AdGuard, Ingress)
-# Note: prepare-longhorn-storage.yml will pause for confirmation before partitioning
-ansible-playbook configure-cluster.yml -i inventory.ini --limit prodservers -K -k
+ansible-playbook cluster.yml -i inventory.ini --limit prodservers
 ```
 
-### Why Two Phases?
-
-Running kube-vip immediately after k3s install can cause IP confusion and
-certificate issues. The two-phase approach ensures k3s is fully stable before
-adding VIP management.
-
-## What Gets Deployed
-
-| Component | VIP/Access | Notes |
-|-----------|------------|-------|
-| k3s API | 192.168.178.222:6443 | HA API endpoint via kube-vip |
-| Longhorn UI | http://longhorn.intern/ | Replicated storage on NVMe |
-| AdGuard Home | http://adguard.intern/ | DNS on port 53, UI on 3000 |
-| Traefik Ingress | 192.168.178.223:80/443 | Shared VIP for all HTTP services |
-
-## Individual Playbook Runs
+### Phase 2: Configure (`configure-cluster.yml`)
+Adds cluster services in dependency order:
+1. **kube-vip** - HA API endpoint and LoadBalancer VIP allocation
+2. **Longhorn** - Replicated block storage on NVMe
+3. **AdGuard Home** - DNS and network filtering
+4. **CoreDNS forwarding** - Internal `.intern` zone resolution
+5. **Traefik ingress** - Host-based routing with VIP
 
 ```bash
-# Site auf Test-Cluster
-ansible-playbook cluster.yml -i inventory.ini --limit testservers
-
-# Oder mit den Wrapper-Skripten
-chmod +x *.sh
-./run-on-test.sh -K -k
-./run-on-prod.sh -K -k
-
-# Add-ons (kube-vip, later more)
-./run-addons-test.sh -K -k
-./run-addons-prod.sh -K -k
+ansible-playbook configure-cluster.yml -i inventory.ini --limit prodservers
 ```
 
-# Install kube-VIP
+## Architecture
+
+| Component | Endpoint | Purpose |
+|-----------|----------|---------|
+| k3s API | `192.168.178.222:6443` | HA control plane via kube-vip |
+| Longhorn UI | `http://longhorn.intern/` | Distributed storage management |
+| AdGuard Home | `http://adguard.intern/` | DNS + network filtering |
+| Traefik Ingress | `192.168.178.223:80/443` | HTTP service ingress |
+
+## Individual Playbooks
+
+Core provisioning tasks:
+- `bootstrap-passwordless-sudo.yml` - Enable ansible sudo access
+- `check-connectivity.yml` - Validate SSH access
+- `deploy-ssh-key.yml` - Distribute SSH keys
+- `prepare-ethernet.yml` - Configure network interfaces
+- `install-nano.yml` - Install text editor
+- `network-config.yml` - Advanced networking
+- `raspi-cgroups.yml` - ARM-specific kernel tuning
+- `install-k3s.yml` - k3s installation
+
+Configuration tasks:
+- `configure-kubevip.yml` - HA API and service VIPs
+- `prepare-longhorn-nodes.yml` - Node preparation for storage
+- `prepare-longhorn-storage.yml` - Partition and prepare storage devices
+- `install-longhorn.yml` - Deploy Longhorn
+- `expose-longhorn-ui.yml` - Expose UI via ingress
+- `prepare-minio-storage.yml` - MinIO object storage (optional)
+- `install-adguard-home.yml` - Deploy DNS service
+- `configure-coredns-intern-forward.yml` - Pod DNS zone forwarding
+- `configure-ingress-hostnames.yml` - Host-based ingress routes
+- `configure-traefik-mqtt.yml` - MQTT service routing
+- `install-argocd.yml` - GitOps CD (optional)
+- `disable-kubevip.yml` - Remove kube-vip (troubleshooting)
+
+## Wrapper Scripts
+
 ```bash
-ansible-playbook plays/configure-kubevip.yml -i inventory.ini --limit k3s_servers -K -k
+./run-on-prod.sh -K -k     # Full bootstrap for production
+./run-addons-prod.sh -K -k # Configuration only for production
 ```
 
-# Fix kube-VIP / API VIP certificate SANs (only)
-```bash
-ansible-playbook plays/configure-kubevip.yml -i inventory.ini --limit k3s_servers -K -k --tags cert
-```
-
-Check kube-VIP
-```bash
-kubectl get nodes --server=https://192.168.178.222:6443
-```
+Test cluster variants available (`testservers` inventory group).
