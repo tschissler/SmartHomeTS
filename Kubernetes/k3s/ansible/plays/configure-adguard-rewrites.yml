@@ -70,7 +70,7 @@
         answer={{ item.answer | quote }}
         payload=$(printf '{"domain":"%s","answer":"%s"}' "$domain" "$answer")
 
-        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-add-$RANDOM \
           --image=curlimages/curl:8.6.0 \
           --restart=Never \
           --rm \
@@ -114,14 +114,14 @@
         new_payload=$(printf '{"domain":"%s","answer":"%s"}' "$domain" "$new_answer")
 
         # Try delete with domain+answer, then fall back to domain-only
-        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-del-$RANDOM \
           --image=curlimages/curl:8.6.0 \
           --restart=Never \
           --rm \
           -i \
           --command -- sh -lc \
           "curl -sS $AUTH_ARGS -H 'Content-Type: application/json' -X POST -d '$old_payload' '$URL/control/rewrite/delete' >/dev/null" \
-          || /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+          || /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-del-$RANDOM \
             --image=curlimages/curl:8.6.0 \
             --restart=Never \
             --rm \
@@ -130,7 +130,7 @@
             "curl -sS $AUTH_ARGS -H 'Content-Type: application/json' -X POST -d '$old_payload_domain_only' '$URL/control/rewrite/delete' >/dev/null"
 
         # Add new
-        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-updater \
+        /usr/local/bin/k3s kubectl -n "$NS" run adguard-rewrite-add-$RANDOM \
           --image=curlimages/curl:8.6.0 \
           --restart=Never \
           --rm \
