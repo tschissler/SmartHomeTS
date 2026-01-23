@@ -53,12 +53,6 @@
         # Get current service, add MQTT port if not present
         if ! /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o jsonpath='{.spec.ports[?(@.name=="mqtt")].port}' | grep -q 1883; then
           /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o yaml > /tmp/traefik-svc.yaml
-          cat >> /tmp/traefik-svc.yaml <<'PORTEOF'
-          - name: mqtt
-            port: 1883
-            protocol: TCP
-            targetPort: mqtt
-PORTEOF
           # Insert MQTT port into the ports array (before selector)
           sed -i '/^  selector:/i\  - name: mqtt\n    port: 1883\n    protocol: TCP\n    targetPort: mqtt' /tmp/traefik-svc.yaml
           /usr/local/bin/k3s kubectl apply -f /tmp/traefik-svc.yaml
