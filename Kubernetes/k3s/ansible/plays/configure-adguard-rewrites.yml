@@ -45,6 +45,11 @@
       register: adguard_rewrite_list
       changed_when: false
 
+    - name: Debug raw API response
+      ansible.builtin.debug:
+        var: adguard_rewrite_list.stdout
+      run_once: true
+
     - name: Parse current AdGuard rewrites
       ansible.builtin.set_fact:
         adguard_rewrites_current: "{{ adguard_rewrite_list.stdout | trim | from_json | default([]) }}"
