@@ -1,0 +1,81 @@
+---
+- name: Configure Traefik with SMB TCP entrypoint for Paperless consume share
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    smb_vip: "{{ kubevip_service_range_start }}"  # reuse kube-vip service VIP
+  pre_tasks:
+    - name: Validate SMB VIP is set
+      ansible.builtin.assert:
+        that:
+          - smb_vip is defined
+          - smb_vip | trim != ''
+        fail_msg: "kubevip_service_range_start must be set (used as SMB VIP)"
+      run_once: true
+
+  tasks:
+    - name: Configure Traefik with SMB TCP entrypoint via HelmChartConfig
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl apply -f - <<EOF
+        apiVersion: helm.cattle.io/v1
+        kind: HelmChartConfig
+        metadata:
+          name: traefik
+          namespace: kube-system
+        spec:
+          valuesContent: |-
+            service:
+              annotations:
+                kube-vip.io/loadbalancerIPs: '{{ smb_vip }}'
+            ports:
+              smb:
+                port: 445
+                expose: true
+                exposedPort: 445
+                protocol: TCP
+            additionalArguments:
+              - "--entrypoints.smb.address=:445/tcp"
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait for Traefik deployment to update
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n kube-system rollout status deployment traefik --timeout=120s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Patch Traefik Service to expose SMB port
+      ansible.builtin.shell: |
+        if ! /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o jsonpath='{.spec.ports[?(@.name=="smb")].port}' 2>/dev/null | grep -q 445; then
+          /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o yaml > /tmp/traefik-svc.yaml
+          sed -i '/^  selector:/i\  - name: smb\n    port: 445\n    protocol: TCP\n    targetPort: smb' /tmp/traefik-svc.yaml
+          /usr/local/bin/k3s kubectl apply -f /tmp/traefik-svc.yaml
+          rm /tmp/traefik-svc.yaml
+        fi
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Wait for Traefik Service to be reconfigured with SMB port
+      ansible.builtin.shell: |
+        for i in $(seq 1 60); do
+          /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o jsonpath='{.spec.ports[?(@.name=="smb")].port}' 2>/dev/null | grep -q 445 && exit 0
+          sleep 2
+        done
+        echo "Timed out waiting for Traefik SMB port" >&2
+        exit 1
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+
+    - name: Display SMB access info
+      ansible.builtin.debug:
+        msg: |
+          ✓ Traefik SMB entrypoint configured
+          ✓ Connect SMB to: {{ smb_vip }}:445
+          ✓ Use hostSNI: paperless-consume.intern in the Paperless IngressRouteTCP
+      run_once: true

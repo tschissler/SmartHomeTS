@@ -36,3 +36,4 @@
 # Step 3: Ingress routes (host-based routing on shared VIP)
 - import_playbook: plays/configure-ingress-hostnames.yml
 - import_playbook: plays/configure-traefik-mqtt.yml
+- import_playbook: plays/configure-traefik-smb.yml
