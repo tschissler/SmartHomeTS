@@ -17,30 +17,15 @@
   tasks:
     - name: Configure Traefik with SMB TCP entrypoint via HelmChartConfig
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl apply -f - <<EOF
-        apiVersion: helm.cattle.io/v1
-        kind: HelmChartConfig
-        metadata:
-          name: traefik
-          namespace: kube-system
-        spec:
-          valuesContent: |-
-            service:
-              annotations:
-                kube-vip.io/loadbalancerIPs: '{{ smb_vip }}'
-            ports:
-              smb:
-                port: 445
-                expose: true
-                exposedPort: 445
-                protocol: TCP
-            additionalArguments:
-              - "--entrypoints.smb.address=:445/tcp"
-        EOF
+        /usr/local/bin/k3s kubectl patch helmchartconfig traefik -n kube-system --type=merge -p '{
+          "spec": {
+            "valuesContent": "ports:\n  smb:\n    port: 445\n    expose: true\n    exposedPort: 445\n    protocol: TCP\nadditionalArguments:\n  - --entrypoints.smb.address=:445/tcp"
+          }
+        }' 2>&1 || echo "HelmChartConfig might not exist or patch applied"
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       register: smb_cfg_apply
-      changed_when: smb_cfg_apply.stdout is defined and ("configured" in smb_cfg_apply.stdout or "created" in smb_cfg_apply.stdout)
+      changed_when: smb_cfg_apply.stdout is defined and ("patched" in smb_cfg_apply.stdout or "configured" in smb_cfg_apply.stdout)
 
     - name: Wait for Traefik deployment to update
       ansible.builtin.shell: |
@@ -52,15 +37,16 @@
     - name: Patch Traefik Service to expose SMB port
       ansible.builtin.shell: |
         if ! /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o jsonpath='{.spec.ports[?(@.name=="smb")].port}' 2>/dev/null | grep -q 445; then
-          /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o yaml > /tmp/traefik-svc.yaml
-          sed -i '/^  selector:/i\  - name: smb\n    port: 445\n    protocol: TCP\n    targetPort: smb' /tmp/traefik-svc.yaml
-          /usr/local/bin/k3s kubectl apply -f /tmp/traefik-svc.yaml
-          rm /tmp/traefik-svc.yaml
+          echo "Adding SMB port to Traefik service..."
+          /usr/local/bin/k3s kubectl -n kube-system patch svc traefik --type=json -p '[{"op":"add","path":"/spec/ports/-","value":{"name":"smb","port":445,"protocol":"TCP","targetPort":"smb"}}]'
+          echo "SMB_PORT_ADDED"
+        else
+          echo "SMB port already present"
         fi
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       register: smb_svc_patch
-      changed_when: smb_svc_patch.stdout is defined and smb_svc_patch.stdout | trim != ""
+      changed_when: smb_svc_patch.stdout is defined and "SMB_PORT_ADDED" in smb_svc_patch.stdout
 
     - name: Wait for Traefik Service to be reconfigured with SMB port
       ansible.builtin.shell: |
