@@ -39,7 +39,8 @@
         EOF
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      changed_when: false
+      register: smb_cfg_apply
+      changed_when: smb_cfg_apply.stdout is defined and ("configured" in smb_cfg_apply.stdout or "created" in smb_cfg_apply.stdout)
 
     - name: Wait for Traefik deployment to update
       ansible.builtin.shell: |
@@ -58,7 +59,8 @@
         fi
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      changed_when: false
+      register: smb_svc_patch
+      changed_when: smb_svc_patch.stdout is defined and smb_svc_patch.stdout | trim != ""
 
     - name: Wait for Traefik Service to be reconfigured with SMB port
       ansible.builtin.shell: |
