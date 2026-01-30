@@ -49,6 +49,27 @@ class InfluxConnection:
 	def __init__(self) -> None:
 		self._client: Optional[Any] = None
 		self._last_error: Optional[str] = None
+		# Override connection parameters (takes precedence over env vars)
+		self._override_host: Optional[str] = None
+		self._override_database: Optional[str] = None
+		self._override_token: Optional[str] = None
+
+	def set_connection_params(
+		self, 
+		host: Optional[str] = None, 
+		database: Optional[str] = None, 
+		token: Optional[str] = None
+	) -> None:
+		"""Set connection parameters programmatically. These override environment variables."""
+		if host is not None:
+			self._override_host = host
+		if database is not None:
+			self._override_database = database
+		if token is not None:
+			self._override_token = token
+		# Reset client to force reconnection with new params
+		self._client = None
+		self._last_error = None
 
 	def _build_client(self) -> Any:
 		if InfluxDBClient3 is None:  # Dependencies not installed
@@ -56,9 +77,10 @@ class InfluxConnection:
 				f"influxdb3-python client is not installed correctly: {_import_error}"
 			)
 
-		host = _get_env_any(["SMARTHOME__INFLUXDB3_HOST", "INFLUXDB3_HOST"])    
-		database = _get_env_any(["SMARTHOME__INFLUXDB3_DATABASE", "INFLUXDB3_DATABASE"]) 
-		token = _get_env_any(["SMARTHOME__INFLUXDB3_TOKEN", "INFLUXDB3_TOKEN"]) 
+		# Use override params if set, otherwise fall back to env vars
+		host = self._override_host or _get_env_any(["SMARTHOME__INFLUXDB3_HOST", "INFLUXDB3_HOST"])    
+		database = self._override_database or _get_env_any(["SMARTHOME__INFLUXDB3_DATABASE", "INFLUXDB3_DATABASE"]) 
+		token = self._override_token or _get_env_any(["SMARTHOME__INFLUXDB3_TOKEN", "INFLUXDB3_TOKEN"]) 
 		enable_gzip = _bool_env("INFLUXDB3_ENABLE_GZIP", True)
 
 		if not host or not database:
@@ -94,14 +116,18 @@ class InfluxConnection:
 		return self._client
 
 	def status(self) -> Dict[str, Any]:
+		host = self._override_host or _get_env_any(["SMARTHOME__INFLUXDB3_HOST", "INFLUXDB3_HOST"])
+		database = self._override_database or _get_env_any(["SMARTHOME__INFLUXDB3_DATABASE", "INFLUXDB3_DATABASE"])
+		token = self._override_token or _get_env_any(["SMARTHOME__INFLUXDB3_TOKEN", "INFLUXDB3_TOKEN"])
 		return {
-			"host": _get_env_any(["SMARTHOME__INFLUXDB3_HOST", "INFLUXDB3_HOST"]),
-			"database": _get_env_any(["SMARTHOME__INFLUXDB3_DATABASE", "INFLUXDB3_DATABASE"]),
-			"has_token": bool(_get_env_any(["SMARTHOME__INFLUXDB3_TOKEN", "INFLUXDB3_TOKEN"])),
+			"host": host,
+			"database": database,
+			"has_token": bool(token),
 			"enable_gzip": _bool_env("INFLUXDB3_ENABLE_GZIP", True),
 			"using_certifi": _bool_env("INFLUXDB3_USE_CERTIFI", False),
 			"last_error": self._last_error,
 			"deps_loaded": _import_error is None,
+			"using_overrides": bool(self._override_host or self._override_database or self._override_token),
 		}
 
 
@@ -170,6 +196,33 @@ def _table_to_rows(table_obj: Any, max_rows: int = 0) -> List[Dict[str, Any]]:
 	except Exception:
 		# Fallback: return empty on unexpected format
 		return []
+
+
+@mcp.tool()
+def set_connection(host: str, database: str, token: str = "") -> str:
+	"""Set connection parameters for InfluxDB3. These override environment variables.
+	
+	Parameters:
+	- host: InfluxDB3 host URL (e.g., "http://localhost:8086")
+	- database: Database/bucket name
+	- token: Authentication token (optional, can be empty string)
+	
+	Returns: Connection status
+	"""
+	try:
+		conn.set_connection_params(host=host, database=database, token=token)
+		# Test the connection
+		client = conn.client()
+		try:
+			_ = client.query(query="SELECT 1", language="sql")
+			ok = True
+			msg = "Connection established successfully"
+		except Exception as e:
+			ok = False
+			msg = f"Connection test failed: {e}"
+		return _json_content({"ok": ok, "message": msg, "config": conn.status()})
+	except Exception as e:
+		return _json_content({"ok": False, "message": f"Failed to set connection: {e}", "config": conn.status()})
 
 
 @mcp.tool()
@@ -393,6 +446,130 @@ def distinct_measurements(
 		"table": table,
 		"filters": {"location": location, "sub_category": sub_category, "days": days},
 	})
+
+
+@mcp.tool()
+def write_data(records: str, table: Optional[str] = None) -> str:
+	"""Write data records to InfluxDB3 using line protocol format.
+	
+	Parameters:
+	- records: Line protocol formatted data (one record per line, newline separated)
+	  Example: "measurement,tag1=value1 field1=1.0,field2=2.0 1234567890000000000"
+	- table: Optional table/measurement name (only used for response, not for write routing)
+	
+	Returns: Status of the write operation including count of records written
+	"""
+	try:
+		client = conn.client()
+		
+		# Count records (non-empty lines)
+		lines = [line.strip() for line in records.split('\n') if line.strip() and not line.strip().startswith('#')]
+		record_count = len(lines)
+		
+		if record_count == 0:
+			return _json_content({"ok": False, "message": "No valid records to write", "records_written": 0})
+		
+		# Write data using line protocol
+		client.write(record=records)
+		
+		return _json_content({
+			"ok": True, 
+			"message": f"Successfully wrote {record_count} records",
+			"records_written": record_count,
+			"table": table
+		})
+	except Exception as e:
+		return _json_content({
+			"ok": False, 
+			"message": f"Write failed: {e}",
+			"records_written": 0,
+			"table": table
+		})
+
+
+@mcp.tool()
+def insert_data(
+	table: str,
+	data: str,
+	timestamp_column: str = "time",
+	tag_columns: Optional[str] = None,
+	field_columns: Optional[str] = None
+) -> str:
+	"""Insert data into InfluxDB3 from JSON array format.
+	
+	Parameters:
+	- table: Measurement/table name
+	- data: JSON array of records, e.g., '[{"time": "2024-01-01T00:00:00Z", "temp": 20.5, "location": "kitchen"}]'
+	- timestamp_column: Name of the timestamp column (default: "time")
+	- tag_columns: Comma-separated list of tag column names (e.g., "location,sensor_id")
+	- field_columns: Comma-separated list of field column names (e.g., "temp,humidity"). If not specified, all non-tag, non-timestamp columns are treated as fields
+	
+	Returns: Status of the insert operation
+	"""
+	try:
+		import pandas as pd
+		from datetime import datetime
+		
+		client = conn.client()
+		
+		# Parse JSON data
+		try:
+			records_list = json.loads(data)
+			if not isinstance(records_list, list):
+				return _json_content({"ok": False, "message": "Data must be a JSON array", "records_written": 0})
+		except json.JSONDecodeError as e:
+			return _json_content({"ok": False, "message": f"Invalid JSON: {e}", "records_written": 0})
+		
+		if len(records_list) == 0:
+			return _json_content({"ok": False, "message": "No records to insert", "records_written": 0})
+		
+		# Parse tag and field columns
+		tags = [t.strip() for t in tag_columns.split(',')] if tag_columns else []
+		fields = [f.strip() for f in field_columns.split(',')] if field_columns else None
+		
+		# Convert to DataFrame
+		df = pd.DataFrame(records_list)
+		
+		# Validate timestamp column exists
+		if timestamp_column not in df.columns:
+			return _json_content({
+				"ok": False, 
+				"message": f"Timestamp column '{timestamp_column}' not found in data",
+				"records_written": 0
+			})
+		
+		# If field_columns not specified, use all columns except timestamp and tags
+		if fields is None:
+			fields = [col for col in df.columns if col != timestamp_column and col not in tags]
+		
+		# Convert timestamp column to datetime if it's not already
+		if not pd.api.types.is_datetime64_any_dtype(df[timestamp_column]):
+			df[timestamp_column] = pd.to_datetime(df[timestamp_column])
+		
+		# Write using the DataFrame method with tags and fields specified
+		client.write(
+			record=df,
+			data_frame_measurement_name=table,
+			data_frame_timestamp_column=timestamp_column,
+			data_frame_tag_columns=tags if tags else None
+		)
+		
+		return _json_content({
+			"ok": True,
+			"message": f"Successfully inserted {len(df)} records into {table}",
+			"records_written": len(df),
+			"table": table,
+			"tags": tags,
+			"fields": fields
+		})
+		
+	except Exception as e:
+		return _json_content({
+			"ok": False,
+			"message": f"Insert failed: {e}",
+			"records_written": 0,
+			"table": table
+		})
 
 
 if __name__ == "__main__":
