@@ -1,0 +1,7 @@
+{
+  "name": "LEDLib",
+  "version": "0.1.0",
+  "description": "Shared LED control utilities for ESP32 projects.",
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"]
+}

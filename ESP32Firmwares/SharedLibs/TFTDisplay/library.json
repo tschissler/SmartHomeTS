@@ -1,0 +1,7 @@
+{
+  "name": "TFTDisplay",
+  "version": "0.1.0",
+  "description": "Shared TFT display utilities for ESP32 projects.",
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"]
+}
