@@ -1,0 +1,172 @@
+# InfluxDB3 Migration Tool - Configuration Example
+# Copy this file to config.yaml and customize for your environment
+
+# Migration metadata
+migration:
+  name: "SmartHome_Prod_to_Enterprise"  # Descriptive name for this migration
+  mode: "incremental"                    # Migration mode: "incremental" or "full"
+                                        # - incremental: Resume from last checkpoint, migrate only new data
+                                        # - full: Migrate all data regardless of checkpoints
+  dry_run: false                        # Set to true to validate without writing data
+
+# Source database configuration
+source:
+  host: "https://us-east-1-1.aws.cloud2.influxdata.com"  # InfluxDB3 host URL
+  database: "Smarthome_Prod"            # Database/bucket name
+  token: "${INFLUX_SOURCE_TOKEN}"       # Authentication token (use env var: ${VAR_NAME})
+  enable_gzip: true                     # Enable gzip compression for queries
+
+# Target database configuration
+target:
+  host: "https://influx-enterprise.company.com"  # InfluxDB3 Enterprise host URL
+  database: "Smarthome_Prod"            # Database/bucket name (can be different from source)
+  token: "${INFLUX_TARGET_TOKEN}"       # Authentication token (use env var: ${VAR_NAME})
+  enable_gzip: true                     # Enable gzip compression for writes
+
+# Table selection
+tables:
+  # List of tables to migrate (if empty, migrates all known tables)
+  include:
+    - "temperature_values"
+    - "power_values"
+    - "energy_values"
+    - "voltage_values"
+    - "percent_values"
+    - "status_values"
+    - "counter_values"
+
+  # Optional: Exclude specific tables from migration
+  # exclude:
+  #   - "test_values"
+
+# Data filtering
+filters:
+  # Optional: Time range filtering
+  time_range:
+    start: null  # Start timestamp (ISO 8601) or null for earliest available
+                # Example: "2024-01-01T00:00:00Z"
+    end: null    # End timestamp (ISO 8601) or null for latest available
+                # Example: "2024-12-31T23:59:59Z"
+
+  # Optional: Tag-based filtering (applied to all tables)
+  # Only migrate data matching these tag values
+  tags: {}
+    # location: "M3"           # Example: Only migrate data from location M3
+    # device: "EnvoyM3"        # Example: Only migrate data from device EnvoyM3
+
+# Batching and chunking configuration
+batching:
+  chunk_size_days: 1         # Process data in N-day chunks for resumability
+                            # Smaller = more checkpoints, slower
+                            # Larger = fewer checkpoints, faster, more memory
+                            # Recommended: 1-7 days
+
+  batch_size_rows: 10000    # Number of rows per write batch
+                            # Larger = more efficient, more memory
+                            # Smaller = less memory, more API calls
+                            # Recommended: 5000-50000
+
+  max_memory_mb: 512        # Maximum memory limit for Arrow tables (MB)
+                            # Adjust based on available system memory
+
+# Performance tuning
+performance:
+  parallel_tables: false    # Migrate tables in parallel (experimental)
+                            # true = faster but uses more memory
+                            # false = sequential, safer (recommended)
+
+  query_timeout_seconds: 300   # Query timeout (5 minutes)
+  write_timeout_seconds: 300   # Write timeout (5 minutes)
+
+  retry_attempts: 3         # Number of retry attempts for failed operations
+  retry_delay_seconds: 5    # Base delay between retries (exponential backoff)
+
+# Validation configuration
+validation:
+  pre_flight: true          # Validate connections and tables before migration
+                            # Recommended: true
+
+  post_migration: true      # Validate row counts after each table migration
+                            # Recommended: true for data integrity
+
+  sample_verification: 100  # Number of random samples to verify per table
+                            # 0 = disable sample verification
+                            # Higher = more thorough but slower
+                            # Recommended: 10-100
+
+# Logging configuration
+logging:
+  level: "INFO"             # Log level: DEBUG, INFO, WARNING, ERROR
+                            # DEBUG = verbose, INFO = normal, WARNING = minimal
+
+  file: "migration.log"     # Log file path
+                            # Logs are rotated at 10MB with 5 backups
+
+  console: true             # Also log to console (stdout)
+
+# State management
+state:
+  checkpoint_db: "migration_state.db"  # SQLite database for checkpoints
+                                      # Contains migration history and resumption points
+
+  checkpoint_frequency: "chunk"  # When to save checkpoints: "chunk" or "batch"
+                                # "chunk" = after each time chunk (recommended)
+                                # "batch" = after each write batch (more frequent)
+
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+
+# 1. First-time full migration:
+#    - Set mode: "full"
+#    - Set dry_run: false
+#    - Configure source and target
+#    - Run: python migrate.py --config config.yaml
+
+# 2. Dry run (test configuration):
+#    - Set dry_run: true
+#    - Run: python migrate.py --config config.yaml --dry-run
+
+# 3. Incremental sync (daily updates):
+#    - Set mode: "incremental"
+#    - Run periodically: python migrate.py --config config.yaml
+#    - Only new data since last checkpoint will be migrated
+
+# 4. Migrate specific tables:
+#    - Option 1: Update "tables.include" list in this config
+#    - Option 2: Use CLI: python migrate.py --config config.yaml --tables temperature_values,power_values
+
+# 5. Filter by time range:
+#    - Set filters.time_range.start and/or end
+#    - Example: Migrate only 2024 data
+
+# 6. Resume interrupted migration:
+#    - Simply re-run: python migrate.py --config config.yaml
+#    - Migration will resume from last checkpoint automatically
+
+# ============================================================================
+# ENVIRONMENT VARIABLES
+# ============================================================================
+
+# You can use environment variables for sensitive values:
+# - ${INFLUX_SOURCE_TOKEN} - Source database token
+# - ${INFLUX_TARGET_TOKEN} - Target database token
+#
+# Set them before running migration:
+#   export INFLUX_SOURCE_TOKEN="your_source_token"
+#   export INFLUX_TARGET_TOKEN="your_target_token"
+#
+# Or use .env file (not included - create your own)
+
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+
+# - Connection errors: Check host URLs, tokens, network connectivity
+# - "Table not found": Verify table names in source database
+# - Out of memory: Reduce batch_size_rows or chunk_size_days
+# - Slow migration: Increase batch_size_rows, enable parallel_tables
+# - Validation failures: Check for data consistency, network issues
+
+# For more help, see README.md

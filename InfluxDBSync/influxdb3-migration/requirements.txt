@@ -1,0 +1,20 @@
+# InfluxDB3 Python client
+influxdb3-python>=0.7
+
+# Data processing
+pandas>=2.0
+pyarrow>=15.0
+
+# Configuration
+pyyaml>=6.0
+python-dotenv>=1.0.0
+
+# CLI
+click>=8.0
+
+# Logging
+structlog>=23.0
+
+# Testing
+pytest>=7.0
+pytest-cov>=4.0
