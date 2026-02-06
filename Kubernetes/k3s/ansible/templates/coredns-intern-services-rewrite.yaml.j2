@@ -5,20 +5,33 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 data:
-  # Rewrite rules for .intern domain services to resolve to internal Kubernetes service DNS names
-  # This allows pods in the cluster to reach external .intern services via their internal service DNS names
-  {% for service_name, service_dns in intern_service_rewrites.items() %}
-  {{ service_name }}-intern.server: |
-    {{ service_name }}.intern:53 {
+  mosquitto-intern.server: |
+    mosquitto.intern:53 {
         errors
         cache 30
-        rewrite name exact {{ service_name }}.intern {{ service_dns }}
+        rewrite name exact mosquitto.intern mosquitto.mosquitto.svc.cluster.local
         forward . 10.43.0.10
         reload 5s
     }
-  {% endfor %}
 
-  # Existing service definitions (preserved)
+  nextcloud-intern.server: |
+    nextcloud.intern:53 {
+        errors
+        cache 30
+        rewrite name exact nextcloud.intern nextcloud.nextcloud.svc.cluster.local
+        forward . 10.43.0.10
+        reload 5s
+    }
+
+  argocd-intern.server: |
+    argocd.intern:53 {
+        errors
+        cache 30
+        rewrite name exact argocd.intern argocd-server.argocd.svc.cluster.local
+        forward . 10.43.0.10
+        reload 5s
+    }
+
   envoym1.server: |
     envoym1:53 {
         errors
@@ -52,4 +65,3 @@ data:
         forward . 10.43.11.255
         reload 5s
     }
-
