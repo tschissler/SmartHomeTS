@@ -1,0 +1,112 @@
+---
+# Creates a ConfigMap in the collabora namespace containing a merged CA bundle
+# (system CAs from the Collabora image + SmartHome Cluster CA).
+#
+# This is needed because:
+# - Collabora CODE runs as non-root (uid=1001), cannot run update-ca-certificates
+# - The Helm chart's trusted_certs_install feature is not functional in v1.1.54
+# - coolwsd uses /etc/ssl/certs/ca-certificates.crt as the system trust store
+#
+# Prerequisites:
+# - Collabora pod must already be running (to extract the system CA bundle)
+# - cluster-ca-secret must exist in the collabora namespace
+#   (run sync-cluster-ca-secret.yml first)
+#
+# After running this playbook, ensure Collabora.yaml mounts the ConfigMap:
+#   extraVolumes:
+#     - name: merged-ca
+#       configMap:
+#         name: merged-ca-bundle
+#   extraVolumeMounts:
+#     - name: merged-ca
+#       mountPath: /etc/ssl/certs/ca-certificates.crt
+#       subPath: ca-certificates.crt
+#       readOnly: true
+
+- name: Create merged CA bundle ConfigMap for Collabora
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Get Collabora pod name
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get pods -n collabora \
+          -l app.kubernetes.io/name=collabora-online \
+          -o jsonpath='{.items[0].metadata.name}'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: collabora_pod
+      failed_when: collabora_pod.rc != 0 or collabora_pod.stdout == ""
+
+    - name: Display Collabora pod name
+      ansible.builtin.debug:
+        msg: "Using Collabora pod: {{ collabora_pod.stdout }}"
+      run_once: true
+
+    - name: Extract system CA bundle from Collabora pod
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl exec -n collabora {{ collabora_pod.stdout }} \
+          -- cat /etc/ssl/certs/ca-certificates.crt
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: system_ca_bundle
+      failed_when: system_ca_bundle.rc != 0
+
+    - name: Get SmartHome Cluster CA from secret
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get secret cluster-ca-secret -n collabora \
+          -o jsonpath='{.data.ca\.crt}' | base64 -d
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: custom_ca
+      failed_when: custom_ca.rc != 0
+
+    - name: Write merged CA bundle to temp file
+      ansible.builtin.copy:
+        content: |
+          {{ system_ca_bundle.stdout }}
+          # SmartHome Cluster CA
+          {{ custom_ca.stdout }}
+        dest: /tmp/collabora-merged-ca-bundle.crt
+        mode: '0644'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+
+    - name: Create or update merged-ca-bundle ConfigMap
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl create configmap merged-ca-bundle \
+          --from-file=ca-certificates.crt=/tmp/collabora-merged-ca-bundle.crt \
+          -n collabora \
+          --dry-run=client -o yaml | \
+        /usr/local/bin/k3s kubectl apply -f -
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: configmap_result
+      changed_when: "'created' in configmap_result.stdout or 'configured' in configmap_result.stdout"
+
+    - name: Display ConfigMap result
+      ansible.builtin.debug:
+        msg: "{{ configmap_result.stdout }}"
+      run_once: true
+
+    - name: Clean up temp file
+      ansible.builtin.file:
+        path: /tmp/collabora-merged-ca-bundle.crt
+        state: absent
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+
+    - name: Verify ConfigMap exists
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get configmap merged-ca-bundle -n collabora -o jsonpath='{.metadata.name}'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: verify_cm
+      changed_when: false
+      failed_when: verify_cm.stdout != "merged-ca-bundle"
+
+    - name: Display verification
+      ansible.builtin.debug:
+        msg: "✓ ConfigMap merged-ca-bundle exists in collabora namespace"
+      run_once: true
