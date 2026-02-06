@@ -5,33 +5,17 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 data:
-  mosquitto-intern.server: |
-    mosquitto.intern:53 {
+{% for service, target in intern_service_rewrites.items() %}
+  {{ service }}-intern.server: |
+    {{ service }}.intern:53 {
         errors
         cache 30
-        rewrite name exact mosquitto.intern mosquitto.mosquitto.svc.cluster.local
+        rewrite name exact {{ service }}.intern {{ target }}
         forward . 10.43.0.10
         reload 5s
     }
 
-  nextcloud-intern.server: |
-    nextcloud.intern:53 {
-        errors
-        cache 30
-        rewrite name exact nextcloud.intern nextcloud.nextcloud.svc.cluster.local
-        forward . 10.43.0.10
-        reload 5s
-    }
-
-  argocd-intern.server: |
-    argocd.intern:53 {
-        errors
-        cache 30
-        rewrite name exact argocd.intern argocd-server.argocd.svc.cluster.local
-        forward . 10.43.0.10
-        reload 5s
-    }
-
+{% endfor %}
   envoym1.server: |
     envoym1:53 {
         errors

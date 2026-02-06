@@ -9,10 +9,12 @@
     # Map of .intern service names to their Kubernetes service DNS names
     # This allows internal cluster pods to reach services via the .intern domain
     # by rewriting them to the internal Kubernetes service DNS names
+    # NOTE: Only add services here that do NOT need TLS termination via Traefik.
+    #       Services like nextcloud and argocd use HTTPS through Traefik ingress,
+    #       so their .intern names must resolve to the Traefik LoadBalancer IP
+    #       (handled by AdGuard via the fallback intern.server forward).
     intern_service_rewrites:
       mosquitto: "mosquitto.mosquitto.svc.cluster.local"
-      nextcloud: "nextcloud.nextcloud.svc.cluster.local"
-      argocd: "argocd-server.argocd.svc.cluster.local"
 
   tasks:
     - name: Create/Update CoreDNS custom server block for .intern services
