@@ -1,0 +1,74 @@
+---
+- name: Configure CoreDNS to resolve .intern services to internal Kubernetes service DNS names
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    coredns_namespace: kube-system
+    coredns_custom_configmap: coredns-custom
+    # Map of .intern service names to their Kubernetes service DNS names
+    # This allows internal cluster pods to reach services via the .intern domain
+    # by rewriting them to the internal Kubernetes service DNS names
+    intern_service_rewrites:
+      mosquitto: "mosquitto.mosquitto.svc.cluster.local"
+      nextcloud: "nextcloud.nextcloud.svc.cluster.local"
+      argocd: "argocd-server.argocd.svc.cluster.local"
+
+  tasks:
+    - name: Create/Update CoreDNS custom server block for .intern services
+      ansible.builtin.template:
+        src: ../templates/coredns-intern-services-rewrite.yaml.j2
+        dest: /tmp/coredns-intern-services.yaml
+        mode: '0644'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+
+    - name: Apply CoreDNS custom server block(s)
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} apply -f /tmp/coredns-intern-services.yaml
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: coredns_patched
+      changed_when: coredns_patched.stdout is defined and ("configured" in coredns_patched.stdout or "created" in coredns_patched.stdout)
+
+    - name: Restart CoreDNS to pick up config changes
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} rollout restart deployment/coredns
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} rollout status deployment/coredns --timeout=180s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      when: coredns_patched.changed
+
+    - name: Test DNS resolution for .intern services from cluster
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n default delete pod dns-intern-services-test --ignore-not-found 2>/dev/null || true
+        sleep 2
+        /usr/local/bin/k3s kubectl -n default run dns-intern-services-test --image=busybox:1.36 --restart=Never \
+          --command -- sh -lc '
+            echo "=== Cluster DNS resolution for .intern services ===";
+            echo "Testing mosquitto.intern -> should resolve to 10.43.x.x (cluster IP)";
+            nslookup mosquitto.intern 2>&1 || true;
+          '
+        
+        # Wait for pod to finish
+        for i in $(seq 1 60); do
+          phase=$(/usr/local/bin/k3s kubectl -n default get pod dns-intern-services-test -o jsonpath='{.status.phase}' 2>/dev/null || true)
+          if [ "$phase" = "Succeeded" ] || [ "$phase" = "Failed" ]; then
+            break
+          fi
+          sleep 1
+        done
+        echo ""
+        /usr/local/bin/k3s kubectl -n default logs dns-intern-services-test 2>/dev/null || true
+        /usr/local/bin/k3s kubectl -n default delete pod dns-intern-services-test --ignore-not-found --wait=false 2>/dev/null || true
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: dns_test
+
+    - name: Show DNS test results
+      ansible.builtin.debug:
+        msg: "{{ dns_test.stdout | default('') }}"
+      run_once: true
+      changed_when: false
+
