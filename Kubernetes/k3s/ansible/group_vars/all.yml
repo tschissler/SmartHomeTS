@@ -8,3 +8,9 @@ nameservers:
 # Some nodes can be slow to present the sudo prompt on first connection.
 # Default Ansible become timeout is ~12s; increase to avoid false failures.
 ansible_become_timeout: 60
+
+# Ingress hostnames
+nextcloud_domain: nextcloud.intern
+nextcloud_namespace: nextcloud
+nextcloud_service_name: nextcloud
+nextcloud_service_port: 8080

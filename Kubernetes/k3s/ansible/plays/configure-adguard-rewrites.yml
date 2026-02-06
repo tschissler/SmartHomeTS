@@ -8,15 +8,20 @@
     adguard_api_service_url: "http://adguard-web.adguard-home.svc.cluster.local:3000"
     adguard_api_username: ""
     adguard_api_password: ""
+    ingress_vip: "{{ kubevip_service_range_start }}"
     adguard_rewrite_entries:
       - domain: "{{ paperless_consume_domain | default('paperless-consume.intern') }}"
         answer: "{{ paperless_consume_ip | default('') }}"
+      - domain: "{{ nextcloud_domain | default('nextcloud.intern') }}"
+        answer: "{{ ingress_vip }}"
   pre_tasks:
     - name: Validate required variables
       ansible.builtin.assert:
         that:
           - (paperless_consume_ip | default('')) | trim != ''
-        fail_msg: "paperless_consume_ip must be set (e.g., 192.168.178.224)"
+          - ingress_vip is defined
+          - ingress_vip | trim != ''
+        fail_msg: "paperless_consume_ip and kubevip_service_range_start must be set"
       run_once: true
 
   tasks:
