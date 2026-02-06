@@ -1,10 +1,10 @@
 ---
-- name: Configure Traefik with MQTT TCP entrypoint for Mosquitto
+- name: Ensure Traefik Service exposes MQTT TCP port for Mosquitto
   hosts: k3s_servers
   become: yes
   gather_facts: no
   vars:
-    mqtt_vip: "{{ kubevip_service_range_start }}"  # Use same VIP as HTTP ingress, different port
+    mqtt_vip: "{{ kubevip_service_range_start }}"
   pre_tasks:
     - name: Validate MQTT VIP is set
       ansible.builtin.assert:
@@ -15,33 +15,11 @@
       run_once: true
 
   tasks:
-    - name: Configure Traefik with MQTT TCP entrypoint via HelmChartConfig
-      ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl apply -f - <<EOF
-        apiVersion: helm.cattle.io/v1
-        kind: HelmChartConfig
-        metadata:
-          name: traefik
-          namespace: kube-system
-        spec:
-          valuesContent: |-
-            service:
-              annotations:
-                kube-vip.io/loadbalancerIPs: '{{ mqtt_vip }}'
-            ports:
-              mqtt:
-                port: 1883
-                expose: true
-                exposedPort: 1883
-                protocol: TCP
-            additionalArguments:
-              - "--entrypoints.mqtt.address=:1883/tcp"
-        EOF
-      run_once: true
-      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      changed_when: false
+    # The MQTT entrypoint and port are configured in configure-ingress-hostnames.yml
+    # via the consolidated HelmChartConfig. This playbook only ensures the
+    # Traefik Service object exposes the MQTT port.
 
-    - name: Wait for Traefik deployment to update
+    - name: Wait for Traefik deployment to be ready
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl -n kube-system rollout status deployment traefik --timeout=120s
       run_once: true
@@ -50,10 +28,8 @@
 
     - name: Patch Traefik Service to expose MQTT port
       ansible.builtin.shell: |
-        # Get current service, add MQTT port if not present
         if ! /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o jsonpath='{.spec.ports[?(@.name=="mqtt")].port}' | grep -q 1883; then
           /usr/local/bin/k3s kubectl -n kube-system get svc traefik -o yaml > /tmp/traefik-svc.yaml
-          # Insert MQTT port into the ports array (before selector)
           sed -i '/^  selector:/i\  - name: mqtt\n    port: 1883\n    protocol: TCP\n    targetPort: mqtt' /tmp/traefik-svc.yaml
           /usr/local/bin/k3s kubectl apply -f /tmp/traefik-svc.yaml
           rm /tmp/traefik-svc.yaml
@@ -77,7 +53,7 @@
     - name: Display MQTT access info
       ansible.builtin.debug:
         msg: |
-          ✓ Traefik MQTT entrypoint configured
-          ✓ Connect to MQTT at: {{ mqtt_vip }}:1883
-          ✓ Hostname: mosquitto.intern (add to DNS or /etc/hosts pointing to {{ mqtt_vip }})
+          Traefik MQTT entrypoint configured
+          Connect to MQTT at: {{ mqtt_vip }}:1883
+          Hostname: mosquitto.intern (add to DNS or /etc/hosts pointing to {{ mqtt_vip }})
       run_once: true

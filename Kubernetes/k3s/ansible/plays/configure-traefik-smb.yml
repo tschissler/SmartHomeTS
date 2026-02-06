@@ -28,22 +28,9 @@
       run_once: true
 
   tasks:
-    - name: Configure Traefik with SMB TCP entrypoint via HelmChartConfig
-      ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl patch helmchartconfig traefik -n kube-system --type=merge -p '{
-          "spec": {
-            "valuesContent": "ports:\n  smb:\n    port: 445\n    expose: true\n    exposedPort: 445\n    protocol: TCP\nadditionalArguments:\n  - --entrypoints.smb.address=:445/tcp"
-          }
-        }' 2>&1 || echo "HelmChartConfig might not exist or patch applied"
-      run_once: true
-      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      register: smb_cfg_apply
-      changed_when: smb_cfg_apply.stdout is defined and ("patched" in smb_cfg_apply.stdout or "configured" in smb_cfg_apply.stdout)
-
-    - name: Show HelmChartConfig patch result
-      ansible.builtin.debug:
-        msg: "{{ smb_cfg_apply.stdout }}"
-      run_once: true
+    # The SMB entrypoint is NOT in the consolidated HelmChartConfig because it is
+    # optional (controlled by enable_traefik_smb). If you need SMB via Traefik,
+    # add it to configure-ingress-hostnames.yml HelmChartConfig instead.
 
     - name: Wait for Traefik deployment to update
       ansible.builtin.shell: |

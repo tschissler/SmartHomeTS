@@ -1,5 +1,5 @@
 ---
-- name: Configure Traefik VIP and host-based Ingress routes
+- name: Configure Traefik VIP, HTTPS redirect, and host-based Ingress routes
   hosts: k3s_servers
   become: yes
   gather_facts: no
@@ -17,7 +17,7 @@
       run_once: true
 
   tasks:
-    - name: Configure Traefik Service VIP via HelmChartConfig (k3s-managed Traefik)
+    - name: Configure Traefik VIP, HTTPS redirect, and custom entrypoints via HelmChartConfig
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl apply -f - <<EOF
         apiVersion: helm.cattle.io/v1
@@ -30,6 +30,17 @@
             service:
               annotations:
                 kube-vip.io/loadbalancerIPs: '{{ ingress_vip }}'
+            ports:
+              web:
+                redirectTo:
+                  port: websecure
+              mqtt:
+                port: 1883
+                expose: true
+                exposedPort: 1883
+                protocol: TCP
+            additionalArguments:
+              - "--entrypoints.mqtt.address=:1883/tcp"
         EOF
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
@@ -47,7 +58,7 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
-    - name: Create Ingress for AdGuard UI (http://adguard.intern)
+    - name: Create Ingress for AdGuard UI (https://adguard.intern)
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl apply -f - <<EOF
         apiVersion: networking.k8s.io/v1
@@ -56,9 +67,15 @@
           name: adguard-ui
           namespace: adguard-home
           annotations:
-            traefik.ingress.kubernetes.io/router.entrypoints: web
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+            traefik.ingress.kubernetes.io/router.tls: "true"
+            cert-manager.io/cluster-issuer: cluster-ca-issuer
         spec:
           ingressClassName: traefik
+          tls:
+          - secretName: adguard-tls
+            hosts:
+            - {{ adguard_domain }}
           rules:
           - host: {{ adguard_domain }}
             http:
@@ -75,7 +92,7 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
-    - name: Create Ingress for Longhorn UI (http://longhorn.intern)
+    - name: Create Ingress for Longhorn UI (https://longhorn.intern)
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl apply -f - <<EOF
         apiVersion: networking.k8s.io/v1
@@ -84,9 +101,15 @@
           name: longhorn-ui
           namespace: longhorn-system
           annotations:
-            traefik.ingress.kubernetes.io/router.entrypoints: web
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+            traefik.ingress.kubernetes.io/router.tls: "true"
+            cert-manager.io/cluster-issuer: cluster-ca-issuer
         spec:
           ingressClassName: traefik
+          tls:
+          - secretName: longhorn-tls
+            hosts:
+            - {{ longhorn_domain }}
           rules:
           - host: {{ longhorn_domain }}
             http:
@@ -103,16 +126,15 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
-    - name: Remove Argo CD HTTPS/redirect ingress resources (switch to HTTP only)
+    - name: Remove old Argo CD HTTPS/redirect ingress resources
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl -n argocd delete ingress argocd-ui-http --ignore-not-found
-        /usr/local/bin/k3s kubectl -n argocd delete ingress argocd-ui --ignore-not-found
         /usr/local/bin/k3s kubectl -n argocd delete middleware redirect-https --ignore-not-found
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
-    - name: Create Ingress for Argo CD UI (http://argocd.intern)
+    - name: Create Ingress for Argo CD UI (https://argocd.intern)
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl apply -f - <<EOF
         apiVersion: networking.k8s.io/v1
@@ -121,9 +143,15 @@
           name: argocd-ui
           namespace: argocd
           annotations:
-            traefik.ingress.kubernetes.io/router.entrypoints: web
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+            traefik.ingress.kubernetes.io/router.tls: "true"
+            cert-manager.io/cluster-issuer: cluster-ca-issuer
         spec:
           ingressClassName: traefik
+          tls:
+          - secretName: argocd-tls
+            hosts:
+            - {{ argocd_domain | default('argocd.intern') }}
           rules:
           - host: {{ argocd_domain | default('argocd.intern') }}
             http:
@@ -144,10 +172,10 @@
       ansible.builtin.debug:
         msg: |
           Traefik VIP (HTTP/HTTPS): {{ ingress_vip }}
-          AdGuard UI:              http://{{ adguard_domain }}/
-          Longhorn UI:             http://{{ longhorn_domain }}/
-          Argo CD UI:              http://{{ argocd_domain | default('argocd.intern') }}/
-          SmartHome Web:           http://smarthome.intern/
+          HTTP automatically redirects to HTTPS for all services.
+          AdGuard UI:              https://{{ adguard_domain }}/
+          Longhorn UI:             https://{{ longhorn_domain }}/
+          Argo CD UI:              https://{{ argocd_domain | default('argocd.intern') }}/
       run_once: true
       delegate_to: localhost
       become: false
