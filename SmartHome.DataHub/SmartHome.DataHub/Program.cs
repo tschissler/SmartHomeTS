@@ -1,5 +1,6 @@
 ﻿using Influx3Connector;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Newtonsoft.Json.Linq;
 using SharedContracts;
 using SmartHome.DataHub;
@@ -100,37 +101,9 @@ builder.Services.AddSingleton<Converters>();
 builder.Services.AddSignalR();
 builder.Services.AddLogging();
 
+// Register health checks
 builder.Services.AddHealthChecks()
-    .AddCheck("data-pipeline", (sp) => 
-        {
-            var mqttClient = sp.GetRequiredService<MQTTClient.MQTTClient>();
-            var influxConnector = sp.GetRequiredService<InfluxDB3Connector>();
-            
-            // Check MQTT connectivity
-            if (!mqttClient.IsConnected)
-            {
-                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(
-                    "MQTT broker disconnected");
-            }
-            
-            // Check MQTT message reception
-            if (mqttClient.TimeSinceLastMessage > TimeSpan.FromMinutes(5))
-            {
-                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(
-                    $"No MQTT messages received in {mqttClient.TimeSinceLastMessage.TotalMinutes:F1} minutes");
-            }
-            
-            // Check InfluxDB writes
-            if (influxConnector.TimeSinceLastWrite > TimeSpan.FromMinutes(3))
-            {
-                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(
-                    $"No successful InfluxDB write in {influxConnector.TimeSinceLastWrite.TotalMinutes:F1} minutes. Pending points: {influxConnector.PendingPointsCount}");
-            }
-            
-            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy();
-        },
-        tags: new[] { "live", "ready" }
-    );
+    .AddCheck<DataPipelineHealthCheck>("data-pipeline", tags: new[] { "live", "ready" });
 
 var app = builder.Build();
 
