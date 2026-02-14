@@ -1,14 +1,14 @@
----
+﻿---
 # Post-provision cluster configuration (add-ons).
 # Run this AFTER cluster.yml has completed successfully and k3s is stable.
 #
 # Two-Phase Install Strategy:
-#   Phase 1: cluster.yml      → OS prep, k3s install
-#   Phase 2: configure-cluster.yml → kube-vip, storage, services
+#   Phase 1: cluster.yml      â†’ OS prep, k3s install
+#   Phase 2: configure-cluster.yml â†’ kube-vip, storage, services
 #
 # Order matters:
 # 0. kube-vip (MUST be first - provides VIPs for LoadBalancer services)
-# 1. Longhorn storage (prep nodes → prep storage → install)
+# 1. Longhorn storage (prep nodes â†’ prep storage â†’ install)
 # 2. Services that need storage (AdGuard with PVC)
 # 3. Ingress configuration (needs Traefik + services ready)
 
@@ -39,7 +39,7 @@
 # Step 3: Ingress routes (host-based routing on shared VIP)
 # NOTE: configure-ingress-hostnames.yml and configure-traefik-mqtt.yml are now
 # managed by ArgoCD Application: SmartHomeDeployments/Traefik.yaml
-# This configures Traefik MQTT entrypoint via HelmChartConfig.
+# This configures Traefik MQTT and SMB entrypoints via HelmChartConfig.
 # - import_playbook: plays/configure-ingress-hostnames.yml
 # - import_playbook: plays/configure-traefik-mqtt.yml
-- import_playbook: plays/configure-traefik-smb.yml
+# - import_playbook: plays/configure-traefik-smb.yml
