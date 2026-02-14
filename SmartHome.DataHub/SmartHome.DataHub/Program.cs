@@ -101,10 +101,35 @@ builder.Services.AddSignalR();
 builder.Services.AddLogging();
 
 builder.Services.AddHealthChecks()
-    .AddCheck("self", () => 
+    .AddCheck("data-pipeline", (sp) => 
         {
+            var mqttClient = sp.GetRequiredService<MQTTClient.MQTTClient>();
+            var influxConnector = sp.GetRequiredService<InfluxDB3Connector>();
+            
+            // Check MQTT connectivity
+            if (!mqttClient.IsConnected)
+            {
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(
+                    "MQTT broker disconnected");
+            }
+            
+            // Check MQTT message reception
+            if (mqttClient.TimeSinceLastMessage > TimeSpan.FromMinutes(5))
+            {
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(
+                    $"No MQTT messages received in {mqttClient.TimeSinceLastMessage.TotalMinutes:F1} minutes");
+            }
+            
+            // Check InfluxDB writes
+            if (influxConnector.TimeSinceLastWrite > TimeSpan.FromMinutes(3))
+            {
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(
+                    $"No successful InfluxDB write in {influxConnector.TimeSinceLastWrite.TotalMinutes:F1} minutes. Pending points: {influxConnector.PendingPointsCount}");
+            }
+            
             return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy();
-        }
+        },
+        tags: new[] { "live", "ready" }
     );
 
 var app = builder.Build();
@@ -133,9 +158,10 @@ app.MapHealthChecks("/healthz/live", new HealthCheckOptions
 {
     Predicate = (check) => check.Tags.Contains("live"),
 });
+
 app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
 {
-    Predicate = (check) => true,
+    Predicate = (check) => check.Tags.Contains("ready"),
 });
 
 using (var scope = app.Services.CreateScope())

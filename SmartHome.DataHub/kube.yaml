@@ -29,7 +29,19 @@ spec:
           - name: SMARTHOME__INFLUXDB_ORG
             value: "env:SMARTHOME_INFLUXDB_ORG"
           - name: SMARTHOME__MQTT_BROKER
-            value: "env:SMARTHOME__MQTT_BROKER"          
+            value: "env:SMARTHOME__MQTT_BROKER"
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10          
 ---
 apiVersion: v1
 kind: Service

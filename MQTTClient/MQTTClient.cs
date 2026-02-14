@@ -15,8 +15,14 @@ namespace MQTTClient
         public string BrokerName { get; init; }
         public int BrokerPort { get; init; }
         public bool IsConnected => _client.IsConnected;
+        private DateTimeOffset lastMessageReceived = DateTimeOffset.UtcNow;
 
         public event EventHandler<MqttMessageReceivedEventArgs> OnMessageReceived;
+
+        /// <summary>
+        /// Returns the time since the last MQTT message was received
+        /// </summary>
+        public TimeSpan TimeSinceLastMessage => DateTimeOffset.UtcNow - lastMessageReceived;
 
         public MQTTClient(string clientId, string brokerName, int brokerPort)
         {
@@ -41,6 +47,7 @@ namespace MQTTClient
             {
                 if (e.ApplicationMessage.Payload.Length > 0)
                 {
+                    lastMessageReceived = DateTimeOffset.UtcNow;
                     var messageReceivedEventArgs = new MqttMessageReceivedEventArgs
                     {
                         Topic = e.ApplicationMessage.Topic,
