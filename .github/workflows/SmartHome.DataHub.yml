@@ -65,26 +65,26 @@ jobs:
         provenance: false
         sbom: false
 
-  # Separate job for deployment to local cluster (requires self-hosted runner)
-  deploy:
-    needs: build
-    runs-on: [self-hosted, linux]  # Use self-hosted runner for deployment
-    if: github.event_name == 'push'  # Only deploy on push, not PRs
-
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to Kubernetes if deployment does not exist yet
-      run: |
-        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
-          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
-        fi
-        
-    - name: Update Kubernetes deployment
-      run: |        
-        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUX3_URL="http://smarthomepi2:32087"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB3_TOKEN="${{ secrets.INFLUX3_TOKEN }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__DATAHUB_ENVIRONMENT="Prod"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_ORG="smarthome"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__MQTT_BROKER="smarthomepi2:32004"
+#  # Separate job for deployment to local cluster (requires self-hosted runner)
+#  deploy:
+#    needs: build
+#    runs-on: [self-hosted, linux]  # Use self-hosted runner for deployment
+#    if: github.event_name == 'push'  # Only deploy on push, not PRs
+#
+#    steps:
+#    - uses: actions/checkout@v4
+#    
+#    - name: Deploy to Kubernetes if deployment does not exist yet
+#      run: |
+#        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
+#          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
+#        fi
+#        
+#    - name: Update Kubernetes deployment
+#      run: |        
+#        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
+#        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUX3_URL="http://smarthomepi2:32087"
+#        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB3_TOKEN="${{ secrets.INFLUX3_TOKEN }}"
+#        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__DATAHUB_ENVIRONMENT="Prod"
+#        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__INFLUXDB_ORG="smarthome"
+#        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} SMARTHOME__MQTT_BROKER="smarthomepi2:32004"
