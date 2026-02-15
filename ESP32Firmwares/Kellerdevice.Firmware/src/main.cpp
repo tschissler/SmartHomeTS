@@ -38,7 +38,8 @@ static int lastMQTTSentMinute = 0;
 
 static String baseTopic = "daten";
 static String sensorName = "";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/KellerDevice";
 static String mqtt_SensorNameTopic = "config/KellerDevice/{ID}/Sensorname";
 static String mqtt_BrightnessTopic = "config/KellerDevice/{ID}/Brightness";
@@ -161,11 +162,11 @@ void mqttCallback(String &topic, String &payload) {
     }
 }
 
-void connectToMQTT() {
+void connectToMQTT(bool cleanSession = false) {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect(false);
+  mqttClientLib->connect(cleanSession);
   mqttClientLib->subscribe({mqtt_SensorNameTopic, mqtt_BrightnessTopic, mqtt_OTAtopic});
   Serial.println("MQTT Client is connected");
 }
@@ -276,8 +277,8 @@ void setup() {
 
   // Set up MQTT
   String mqttClientID = "ESP32TemperatureSensorClient_" + chipID;
-  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
-  connectToMQTT();
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
+  connectToMQTT(true);
 
   timeClient.begin();
   timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
