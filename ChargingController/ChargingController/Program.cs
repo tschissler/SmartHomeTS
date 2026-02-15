@@ -1,9 +1,9 @@
-﻿using ChargingController;
+using ChargingController;
 using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Packets;
 using SharedContracts;
+using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 IMqttClient mqttClient;
 ChargingSituation currentChargingSituation = new ChargingSituation();
@@ -12,12 +12,33 @@ DateTime lastOutsideSetTime = DateTime.MinValue;
 DateTime lastInsideSetTime = DateTime.MinValue;
 const int minimumSetIntervalSeconds = 10;
 
-Console.WriteLine("ChargingController started");
+// Display version information on startup
+var versionInfo = VersionInfo.GetVersionInfo();
+Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║  ChargingController Starting                                       ║");
+Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
+Console.WriteLine($"║  {versionInfo.GetDisplayString().PadRight(66)}║");
+Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
 
-// Listen to Keba and Envoy MQTT messages and new configuration setting
+// Build configuration from environment variables
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddEnvironmentVariables(prefix: "ChargingControllerSettings__")
+    .Build();
+
+// Read configuration values
+var mqttBroker = configuration["MqttBroker"] ?? "smarthomepi2";
+var mqttPort = int.Parse(configuration["MqttPort"] ?? "32004");
+var healthCheckPort = int.Parse(configuration["HealthCheckPort"] ?? "8080");
+
+Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
+
+// Start health check HTTP server in background
+var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
+
 Console.WriteLine("  - Connecting to MQTT Broker");
 
-var factory = new MqttFactory();
+var factory = new MqttClientFactory();
 mqttClient = factory.CreateMqttClient();
 await MQTTConnectAsync();
 
@@ -29,6 +50,7 @@ while (true)
     if (!mqttClient.IsConnected)
     {
         Console.WriteLine("MQTT connection lost. Reconnecting...");
+        ChargingControllerHealthCheck.UpdateMqttConnectionStatus(false);
         await MQTTConnectAsync();
     }
     await Task.Delay(1000);
@@ -37,11 +59,9 @@ while (true)
 
 async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
 {
-    string payload = args.ApplicationMessage.ConvertPayloadToString();
+    string payload = Encoding.UTF8.GetString(args.ApplicationMessage.Payload);
     var topic = args.ApplicationMessage.Topic;
     var time = DateTime.Now;
-
-    //Console.WriteLine($"Received message from {topic} at {time}: {payload}");
 
     try
     {
@@ -82,6 +102,9 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             Console.WriteLine($"Unknown topic: {topic}");
         }
 
+        // Update health check on successful message processing
+        ChargingControllerHealthCheck.UpdateLastSuccessfulRead();
+
         var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation, currentChargingSettings);
         if (chargingResult.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
         {
@@ -97,7 +120,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                 Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
                 currentChargingSituation.InsideChargingLatestmA = chargingResult.InsideChargingCurrentmA;
             }
-            else 
+            else
             {
                 Console.WriteLine($"Inside charging current was set too recently. Skipping.");
             }
@@ -121,7 +144,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                 Console.WriteLine($"Outside charging current was set too recently. Skipping.");
             }
         }
-        
+
         var payloadChargingSituation = JsonSerializer.Serialize(currentChargingSituation);
         await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
             .WithTopic("data/charging/situation")
@@ -129,8 +152,8 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             .WithRetainFlag()
             .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
             .Build());
-    } 
-    catch (Exception ex) 
+    }
+    catch (Exception ex)
     {
         Console.WriteLine($"Error processing MQTT message: {ex.Message}");
     }
@@ -139,7 +162,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
 async Task MQTTConnectAsync()
 {
     var mqttOptions = new MqttClientOptionsBuilder()
-        .WithTcpServer("smarthomepi2", 32004)
+        .WithTcpServer(mqttBroker, mqttPort)
         .WithClientId("Smarthome.ChargingController")
         .WithKeepAlivePeriod(new TimeSpan(0, 1, 0,0))
         .Build();
@@ -154,23 +177,72 @@ async Task MQTTConnectAsync()
             if (mqttClient.IsConnected)
             {
                 Console.WriteLine("Connected to MQTT Broker.");
+                ChargingControllerHealthCheck.UpdateMqttConnectionStatus(true);
 
                 mqttClient.ApplicationMessageReceivedAsync -= MqttMessageReceived;
                 mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
 
-                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaGarage").Build());
-                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/KebaOutside").Build());
-                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/BMW").Build());
-                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/charging/VW").Build());
-                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("data/electricity/envoym3").Build());
-                await mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("config/charging/#").Build());
+                await mqttClient.SubscribeAsync("data/charging/KebaGarage");
+                await mqttClient.SubscribeAsync("data/charging/KebaOutside");
+                await mqttClient.SubscribeAsync("data/charging/BMW");
+                await mqttClient.SubscribeAsync("data/charging/VW");
+                await mqttClient.SubscribeAsync("data/electricity/envoym3");
+                await mqttClient.SubscribeAsync("config/charging/#");
                 break;
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error connecting to MQTT Broker: {ex.Message}");
-            Thread.Sleep(5000);
+            await Task.Delay(5000);
         }
     }
+}
+
+static void StartHealthCheckServer(int port)
+{
+    var builder = WebApplication.CreateBuilder();
+
+    // Add health checks
+    builder.Services.AddHealthChecks()
+        .AddCheck<ChargingControllerHealthCheck>("charging_controller");
+
+    var app = builder.Build();
+
+    // Configure health check endpoints
+    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description,
+                    duration = e.Value.Duration.TotalMilliseconds
+                }),
+                totalDuration = report.TotalDuration.TotalMilliseconds
+            });
+            await context.Response.WriteAsync(result);
+        }
+    });
+
+    // Simple liveness probe
+    app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+
+    // Readiness probe
+    app.MapGet("/ready", async (HealthCheckService healthCheckService) =>
+    {
+        var report = await healthCheckService.CheckHealthAsync();
+        return report.Status == HealthStatus.Healthy
+            ? Results.Ok(new { status = "ready" })
+            : Results.StatusCode(503);
+    });
+
+    Console.WriteLine($" ### Health check server starting on port {port}");
+    app.Run($"http://0.0.0.0:{port}");
 }
