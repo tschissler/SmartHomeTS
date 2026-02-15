@@ -33,7 +33,8 @@ static unsigned long otaStartMs = 0;
 static bool otaEnable = String(OTA_ENABLED) != "false";
 
 // MQTT settings (kept compatible with existing backend topics)
-static const String mqtt_broker = "smarthomepi2";
+static const String mqtt_broker = "mosquitto.intern";
+static const int mqtt_port = 1883;
 static const String mqtt_update_topic = "OTAUpdate/LEDStripe";
 static const String mqtt_data_topic = "commands/illumination/LEDStripe/setColor";
 
@@ -241,7 +242,7 @@ void setup() {
   
   // Set up MQTT
   String mqttClientID = "ESP32LEDStripeClient_" + chipID;
-  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT(true);
 
   mqttClientLib->publish("meta/LEDStripe/version", String(version), true, 2);
