@@ -33,7 +33,8 @@ static bool mqttSuccess = false;
 static String baseTopic = "data/heating";
 static String sensorName = "";
 static String location = "";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/HeatMeter";
 static String mqtt_ConfigTopic = "config/HeatMeter/Sensorname/";
 
@@ -93,12 +94,14 @@ void mqttCallback(String &topic, String &payload) {
     }
 }
 
-void connectToMQTT() {
+void connectToMQTT(bool cleanSession = false) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected, trying to reconnect...");
     wifiLib.connect();
   }
-  mqttClient->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
+  mqttClient->connect(cleanSession);
+  mqttClient->subscribe(mqtt_ConfigTopic);
+  mqttClient->subscribe(mqtt_OTAtopic);
   Serial.println("MQTT Client is connected");
 }
 
@@ -275,8 +278,8 @@ void setup() {
   
   // Set up MQTT
   String mqttClientID = "ESP32HeatmeterSensorClient_" + chipID;
-  mqttClient = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
-  connectToMQTT();
+  mqttClient = std::make_unique<MQTTClientLib>(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
+  connectToMQTT(true);
   
   // Print the IP address
   Serial.print("IP Address: ");
