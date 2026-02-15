@@ -40,7 +40,7 @@ namespace SmartHome.Web.Services
             _client = factory.CreateMqttClient();
 
             _options = new MqttClientOptionsBuilder()
-            .WithTcpServer("smarthomepi2", 32004)
+            .WithTcpServer("mosquitto.intern", 1883)
             .WithClientId("Smarthome.Web")
             .WithKeepAlivePeriod(new TimeSpan(0, 1, 0, 0))
             .Build();
