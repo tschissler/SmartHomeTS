@@ -1,17 +1,32 @@
 # Use an official Python runtime as a parent image
 FROM python:3.13.2-bookworm
 
+ARG VERSION=0.0.0
+ARG BUILD_DATE=unknown
+ARG GIT_COMMIT=unknown
+ARG BUILD_NUMBER=0
+
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
-
-# Install any needed packages specified in requirements.txt
+# Copy requirements first for better caching
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Make port 5000 available to the world outside this container
-EXPOSE 5000
+# Copy the rest of the application
+COPY . /app
 
-# Run app.py when the container launches
+# Create version info file
+RUN echo "{ \"version\": \"${VERSION}\", \"buildDate\": \"${BUILD_DATE}\", \"gitCommit\": \"${GIT_COMMIT}\", \"buildNumber\": \"${BUILD_NUMBER}\" }" > /app/version.json
+
+# Add version labels to the image
+LABEL version="${VERSION}" \
+      build-date="${BUILD_DATE}" \
+      git-commit="${GIT_COMMIT}" \
+      maintainer="tschissler"
+
+# Expose health check port
+EXPOSE 8080
+
+# Run app when the container launches
 CMD ["python", "vw_mqtt.py"]

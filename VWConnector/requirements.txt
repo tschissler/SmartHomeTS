@@ -1,3 +1,4 @@
 carconnectivity>=0.9.2
 carconnectivity-connector-volkswagen>=0.9.2
 paho-mqtt
+flask
