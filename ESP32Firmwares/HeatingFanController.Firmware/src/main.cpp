@@ -60,7 +60,8 @@ static String baseTopic = "daten";
 static String deviceName = "Heizkörperlüfter";
 static std::unordered_map<std::string, String> sensorNames;
 static String location = "unknown";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/HeatingFanController";
 static String mqtt_ConfigTopic = "config/HeatingFanController/{ID}";
 static const String mqtt_CommandTopicTemplate = "commands/Heating/{DeviceName}";
@@ -521,7 +522,7 @@ void setup()
 
   // Set up MQTT
   String mqttClientID = "ESP32HeatingFanControllerClient_" + chipID;
-  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT(true);
   mqttClientLib->publish(("meta/HeatingFanController/" + location + "/" + deviceName + "/version").c_str(), String(version), true, 2);
 

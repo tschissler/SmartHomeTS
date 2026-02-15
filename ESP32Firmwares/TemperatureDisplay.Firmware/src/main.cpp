@@ -28,7 +28,8 @@ static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static String baseTopic = "daten";
 static String deviceName = "";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/TemperatureDisplay";
 static String mqtt_DeviceNameTopic = "config/TemperaturDisplay/{ID}/DeviceName";
 static String mqtt_OutsideTempTopic = "cangateway/M3/WPAE/Temperatur/AF1_Aussenfuehler";
@@ -249,7 +250,7 @@ void setup()
   // Set up MQTT
   String mqttClientID = "ESP32TemperatureDisplayClient_" + chipID;
   mqtt_DeviceNameTopic.replace("{ID}", chipID);
-  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT();
 
   timeClient.begin();
