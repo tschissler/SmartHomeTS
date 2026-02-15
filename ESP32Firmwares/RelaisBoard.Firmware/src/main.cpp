@@ -51,7 +51,8 @@ static bool mqttSuccess = false;
 static String baseTopic = "data/heating";
 static String sensorName = "";
 static String location = "";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/Relaismodule";
 static String mqtt_SensornameTopic = "config/Relaismodule/Sensorname/";
 static String mqtt_config_Base = "config/Relaismodule/";
@@ -292,7 +293,7 @@ void setup() {
 
   // Set up MQTT
   String mqttClientID = "ESP32RelaismoduleClient_" + chipID;
-  mqttClient = std::unique_ptr<MQTTClientLib>(new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback));
+  mqttClient = std::unique_ptr<MQTTClientLib>(new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback));
   connectToMQTT(true);
 
   // Print the IP address
