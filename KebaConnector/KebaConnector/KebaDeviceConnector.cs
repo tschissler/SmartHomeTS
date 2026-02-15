@@ -149,7 +149,8 @@ namespace KebaConnector
                     EndTime: ParseDateTimeOffset(data.Ended),
                     TatalEnergyAtStart: data.Estart / 10.0,
                     EnergyOfChargingSession: data.Epres / 10.0,
-                    wallbox
+                    WallboxName: wallbox,
+                    ChargedCar: ""
                 );
             }
             catch (Exception ex)

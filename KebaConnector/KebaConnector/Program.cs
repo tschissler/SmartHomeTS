@@ -1,44 +1,70 @@
-﻿// See https://aka.ms/new-console-template for more information
-
 using HelpersLib;
 using KebaConnector;
 using MQTTnet;
-using MQTTnet.Client;
+using MQTTnet.Protocol;
 using SharedContracts;
 using System.Net;
 using System.Text.Json;
 using MQTTClient;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 MQTTClient.MQTTClient mqttClient;
 KebaDeviceConnector kebaOutside;
 KebaDeviceConnector kebaGarage;
 
-Console.WriteLine("KebaConnector started");
+// Display version information on startup
+var versionInfo = VersionInfo.GetVersionInfo();
+Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║  KebaConnector Starting                                            ║");
+Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
+Console.WriteLine($"║  {versionInfo.GetDisplayString().PadRight(66)}║");
+Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
+
+// Build configuration from environment variables
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddEnvironmentVariables(prefix: "KebaConnectorSettings__")
+    .Build();
+
+// Read configuration values
+var mqttBroker = configuration["MqttBroker"] ?? "smarthomepi2";
+var mqttPort = int.Parse(configuration["MqttPort"] ?? "32004");
+var healthCheckPort = int.Parse(configuration["HealthCheckPort"] ?? "8080");
+var kebaOutsideHost = configuration["KebaOutsideHost"] ?? "keba-stellplatz";
+var kebaGarageHost = configuration["KebaGarageHost"] ?? "keba-garage";
+var kebaPort = int.Parse(configuration["KebaPort"] ?? "7090");
+
+Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
+Console.WriteLine($" ### Keba devices: Outside={kebaOutsideHost}:{kebaPort}, Garage={kebaGarageHost}:{kebaPort}");
+
+// Start health check HTTP server in background
+var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
 
 Console.WriteLine("  - Connecting to Keba Outside...");
-var ipsOutside = await Dns.GetHostAddressesAsync("keba-stellplatz");
+var ipsOutside = await Dns.GetHostAddressesAsync(kebaOutsideHost);
 if (ipsOutside is null || ipsOutside.Length == 0)
 {
-    Console.WriteLine("    Could not resolve keba-stellplatz");
+    Console.WriteLine($"    Could not resolve {kebaOutsideHost}");
     return;
 }
-kebaOutside = new KebaDeviceConnector(ipsOutside[0], 7090);
+kebaOutside = new KebaDeviceConnector(ipsOutside[0], kebaPort);
 Console.WriteLine("    ...Done");
 
 Console.WriteLine("  - Connecting to Keba Garage...");
-var ipsGarage = await Dns.GetHostAddressesAsync("keba-garage");
+var ipsGarage = await Dns.GetHostAddressesAsync(kebaGarageHost);
 if (ipsGarage is null || ipsGarage.Length == 0)
 {
-    Console.WriteLine("    Could not resolve keba-garage");
+    Console.WriteLine($"    Could not resolve {kebaGarageHost}");
     return;
 }
-kebaGarage = new KebaDeviceConnector(ipsGarage[0], 7090);
+kebaGarage = new KebaDeviceConnector(ipsGarage[0], kebaPort);
 Console.WriteLine("    ...Done");
 
 Console.WriteLine("  - Connecting to MQTT Broker");
 
-mqttClient = new MQTTClient.MQTTClient("KebaConnector");
+mqttClient = new MQTTClient.MQTTClient("KebaConnector", mqttBroker, mqttPort);
 Console.WriteLine($"    ClientId: {mqttClient.ClientId}");
+KebaConnectorHealthCheck.UpdateMqttConnectionStatus(true);
 
 mqttClient.OnMessageReceived += MqttMessageReceived;
 
@@ -63,6 +89,7 @@ async void Update(object? state)
                 var data = task.Result;
                 Console.WriteLine($"Keba Outside: {data.PlugStatus,-50} {data.CurrentChargingPower,10} W {data.EnergyCurrentChargingSession,15:#,##0} Wh {data.EnergyTotal,15:#,##0} Wh");
                 SendDataAsMQTTMessage(mqttClient, data, "KebaOutside").Wait();
+                KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
             }
         });
 
@@ -73,6 +100,7 @@ async void Update(object? state)
                 var data = task.Result;
                 Console.WriteLine($"Keba Garage : {data.PlugStatus,-50} {data.CurrentChargingPower,10} W {data.EnergyCurrentChargingSession,15:#,##0} Wh {data.EnergyTotal,15:#,##0} Wh");
                 SendDataAsMQTTMessage(mqttClient, data, "KebaGarage").Wait();
+                KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
             }
         });
 
@@ -95,26 +123,6 @@ async void Update(object? state)
                 SendChargingSessionAsMQTTMessage(mqttClient, data, "KebaOutside").Wait();
             }
         });
-
-        //foreach (var chargingDataReport in kebaOutside.ReadReports()) 
-        //{
-        //    if (chargingDataReport.session is not null)
-        //    {
-        //        Console.WriteLine($"Report {chargingDataReport.report}:" 
-        //            + $" Session-{chargingDataReport.session.SessionID}"
-        //            + $" {chargingDataReport.session.CurrHW,15:#,##0 W}" 
-        //            + $" {chargingDataReport.session.Estart,20:#,##0 Wh}"
-        //            + $" {chargingDataReport.session.Epres,20:#,##0 Wh}"
-        //            + $" TimeQ-{chargingDataReport.session.TimeQ,3}"
-        //            + $" Reason-{chargingDataReport.session.Reason,3}"
-        //            + "\n           "
-        //            + $" Start-{chargingDataReport.session.Started,30}"
-        //            + "\n           "
-        //            + $" End  -{chargingDataReport.session.Ended,30}"
-        //            );
-        //    }
-        //}
-        //Console.WriteLine("---------------------------------------------------------------------------------------------------------------------");
     }
     catch (Exception ex)
     {
@@ -154,7 +162,7 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
     }
     var kebaDevice = topic.Split("/")[2];
     if (kebaDevice.ToLower() == "kebagarage")
-    {         
+    {
         await kebaGarage.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent);
     }
     else if (kebaDevice.ToLower() == "kebaoutside")
@@ -180,12 +188,60 @@ static async Task SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaDa
         EnergyCurrentChargingSession = data.EnergyCurrentChargingSession,
         EnergyTotal = data.EnergyTotal
     };
-    await mqttClient.PublishAsync($"data/charging/{device}", JsonSerializer.Serialize(messageData), MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce, false);
+    await mqttClient.PublishAsync($"data/charging/{device}", JsonSerializer.Serialize(messageData), MqttQualityOfServiceLevel.AtMostOnce, false);
 }
 
 static async Task SendChargingSessionAsMQTTMessage(MQTTClient.MQTTClient mqttClient, ChargingSession? data, string device)
 {
     if (data is null)
         return;
-    await mqttClient.PublishAsync($"data/charging/{device}_ChargingSessionEnded", JsonSerializer.Serialize(data), MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce, false);
+    await mqttClient.PublishAsync($"data/charging/{device}_ChargingSessionEnded", JsonSerializer.Serialize(data), MqttQualityOfServiceLevel.AtMostOnce, false);
+}
+
+static void StartHealthCheckServer(int port)
+{
+    var builder = WebApplication.CreateBuilder();
+
+    // Add health checks
+    builder.Services.AddHealthChecks()
+        .AddCheck<KebaConnectorHealthCheck>("keba_connector");
+
+    var app = builder.Build();
+
+    // Configure health check endpoints
+    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description,
+                    duration = e.Value.Duration.TotalMilliseconds
+                }),
+                totalDuration = report.TotalDuration.TotalMilliseconds
+            });
+            await context.Response.WriteAsync(result);
+        }
+    });
+
+    // Simple liveness probe
+    app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+
+    // Readiness probe
+    app.MapGet("/ready", async (HealthCheckService healthCheckService) =>
+    {
+        var report = await healthCheckService.CheckHealthAsync();
+        return report.Status == HealthStatus.Healthy
+            ? Results.Ok(new { status = "ready" })
+            : Results.StatusCode(503);
+    });
+
+    Console.WriteLine($" ### Health check server starting on port {port}");
+    app.Run($"http://0.0.0.0:{port}");
 }
