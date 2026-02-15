@@ -49,7 +49,6 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     -c $BUILD_CONFIGURATION \
     -a $TARGETARCH \
     -o /app/publish \
-    --no-restore \
     --verbosity minimal \
     -p:UseAppHost=false \
     -p:Version=${VERSION} \

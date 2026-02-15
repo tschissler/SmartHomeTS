@@ -99,7 +99,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
                      | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
 });
 
-//app.UseStaticFiles();
+app.UseStaticFiles();
 // Antiforgery disabled for internal system
 // app.UseAntiforgery();
 app.MapStaticAssets();
