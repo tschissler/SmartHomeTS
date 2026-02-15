@@ -1,7 +1,0 @@
-{
-  "name": "Sensors",
-  "version": "0.1.0",
-  "description": "Shared sensor drivers and helpers for ESP32 projects.",
-  "frameworks": ["arduino"],
-  "platforms": ["espressif32"]
-}

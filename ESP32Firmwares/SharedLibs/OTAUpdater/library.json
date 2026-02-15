@@ -1,7 +1,0 @@
-{
-  "name": "OTAUpdater",
-  "version": "0.1.0",
-  "description": "Shared OTA update helpers for ESP32 projects.",
-  "frameworks": ["arduino"],
-  "platforms": ["espressif32"]
-}

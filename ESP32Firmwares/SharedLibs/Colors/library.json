@@ -1,7 +1,0 @@
-{
-  "name": "Colors",
-  "version": "0.1.0",
-  "description": "Shared color utilities and palettes for ESP32 projects.",
-  "frameworks": ["arduino"],
-  "platforms": ["espressif32"]
-}
