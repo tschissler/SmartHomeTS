@@ -73,7 +73,8 @@ static String baseTopic = "daten";
 static String sensorName = "";
 static std::unordered_map<std::string, String> sensorNames;
 static String location = "unknown";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
 static String mqtt_ConfigTopic = "config/TemperaturSensor2/{ID}";
 static int brightness = 255;
@@ -617,7 +618,7 @@ void setup()
 
   // Set up MQTT
   String mqttClientID = "ESP32TemperatureSensor2Client_" + chipID;
-  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT(true);
   mqttClientLib->publish(("meta/TemperaturSensor2/" + location + "/" + sensorName + "/version").c_str(), String(version), true, 2);
 }
