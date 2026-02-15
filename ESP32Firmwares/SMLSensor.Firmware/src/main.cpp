@@ -41,7 +41,8 @@ static bool mqttSuccess = false;
 static String baseTopic = "data/electricity";
 static String sensorName = "";
 static String location = "";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/SMLSensor";
 static String mqtt_ConfigTopic = "config/SMLSensor/Sensorname/";
 
@@ -102,11 +103,12 @@ void mqttCallback(String &topic, String &payload) {
     }
 }
 
-void connectToMQTT() {
+void connectToMQTT(bool cleanSession = false) {
   if (WiFi.status() != WL_CONNECTED) {
     wifiLib.connect();
   }
-  mqttClientLib->connect({mqtt_ConfigTopic, mqtt_OTAtopic});
+  mqttClientLib->connect(cleanSession);
+  mqttClientLib->subscribe({mqtt_OTAtopic, mqtt_ConfigTopic});
   Serial.println("MQTT Client is connected");
 }
 
@@ -143,8 +145,8 @@ void setup() {
   
   // Set up MQTT
   String mqttClientID = "ESP32SMLSensorClient_" + chipID;
-  mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
-  connectToMQTT();
+  mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
+  connectToMQTT(true);
   
   // Print the IP address
   Serial.print("IP Address: ");
