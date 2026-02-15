@@ -51,7 +51,8 @@ static int switchBottomStatus = false;
 static String baseTopic = "daten";
 static String sensorName = "";
 static String location = "unknown";
-const String mqtt_broker = "smarthomepi2";
+const String mqtt_broker = "mosquitto.intern";
+const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor";
 static String mqtt_ConfigTopic = "config/TemperaturSensor/";
 
@@ -225,7 +226,7 @@ void setup() {
 
   // Set up MQTT
   String mqttClientID = "ESP32TemperatureSensorClient_" + chipID;
-  mqttClientLib = new MQTTClientLib(mqtt_broker, mqttClientID, wifiClient, mqttCallback);
+  mqttClientLib = new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT();
 
   //Init DHT sensor
