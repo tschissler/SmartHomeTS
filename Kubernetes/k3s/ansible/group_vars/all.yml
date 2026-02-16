@@ -9,6 +9,9 @@ nameservers:
 # Default Ansible become timeout is ~12s; increase to avoid false failures.
 ansible_become_timeout: 60
 
+# Pin k3s version for consistent installs.
+k3s_version: v1.33.6+k3s1
+
 # Ingress hostnames
 nextcloud_domain: nextcloud.intern
 nextcloud_namespace: nextcloud
