@@ -56,6 +56,56 @@ ansible-playbook configure-cluster.yml -i inventory.ini --limit prodservers
 | AdGuard Home | `http://adguard.intern/` | DNS + network filtering |
 | Traefik Ingress | `192.168.178.223:80/443` | HTTP service ingress |
 
+## DNS Resolution for LAN Devices
+
+When pods need to reach devices on the local network (Keba wallboxes, Enphase envoys, etc.),
+bare hostnames like `keba-garage` won't resolve because CoreDNS only knows about `cluster.local`,
+not FritzBox DHCP names.
+
+### How DNS flows in the cluster
+
+```
+Pod DNS query
+  └─> CoreDNS (10.43.0.10)
+        ├── *.cluster.local          → Kubernetes internal
+        ├── *.intern                 → AdGuard Home (10.43.11.255)
+        ├── *.fritz.box              → FritzBox (192.168.178.1) via coredns-custom
+        ├── envoym1 / envoym3        → rewritten to *.fritz.box, then FritzBox (legacy shortname blocks)
+        └── everything else          → node's /etc/resolv.conf
+```
+
+### Preferred pattern: use `.fritz.box` FQDNs
+
+All DHCP clients registered in the FritzBox are resolvable as `<hostname>.fritz.box`.
+Since `coredns-custom` already has a `fritz.box` server block forwarding to `192.168.178.1`,
+**the simplest and most future-proof approach is to use `.fritz.box` FQDNs** in Helm values
+and application configs:
+
+```yaml
+# Good — resolved via existing fritz.box server block, no extra CoreDNS config needed
+kebaOutsideHost: "keba-stellplatz.fritz.box"
+kebaGarageHost: "keba-garage.fritz.box"
+
+# Bad — bare hostname, needs a dedicated CoreDNS server block to resolve
+kebaOutsideHost: "keba-stellplatz"
+```
+
+**When to use each DNS zone:**
+
+| Device / Service | Use | Example |
+|---|---|---|
+| LAN device (DHCP on FritzBox) | `<name>.fritz.box` | `keba-garage.fritz.box` |
+| Cluster-internal K8s service | `<svc>.<ns>.svc.cluster.local` | `mosquitto.mosquitto.svc.cluster.local` |
+| Cluster service exposed via ingress | `<name>.intern` (AdGuard rewrite) | `nextcloud.intern` |
+
+### Future simplification: `envoym1` / `envoym3`
+
+The dedicated CoreDNS server blocks for `envoym1` and `envoym3` (bare shortnames that get
+rewritten to `*.fritz.box`) can be removed if the consuming applications are updated to use
+`envoym1.fritz.box` and `envoym3.fritz.box` directly. This would eliminate the per-device
+server blocks in `coredns-custom` and the corresponding Ansible template logic. Track this
+simplification as a follow-up task.
+
 ## Individual Playbooks
 
 Core provisioning tasks:
