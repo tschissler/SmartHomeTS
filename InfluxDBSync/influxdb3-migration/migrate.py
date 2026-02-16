@@ -72,7 +72,12 @@ from src.state_manager import StateManager
     metavar='N',
     help='Keep only N most recent runs, delete older ones'
 )
-def main(config, dry_run, tables, log_level, list_runs, show_run, cleanup_runs):
+@click.option(
+    '--skip-validation',
+    is_flag=True,
+    help='Skip post-migration validation (useful when target has additional data from live writes)'
+)
+def main(config, dry_run, tables, log_level, list_runs, show_run, cleanup_runs, skip_validation):
     """
     InfluxDB3 Migration Tool
 
@@ -113,6 +118,12 @@ def main(config, dry_run, tables, log_level, list_runs, show_run, cleanup_runs):
         # Override log level if specified
         if log_level:
             migration_config.logging.level = log_level.upper()
+
+        # Override validation if specified
+        if skip_validation:
+            migration_config.validation.post_migration = False
+            migration_config.validation.sample_verification = 0
+            click.echo("Post-migration validation disabled via --skip-validation")
 
         # Handle utility commands
         state_mgr = StateManager(migration_config.state.checkpoint_db)

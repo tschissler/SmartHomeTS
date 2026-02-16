@@ -194,13 +194,20 @@ class MigrationValidator:
 
             # Determine expected count
             if expected_rows is not None:
-                # We have the count of rows actually migrated - use that to avoid race conditions
-                if target_count != expected_rows:
+                # We have the count of rows actually migrated
+                # Target may have MORE rows than expected if sensors are already writing
+                # directly to the target DB (migration scenario). This is expected and OK.
+                if target_count < expected_rows:
                     logger.error(
                         f"  ✗ Row count mismatch for {table}: "
-                        f"expected={expected_rows:,}, target={target_count:,}"
+                        f"expected at least {expected_rows:,}, but target has only {target_count:,}"
                     )
                     return False
+                elif target_count > expected_rows:
+                    logger.info(
+                        f"  ✓ Target has {target_count:,} rows (migrated {expected_rows:,}, "
+                        f"{target_count - expected_rows:,} additional from live writes)"
+                    )
                 else:
                     logger.info(f"  ✓ Row counts match: {expected_rows:,} rows")
             else:
