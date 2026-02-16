@@ -39,6 +39,11 @@ namespace KebaConnector
                 Console.WriteLine($"Would have written {newCurrent} mA as charging current to device otherwise");
                 return;
             }
+            if (newCurrent == previousChargingCurrencyWrittenToDevice)
+            {
+                Console.WriteLine($"Charging current already set to {newCurrent} mA, skipping write to device");
+                return;
+            }
             WriteChargingCurrentToDevice(newCurrent);
             return;
         }
@@ -184,18 +189,33 @@ namespace KebaConnector
 
         private void WriteChargingCurrentToDevice(int current)
         {
-            Console.WriteLine("Updating charging currency to " + current);
-            var success = ExecuteUDPCommand($"currtime {current} 1");
-            Console.WriteLine("Result: " + success);
-            if (success != "TCH-OK :done\n")
+            const int maxRetries = 3;
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                Console.WriteLine($"Setting currency failed - {success}");
-                throw new Exception($"Setting currency failed");
+                Console.WriteLine($"Updating charging current to {current} (attempt {attempt}/{maxRetries})");
+                var result = ExecuteUDPCommand($"currtime {current} 1");
+                Console.WriteLine("Result: " + result);
+                if (result == "TCH-OK :done\n")
+                {
+                    Console.WriteLine("Updated charging current to " + current);
+                    previousChargingCurrencyWrittenToDevice = current;
+                    return;
+                }
+
+                // Check if we received a report response instead of the expected TCH-OK
+                // This happens when UDP responses from concurrent commands get mixed up
+                if (result.TrimStart().StartsWith("{"))
+                {
+                    Console.WriteLine($"Received unexpected report response instead of TCH-OK, retrying...");
+                    Thread.Sleep(500);
+                    continue;
+                }
+
+                Console.WriteLine($"Setting charging current failed - unexpected response: {result}");
+                break;
             }
-            else
-            {
-                Console.WriteLine("Updated charging currency to " + current);
-            }
+            Console.WriteLine($"Failed to set charging current to {current} after {maxRetries} attempts");
+            throw new Exception($"Setting charging current failed");
         }
 
         internal KebaDeviceStatusData GetDeviceStatus()
