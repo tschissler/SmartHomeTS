@@ -161,17 +161,24 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
         return;
     }
     var kebaDevice = topic.Split("/")[2];
-    if (kebaDevice.ToLower() == "kebagarage")
+    try
     {
-        await kebaGarage.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent);
+        if (kebaDevice.ToLower() == "kebagarage")
+        {
+            await kebaGarage.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent);
+        }
+        else if (kebaDevice.ToLower() == "kebaoutside")
+        {
+            await kebaOutside.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent);
+        }
+        else
+        {
+            Console.WriteLine($"Unknown device {kebaDevice}");
+        }
     }
-    else if (kebaDevice.ToLower() == "kebaoutside")
+    catch (Exception ex)
     {
-        await kebaOutside.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent);
-    }
-    else
-    {
-        Console.WriteLine($"Unknown device {kebaDevice}");
+        Console.WriteLine($"Error updating charging current for {kebaDevice}: {ex.Message}");
     }
 
     return;

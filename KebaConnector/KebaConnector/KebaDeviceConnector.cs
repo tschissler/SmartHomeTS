@@ -12,7 +12,7 @@ namespace KebaConnector
         private IPAddress ipAddress;
         private int uDPPort;
         private int previousChargingCurrencyWrittenToDevice = 0;
-        private bool udpExceptionInProgress = false;
+        private readonly SemaphoreSlim udpSemaphore = new(1, 1);
         private int LastChargingSessionPublishedViaMQTT = 0;
 
         public KebaDeviceConnector(IPAddress IpAddress, int UDPPort, object? lockObject = null)
@@ -50,16 +50,14 @@ namespace KebaConnector
 
         public async Task<KebaData?> ReadDeviceData()
         {
-            if (udpExceptionInProgress)
+            if (!await udpSemaphore.WaitAsync(TimeSpan.FromSeconds(5)))
             {
-                throw new Exception("Other UDP Operation is still in progress, skipping read from device. This might be due to failing UDP communication with device.");
+                Console.WriteLine("Other UDP operation is still in progress, skipping read from device.");
+                return null;
             }
-            udpExceptionInProgress = true;
-            KebaDeviceStatusData data;
             try
             {
-                data = GetDeviceStatus();
-                udpExceptionInProgress = false;
+                var data = GetDeviceStatus();
                 return new KebaData(
                     (PlugStatus)data.PlugStatus,
                     data.ChargingEnabled == 1,
@@ -84,7 +82,10 @@ namespace KebaConnector
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to read data from Keba device, Error: {ex.Message}");
-                udpExceptionInProgress = false;
+            }
+            finally
+            {
+                udpSemaphore.Release();
             }
 
             return null;
@@ -131,22 +132,19 @@ namespace KebaConnector
 
         private ChargingSession? ReadReport(int reportId, string wallbox)
         {
-            if (udpExceptionInProgress)
+            if (!udpSemaphore.Wait(TimeSpan.FromSeconds(5)))
             {
-                throw new Exception("Other UDP Operation is still in progress, skipping read from device. This might be due to failing UDP communication with device.");
+                Console.WriteLine("Other UDP operation is still in progress, skipping report read from device.");
+                return null;
             }
-            udpExceptionInProgress = true;
-            KebaReportData? data;
             try
             {
-                data = JsonConvert.DeserializeObject<KebaReportData>(GetDeviceReport(reportId));
+                var data = JsonConvert.DeserializeObject<KebaReportData>(GetDeviceReport(reportId));
                 if (data == null)
                 {
                     Console.WriteLine("Failed to read data from Keba device");
-                    udpExceptionInProgress = false;
                     return null;
                 }
-                udpExceptionInProgress = false;
                 return new ChargingSession
                 (
                     SessionId: data.SessionID,
@@ -161,7 +159,10 @@ namespace KebaConnector
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to read charging session from Keba device, Error: {ex.Message}");
-                udpExceptionInProgress = false;
+            }
+            finally
+            {
+                udpSemaphore.Release();
             }
             return null;
         }
@@ -189,33 +190,44 @@ namespace KebaConnector
 
         private void WriteChargingCurrentToDevice(int current)
         {
-            const int maxRetries = 3;
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            if (!udpSemaphore.Wait(TimeSpan.FromSeconds(5)))
             {
-                Console.WriteLine($"Updating charging current to {current} (attempt {attempt}/{maxRetries})");
-                var result = ExecuteUDPCommand($"currtime {current} 1");
-                Console.WriteLine("Result: " + result);
-                if (result == "TCH-OK :done\n")
-                {
-                    Console.WriteLine("Updated charging current to " + current);
-                    previousChargingCurrencyWrittenToDevice = current;
-                    return;
-                }
-
-                // Check if we received a report response instead of the expected TCH-OK
-                // This happens when UDP responses from concurrent commands get mixed up
-                if (result.TrimStart().StartsWith("{"))
-                {
-                    Console.WriteLine($"Received unexpected report response instead of TCH-OK, retrying...");
-                    Thread.Sleep(500);
-                    continue;
-                }
-
-                Console.WriteLine($"Setting charging current failed - unexpected response: {result}");
-                break;
+                Console.WriteLine("Other UDP operation is still in progress, skipping write to device.");
+                return;
             }
-            Console.WriteLine($"Failed to set charging current to {current} after {maxRetries} attempts");
-            throw new Exception($"Setting charging current failed");
+            try
+            {
+                const int maxRetries = 3;
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    Console.WriteLine($"Updating charging current to {current} (attempt {attempt}/{maxRetries})");
+                    var result = ExecuteUDPCommand($"currtime {current} 1");
+                    Console.WriteLine("Result: " + result);
+                    if (result == "TCH-OK :done\n")
+                    {
+                        Console.WriteLine("Updated charging current to " + current);
+                        previousChargingCurrencyWrittenToDevice = current;
+                        return;
+                    }
+
+                    // Check if we received a report response instead of the expected TCH-OK
+                    // This happens when UDP responses from concurrent commands get mixed up
+                    if (result.TrimStart().StartsWith("{"))
+                    {
+                        Console.WriteLine($"Received unexpected report response instead of TCH-OK, retrying...");
+                        Thread.Sleep(500);
+                        continue;
+                    }
+
+                    Console.WriteLine($"Setting charging current failed - unexpected response: {result}");
+                    break;
+                }
+                Console.WriteLine($"Failed to set charging current to {current} after {maxRetries} attempts");
+            }
+            finally
+            {
+                udpSemaphore.Release();
+            }
         }
 
         internal KebaDeviceStatusData GetDeviceStatus()
