@@ -1,5 +1,1 @@
-enum CarType {
-  bmw,
-  mini,
-  id4
-}
+enum CarType { bmw, mini, vw }
