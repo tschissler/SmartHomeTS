@@ -5,6 +5,7 @@
 - import_playbook: plays/install-nano.yml
 - import_playbook: plays/network-config.yml
 - import_playbook: plays/raspi-cgroups.yml
+- import_playbook: plays/prepare-longhorn-nodes.yml
 - import_playbook: plays/install-k3s.yml
 
 # NOTE: kube-vip is intentionally NOT included here.
