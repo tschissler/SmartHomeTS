@@ -56,6 +56,61 @@ ansible-playbook configure-cluster.yml -i inventory.ini --limit prodservers
 | AdGuard Home | `http://adguard.intern/` | DNS + network filtering |
 | Traefik Ingress | `192.168.178.223:80/443` | HTTP service ingress |
 
+## IP-Adressen
+
+### Cluster-Nodes (statische IPs via DHCP-Reservierung)
+
+| Host | IP | Rolle |
+|------|----|-------|
+| k3snode1 | 192.168.178.231 | Control Plane + Longhorn Storage |
+| k3snode2 | 192.168.178.232 | Control Plane + Longhorn Storage |
+| k3snode3 | 192.168.178.233 | Control Plane |
+| k3snode4 | 192.168.178.234 | Worker |
+| k3snode5 | 192.168.178.235 | Worker |
+| k3snode6 | 192.168.178.236 | Worker |
+
+### Virtual IPs (kube-vip)
+
+| IP | Port(s) | Dienst |
+|----|---------|--------|
+| 192.168.178.222 | 6443 | k3s API Server (HA) |
+| 192.168.178.223 | 80, 443 | Traefik Ingress (HTTP/HTTPS) |
+| 192.168.178.223 | 53 | AdGuard Home DNS |
+| 192.168.178.223 | 1883 | Mosquitto MQTT |
+| 192.168.178.223 | 3000 | AdGuard Home Web UI |
+| 192.168.178.224 | 445 | Paperless SMB Consume-Share |
+
+### Sonstige Infrastruktur
+
+| Host | IP | Dienst |
+|------|----|--------|
+| FritzBox | 192.168.178.1 | Router / DHCP / Fallback-DNS |
+| backuprpi | 192.168.178.240 | Backup-Server (MinIO für Velero) |
+
+### Interne Kubernetes-Adressen
+
+| Adresse | Zweck |
+|---------|-------|
+| 10.43.0.10 | CoreDNS ClusterIP |
+| 10.43.11.255 | AdGuard Home ClusterIP (intern) |
+| 10.43.0.0/16 | Kubernetes ClusterIP Range |
+
+### Interne DNS-Namen (`.intern`)
+
+Alle `.intern`-Namen werden von AdGuard Home aufgelöst und zeigen auf `192.168.178.223` (außer wo anders angegeben).
+
+| DNS-Name | Ziel |
+|----------|------|
+| nextcloud.intern | 192.168.178.223 (Traefik → nextcloud) |
+| paperless.intern | 192.168.178.223 (Traefik → paperless) |
+| adguard.intern | 192.168.178.223 |
+| longhorn.intern | 192.168.178.223 |
+| argocd.intern | 192.168.178.223 |
+| mosquitto.intern | 192.168.178.223 |
+| backup.intern | 192.168.178.240 (MinIO Backup RPi) |
+| k3snode1.intern … k3snode6.intern | 192.168.178.231–236 |
+| paperless-consume.intern | 192.168.178.224 (SMB Share) |
+
 ## DNS Resolution for LAN Devices
 
 When pods need to reach devices on the local network (Keba wallboxes, Enphase envoys, etc.),
@@ -131,6 +186,10 @@ Configuration tasks:
 - `configure-traefik-mqtt.yml` - MQTT service routing
 - `install-argocd.yml` - GitOps CD (optional)
 - `disable-kubevip.yml` - Remove kube-vip (troubleshooting)
+
+Backup infrastructure:
+
+- `setup-backup-rpi.yml` - Setup Raspberry Pi as MinIO backup server (Velero S3 backend)
 
 ## Wrapper Scripts
 

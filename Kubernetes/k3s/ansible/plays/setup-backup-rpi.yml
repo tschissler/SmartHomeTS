@@ -1,0 +1,349 @@
+---
+- name: Setup Raspberry Pi as Backup Server with MinIO
+  hosts: backup_server
+  become: yes
+  gather_facts: yes
+  vars:
+    # === DISK KONFIGURATION ===
+    # Vor dem ersten Lauf: lsblk ausführen und USB-SSD-Device prüfen!
+    # Standard: /dev/sda (USB-SSD an Pi 4)
+    minio_disk_device: "/dev/sda"
+    minio_mount_point: "/data"
+    minio_data_dir: "/data/minio"
+    # Sicherheitsgate: Disk wird NUR formatiert, wenn dieses Flag explizit gesetzt ist.
+    # Beim ersten Lauf: -e confirm_format_disk=true mitgeben
+    confirm_format_disk: false
+
+    # === MINIO KONFIGURATION ===
+    minio_version: "RELEASE.2025-02-28T09-55-16Z"
+    minio_bin_dir: "/usr/local/bin"
+    minio_config_dir: "/etc/minio"
+    minio_user: "minio-user"
+    minio_port: 9000
+    minio_console_port: 9001
+
+    # === CREDENTIALS (via -e überschreiben!) ===
+    # Beispiel: ansible-playbook ... -e minio_root_password=MeinSicheresPasswort -e velero_secret_key=VeleroSecret
+    minio_root_user: "minioadmin"
+    minio_root_password: "changeme-minio-root"
+    velero_access_key: "velero"
+    velero_secret_key: "changeme-velero-secret"
+    velero_bucket: "velero-backups"
+
+  pre_tasks:
+    - name: Validate credentials are not default
+      ansible.builtin.assert:
+        that:
+          - minio_root_password != "changeme-minio-root"
+          - velero_secret_key != "changeme-velero-secret"
+        fail_msg: |
+          ABORT: Standard-Passwörter dürfen nicht verwendet werden!
+
+          Bitte beim Aufruf überschreiben:
+            ansible-playbook plays/setup-backup-rpi.yml -i inventory.ini \
+              -e minio_root_password=DEIN_SICHERES_PASSWORT \
+              -e velero_secret_key=DEIN_VELERO_SECRET \
+              -e confirm_format_disk=true   # nur beim ersten Lauf!
+
+    - name: Gather disk info
+      ansible.builtin.command: lsblk -d -o NAME,SIZE,TYPE,MODEL {{ minio_disk_device }}
+      register: disk_info
+      changed_when: false
+      failed_when: false
+
+    - name: Display disk to be used
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          Backup RPi Setup - {{ inventory_hostname }} ({{ ansible_host }})
+          ============================================================
+          Geplantes Disk-Device:  {{ minio_disk_device }}
+          Mount Point:            {{ minio_mount_point }}
+          MinIO Data Dir:         {{ minio_data_dir }}
+
+          Disk-Info:
+          {{ disk_info.stdout | default('Device nicht gefunden!') }}
+
+          Formatierung erlaubt:   {{ confirm_format_disk }}
+          ============================================================
+
+    - name: Validate disk device exists
+      ansible.builtin.assert:
+        that:
+          - disk_info.rc == 0
+        fail_msg: |
+          ABORT: Device {{ minio_disk_device }} nicht gefunden!
+          Verfügbare Disks prüfen: lsblk
+          Dann -e minio_disk_device=/dev/sdX setzen.
+
+  tasks:
+    # === DISK VORBEREITUNG ===
+
+    - name: Check if data mount point is already mounted
+      ansible.builtin.command: mountpoint -q {{ minio_mount_point }}
+      register: already_mounted
+      changed_when: false
+      failed_when: false
+
+    - name: Check if disk already has ext4 filesystem
+      ansible.builtin.command: blkid -s TYPE -o value {{ minio_disk_device }}
+      register: disk_fstype
+      changed_when: false
+      failed_when: false
+
+    - name: Display filesystem status
+      ansible.builtin.debug:
+        msg: |
+          Disk-Status: fstype={{ disk_fstype.stdout | default('keine') }},
+          gemountet={{ already_mounted.rc == 0 }}
+
+    - name: GATE - Format disk (nur wenn noch kein Dateisystem und confirm_format_disk=true)
+      ansible.builtin.assert:
+        that:
+          - confirm_format_disk | bool
+        fail_msg: |
+          ABORT: Disk {{ minio_disk_device }} hat noch kein Dateisystem ({{ disk_fstype.stdout | default('leer') }}).
+
+          Zum Formatieren neu starten mit:
+            -e confirm_format_disk=true
+
+          ACHTUNG: Alle Daten auf {{ minio_disk_device }} werden gelöscht!
+      when: disk_fstype.stdout == "" and already_mounted.rc != 0
+
+    - name: Format disk with ext4 (nur wenn kein Dateisystem vorhanden)
+      ansible.builtin.command: mkfs.ext4 -L minio-backup {{ minio_disk_device }}
+      when:
+        - disk_fstype.stdout == ""
+        - already_mounted.rc != 0
+        - confirm_format_disk | bool
+
+    - name: Create mount point directory
+      ansible.builtin.file:
+        path: "{{ minio_mount_point }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Get disk UUID for fstab
+      ansible.builtin.command: blkid -s UUID -o value {{ minio_disk_device }}
+      register: disk_uuid
+      changed_when: false
+
+    - name: Mount disk via fstab (idempotent)
+      ansible.posix.mount:
+        path: "{{ minio_mount_point }}"
+        src: "UUID={{ disk_uuid.stdout }}"
+        fstype: ext4
+        opts: defaults,noatime
+        state: mounted
+
+    - name: Check available disk space
+      ansible.builtin.shell: df -BG {{ minio_mount_point }} | awk 'NR==2 {print $4}' | sed 's/G//'
+      register: available_space
+      changed_when: false
+
+    - name: GATE - Verify sufficient space (mind. 200 GB)
+      ansible.builtin.assert:
+        that:
+          - available_space.stdout | int >= 200
+        fail_msg: |
+          ABORT: Zu wenig Speicherplatz auf {{ minio_mount_point }}
+          Verfügbar: {{ available_space.stdout }}G, Benötigt: mind. 200G
+
+    # === MINIO INSTALLATION ===
+
+    - name: Create minio system user
+      ansible.builtin.user:
+        name: "{{ minio_user }}"
+        system: yes
+        shell: /usr/sbin/nologin
+        home: "{{ minio_data_dir }}"
+        create_home: no
+        comment: "MinIO Service User"
+
+    - name: Create MinIO data directory
+      ansible.builtin.file:
+        path: "{{ minio_data_dir }}"
+        state: directory
+        owner: "{{ minio_user }}"
+        group: "{{ minio_user }}"
+        mode: '0750'
+
+    - name: Create MinIO config directory
+      ansible.builtin.file:
+        path: "{{ minio_config_dir }}"
+        state: directory
+        owner: "{{ minio_user }}"
+        group: "{{ minio_user }}"
+        mode: '0750'
+
+    - name: Download MinIO server binary (ARM64)
+      ansible.builtin.get_url:
+        url: "https://dl.min.io/server/minio/release/linux-arm64/archive/minio.{{ minio_version }}"
+        dest: "{{ minio_bin_dir }}/minio"
+        mode: '0755'
+        owner: root
+        group: root
+      notify: restart minio
+
+    - name: Download MinIO client (mc) binary (ARM64)
+      ansible.builtin.get_url:
+        url: "https://dl.min.io/client/mc/release/linux-arm64/mc"
+        dest: "{{ minio_bin_dir }}/mc"
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Create MinIO environment file
+      ansible.builtin.copy:
+        dest: "{{ minio_config_dir }}/minio.env"
+        owner: "{{ minio_user }}"
+        group: "{{ minio_user }}"
+        mode: '0640'
+        content: |
+          # MinIO Backup Server Konfiguration
+          # Generiert von Ansible – nicht manuell bearbeiten
+          MINIO_ROOT_USER={{ minio_root_user }}
+          MINIO_ROOT_PASSWORD={{ minio_root_password }}
+          MINIO_VOLUMES={{ minio_data_dir }}
+          MINIO_OPTS="--address :{{ minio_port }} --console-address :{{ minio_console_port }}"
+      notify: restart minio
+
+    - name: Create MinIO systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/minio.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=MinIO Object Storage (Backup Server)
+          Documentation=https://min.io/docs/
+          Wants=network-online.target
+          After=network-online.target
+          AssertFileIsExecutable={{ minio_bin_dir }}/minio
+
+          [Service]
+          Type=notify
+          User={{ minio_user }}
+          Group={{ minio_user }}
+          EnvironmentFile={{ minio_config_dir }}/minio.env
+          ExecStart={{ minio_bin_dir }}/minio server $MINIO_VOLUMES $MINIO_OPTS
+          Restart=always
+          RestartSec=10
+          LimitNOFILE=65536
+          TasksMax=infinity
+          TimeoutStopSec=infinity
+          SendSIGKILL=no
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: restart minio
+
+    - name: Enable and start MinIO service
+      ansible.builtin.systemd:
+        name: minio
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Wait for MinIO API to be ready (max 60s)
+      ansible.builtin.uri:
+        url: "http://localhost:{{ minio_port }}/minio/health/live"
+        status_code: 200
+      register: minio_health
+      retries: 12
+      delay: 5
+      until: minio_health.status == 200
+
+    # === BUCKET UND VELERO ACCESS KEY ===
+
+    - name: Configure mc alias for local MinIO
+      ansible.builtin.command: >
+        mc alias set local
+        http://localhost:{{ minio_port }}
+        {{ minio_root_user }} {{ minio_root_password }}
+      changed_when: false
+      no_log: true
+
+    - name: Create velero-backups bucket
+      ansible.builtin.command: mc mb --ignore-existing local/{{ velero_bucket }}
+      changed_when: false
+
+    - name: Create Velero service account
+      ansible.builtin.command: >
+        mc admin user add local {{ velero_access_key }} {{ velero_secret_key }}
+      changed_when: false
+      no_log: true
+      failed_when: false
+
+    - name: Create Velero policy (readwrite on velero bucket)
+      ansible.builtin.copy:
+        dest: /tmp/velero-policy.json
+        content: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": ["s3:*"],
+                "Resource": [
+                  "arn:aws:s3:::{{ velero_bucket }}",
+                  "arn:aws:s3:::{{ velero_bucket }}/*"
+                ]
+              }
+            ]
+          }
+        mode: '0644'
+
+    - name: Apply Velero policy in MinIO
+      ansible.builtin.command: mc admin policy create local velero-policy /tmp/velero-policy.json
+      changed_when: false
+      failed_when: false
+
+    - name: Attach Velero policy to Velero user
+      ansible.builtin.command: mc admin policy attach local velero-policy --user {{ velero_access_key }}
+      changed_when: false
+      failed_when: false
+
+    - name: Clean up temporary policy file
+      ansible.builtin.file:
+        path: /tmp/velero-policy.json
+        state: absent
+
+    # === ABSCHLUSS ===
+
+    - name: Display setup summary
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          ✓ Backup RPi Setup abgeschlossen - {{ inventory_hostname }}
+          ============================================================
+          MinIO API:      http://{{ ansible_host }}:{{ minio_port }}
+          MinIO Console:  http://{{ ansible_host }}:{{ minio_console_port }}
+          Bucket:         {{ velero_bucket }}
+          Disk:           {{ minio_disk_device }} → {{ minio_mount_point }}
+          Verfügbar:      {{ available_space.stdout }}G
+
+          Velero Credentials (für Phase 2 Velero-Deployment benötigt):
+          ---------------------------------------------------------------
+          S3 Endpoint:    http://{{ ansible_host }}:{{ minio_port }}
+          Bucket:         {{ velero_bucket }}
+          Access Key:     {{ velero_access_key }}
+          Secret Key:     → aus Ansible-Variable 'velero_secret_key'
+
+          Nächste Schritte:
+          1. MinIO Console öffnen: http://{{ ansible_host }}:{{ minio_console_port }}
+          2. DNS-Rewrite in AdGuard: backup.intern → {{ ansible_host }}
+          3. Phase 2: Velero via ArgoCD deployen
+          ============================================================
+      delegate_to: localhost
+      become: false
+
+  handlers:
+    - name: restart minio
+      ansible.builtin.systemd:
+        name: minio
+        state: restarted
+        daemon_reload: yes
