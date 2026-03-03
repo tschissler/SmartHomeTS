@@ -31,8 +31,8 @@ static int otaInProgress = 0;
 static bool otaEnable = OTA_ENABLED != "false";
 
 // WiFi credentials - CHANGE THESE!
-const char* ssid = "agileMax_Guest";
-const char* password = "WLAN_agileMax";
+const char* ssid = "SSID";
+const char* password = "PASSWORD";
 
 // Initialize the LCD with I2C address (usually 0x27 or 0x3F), 20 columns and 4 rows
 LiquidCrystal_I2C lcd(0x27, 20, 4);
