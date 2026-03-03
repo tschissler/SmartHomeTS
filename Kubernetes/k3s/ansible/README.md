@@ -1,9 +1,9 @@
-﻿# k3s Cluster Setup via Ansible
+# k3s Cluster Setup via Ansible
 
 Automated provisioning and configuration of a k3s Kubernetes cluster with HA control plane, distributed storage, DNS, and ingress.
 
 ## Purpose
-This cluster is designed for home lab use rather than an enterprise environment. 
+This cluster is designed for home lab use rather than an enterprise environment.
 It emphasizes simplicity, cost-effectiveness, and ease of management while providing essential features.
 To provide a robust and functional Kubernetes experience, the cluster includes:
 - **High Availability (HA)** for the control plane using `kube-vip`
@@ -20,6 +20,7 @@ Applications and services will then be deployed on top of this foundation using 
 - Ubuntu Server (20.04+) on all nodes
 - SSH access enabled
 - Passwordless sudo configured for Ansible user
+- Copy `inventory.ini.example` to `inventory.ini` and fill in your node IPs and SSH user
 
 ## Two-Phase Deployment
 
@@ -49,117 +50,37 @@ ansible-playbook configure-cluster.yml -i inventory.ini --limit prodservers
 
 ## Architecture
 
-| Component | Endpoint | Purpose |
-|-----------|----------|---------|
-| k3s API | `192.168.178.222:6443` | HA control plane via kube-vip |
-| Longhorn UI | `http://longhorn.intern/` | Distributed storage management |
-| AdGuard Home | `http://adguard.intern/` | DNS + network filtering |
-| Traefik Ingress | `192.168.178.223:80/443` | HTTP service ingress |
+| Component | Purpose |
+|-----------|---------|
+| k3s API (kube-vip VIP) | HA control plane |
+| Longhorn UI (`longhorn.intern`) | Distributed storage management |
+| AdGuard Home (`adguard.intern`) | DNS + network filtering |
+| Traefik Ingress | HTTP/HTTPS service ingress |
 
-## IP-Adressen
+> For internal network configuration details (IP addresses, VIPs, DNS mappings), see your private infrastructure repository.
 
-### Cluster-Nodes (statische IPs via DHCP-Reservierung)
+## DNS Zones
 
-| Host | IP | Rolle |
-|------|----|-------|
-| k3snode1 | 192.168.178.231 | Control Plane + Longhorn Storage |
-| k3snode2 | 192.168.178.232 | Control Plane + Longhorn Storage |
-| k3snode3 | 192.168.178.233 | Control Plane |
-| k3snode4 | 192.168.178.234 | Worker |
-| k3snode5 | 192.168.178.235 | Worker |
-| k3snode6 | 192.168.178.236 | Worker |
-
-### Virtual IPs (kube-vip)
-
-| IP | Port(s) | Dienst |
-|----|---------|--------|
-| 192.168.178.222 | 6443 | k3s API Server (HA) |
-| 192.168.178.223 | 80, 443 | Traefik Ingress (HTTP/HTTPS) |
-| 192.168.178.223 | 53 | AdGuard Home DNS |
-| 192.168.178.223 | 1883 | Mosquitto MQTT |
-| 192.168.178.223 | 3000 | AdGuard Home Web UI |
-| 192.168.178.224 | 445 | Paperless SMB Consume-Share |
-
-### Sonstige Infrastruktur
-
-| Host | IP | Dienst |
-|------|----|--------|
-| FritzBox | 192.168.178.1 | Router / DHCP / Fallback-DNS |
-| backuprpi | 192.168.178.240 | Backup-Server (MinIO für Velero) |
-
-### Interne Kubernetes-Adressen
-
-| Adresse | Zweck |
-|---------|-------|
-| 10.43.0.10 | CoreDNS ClusterIP |
-| 10.43.11.255 | AdGuard Home ClusterIP (intern) |
-| 10.43.0.0/16 | Kubernetes ClusterIP Range |
-
-### Interne DNS-Namen (`.intern`)
-
-Alle `.intern`-Namen werden von AdGuard Home aufgelöst und zeigen auf `192.168.178.223` (außer wo anders angegeben).
-
-| DNS-Name | Ziel |
-|----------|------|
-| nextcloud.intern | 192.168.178.223 (Traefik → nextcloud) |
-| paperless.intern | 192.168.178.223 (Traefik → paperless) |
-| adguard.intern | 192.168.178.223 |
-| longhorn.intern | 192.168.178.223 |
-| argocd.intern | 192.168.178.223 |
-| mosquitto.intern | 192.168.178.223 |
-| backup.intern | 192.168.178.240 (MinIO Backup RPi) |
-| k3snode1.intern … k3snode6.intern | 192.168.178.231–236 |
-| paperless-consume.intern | 192.168.178.224 (SMB Share) |
-
-## DNS Resolution for LAN Devices
-
-When pods need to reach devices on the local network (Keba wallboxes, Enphase envoys, etc.),
-bare hostnames like `keba-garage` won't resolve because CoreDNS only knows about `cluster.local`,
-not FritzBox DHCP names.
-
-### How DNS flows in the cluster
+The cluster uses three DNS zones for resolving services and devices:
 
 ```
 Pod DNS query
-  └─> CoreDNS (10.43.0.10)
+  └─> CoreDNS
         ├── *.cluster.local          → Kubernetes internal
-        ├── *.intern                 → AdGuard Home (10.43.11.255)
-        ├── *.fritz.box              → FritzBox (192.168.178.1) via coredns-custom
-        ├── envoym1 / envoym3        → rewritten to *.fritz.box, then FritzBox (legacy shortname blocks)
+        ├── *.intern                 → AdGuard Home (custom DNS rewrites)
+        ├── *.fritz.box              → Home router via coredns-custom
         └── everything else          → node's /etc/resolv.conf
-```
-
-### Preferred pattern: use `.fritz.box` FQDNs
-
-All DHCP clients registered in the FritzBox are resolvable as `<hostname>.fritz.box`.
-Since `coredns-custom` already has a `fritz.box` server block forwarding to `192.168.178.1`,
-**the simplest and most future-proof approach is to use `.fritz.box` FQDNs** in Helm values
-and application configs:
-
-```yaml
-# Good — resolved via existing fritz.box server block, no extra CoreDNS config needed
-kebaOutsideHost: "keba-stellplatz.fritz.box"
-kebaGarageHost: "keba-garage.fritz.box"
-
-# Bad — bare hostname, needs a dedicated CoreDNS server block to resolve
-kebaOutsideHost: "keba-stellplatz"
 ```
 
 **When to use each DNS zone:**
 
 | Device / Service | Use | Example |
 |---|---|---|
-| LAN device (DHCP on FritzBox) | `<name>.fritz.box` | `keba-garage.fritz.box` |
+| LAN device (DHCP on home router) | `<name>.fritz.box` | `<device>.fritz.box` |
 | Cluster-internal K8s service | `<svc>.<ns>.svc.cluster.local` | `mosquitto.mosquitto.svc.cluster.local` |
 | Cluster service exposed via ingress | `<name>.intern` (AdGuard rewrite) | `nextcloud.intern` |
 
-### Future simplification: `envoym1` / `envoym3`
-
-The dedicated CoreDNS server blocks for `envoym1` and `envoym3` (bare shortnames that get
-rewritten to `*.fritz.box`) can be removed if the consuming applications are updated to use
-`envoym1.fritz.box` and `envoym3.fritz.box` directly. This would eliminate the per-device
-server blocks in `coredns-custom` and the corresponding Ansible template logic. Track this
-simplification as a follow-up task.
+All DHCP clients registered in the router are resolvable as `<hostname>.fritz.box` via a CoreDNS server block that forwards the `fritz.box` zone to the router. This is the preferred pattern for reaching LAN devices (wallboxes, inverters, etc.) from within the cluster — no extra CoreDNS config needed per device.
 
 ## Individual Playbooks
 

@@ -18,7 +18,7 @@ sudo apt install snapd
 sudo snap install microk8s --classic
 sudo reboot 
 
-sudo usermod -a -G microk8s thomasschissler
+sudo usermod -a -G microk8s <your-username>
 newgrp microk8s
 
 microk8s status --wait-ready
@@ -40,7 +40,7 @@ microk8s start
 Before stopping microk8s the node should be drained:
 
 ``` bash
-kubectl drain smarthomepi2 --ignore-daemonsets --delete-emptydir-data
+kubectl drain <your-hostname> --ignore-daemonsets --delete-emptydir-data
 ```
 
 
@@ -69,7 +69,7 @@ microk8s enable dashboard
 microk8s dashboard-proxy
 ```
 
-Access dashboard via https://smarthomepi2:10443/.
+Access dashboard via https://<your-hostname>:10443/.
 To get the token, use
 ``` bash
 kubectl describe secret -n kube-system microk8s-dashboard-token
@@ -89,7 +89,7 @@ After=network.target
 [Service]
 ExecStart=/snap/bin/microk8s dashboard-proxy
 Restart=always
-User=thomasschissler
+User=<your-username>
 Group=adm
 
 [Install]
@@ -111,7 +111,7 @@ microk8s config > kube.config
 ```
 Then copy the created config file to your Windows machine and configure kubectl
 ``` bash
-scp thomasschissler@smarthomepi2:~/kube.config .
+scp <your-username>@<your-hostname>:~/kube.config .
 copy kube.config ~/.kube/kube.config
 kubectl get nodes
 ```
