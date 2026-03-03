@@ -1,5 +1,12 @@
 # SmartHomeTS - A Comprehensive Playground for Smart Energy Technologies
 
+![ChargingController](https://github.com/tschissler/SmartHomeTS/actions/workflows/ChargingController.yml/badge.svg)
+![SmartHome.DataHub](https://github.com/tschissler/SmartHomeTS/actions/workflows/SmartHome.DataHub.yml/badge.svg)
+![SmartHome.Web](https://github.com/tschissler/SmartHomeTS/actions/workflows/Smarthome.Web.yml/badge.svg)
+![SMLSensor Firmware](https://github.com/tschissler/SmartHomeTS/actions/workflows/SMLSensorFirmware.yml/badge.svg)
+![BMW Connector](https://github.com/tschissler/SmartHomeTS/actions/workflows/bmwconnector.yml/badge.svg)
+![Flutter App](https://github.com/tschissler/SmartHomeTS/actions/workflows/Smarthome_app.yml/badge.svg)
+
 This repository documents a comprehensive smart home automation system that has been running in production for a couple of years. It serves dual purposes: managing actual home infrastructure (energy, climate, light) and providing a real-world test environment for exploring modern software development practices, architectural patterns, and emerging technologies.
 
 ## Purpose
@@ -13,6 +20,36 @@ The primary goal of this repository is to:
 
 While the code is tailored specifically to my equipment, devices, and needs, it is shared here to inspire others. Feel free to explore, copy, and adapt anything you find useful.
 
+## Architecture
+
+The system follows an **event-driven microservices architecture** with MQTT as the central message bus:
+
+```
+Physical Devices ──► ESP32 Firmware ──► MQTT (Mosquitto) ──► .NET Connector Services ──► InfluxDB 3
+                                              ▲
+                                    External APIs
+                               (BMW, VW, Enphase)               InfluxDB 3 ──► Grafana
+                                                                            ──► Blazor Web
+                                                                            ──► Flutter App
+```
+
+All services run in a **k3s Kubernetes cluster** on Raspberry Pi nodes, deployed via **GitOps with ArgoCD**.
+
+## Hardware
+
+The system runs on consumer and hobbyist hardware:
+
+| Component | Details |
+|-----------|---------|
+| **Kubernetes cluster** | 6× Raspberry Pi 4 (k3snode1–6), running k3s |
+| **Backup server** | 1× Raspberry Pi with 1.8 TB USB-SSD (MinIO / Velero) |
+| **Solar system** | Enphase microinverter system |
+| **EV charging** | KEBA KeContact wallbox(es) |
+| **Heat pump** | Hoval Belaria (CAN bus readout) |
+| **Temperature display** | WaveShare ESP32-S3-Touch-LCD-7 with LVGL |
+| **Smart switches** | Shelly smart plugs and relays |
+| **Sensors** | Various ESP32 dev boards (WEMOS D1 Mini, etc.) |
+
 ## Currently Implemented Functionality
 
 The current state of my SmartHome system covers these capabilities:
@@ -20,7 +57,7 @@ The current state of my SmartHome system covers these capabilities:
 - **[Energy Monitoring](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#smlsensorfirmware)**: Smart meter integration via SML protocol for real-time consumption/feed-in data
 
   https://github.com/user-attachments/assets/b4d1377a-9b22-4791-b81c-11fe2fb45030
-  
+
 - **Water Management**: Ultrasonic cistern level monitoring with trend analysis
 - **Water consumption**: Reading measurement from analog water meter via OCR functionality ![Watermeter display](Docs/images/Watermeter3.jpg) ![Watermeter sensor](Docs/images/Watermeter.jpg)
 - **Environmental Sensing**: Multi-zone temperature and humidity monitoring with ESP32 sensors ![Temperature Sensor indoor](Docs/images/Tempsensor.jpg) ![Temperature Sensor outdoor](Docs/images/Tempsensor_outdoor.jpg)
@@ -29,10 +66,10 @@ The current state of my SmartHome system covers these capabilities:
 
 - **Vehicle Integration**: Real-time data from BMW/Mini Connected Drive and VW Connect APIs
 - **Solar Production**: Live monitoring of Enphase microinverter system performance
-- **Lighting Control**: RGB LED strip automation and customizable lighting scenes 
-  
+- **Lighting Control**: RGB LED strip automation and customizable lighting scenes
+
   https://github.com/user-attachments/assets/a5237b24-f65d-43e7-95f5-5848af950f3c
-  
+
 - **Smart Device Integration**: Energy consumption tracking via Shelly smart switches ![ShellyPlug](./Docs/images/Shelly.jpg)
 
 - **[Room temperature / thermostat control](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#temperature-display)**: Allowing users to set temperature targets per room ![TemperatureDisplay](https://github.com/user-attachments/assets/1d667af0-d9ec-42c1-a91c-68037762102b)
@@ -59,7 +96,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 - **SML - Smart Meter Language Protocol**: A protocol used by smart meters to communicate data. Currently the SML protocol is used in the [SMLSensor project](https://github.com/tschissler/SmartHomeTS/tree/main/ESP32Firmwares/SMLSensor.Firmware) to read SML data via IR signals and send these values as MQTT messages.
 - **InfluxDB**: A time-series database optimized for storing and querying time-stamped data. This repository uses InfluxDB to manage energy consumption and climate metrics, showcasing its power in data analytics. Learn more at [InfluxDB Documentation](https://docs.influxdata.com/).
 - **Model Context Protocol (MCP)**: A protocol for AI tools that allows structured retrieval and manipulation of data. This repository features a C# MCP server for InfluxDB, enabling AI assistants to directly query schema and sample data to provide better assistance in creating Flux queries. Learn more at [Model Context Protocol](https://github.com/microsoft/node-model-context-protocol).
-- **Kubernetes**: A container orchestration platform that ensures scalability and reliability. Kubernetes is used across multiple projects to manage containerized applications, making it essential for modern DevOps. Learn more at [Kubernetes.io](https://kubernetes.io/). In this project I use [MicroK8s](https://microk8s.io/) to host a Kubernetes cluster on a set of Raspberry Pis. ![Kubernetes Cluster](./Docs/images/KubernetesCluster.jpg)
+- **Kubernetes (k3s)**: A lightweight Kubernetes distribution ideal for resource-constrained nodes. k3s runs on a 6-node Raspberry Pi cluster and orchestrates all containerized services. Applications are deployed via **GitOps with ArgoCD**, keeping the cluster state declarative and version-controlled. Learn more at [k3s.io](https://k3s.io/) and [Kubernetes.io](https://kubernetes.io/). ![Kubernetes Cluster](./Docs/images/KubernetesCluster.jpg)
 - **Docker**: Simplifies application deployment by containerizing services. Container images are built during the build process and then used to deploy to the Kubernetes cluster. Learn more at [Docker Documentation](https://docs.docker.com/).
 - **Flutter**: A cross-platform framework for building mobile apps. The `smarthome_app` project illustrates how to use Flutter to build apps that run on mobile devices, Windows and in the browser (see [`smarthome_app/README.md`](smarthome_app/README.md)). Learn more at [Flutter.dev](https://flutter.dev/).
 - **Blazor**: A web framework for building interactive applications using C#. The SmartHome.Web project is an example of how to create responsive and feature-rich web interfaces. Learn more at [Blazor Documentation](https://learn.microsoft.com/en-us/aspnet/core/blazor/).
@@ -99,7 +136,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 
 - **Purpose**: A centralized data hub service that processes and routes data between various smart home components and InfluxDB, serving as a bridge for data transformation and storage.
 - **Inspiration**: Learn how to build scalable data processing services using .NET and implement data pipeline architectures.
-  
+
   More details: [`SmartHome.DataHub/SmartHome.DataHub/README.md`](SmartHome.DataHub/SmartHome.DataHub/README.md)
 
 ### EnphaseConnector
@@ -111,7 +148,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 
 - **Purpose**: Firmware for ESP32-based devices, including LED strips, temperature sensors, and more.
 - **Inspiration**: Learn how to program microcontrollers for IoT applications.
-  
+
   Quick links: [`SMLSensor.Firmware`](ESP32Firmwares/SMLSensor.Firmware/README.md) · [`TemperatureDisplay.Firmware`](ESP32Firmwares/TemperatureDisplay.Firmware/README.md) · [`HeatmeterSensor.Firmware`](ESP32Firmwares/HeatmeterSensor.Firmware/README.md) · [`RelaisBoard.Firmware`](ESP32Firmwares/RelaisBoard.Firmware/README.md) · [`CANBusGateway.Firmware`](ESP32Firmwares/CANBusGateway.Firmware/README.md)
 
 #### SMLSensor.Firmware
@@ -125,9 +162,9 @@ For more details see [ESP32Firmwares/SMLSensor.Firmware#readme](ESP32Firmwares/S
 - **Purpose**: This project allows control of room temperatures by viewing and changing thermostat settings. The display integrates fully via MQTT as it receives all data to be displayed by subscribing to various MQTT topics and sending changes to the thermostat settings as MQTT messages. These MQTT messages are then picked up by the [ShellyConnector](https://github.com/tschissler/SmartHomeTS/tree/main?tab=readme-ov-file#shellyconnector) and used to define the target temperature for these devices.
 
 - **Inspiration**: Learn how to build a visual interface controlled by touch gestures.
-  
+
 - **Details**:
-  
+
   - The display is built with this device: [WaveShare ESP32-S3-Touch-LCD-7](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-7).
   - It uses the [LVGL library](https://github.com/lvgl/lvgl). The UI is designed using [SquareLine Studio](https://squareline.io/).
 
@@ -178,7 +215,7 @@ Setup and build: [`ESP32Firmwares/TemperatureDisplay.Firmware/README.md`](ESP32F
 
 - **Purpose**: Provides visualization and monitoring dashboards for the smart home system, creating interactive charts and graphs from InfluxDB time-series data.
 - **Inspiration**: Learn how to deploy Grafana in Kubernetes and create compelling data visualizations for real-time monitoring.
-  
+
   Deployment/config: [`Grafana/README.md`](Grafana/README.md)
 
 ### Smarthome.App.MAUI
@@ -267,14 +304,20 @@ This repository showcases several patterns and practices that enhance its functi
 
 ## Hosting and CI/CD
 
-This project is hosted on **GitHub**, leveraging its robust ecosystem for version control, collaboration, and automation. The repository uses **GitHub Actions** for Continuous Integration and Continuous Deployment (CI/CD), ensuring a streamlined and automated development workflow.
+This project is hosted on **GitHub**, leveraging its robust ecosystem for version control, collaboration, and automation.
 
-### CI/CD Highlights
+### Build & Deploy (GitHub Actions)
 
-- **GitHub Actions**: Workflows are defined to automate testing, building, and deploying the projects. These workflows ensure that every change is validated and deployed efficiently.
-- **Kubernetes Agent**: A custom agent runs on the Kubernetes cluster, enabling automated deployments directly from GitHub Actions. This integration ensures that updates are deployed seamlessly to the cluster.
+Every push to `main` triggers a two-stage pipeline for each service:
 
-These workflows are designed to provide a robust and automated pipeline, reducing manual effort and ensuring consistent deployments.
+1. **Build** (GitHub-hosted runner): Multi-arch Docker image (amd64 + arm64) built and pushed to Docker Hub (`tschissler/*`)
+2. **Deploy** (self-hosted runner on the k3s cluster): Kubernetes deployment updated with the new image
+
+ESP32 firmware CI uploads `.bin` files to Azure Blob Storage and publishes a retained MQTT message — devices auto-update via OTA on next boot.
+
+### GitOps with ArgoCD
+
+Kubernetes manifests and Helm values for all services live in a separate private repository and are continuously reconciled by **ArgoCD** running in the cluster. This keeps the cluster state declarative and auditable, and decouples deployment configuration from application source code.
 
 ## External Components Used
 
@@ -303,5 +346,11 @@ Some essential parts of my running setup live in external repositories; they are
 - [InfluxDB Documentation](https://docs.influxdata.com/): For time-series data management.
 - [MQTT Protocol](https://mqtt.org/): Lightweight messaging protocol for IoT.
 - [PlatformIO Documentation](https://docs.platformio.org/): Embedded development platform.
+
+## License
+
+This project is licensed under the **MIT License** — feel free to use, adapt, and share. See [LICENSE](LICENSE) for details.
+
+---
 
 This repository is a work in progress and is tailored to my specific needs. However, it is shared with the hope that it provides inspiration and learning opportunities for others interested in smart home technologies.
