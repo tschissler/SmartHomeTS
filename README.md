@@ -28,9 +28,9 @@ The system follows an **event-driven microservices architecture** with MQTT as t
 Physical Devices ──► ESP32 Firmware ──► MQTT (Mosquitto) ──► .NET Connector Services ──► InfluxDB 3
                                               ▲
                                     External APIs
-                               (BMW, VW, Enphase)               InfluxDB 3 ──► Grafana
-                                                                            ──► Blazor Web
-                                                                            ──► Flutter App
+                               (BMW, VW, Enphase, Heatpump)           InfluxDB 3 ──► Grafana
+                                                                                 ──► Blazor Web
+                                                                                 ──► Flutter App
 ```
 
 All services run in a **k3s Kubernetes cluster** on Raspberry Pi nodes, deployed via **GitOps with ArgoCD**.
