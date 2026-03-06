@@ -15,7 +15,7 @@
     confirm_format_disk: false
 
     # === MINIO KONFIGURATION ===
-    minio_version: "RELEASE.2025-02-28T09-55-16Z"
+    minio_version: "RELEASE.2025-09-07T16-13-09Z"
     minio_bin_dir: "/usr/local/bin"
     minio_config_dir: "/etc/minio"
     minio_user: "minio-user"
