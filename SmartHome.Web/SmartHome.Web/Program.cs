@@ -77,9 +77,7 @@ builder.Services.AddSingleton<MqttService>();
 
 // Add health checks
 builder.Services.AddHealthChecks()
-    .AddCheck("self", () => 
-        Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy()
-    );
+    .AddCheck<MqttHealthCheck>("mqtt", tags: new[] { "live" });
 
 var app = builder.Build();
 app.UseRequestLocalization(new RequestLocalizationOptions()
@@ -125,11 +123,12 @@ app.MapGet("/version", () =>
 });
 
 // Add health check endpoints
-app.MapGet("/health", (MqttService mqttService) => 
+app.MapGet("/health", (MqttService mqttService) =>
 {
-    // Check if MQTT service is connected and healthy
-    // You can add more checks here based on your requirements
-    return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
+    var mqttConnected = mqttService.IsConnected;
+    return mqttConnected
+        ? Results.Ok(new { status = "healthy", mqtt = "connected", timestamp = DateTime.UtcNow })
+        : Results.Json(new { status = "degraded", mqtt = "disconnected", timestamp = DateTime.UtcNow }, statusCode: 503);
 });
 
 app.MapHealthChecks("/healthz/live", new HealthCheckOptions
@@ -145,3 +144,16 @@ app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
 logger.LogInformation("SmartHome.Web started successfully");
 
 app.Run();
+
+class MqttHealthCheck(MqttService mqttService) : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+{
+    public Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(
+        Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var result = mqttService.IsConnected
+            ? Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("MQTT broker connected")
+            : Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("MQTT broker disconnected");
+        return Task.FromResult(result);
+    }
+}

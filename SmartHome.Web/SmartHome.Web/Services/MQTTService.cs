@@ -22,6 +22,7 @@ namespace SmartHome.Web.Services
         public CarStatusData VwStatusData { get; set; }
         public HeatingCommandData? HeatingKinderzimmerCommand { get; private set; }
         public HeatingCommandData? HeatingEsszimmerCommand { get; private set; }
+        public bool IsConnected => _client?.IsConnected ?? false;
 
 
         public MqttService()
@@ -56,6 +57,20 @@ namespace SmartHome.Web.Services
                 await _client.SubscribeAsync("commands/Heating/#");
             };
 
+            _client.DisconnectedAsync += async e =>
+            {
+                Console.WriteLine($"Disconnected from MQTT broker. Reason: {e.Reason}. Reconnecting in 5s...");
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                try
+                {
+                    await _client.ConnectAsync(_options, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"MQTT reconnection attempt failed: {ex.Message}");
+                }
+            };
+
             _client.ApplicationMessageReceivedAsync += e =>
             {
                 UpdateSharedData(e.ApplicationMessage);
@@ -74,7 +89,7 @@ namespace SmartHome.Web.Services
         {
             if (!_client.IsConnected)
             {
-                await ConnectAsync();
+                throw new InvalidOperationException("MQTT client is not connected. Reconnection is in progress.");
             }
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
