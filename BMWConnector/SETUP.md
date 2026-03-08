@@ -132,6 +132,27 @@ mosquitto_sub -h mosquitto.intern -t "data/charging/BMW" -v
 mosquitto_sub -h mosquitto.intern -t "data/charging/Mini" -v
 ```
 
+### Raw message debugging
+
+Set `BMW_DEBUG_RAW=true` to forward the unprocessed BMW streaming payloads to `debug/{vehicle}/raw` on Mosquitto. Useful for inspecting field names, types, and values directly from the BMW broker.
+
+```fish
+# Locally
+BMW_DEBUG_RAW=true dotnet run
+
+# Kubernetes (temporary — remove after debugging)
+kubectl -n smarthome set env deployment/bmwconnector BMW_DEBUG_RAW=true
+# Disable again:
+kubectl -n smarthome set env deployment/bmwconnector BMW_DEBUG_RAW-
+```
+
+Subscribe while the car is charging:
+
+```fish
+mosquitto_sub -h mosquitto.intern -t "debug/bmw/raw" -v
+mosquitto_sub -h mosquitto.intern -t "debug/mini/raw" -v
+```
+
 ---
 
 ## BMW CarData Developer Portal — required data points
