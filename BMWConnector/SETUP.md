@@ -152,7 +152,7 @@ vehicle.isMoving
 vehicle.cabin.infotainment.navigation.currentLocation.latitude
 vehicle.cabin.infotainment.navigation.currentLocation.longitude
 vehicle.powertrain.electric.battery.charging.power
-vehicle.powertrain.electric.battery.stateOfCharge.targetMin   
+vehicle.powertrain.electric.battery.stateOfCharge.target   
 vehicle.vehicle.travelledDistance
 ```
 

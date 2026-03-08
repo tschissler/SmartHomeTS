@@ -12,7 +12,7 @@ public class VehicleState
     public int? Battery { get; private set; }
     public string? ChargingStatus { get; private set; }
     public string? HvChargingStatus { get; private set; }
-    public int? ChargingTarget { get; private set; }
+    public int ChargingTarget { get; private set; } = 100;
     public DateTime? ChargingEndTime { get; private set; }
     public bool? ChargerConnected { get; private set; }
 

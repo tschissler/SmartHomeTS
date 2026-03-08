@@ -3,11 +3,7 @@
     {
       "name": "Default",
       "files": [
-        "BMWConnector/BMWConnector/Models/VehicleState.cs",
-        "BMWConnector/BMWConnector/Services/BmwCarDataService.cs",
-        "BMWConnector/SETUP.md",
-        "BMWConnector/DATAPOINTS.md",
-        ".vscode/changelists.json"
+        "BMWConnector/SETUP.md"
       ]
     }
   ],
