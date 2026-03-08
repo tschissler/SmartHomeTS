@@ -60,7 +60,7 @@ namespace SharedContracts
             Battery = 0;
             ChargingStatus = "";
             ChargingTarget = 0;
-            ChargingEndTime = DateTime.MinValue;
+            ChargingEndTime = null;
             ChargerConnected = false;
             RemainingRange = 0;
             Mileage = 0;

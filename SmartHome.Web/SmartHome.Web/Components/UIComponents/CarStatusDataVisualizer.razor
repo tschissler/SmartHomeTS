@@ -41,7 +41,7 @@
             </div>
             <div class="batteryLabel">
                 @CarStatusData.Battery % / @CarStatusData.ChargingTarget %<br />
-                @if (CarStatusData.ChargingEndTime.HasValue)
+                @if (CarStatusData.ChargingEndTime.HasValue && CarStatusData.ChargingEndTime > DateTime.UtcNow)
                 {
                     <span>Bis: </span>
                     @CarStatusData.ChargingEndTime?.ToLocalTime().ToString("HH:mm")
