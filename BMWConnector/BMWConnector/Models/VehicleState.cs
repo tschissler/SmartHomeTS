@@ -67,7 +67,10 @@ public class VehicleState
 
             case "vehicle.drivetrain.electricEngine.charging.timeRemaining":
                 if (point.Value.ValueKind == JsonValueKind.Number)
-                    ChargingEndTime = DateTime.UtcNow.AddMinutes(point.Value.GetDouble());
+                {
+                    var minutes = point.Value.GetDouble();
+                    ChargingEndTime = minutes > 0 ? DateTime.UtcNow.AddMinutes(minutes) : null;
+                }
                 break;
 
             case "vehicle.body.chargingPort.status":
