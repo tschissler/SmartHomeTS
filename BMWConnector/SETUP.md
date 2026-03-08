@@ -136,26 +136,30 @@ mosquitto_sub -h mosquitto.intern -t "data/charging/Mini" -v
 
 ## BMW CarData Developer Portal — required data points
 
-When setting up your application in the [BMW CarData Developer Portal](https://developer.bmw.com/products/cardata-streaming),
-enable the following data points for the CarData Streaming subscription.
-The connector subscribes to the wildcard topic `{GCID}/+` and extracts exactly these fields:
+Register exactly these fields in the [BMW CarData Developer Portal](https://developer.bmw.com/products/cardata-streaming).
+The connector ignores everything else — unrecognised fields are logged as `Unknown field (not mapped)`.
 
-| Data point (field name) | Description | Used for |
-|---|---|---|
-| `vehicle.drivetrain.batteryManagement.header` | State of charge (%) | Battery level |
-| `vehicle.drivetrain.electricEngine.charging.status` | Charging status string | Charging status |
-| `vehicle.powertrain.electric.battery.stateOfCharge.target` | Target SoC (%) | Charging target |
-| `vehicle.drivetrain.electricEngine.charging.timeRemaining` | Minutes until charge complete | Estimated end time |
-| `vehicle.body.chargingPort.status` | Port status (`CONNECTED` / other) | Charger connected flag |
-| `vehicle.drivetrain.electricEngine.kombiRemainingElectricRange` | Remaining range (km) | Range display |
-| `vehicle.trip.segment.end.travelledDistance` | Odometer / trip distance (km) | Mileage |
-| `vehicle.cabin.infotainment.navigation.currentLocation.latitude` | GPS latitude | Position |
-| `vehicle.cabin.infotainment.navigation.currentLocation.longitude` | GPS longitude | Position |
-| `vehicle.isMoving` | Boolean — vehicle in motion | Moving state |
-| `vehicle.powertrain.electric.battery.charging.power` | Charging power (kW) | Live charging power |
+For full field descriptions see [DATAPOINTS.md](DATAPOINTS.md).
 
-Any other fields pushed by BMW are silently ignored. You can enable additional fields in the portal
-without code changes — add the corresponding `case` in `VehicleState.Apply()` to consume them.
+```
+vehicle.body.chargingPort.status
+vehicle.drivetrain.batteryManagement.header
+vehicle.drivetrain.batteryManagement.maxEnergy               # BMW only
+vehicle.drivetrain.electricEngine.charging.status
+vehicle.drivetrain.electricEngine.charging.timeRemaining
+vehicle.drivetrain.electricEngine.kombiRemainingElectricRange
+vehicle.isMoving
+vehicle.cabin.infotainment.navigation.currentLocation.latitude
+vehicle.cabin.infotainment.navigation.currentLocation.longitude
+vehicle.powertrain.electric.battery.charging.power
+vehicle.powertrain.electric.battery.stateOfCharge.targetMin   
+vehicle.vehicle.travelledDistance
+```
+
+> **Note:** `header` (Mini) = real-time HV battery SoC (%) — not kWh. `maxEnergy` (BMW) = battery capacity (kWh). They are different metrics, register both.
+> Charging target: `stateOfCharge.target` (BMW) and `stateOfCharge.targetMin` (Mini) — register the one for your vehicle.
+
+To add a new field: register it in the portal, then add a `case` in `VehicleState.Apply()` and a property to `ToJson()`.
 
 ---
 

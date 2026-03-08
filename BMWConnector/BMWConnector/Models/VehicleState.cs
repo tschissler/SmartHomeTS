@@ -11,16 +11,24 @@ public class VehicleState
 
     public int? Battery { get; private set; }
     public string? ChargingStatus { get; private set; }
+    public string? HvChargingStatus { get; private set; }
     public int? ChargingTarget { get; private set; }
     public DateTime? ChargingEndTime { get; private set; }
     public bool? ChargerConnected { get; private set; }
+
     public double? RemainingRange { get; private set; }
+    public double? PredictedRange { get; private set; }
     public double? Mileage { get; private set; }
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
     public bool? Moving { get; private set; }
     public double? ChargingPower { get; private set; }
     public double? MaxEnergy { get; private set; }
+    public string? ChargingMode { get; private set; }
+    public int? PlugEventId { get; private set; }
+    public double? AvgConsumption { get; private set; }
+    public double? AcVoltage { get; private set; }
+    public double? AcAmpere { get; private set; }
     public DateTime LastUpdate { get; private set; } = DateTime.UtcNow;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -36,20 +44,28 @@ public class VehicleState
 
         switch (field)
         {
-            case "vehicle.drivetrain.batteryManagement.header":
+            case "vehicle.drivetrain.batteryManagement.header":  // Mini: real-time HV battery SoC (%)
                 Battery = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetInt32() : null;
+                break;
+
+            case "vehicle.drivetrain.batteryManagement.maxEnergy":  // BMW: battery capacity (kWh)
+                MaxEnergy = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
                 break;
 
             case "vehicle.drivetrain.electricEngine.charging.status":
                 ChargingStatus = point.Value.ValueKind == JsonValueKind.String ? point.Value.GetString() : null;
                 break;
 
-            case "vehicle.powertrain.electric.battery.stateOfCharge.target":
+            case "vehicle.drivetrain.electricEngine.charging.hvStatus":
+                HvChargingStatus = point.Value.ValueKind == JsonValueKind.String ? point.Value.GetString() : null;
+                break;
+
+            case "vehicle.powertrain.electric.battery.stateOfCharge.target":    // BMW
+            case "vehicle.powertrain.electric.battery.stateOfCharge.targetMin": // Mini
                 ChargingTarget = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetInt32() : null;
                 break;
 
             case "vehicle.drivetrain.electricEngine.charging.timeRemaining":
-            case "vehicle.drivetrain.electricEngine.charging.timeToFullyCharged":
                 if (point.Value.ValueKind == JsonValueKind.Number)
                     ChargingEndTime = DateTime.UtcNow.AddMinutes(point.Value.GetDouble());
                 break;
@@ -63,7 +79,11 @@ public class VehicleState
                 RemainingRange = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
                 break;
 
-            case "vehicle.trip.segment.end.travelledDistance":
+            case "vehicle.drivetrain.electricEngine.remainingElectricRange":
+                PredictedRange = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
+                break;
+
+            case "vehicle.vehicle.travelledDistance":
                 Mileage = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
                 break;
 
@@ -84,8 +104,24 @@ public class VehicleState
                 ChargingPower = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
                 break;
 
-            case "vehicle.drivetrain.batteryManagement.maxEnergy":
-                MaxEnergy = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
+            case "vehicle.drivetrain.electricEngine.charging.chargingMode":
+                ChargingMode = point.Value.ValueKind == JsonValueKind.String ? point.Value.GetString() : null;
+                break;
+
+            case "vehicle.body.chargingPort.plugEventId":
+                PlugEventId = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetInt32() : null;
+                break;
+
+            case "vehicle.drivetrain.avgElectricRangeConsumption":
+                AvgConsumption = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
+                break;
+
+            case "vehicle.drivetrain.electricEngine.charging.acVoltage":
+                AcVoltage = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
+                break;
+
+            case "vehicle.drivetrain.electricEngine.charging.acAmpere":
+                AcAmpere = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
                 break;
 
             default:
@@ -103,10 +139,12 @@ public class VehicleState
             name = _name,
             battery = Battery,
             chargingStatus = ChargingStatus,
+            hvChargingStatus = HvChargingStatus,
             chargingTarget = ChargingTarget,
             chargingEndTime = ChargingEndTime?.ToString("o"),
             chargerConnected = ChargerConnected,
             remainingRange = RemainingRange,
+            predictedRange = PredictedRange,
             mileage = Mileage,
             position = Latitude.HasValue && Longitude.HasValue
                 ? new { latitude = Latitude.Value, longitude = Longitude.Value }
@@ -114,6 +152,11 @@ public class VehicleState
             moving = Moving,
             chargingPower = ChargingPower,
             maxEnergy = MaxEnergy,
+            chargingMode = ChargingMode,
+            plugEventId = PlugEventId,
+            avgConsumption = AvgConsumption,
+            acVoltage = AcVoltage,
+            acAmpere = AcAmpere,
             lastUpdate = LastUpdate.ToString("o"),
         };
 
