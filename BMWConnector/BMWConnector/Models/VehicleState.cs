@@ -60,9 +60,9 @@ public class VehicleState
                 HvChargingStatus = point.Value.ValueKind == JsonValueKind.String ? point.Value.GetString() : null;
                 break;
 
-            case "vehicle.powertrain.electric.battery.stateOfCharge.target":    // BMW
-            case "vehicle.powertrain.electric.battery.stateOfCharge.targetMin": // Mini
-                ChargingTarget = point.Value.ValueKind == JsonValueKind.Number ? (int)point.Value.GetDouble() : null;
+            case "vehicle.powertrain.electric.battery.stateOfCharge.target":
+                if (point.Value.ValueKind == JsonValueKind.Number)
+                    ChargingTarget = (int)point.Value.GetDouble();
                 break;
 
             case "vehicle.drivetrain.electricEngine.charging.timeRemaining":

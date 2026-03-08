@@ -10,8 +10,7 @@ This document maps BMW CarData MQTT fields to the `VehicleState` properties publ
 | `maxEnergy` | `vehicle.drivetrain.batteryManagement.maxEnergy` | **BMW only** — battery capacity (kWh) | Number |
 | `chargingStatus` | `vehicle.drivetrain.electricEngine.charging.status` | NOCHARGING / CHARGINGACTIVE / CHARGINGPAUSED / CHARGINGENDED / CHARGINGERROR | String |
 | `hvChargingStatus` | `vehicle.drivetrain.electricEngine.charging.hvStatus` | HV charging status | String |
-| `chargingTarget` | `vehicle.powertrain.electric.battery.stateOfCharge.target` | **BMW only** — charge-to target (%, 10% steps) | Number |
-| `chargingTarget` | `vehicle.powertrain.electric.battery.stateOfCharge.targetMin` | **Mini only** — minimum target SoC for smart charging (%) | Number |
+| `chargingTarget` | `vehicle.powertrain.electric.battery.stateOfCharge.target` | Charge-to target (%, 10% steps). Defaults to 100% if not received (e.g. Mini). | Number |
 | `chargingEndTime` | `vehicle.drivetrain.electricEngine.charging.timeRemaining` | Minutes to full charge → converted to UTC timestamp | Number |
 | `chargerConnected` | `vehicle.body.chargingPort.status` | CONNECTED / DISCONNECTED | String |
 | `remainingRange` | `vehicle.drivetrain.electricEngine.kombiRemainingElectricRange` | Current electric range (km) | Number |
@@ -54,7 +53,7 @@ This document maps BMW CarData MQTT fields to the `VehicleState` properties publ
 
 - **Real-time SoC**: Available for Mini via `vehicle.drivetrain.batteryManagement.header` (SoC %). Not available for BMW via streaming API.
 - **`header` vs `maxEnergy`**: These are different metrics. `header` (Mini) = real-time SoC %. `maxEnergy` (BMW) = battery capacity in kWh. Do not conflate them.
-- **Charging target**: `stateOfCharge.target` (BMW) and `stateOfCharge.targetMin` (Mini) both map to `chargingTarget` — register whichever applies to your vehicle.
+- **Charging target**: Only `stateOfCharge.target` is mapped. Mini doesn't expose this field — defaults to 100%.
 - **Charging power unit**: `vehicle.powertrain.electric.battery.charging.power` is in **Watts**, not kW.
 - **ChargingEndTime**: Computed at receive time as `DateTime.UtcNow + minutes`. Accuracy degrades if the value isn't refreshed frequently by BMW.
 - **Mileage**: `vehicle.vehicle.travelledDistance` is the current live odometer reading.
