@@ -45,7 +45,7 @@ public class VehicleState
         switch (field)
         {
             case "vehicle.drivetrain.batteryManagement.header":  // Mini: real-time HV battery SoC (%)
-                Battery = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetInt32() : null;
+                Battery = point.Value.ValueKind == JsonValueKind.Number ? (int)point.Value.GetDouble() : null;
                 break;
 
             case "vehicle.drivetrain.batteryManagement.maxEnergy":  // BMW: battery capacity (kWh)
@@ -62,7 +62,7 @@ public class VehicleState
 
             case "vehicle.powertrain.electric.battery.stateOfCharge.target":    // BMW
             case "vehicle.powertrain.electric.battery.stateOfCharge.targetMin": // Mini
-                ChargingTarget = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetInt32() : null;
+                ChargingTarget = point.Value.ValueKind == JsonValueKind.Number ? (int)point.Value.GetDouble() : null;
                 break;
 
             case "vehicle.drivetrain.electricEngine.charging.timeRemaining":
