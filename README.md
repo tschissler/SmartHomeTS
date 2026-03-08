@@ -88,7 +88,7 @@ The current state of my SmartHome system covers these capabilities:
 This repository showcases a variety of cutting-edge technologies, each solving specific problems and offering opportunities for learning:
 
 - **.NET**: A powerful framework for building scalable backend services. In this repository, it powers projects like the various services and the SmartHome.Web frontend, demonstrating how to create high-performance applications with strong type safety and modularity. Learn more at [.NET Documentation](https://learn.microsoft.com/en-us/dotnet/).
-- **Python**: Known for its simplicity and versatility, Python is used in the BMWConnector to integrate with BMW/Mini Connected services and VWConnector to consume the VW Connect API. These projects demonstrate how to use existing libraries and create MQTT messages based on the data. Learn more at [Python.org](https://www.python.org/).
+- **Python**: Known for its simplicity and versatility, Python is used in the VWConnector to consume the VW Connect API. This project demonstrates how to use existing libraries and create MQTT messages based on the data. Learn more at [Python.org](https://www.python.org/).
 - **C/C++**: Essential for low-level programming, these languages are used in ESP32 firmware to control IoT devices like sensors and actuators. This demonstrates how to build efficient and reliable embedded systems. Learn more at [C++ Documentation](https://cplusplus.com/) and [C Programming](https://en.cppreference.com/w/).
 - **PlatformIO**: A professional collaborative platform for embedded development fully integrated with VS Code. It is used in the ESP32Firmwares projects to simplify the development and deployment (flashing) of firmware for IoT devices. Learn more at [PlatformIO](https://platformio.org/).
 - **MQTT**: A lightweight messaging protocol ideal for IoT. It enables seamless communication between devices and services. Switching from REST API calls to MQTT made the solution much more robust and resilient by reducing direct dependencies. Learn more at [MQTT.org](https://mqtt.org/).
@@ -113,9 +113,9 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 
 ### BMWConnector
 
-- **Purpose**: Integrates with BMW/Mini Connected services to fetch vehicle data, such as battery status and charging information, and publishes it as MQTT messages.
-- **Inspiration**: Explore how to use Python for API integration and real-time data processing.
-- **Kubernetes Secrets Usage**: The BMWConnector securely manages OAuth tokens using Kubernetes Secrets. Tokens are loaded from secrets during authentication and updated periodically to ensure validity. This approach automates token management, reduces manual intervention, and enhances security by avoiding hardcoding sensitive information.
+- **Purpose**: Integrates with BMW/Mini Connected services to stream real-time vehicle data (battery status, charging information, remaining range) and publishes it as MQTT messages to the local broker.
+- **Inspiration**: Explore how to connect to BMW's CarData MQTT streaming service using OAuth2 device flow and bridge vehicle telemetry into a home automation system.
+- **Technology**: C# .NET Worker Service using MQTTnet (MQTT v5 with TLS) connecting directly to BMW's CarData broker (`customer.streaming-cardata.bmwgroup.com`) and republishing to local Mosquitto. Initial authentication uses the OAuth2 PKCE device code flow; tokens are refreshed automatically at runtime.
 
 ### VWConnector
 
@@ -266,6 +266,12 @@ Setup and build: [`ESP32Firmwares/TemperatureDisplay.Firmware/README.md`](ESP32F
 - **Inspiration**: Demonstrates how to use C# and .NET on microcontrollers, exploring the possibilities of bringing familiar development paradigms to embedded systems.
 - **Status**: Deprecated in favor of traditional C/C++ ESP32 firmware development for better performance and OTA update capability.
 
+### BMWConnector (Python)
+
+- **Purpose**: Previously integrated with BMW/Mini Connected Drive APIs using the `bimmer_connected` Python library to fetch vehicle data via HTTP polling and publish it as MQTT messages.
+- **Inspiration**: Demonstrates Python-based API integration and OAuth2 token management using Kubernetes Secrets.
+- **Status**: Replaced by the new C# BMWConnector, which connects directly to BMW's CarData real-time MQTT streaming service — eliminating polling and the dependency on the discontinued `bimmer_connected` library.
+
 ## Tools Frequently Used
 
 While working with this repository, the following tools are frequently utilized to enhance productivity and streamline development:
@@ -277,23 +283,7 @@ While working with this repository, the following tools are frequently utilized 
 
 ## Kubernetes Secrets Usage
 
-Kubernetes secrets are used in this repository to securely manage sensitive information such as API keys, credentials, and certificates.
-
-You can see one example in the BMWConnector project as it uses Kubernetes Secrets for securely managing OAuth tokens required for authenticating with the BMW Connected Drive API. Here's how it works:
-
-1. **Loading Secrets**:
-
-  The `load_oauth_store_from_k8s_secret` function in `k8s_utils.py` reads OAuth tokens from a Kubernetes Secret. It decodes the base64-encoded values and sets them in the `MyBMWAccount` object for authentication.
-
-1. **Storing Secrets**:
-
-  The `store_oauth_store_to_k8s_secret` function updates or creates a Kubernetes Secret with the latest OAuth tokens. It encodes the tokens in base64 before storing them, ensuring secure handling of sensitive data.
-
-1. **Integration in `bmw_mqtt.py`**:
-
-  The `connect_vehicle` function attempts to load OAuth tokens from Kubernetes Secrets for authentication. If this fails, it prompts the user for a captcha token (in interactive mode) and stores the new tokens back into the Kubernetes Secret. As the secret is stored in Kubernetes as a centralized instance, the interactive providing of a captcha token can be executed on a workstation and the service running in the Kubernetes cluster can then pick up this information when running. During the main loop, the script periodically refreshes the OAuth tokens and updates the Kubernetes Secret to keep the tokens valid.
-
-This approach ensures secure and automated management of authentication tokens, reducing manual intervention and enhancing reliability.
+Kubernetes secrets are used in this repository to securely manage sensitive information such as API keys, credentials, and certificates. All connector services read their credentials from Kubernetes Secrets at startup, keeping sensitive values out of container images and source code. The `Secrets.cs` files used for local development are gitignored.
 
 ## Unique Patterns and Practices
 
@@ -340,7 +330,7 @@ Some essential parts of my running setup live in external repositories; they are
 
 ## External Resources
 
-- [bimmer_connected Documentation](https://bimmer-connected.readthedocs.io/): For BMW/Mini car integration.
+- [BMW CarData Developer Portal](https://bmw-cardata.bmwgroup.com/): BMW's official CarData streaming API for real-time vehicle telemetry.
 - [CarConnect](https://github.com/tillsteinbach/CarConnectivity): For VW car integration.
 - [Syncfusion Blazor Components](https://www.syncfusion.com/blazor-components): UI components for Blazor.
 - [InfluxDB Documentation](https://docs.influxdata.com/): For time-series data management.

@@ -1,21 +1,12 @@
-# Use an official Python runtime as a parent image
-FROM python:3.12
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY BMWConnector/BMWConnector.csproj BMWConnector/
+RUN dotnet restore BMWConnector/BMWConnector.csproj
+COPY . .
+RUN dotnet publish BMWConnector/BMWConnector.csproj -c Release -o /app/publish
 
-# Set the working directory in the container
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
+COPY --from=build /app/publish .
 
-# Copy requirements file first to leverage Docker cache
-COPY requirements.txt /app/requirements.txt
-
-# Install dependencies
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
-
-# Copy the rest of the application code
-COPY . /app
-
-# Make port 5000 available to the world outside this container
-EXPOSE 5000
-
-# Run app.py when the container launches
-CMD ["python", "bmw_mqtt.py"]
+ENTRYPOINT ["dotnet", "BMWConnector.dll"]

@@ -11,56 +11,49 @@ on:
 env:
   PROJECT_NAME: BMWConnector
   IMAGE_NAME: bmwconnector
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5.3.0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Build and test
+      run: dotnet build ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.slnx
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-    
-    - name: Build and publish Docker image
-      working-directory: ${{env.PROJECT_NAME}}
-      run: |        
-        # Build the Docker image with the package version tag.
-        docker buildx build \
-          --platform linux/arm64 \
-          -t tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }} \
-          -t tschissler/${{ env.IMAGE_NAME }}:latest \
-          -f ./dockerfile \
-          --push .
 
-  deploy:
-    runs-on: [self-hosted, linux]
-    needs: build
-    
-    steps:
-    - name: Deploy to Kubernetes if depoyment does not exist yet
-      run: |
-        if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
-          microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
-        fi
-    - name: Update Kubernetes deployment
-      run: |        
-        microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_USERNAME="${{ secrets.BMW_USERNAME }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_PASSWORD="${{ secrets.BMW_PASSWORD }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} BMW_VIN="${{ secrets.BMW_VIN }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} Mini_USERNAME="${{ secrets.Mini_USERNAME }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} Mini_PASSWORD="${{ secrets.Mini_PASSWORD }}"
-        microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} Mini_VIN="${{ secrets.Mini_VIN }}"       
+    - name: Generate version information
+      id: version
+      run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+    - name: Build and publish multi-architecture Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: ./${{ env.PROJECT_NAME }}
+        file: ./${{ env.PROJECT_NAME }}/dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          tschissler/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          tschissler/${{ env.IMAGE_NAME }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: false
+        sbom: false

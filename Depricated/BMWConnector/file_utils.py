@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, Optional
 from bimmer_connected.account import MyBMWAccount
 import json
+import time
 
 def load_oauth_store_from_file(oauth_store: Path, account: MyBMWAccount) -> Dict:
     """Load the OAuth details from a file if it exists."""

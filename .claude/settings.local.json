@@ -1,7 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "WebFetch(domain:dj0abr.github.io)",
+      "Bash(dotnet new sln -n BMWConnector -o BMWConnector)",
+      "Bash(dotnet new worker -n BMWConnector -o BMWConnector/BMWConnector --no-restore)",
+      "Bash(dotnet sln BMWConnector/BMWConnector.sln add BMWConnector/BMWConnector/BMWConnector.csproj)",
+      "Bash(dotnet new sln -n BMWConnector -o BMWConnector --force)",
+      "Bash(dotnet new worker -n BMWConnector -o BMWConnector/BMWConnector --no-restore --force)",
+      "Bash(dotnet sln BMWConnector/BMWConnector.slnx add BMWConnector/BMWConnector/BMWConnector.csproj)",
+      "Bash(dotnet build BMWConnector.slnx)",
+      "Bash(dotnet add /home/thomas/Repos/GitHub/SmartHomeTS/BMWConnector/BMWConnector/BMWConnector.csproj package KubernetesClient)",
+      "Bash(xargs -I{} sh -c 'strings {} 2>/dev/null | grep -i \"\"HttpOperation\"\"')",
+      "Read(//home/thomas/.nuget/packages/**)",
+      "Bash(dotnet build)"
     ]
   }
 }
