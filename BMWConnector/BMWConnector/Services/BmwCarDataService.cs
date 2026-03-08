@@ -197,6 +197,10 @@ public class BmwCarDataService : BackgroundService
         try
         {
             string json = Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment);
+
+            // Forward raw BMW message to debug topic for analysis
+            await PublishRawAsync(json);
+
             var payload = JsonSerializer.Deserialize<BmwPayload>(json);
             if (payload?.Data == null) return;
 
@@ -204,7 +208,7 @@ public class BmwCarDataService : BackgroundService
             {
                 bool recognized = _state.Apply(field, dataPoint);
                 if (recognized)
-                    _log.LogInformation("[{Vehicle}] {Field} ({Kind}) = {Value}", _config.Name, field, dataPoint.Value.ValueKind, dataPoint.Value.ToString());
+                    _log.LogDebug("[{Vehicle}] {Field} = {Value}", _config.Name, field, dataPoint.Value.ToString());
                 else
                     _log.LogInformation("[{Vehicle}] Unknown field (not mapped): {Field} ({Kind}) = {Value}", _config.Name, field, dataPoint.Value.ValueKind, dataPoint.Value.ToString());
             }
@@ -215,6 +219,19 @@ public class BmwCarDataService : BackgroundService
         {
             _log.LogError(ex, "[{Vehicle}] Error processing BMW message", _config.Name);
         }
+    }
+
+    private async Task PublishRawAsync(string json)
+    {
+        if (_localClient == null || !_localClient.IsConnected) return;
+
+        var message = new MqttApplicationMessageBuilder()
+            .WithTopic($"debug/{_config.Name.ToLower()}/raw")
+            .WithPayload(json)
+            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce)
+            .Build();
+
+        await _localClient.PublishAsync(message);
     }
 
     private async Task PublishStateAsync()
