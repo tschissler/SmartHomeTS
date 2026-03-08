@@ -72,6 +72,7 @@ public class VehicleState
                     ChargingEndTime = minutes > 0 ? DateTime.UtcNow.AddMinutes(minutes) : null;
                 }
                 break;
+            // timeRemaining is not sent by BMW streaming API — ChargingEndTime is estimated below
 
             case "vehicle.body.chargingPort.status":
                 ChargerConnected = point.Value.ValueKind == JsonValueKind.String
@@ -129,6 +130,20 @@ public class VehicleState
 
             default:
                 return false;
+        }
+
+        // Estimate ChargingEndTime from available data when BMW doesn't send timeRemaining
+        if (ChargingEndTime == null && ChargingStatus == "CHARGINGACTIVE"
+            && Battery.HasValue && MaxEnergy.HasValue && ChargingPower.HasValue && ChargingPower > 0)
+        {
+            var remainingEnergyWh = (ChargingTarget - Battery.Value) / 100.0 * MaxEnergy.Value * 1000.0;
+            var remainingMinutes = remainingEnergyWh / ChargingPower.Value * 60.0;
+            if (remainingMinutes > 0)
+                ChargingEndTime = DateTime.UtcNow.AddMinutes(remainingMinutes);
+        }
+        else if (ChargingStatus != "CHARGINGACTIVE")
+        {
+            ChargingEndTime = null;
         }
 
         return true;
