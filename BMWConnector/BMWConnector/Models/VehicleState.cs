@@ -28,7 +28,8 @@ public class VehicleState
         WriteIndented = false,
     };
 
-    public void Apply(string field, BmwDataPoint point)
+    /// <summary>Returns true if the field was recognized and applied, false if unknown.</summary>
+    public bool Apply(string field, BmwDataPoint point)
     {
         LastUpdate = point.Timestamp;
 
@@ -80,7 +81,12 @@ public class VehicleState
             case "vehicle.powertrain.electric.battery.charging.power":
                 ChargingPower = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
                 break;
+
+            default:
+                return false;
         }
+
+        return true;
     }
 
     public string ToJson()

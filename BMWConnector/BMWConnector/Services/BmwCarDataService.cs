@@ -202,9 +202,11 @@ public class BmwCarDataService : BackgroundService
 
             foreach (var (field, dataPoint) in payload.Data)
             {
-                _state.Apply(field, dataPoint);
-                _log.LogDebug("[{Vehicle}] {Field} = {Value}", _config.Name, field,
-                    dataPoint.Value.ToString());
+                bool recognized = _state.Apply(field, dataPoint);
+                if (recognized)
+                    _log.LogDebug("[{Vehicle}] {Field} = {Value}", _config.Name, field, dataPoint.Value.ToString());
+                else
+                    _log.LogInformation("[{Vehicle}] Unknown field (not mapped): {Field} = {Value}", _config.Name, field, dataPoint.Value.ToString());
             }
 
             await PublishStateAsync();
