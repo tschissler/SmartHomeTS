@@ -13,7 +13,8 @@
       "Bash(dotnet add /home/thomas/Repos/GitHub/SmartHomeTS/BMWConnector/BMWConnector/BMWConnector.csproj package KubernetesClient)",
       "Bash(xargs -I{} sh -c 'strings {} 2>/dev/null | grep -i \"\"HttpOperation\"\"')",
       "Read(//home/thomas/.nuget/packages/**)",
-      "Bash(dotnet build)"
+      "Bash(dotnet build)",
+      "Bash(kubectl -n smarthome get rolebinding bmwconnector -o yaml)"
     ]
   }
 }

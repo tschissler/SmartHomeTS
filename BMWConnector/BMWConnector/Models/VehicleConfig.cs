@@ -34,7 +34,9 @@ public class VehicleConfig
         string value = Env(key);
         if (!string.IsNullOrEmpty(value))
         {
-            Console.WriteLine($"[{vehicleName}] {key}: using environment variable.");
+            Console.WriteLine($"[{vehicleName}] {key}: using environment variable, saving to Kubernetes Secret...");
+            await store.SaveCredentialAsync(key, value, ct);
+            Console.WriteLine($"[{vehicleName}] {key}: saved to Kubernetes Secret '{K8sSecretName}'.");
             return value;
         }
 
