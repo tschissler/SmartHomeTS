@@ -20,6 +20,7 @@ public class VehicleState
     public double? Longitude { get; private set; }
     public bool? Moving { get; private set; }
     public double? ChargingPower { get; private set; }
+    public double? MaxEnergy { get; private set; }
     public DateTime LastUpdate { get; private set; } = DateTime.UtcNow;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -48,6 +49,7 @@ public class VehicleState
                 break;
 
             case "vehicle.drivetrain.electricEngine.charging.timeRemaining":
+            case "vehicle.drivetrain.electricEngine.charging.timeToFullyCharged":
                 if (point.Value.ValueKind == JsonValueKind.Number)
                     ChargingEndTime = DateTime.UtcNow.AddMinutes(point.Value.GetDouble());
                 break;
@@ -82,6 +84,10 @@ public class VehicleState
                 ChargingPower = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
                 break;
 
+            case "vehicle.drivetrain.batteryManagement.maxEnergy":
+                MaxEnergy = point.Value.ValueKind == JsonValueKind.Number ? point.Value.GetDouble() : null;
+                break;
+
             default:
                 return false;
         }
@@ -107,6 +113,7 @@ public class VehicleState
                 : null,
             moving = Moving,
             chargingPower = ChargingPower,
+            maxEnergy = MaxEnergy,
             lastUpdate = LastUpdate.ToString("o"),
         };
 

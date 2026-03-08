@@ -204,9 +204,9 @@ public class BmwCarDataService : BackgroundService
             {
                 bool recognized = _state.Apply(field, dataPoint);
                 if (recognized)
-                    _log.LogDebug("[{Vehicle}] {Field} = {Value}", _config.Name, field, dataPoint.Value.ToString());
+                    _log.LogInformation("[{Vehicle}] {Field} ({Kind}) = {Value}", _config.Name, field, dataPoint.Value.ValueKind, dataPoint.Value.ToString());
                 else
-                    _log.LogInformation("[{Vehicle}] Unknown field (not mapped): {Field} = {Value}", _config.Name, field, dataPoint.Value.ToString());
+                    _log.LogInformation("[{Vehicle}] Unknown field (not mapped): {Field} ({Kind}) = {Value}", _config.Name, field, dataPoint.Value.ValueKind, dataPoint.Value.ToString());
             }
 
             await PublishStateAsync();
