@@ -27,6 +27,7 @@ public class BmwCarDataService : BackgroundService
 
     private readonly string _localMqttHost;
     private readonly int _localMqttPort;
+    private readonly bool _debugRaw;
 
     private IMqttClient? _localClient;
     private int _consecutiveAuthFailures = 0;
@@ -40,6 +41,7 @@ public class BmwCarDataService : BackgroundService
         _state = new VehicleState(config.Name);
         _localMqttHost = Environment.GetEnvironmentVariable("MQTT_BROKER") ?? "mosquitto.intern";
         _localMqttPort = int.Parse(Environment.GetEnvironmentVariable("MQTT_PORT") ?? "1883");
+        _debugRaw = Environment.GetEnvironmentVariable("BMW_DEBUG_RAW") == "true";
         _health.SetConnected(config.Name, false);
     }
 
@@ -198,8 +200,8 @@ public class BmwCarDataService : BackgroundService
         {
             string json = Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment);
 
-            // Forward raw BMW message to debug topic for analysis
-            await PublishRawAsync(json);
+            if (_debugRaw)
+                await PublishRawAsync(json);
 
             var payload = JsonSerializer.Deserialize<BmwPayload>(json);
             if (payload?.Data == null) return;
