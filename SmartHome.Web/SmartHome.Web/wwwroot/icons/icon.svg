@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="bulbGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef9c3"/>
+      <stop offset="40%" style="stop-color:#fde68a"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="baseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d1d5db"/>
+      <stop offset="100%" style="stop-color:#9ca3af"/>
+    </linearGradient>
+    <radialGradient id="glowCore" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" style="stop-color:#fef08a;stop-opacity:1"/>
+      <stop offset="60%" style="stop-color:#fbbf24;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0"/>
+    </radialGradient>
+    <radialGradient id="outerGlow" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:0.35"/>
+      <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:0"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="18" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="url(#bgGrad)"/>
+
+  <!-- Outer ambient glow -->
+  <ellipse cx="256" cy="230" rx="170" ry="160" fill="url(#outerGlow)"/>
+
+  <!-- Ray lines emanating from bulb -->
+  <g stroke="#fde68a" stroke-linecap="round" opacity="0.35">
+    <line x1="256" y1="68" x2="256" y2="40" stroke-width="4"/>
+    <line x1="341" y1="95" x2="360" y2="76" stroke-width="3.5"/>
+    <line x1="384" y1="178" x2="412" y2="170" stroke-width="3.5"/>
+    <line x1="171" y1="95" x2="152" y2="76" stroke-width="3.5"/>
+    <line x1="128" y1="178" x2="100" y2="170" stroke-width="3.5"/>
+    <line x1="370" y1="270" x2="398" y2="278" stroke-width="3"/>
+    <line x1="142" y1="270" x2="114" y2="278" stroke-width="3"/>
+  </g>
+
+  <!-- Main bulb body -->
+  <g filter="url(#glow)">
+    <!-- Bulb glass -->
+    <path d="M 256 95
+             C 180 95 128 150 128 215
+             C 128 262 155 295 182 318
+             C 196 330 204 345 204 360
+             L 308 360
+             C 308 345 316 330 330 318
+             C 357 295 384 262 384 215
+             C 384 150 332 95 256 95 Z"
+          fill="url(#bulbGrad)"/>
+
+    <!-- Inner highlight / shine -->
+    <path d="M 210 130
+             C 195 148 184 172 182 198"
+          stroke="white" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.5"/>
+    <circle cx="228" cy="120" r="10" fill="white" opacity="0.3"/>
+  </g>
+
+  <!-- Filament / smart circuit inside bulb -->
+  <g stroke="#92400e" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6">
+    <polyline points="230,310 230,280 215,255 245,230 256,248 267,230 297,255 282,280 282,310"/>
+    <line x1="230" y1="310" x2="282" y2="310"/>
+  </g>
+
+  <!-- Base segments (screw base) -->
+  <rect x="204" y="358" width="104" height="18" rx="4" fill="url(#baseGrad)"/>
+  <rect x="208" y="379" width="96"  height="16" rx="4" fill="#d1d5db"/>
+  <rect x="212" y="398" width="88"  height="16" rx="4" fill="#9ca3af"/>
+  <!-- Cap -->
+  <rect x="220" y="416" width="72"  height="14" rx="7" fill="#6b7280"/>
+
+  <!-- Horizontal stripe lines on base -->
+  <line x1="208" y1="386" x2="304" y2="386" stroke="#b0b7c3" stroke-width="1.5" opacity="0.5"/>
+  <line x1="212" y1="405" x2="300" y2="405" stroke="#8a9099" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Smart home icon inside bulb (small house silhouette) -->
+  <g opacity="0.55" fill="#92400e">
+    <polygon points="256,195 232,215 280,215" />
+    <rect x="237" y="214" width="38" height="26" rx="2"/>
+    <rect x="249" y="222" width="14" height="18" rx="2" fill="#fde68a" opacity="0.8"/>
+  </g>
+
+</svg>
