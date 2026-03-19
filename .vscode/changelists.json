@@ -3,7 +3,8 @@
     {
       "name": "Default",
       "files": [
-        "SmartHomeTS.code-workspace"
+        ".vscode/changelists.json",
+        "SmartHome.Web/SmartHome.Web/wwwroot/icons/icon.svg"
       ]
     }
   ],
