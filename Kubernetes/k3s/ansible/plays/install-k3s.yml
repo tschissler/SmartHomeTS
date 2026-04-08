@@ -185,3 +185,17 @@
         owner: "{{ ansible_user | default('thomasschissler') }}"
         group: "{{ ansible_user | default('thomasschissler') }}"
         mode: '0644'
+
+- name: Apply node labels
+  hosts: k3s_servers,k3s_agents
+  become: yes
+  tasks:
+    - name: Apply node labels from inventory
+      ansible.builtin.command: >
+        /usr/local/bin/k3s kubectl label node {{ inventory_hostname }}
+        {{ item }}
+        --overwrite
+      loop: "{{ node_labels | default([]) }}"
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      run_once: false
+      when: node_labels is defined and node_labels | length > 0
