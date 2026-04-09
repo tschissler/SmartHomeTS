@@ -202,7 +202,7 @@ namespace KebaConnector
                 for (int attempt = 1; attempt <= maxRetries; attempt++)
                 {
                     Console.WriteLine($"Updating charging current to {current} (attempt {attempt}/{maxRetries})");
-                    var result = ExecuteUDPCommand($"currtime {current} 1");
+                    var result = ExecuteUDPCommand($"currtime {current} 30");
                     Console.WriteLine("Result: " + result);
                     if (result == "TCH-OK :done\n")
                     {
