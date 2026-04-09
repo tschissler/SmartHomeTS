@@ -11,7 +11,7 @@ namespace KebaConnector
     {
         private IPAddress ipAddress;
         private int uDPPort;
-        private int previousChargingCurrencyWrittenToDevice = 0;
+        private volatile int actualCurrentFromDevice = -1; // -1 = unknown (not yet read from device)
         private readonly SemaphoreSlim udpSemaphore = new(1, 1);
         private int LastChargingSessionPublishedViaMQTT = 0;
 
@@ -39,9 +39,9 @@ namespace KebaConnector
                 Console.WriteLine($"Would have written {newCurrent} mA as charging current to device otherwise");
                 return;
             }
-            if (newCurrent == previousChargingCurrencyWrittenToDevice)
+            if (actualCurrentFromDevice >= 0 && newCurrent == actualCurrentFromDevice)
             {
-                Console.WriteLine($"Charging current already set to {newCurrent} mA, skipping write to device");
+                Console.WriteLine($"Charging current already at {newCurrent} mA on device, skipping write to device");
                 return;
             }
             WriteChargingCurrentToDevice(newCurrent);
@@ -58,6 +58,7 @@ namespace KebaConnector
             try
             {
                 var data = GetDeviceStatus();
+                actualCurrentFromDevice = data.MaxCurrency;
                 return new KebaData(
                     (PlugStatus)data.PlugStatus,
                     data.ChargingEnabled == 1,
@@ -206,7 +207,7 @@ namespace KebaConnector
                     if (result == "TCH-OK :done\n")
                     {
                         Console.WriteLine("Updated charging current to " + current);
-                        previousChargingCurrencyWrittenToDevice = current;
+                        actualCurrentFromDevice = current;
                         return;
                     }
 
