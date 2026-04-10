@@ -310,6 +310,7 @@ namespace KebaConnector
                 try
                 {
                     udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    udpClient.Client.ReceiveTimeout = 5000; // 5 second timeout to prevent indefinite blocking
                     udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, uDPPort));
                     udpClient.Connect(ipAddress, uDPPort);
 
