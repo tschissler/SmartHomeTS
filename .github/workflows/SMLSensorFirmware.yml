@@ -35,6 +35,7 @@ jobs:
     - name: Build with PlatformIO  
       env:
         WIFI_PASSWORDS: ${{ secrets.WIFI_PASSWORDS }}
+        METER_PINS: ${{ secrets.METER_PINS }}
         SMLSENSORFW_VERSION: ${{ env.version }}
       run: |
         pio run
