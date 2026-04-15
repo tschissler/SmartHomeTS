@@ -86,13 +86,13 @@ namespace SmartHome.DataHub
             string energyToHouseId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "EnergyToHouse";
 
             // ToDO: Read previous value from DB
-            if (!previousValues.ContainsKey(batteryLevelId))
+            if (data.BatteryLevel.HasValue && !previousValues.ContainsKey(batteryLevelId))
             {
-                previousValues.Add(batteryLevelId, data.BatteryLevel);
+                previousValues.Add(batteryLevelId, data.BatteryLevel.Value);
             }
-            if (!previousValues.ContainsKey(batteryEnergyId))
+            if (data.BatteryEnergy.HasValue && !previousValues.ContainsKey(batteryEnergyId))
             {
-                previousValues.Add(batteryEnergyId, data.BatteryEnergy / 1000); // Convert Wh to kWh
+                previousValues.Add(batteryEnergyId, data.BatteryEnergy.Value / 1000); // Convert Wh to kWh
             }
             if (!previousValues.ContainsKey(powerFromPVId))
             {
@@ -117,31 +117,6 @@ namespace SmartHome.DataHub
 
             var records = new List<InfluxRecord>
             {
-                new InfluxPercentageRecord
-                {
-                    MeasurementId = batteryLevelId,
-                    Category = EnphaseData.category,
-                    SubCategory = "Ladestand",
-                    SensorType = EnphaseData.sensorType,
-                    Location = location,
-                    Device = device,
-                    Measurement = "BatteryLevel",
-                    Value_Percent = data.BatteryLevel,
-                    MeasurementType = MeasurementType.Percent
-                },
-                new InfluxEnergyRecord
-                {
-                    MeasurementId = batteryEnergyId,
-                    Category = EnphaseData.category,
-                    SubCategory = MeasurementSubCategory.Other,
-                    SensorType = EnphaseData.sensorType,
-                    Location = location,
-                    Device = device,
-                    Measurement = "BatteryEnergy",
-                    Value_Cumulated_KWh = data.BatteryEnergy / 1000, // Convert Wh to kWh
-                    Value_Delta_KWh = data.BatteryEnergy / 1000 - previousValues[batteryEnergyId],
-                    MeasurementType = MeasurementType.Energy
-                },
                 new InfluxPowerRecord
                 {
                     MeasurementId = powerFromPVId,
@@ -191,6 +166,41 @@ namespace SmartHome.DataHub
                     MeasurementType = MeasurementType.Power
                 }
             };
+
+            if (data.BatteryLevel.HasValue)
+            {
+                records.Add(new InfluxPercentageRecord
+                {
+                    MeasurementId = batteryLevelId,
+                    Category = EnphaseData.category,
+                    SubCategory = "Ladestand",
+                    SensorType = EnphaseData.sensorType,
+                    Location = location,
+                    Device = device,
+                    Measurement = "BatteryLevel",
+                    Value_Percent = data.BatteryLevel.Value,
+                    MeasurementType = MeasurementType.Percent
+                });
+            }
+
+            if (data.BatteryEnergy.HasValue)
+            {
+                var batteryEnergyKwh = data.BatteryEnergy.Value / 1000;
+                records.Add(new InfluxEnergyRecord
+                {
+                    MeasurementId = batteryEnergyId,
+                    Category = EnphaseData.category,
+                    SubCategory = MeasurementSubCategory.Other,
+                    SensorType = EnphaseData.sensorType,
+                    Location = location,
+                    Device = device,
+                    Measurement = "BatteryEnergy",
+                    Value_Cumulated_KWh = batteryEnergyKwh,
+                    Value_Delta_KWh = batteryEnergyKwh - previousValues[batteryEnergyId],
+                    MeasurementType = MeasurementType.Energy
+                });
+                previousValues[batteryEnergyId] = batteryEnergyKwh;
+            }
 
             if (data.EnergyFromPVLifetime.HasValue)
             {

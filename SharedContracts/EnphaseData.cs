@@ -8,14 +8,14 @@ namespace SharedContracts
 {
     public record EnphaseData(
         DateTimeOffset LastDataUpdate,
-        int BatteryLevel, // Percent
-        decimal BatteryEnergy, // in Wh
         decimal PowerFromPV, // in mW
         decimal PowerFromBattery, // in mW, negative when charging
         decimal PowerFromGrid, // in mW, negative when feeding into grid
         decimal PowerToHouse, // in mW
-        decimal? EnergyFromPVLifetime = null, // in Wh, cumulative lifetime counter
-        decimal? EnergyToHouseLifetime = null  // in Wh, cumulative lifetime counter
+        int? BatteryLevel = null, // Percent, sent every ~60s
+        decimal? BatteryEnergy = null, // in Wh, sent every ~60s
+        decimal? EnergyFromPVLifetime = null, // in Wh, cumulative lifetime counter, sent every ~60s
+        decimal? EnergyToHouseLifetime = null  // in Wh, cumulative lifetime counter, sent every ~60s
     )
     {
         public const MeasurementCategory category = MeasurementCategory.Electricity;

@@ -128,30 +128,15 @@ namespace EnphaseConnector
                     var body = await response.Content.ReadAsStringAsync();
                     var rawData = JsonConvert.DeserializeObject<EnphaseLiveData>(body);
 
-                    if (deviceName == "envoym1")
-                    {
-                        return new EnphaseData(
-                            DateTimeOffset.FromUnixTimeSeconds(rawData.Meters.Last_Update),
-                            rawData.Meters.Soc,
-                            rawData.Meters.Enc_Agg_Energy,
-                            rawData.Meters.Pv.Agg_P_Mw,
-                            rawData.Meters.Storage.Agg_P_Mw,
-                            rawData.Meters.Grid.Agg_P_Mw,
-                            rawData.Meters.Load.Agg_P_Mw
-                            );
-                    }
-                    else
-                    {
-                        return new EnphaseData(
-                            DateTimeOffset.FromUnixTimeSeconds(rawData.Meters.Last_Update),
-                            rawData.Meters.Soc,
-                            rawData.Meters.Enc_Agg_Energy,
-                            rawData.Meters.Pv.Agg_P_Mw,
-                            rawData.Meters.Storage.Agg_P_Mw,
-                            rawData.Meters.Grid.Agg_P_Mw,
-                            rawData.Meters.Load.Agg_P_Mw
-                            );
-                    }
+                    return new EnphaseData(
+                        DateTimeOffset.FromUnixTimeSeconds(rawData.Meters.Last_Update),
+                        rawData.Meters.Pv.Agg_P_Mw,
+                        rawData.Meters.Storage.Agg_P_Mw,
+                        rawData.Meters.Grid.Agg_P_Mw,
+                        rawData.Meters.Load.Agg_P_Mw,
+                        BatteryLevel: rawData.Meters.Soc,
+                        BatteryEnergy: rawData.Meters.Enc_Agg_Energy
+                        );
                 }
             }
             catch (HttpRequestException e)

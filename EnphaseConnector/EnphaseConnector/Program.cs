@@ -78,13 +78,18 @@ static async Task ReadDataAndSendToMQTT(EnphaseLocalToken token, MQTTClient.MQTT
     var data = await enphaseLib.FetchDataAsync(token, deviceName);
     if (data != null)
     {
-        // Produktionsdaten (kumulierte kWh-Zähler) nur alle 60 Sekunden abrufen
+        // Produktionsdaten und Batteriewerte nur alle 60 Sekunden senden
         if (!letzterProduktionsdatenabruf.TryGetValue(deviceName, out var letzterAbruf) ||
             DateTime.Now.Subtract(letzterAbruf).TotalSeconds >= 60)
         {
             var (erzeugteLebensenergie, verbrauchteHausenergie) = await enphaseLib.FetchProductionDataAsync(token, deviceName);
             data = data with { EnergyFromPVLifetime = erzeugteLebensenergie, EnergyToHouseLifetime = verbrauchteHausenergie };
             letzterProduktionsdatenabruf[deviceName] = DateTime.Now;
+            // BatteryLevel und BatteryEnergy bleiben gesetzt (aus FetchDataAsync)
+        }
+        else
+        {
+            data = data with { BatteryLevel = null, BatteryEnergy = null };
         }
 
         await mqttClient.PublishAsync($"data/electricity/{deviceName}", JsonSerializer.Serialize(data), MqttQualityOfServiceLevel.AtLeastOnce, false);
