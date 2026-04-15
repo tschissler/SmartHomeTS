@@ -13,7 +13,9 @@ namespace SharedContracts
         decimal PowerFromPV, // in mW
         decimal PowerFromBattery, // in mW, negative when charging
         decimal PowerFromGrid, // in mW, negative when feeding into grid
-        decimal PowerToHouse // in mW
+        decimal PowerToHouse, // in mW
+        decimal? EnergyFromPVLifetime = null, // in Wh, cumulative lifetime counter
+        decimal? EnergyToHouseLifetime = null  // in Wh, cumulative lifetime counter
     )
     {
         public const MeasurementCategory category = MeasurementCategory.Electricity;

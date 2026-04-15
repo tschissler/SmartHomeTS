@@ -47,6 +47,9 @@ var tokenM1 = enphaseAuth.GetTokenAsync(settings.EnphaseUserName, settings.Enpha
 Thread.Sleep(1000);
 var tokenM3 = enphaseAuth.GetTokenAsync(settings.EnphaseUserName, settings.EnphasePassword, settings.EnvoyM3Serial).Result;
 
+// Letzter Abrufzeitpunkt der kumulierten Produktionsdaten pro Gerät (max. alle 60s)
+var LetzterProduktionsdatenabruf = new Dictionary<string, DateTime>();
+
 using (var mqttClient = new MQTTClient.MQTTClient("EnphaseConnector", settings.MqttBroker, settings.MqttPort))
 {
     Console.WriteLine("Connected to MQTT broker");
@@ -61,23 +64,33 @@ using (var mqttClient = new MQTTClient.MQTTClient("EnphaseConnector", settings.M
             await mqttClient.ConnectAsync();
             EnphaseConnectorHealthCheck.UpdateMqttConnectionStatus(true);
         }
-        
-        await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1");
-        await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3");
-        
+
+        await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1", LetzterProduktionsdatenabruf);
+        await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3", LetzterProduktionsdatenabruf);
+
         Thread.Sleep(settings.ReadIntervalMs - (int)-DateTime.Now.Subtract(startTime).TotalMilliseconds);
     }
 }
 
-static async Task ReadDataAndSendToMQTT(EnphaseLocalToken token, MQTTClient.MQTTClient mqttClient, string deviceName)
+static async Task ReadDataAndSendToMQTT(EnphaseLocalToken token, MQTTClient.MQTTClient mqttClient, string deviceName, Dictionary<string, DateTime> letzterProduktionsdatenabruf)
 {
-    var data = await new EnphaseLib().FetchDataAsync(token, deviceName);
+    var enphaseLib = new EnphaseLib();
+    var data = await enphaseLib.FetchDataAsync(token, deviceName);
     if (data != null)
     {
+        // Produktionsdaten (kumulierte kWh-Zähler) nur alle 60 Sekunden abrufen
+        if (!letzterProduktionsdatenabruf.TryGetValue(deviceName, out var letzterAbruf) ||
+            DateTime.Now.Subtract(letzterAbruf).TotalSeconds >= 60)
+        {
+            var (erzeugteLebensenergie, verbrauchteHausenergie) = await enphaseLib.FetchProductionDataAsync(token, deviceName);
+            data = data with { EnergyFromPVLifetime = erzeugteLebensenergie, EnergyToHouseLifetime = verbrauchteHausenergie };
+            letzterProduktionsdatenabruf[deviceName] = DateTime.Now;
+        }
+
         await mqttClient.PublishAsync($"data/electricity/{deviceName}", JsonSerializer.Serialize(data), MqttQualityOfServiceLevel.AtLeastOnce, false);
 
         Console.WriteLine($"{DateTime.Now} --- Data for Device {deviceName} sent via MQTT -> Battery level: {data.BatteryLevel}\t| Production: {data.PowerFromPV}");
-        
+
         // Update health check
         EnphaseConnectorHealthCheck.UpdateLastSuccessfulRead();
     }

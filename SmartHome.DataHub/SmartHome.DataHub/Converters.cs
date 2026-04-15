@@ -82,6 +82,8 @@ namespace SmartHome.DataHub
             string powerFromPVId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "PowerFromPV";
             string powerFromBatteryId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "PowerFromBattery";
             string powerFromGridId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "PowerFromGrid";
+            string energyFromPVId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "EnergyFromPV";
+            string energyToHouseId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "EnergyToHouse";
 
             // ToDO: Read previous value from DB
             if (!previousValues.ContainsKey(batteryLevelId))
@@ -103,6 +105,14 @@ namespace SmartHome.DataHub
             if (!previousValues.ContainsKey(powerFromGridId))
             {
                 previousValues.Add(powerFromGridId, data.PowerFromGrid / 1000); // Convert mW to W
+            }
+            if (data.EnergyFromPVLifetime.HasValue && !previousValues.ContainsKey(energyFromPVId))
+            {
+                previousValues.Add(energyFromPVId, data.EnergyFromPVLifetime.Value / 1000); // Convert Wh to kWh
+            }
+            if (data.EnergyToHouseLifetime.HasValue && !previousValues.ContainsKey(energyToHouseId))
+            {
+                previousValues.Add(energyToHouseId, data.EnergyToHouseLifetime.Value / 1000); // Convert Wh to kWh
             }
 
             var records = new List<InfluxRecord>
@@ -181,6 +191,45 @@ namespace SmartHome.DataHub
                     MeasurementType = MeasurementType.Power
                 }
             };
+
+            if (data.EnergyFromPVLifetime.HasValue)
+            {
+                var energyFromPVKwh = data.EnergyFromPVLifetime.Value / 1000;
+                records.Add(new InfluxEnergyRecord
+                {
+                    MeasurementId = energyFromPVId,
+                    Category = EnphaseData.category,
+                    SubCategory = MeasurementSubCategory.Production,
+                    SensorType = EnphaseData.sensorType,
+                    Location = location,
+                    Device = device,
+                    Measurement = "EnergyFromPV",
+                    Value_Cumulated_KWh = energyFromPVKwh,
+                    Value_Delta_KWh = energyFromPVKwh - previousValues[energyFromPVId],
+                    MeasurementType = MeasurementType.Energy
+                });
+                previousValues[energyFromPVId] = energyFromPVKwh;
+            }
+
+            if (data.EnergyToHouseLifetime.HasValue)
+            {
+                var energyToHouseKwh = data.EnergyToHouseLifetime.Value / 1000;
+                records.Add(new InfluxEnergyRecord
+                {
+                    MeasurementId = energyToHouseId,
+                    Category = EnphaseData.category,
+                    SubCategory = MeasurementSubCategory.Consumption,
+                    SensorType = EnphaseData.sensorType,
+                    Location = location,
+                    Device = device,
+                    Measurement = "EnergyToHouse",
+                    Value_Cumulated_KWh = energyToHouseKwh,
+                    Value_Delta_KWh = energyToHouseKwh - previousValues[energyToHouseId],
+                    MeasurementType = MeasurementType.Energy
+                });
+                previousValues[energyToHouseId] = energyToHouseKwh;
+            }
+
             return records;
         }
 

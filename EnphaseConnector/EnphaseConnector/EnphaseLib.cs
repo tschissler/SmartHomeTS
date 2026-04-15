@@ -43,6 +43,45 @@ namespace EnphaseConnector
             }
         }
 
+        public async Task<(decimal? ErzeugteLebensenergie, decimal? VerbrauchteHausenergie)> FetchProductionDataAsync(EnphaseLocalToken token, string deviceName)
+        {
+            try
+            {
+                var clientHandler = new HttpClientHandler { UseCookies = false };
+                clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+
+                var client = new HttpClient(clientHandler);
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri(LocalProductionApiUrl.Replace("{devicename}", deviceName)),
+                    Headers =
+                    {
+                        { "cookie", $"sessionId={token.SessionId}" },
+                        { "Authorization", $"Bearer {token.Token}" },
+                    },
+                };
+                using var response = await client.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                var rawData = JsonConvert.DeserializeObject<EnphaseProductionData>(body);
+
+                var pvProduktion = rawData?.Production?.FirstOrDefault(p => p.Type == "eim");
+                var hausverbrauch = rawData?.Consumption?.FirstOrDefault(c => c.MeasurementType == "total-consumption");
+
+                return (
+                    pvProduktion != null ? (decimal)pvProduktion.WhLifetime : null,
+                    hausverbrauch != null ? (decimal)hausverbrauch.WhLifetime : null
+                );
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine("\nException beim Abruf der Produktionsdaten!");
+                Console.WriteLine("Message :{0} ", e);
+                return (null, null);
+            }
+        }
+
         public async Task<EnphaseData> FetchDataAsync(EnphaseLocalToken token, string deviceName)
         {
             try
