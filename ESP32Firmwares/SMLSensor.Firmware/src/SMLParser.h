@@ -39,6 +39,11 @@ public:
     std::optional<float> Tarif1;
     std::optional<float> Tarif2;
     std::optional<float> Power;
+    bool isInfoMode = false;
+    String deviceSerial;
+
+    SMLData(float t1, float t2, float p, bool infoMode, const String& serial)
+        : Tarif1(t1), Tarif2(t2), Power(p), isInfoMode(infoMode), deviceSerial(serial) {}
 };
 
 class SMLParser {
@@ -46,7 +51,8 @@ public:
     static std::shared_ptr<SMLData> Parse(std::vector<uint8_t>& data);
     static bool VerifyCRC16(const std::vector<uint8_t>& buffer);
     static std::vector<std::shared_ptr<SMLList>> FilterSMLLists(const std::vector<std::shared_ptr<ISMLNode>>& nodes);
- 
+    static String GetDeviceSerial(const std::vector<std::shared_ptr<ISMLNode>>& valuesList);
+
 private:
     static int SMLElementToInteger(std::shared_ptr<SMLElement> byteData);
     static bool isLittleEndian();
@@ -56,6 +62,10 @@ private:
     static uint16_t ComputeCRC16(const std::vector<uint8_t>& data, size_t offset, size_t length);
     static std::shared_ptr<SMLList> FindElementByData(const std::vector<std::shared_ptr<ISMLNode>>& valuesList, const std::vector<uint8_t>& targetData);
     static float GetScaledValueFromSMLList(const std::shared_ptr<SMLList> &valueList);
+#ifdef DEBUG_SML
+    static void DumpSMLTree(const std::vector<std::shared_ptr<ISMLNode>>& nodes, int indent = 0);
+    static void DumpOBISValues(const std::vector<std::shared_ptr<ISMLNode>>& valuesList);
+#endif
 };
 
 #endif // SMLPARSER_H

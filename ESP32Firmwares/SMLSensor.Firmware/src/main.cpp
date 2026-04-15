@@ -37,6 +37,7 @@ static bool otaInProgress = false;
 static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
+static bool pinSent = false;
 
 static String baseTopic = "data/electricity";
 static String sensorName = "";
@@ -49,6 +50,92 @@ static String mqtt_ConfigTopic = "config/SMLSensor/Sensorname/";
 std::deque<uint8_t> buffer;
 const std::vector<uint8_t> startSequence = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const std::vector<uint8_t> endSequencePrefix = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
+
+// Parse METER_PINS build flag ("serial:pin|serial2:pin2") and return PIN for given serial
+String lookupMeterPin(const String& serial) {
+    String pins = METER_PINS;
+    if (pins.length() == 0) return "";
+    int start = 0;
+    while (start < (int)pins.length()) {
+        int end = pins.indexOf('|', start);
+        if (end == -1) end = pins.length();
+        String entry = pins.substring(start, end);
+        int sep = entry.indexOf(':');
+        if (sep > 0) {
+            String entrySerial = entry.substring(0, sep);
+            entrySerial.toUpperCase();
+            String compareSerial = serial;
+            compareSerial.toUpperCase();
+            if (entrySerial == compareSerial) {
+                return entry.substring(sep + 1);
+            }
+        }
+        start = end + 1;
+    }
+    return "";
+}
+
+// Single 1-second navigation pulse (used to advance through meter menu)
+void meterNavPulse(const String& label) {
+    Serial.println("  Nav: " + label);
+    digitalWrite(irLedPin, HIGH); digitalWrite(ledPin, HIGH);
+    delay(1000);
+    digitalWrite(irLedPin, LOW); digitalWrite(ledPin, LOW);
+    delay(1500); // pause for meter to process and advance
+}
+
+// Send PIN + navigate to "Inf. ON" setting via IR LED (ISKRA MT631 optical interface)
+// Full sequence per manual: wake-up → PIN digits → navigate steps 3-9 → activate Inf. ON (step 10) → skip PIN toggle (step 11)
+void sendMeterPin(const String& pin) {
+    Serial.println("Sending meter PIN via IR LED...");
+
+    // Step 1: Wake-up pulse — activates display and opens PIN input field
+    Serial.println("  Wake-up pulse...");
+    digitalWrite(irLedPin, HIGH); digitalWrite(ledPin, HIGH);
+    delay(1000);
+    digitalWrite(irLedPin, LOW); digitalWrite(ledPin, LOW);
+    Serial.println("  Waiting for PIN input field (~5s)...");
+    delay(5000);
+
+    // Step 2: Enter each digit — N pulses of 1s ON; meter auto-advances to next digit after timeout
+    for (int i = 0; i < (int)pin.length(); i++) {
+        int digit = pin[i] - '0';
+        if (digit <= 0) digit = 10; // digit '0' = 10 pulses
+        Serial.println("  Digit " + String(i + 1) + ": " + String(digit) + " pulse(s)");
+        for (int p = 0; p < digit; p++) {
+            digitalWrite(irLedPin, HIGH); digitalWrite(ledPin, HIGH);
+            delay(1000);
+            digitalWrite(irLedPin, LOW); digitalWrite(ledPin, LOW);
+            delay(500); // gap between pulses within a digit
+        }
+        // After last pulse of digit: wait for meter to auto-advance to next digit field
+        if (i < (int)pin.length() - 1) {
+            Serial.println("  Waiting for meter to advance to next digit (~3s)...");
+            delay(2500); // total off-time = 500 (last gap) + 2500 = 3s
+        }
+    }
+
+    // After PIN: wait for meter to settle on post-PIN display
+    Serial.println("PIN entered. Waiting 5s before navigating...");
+    delay(5000);
+
+    // 1s pulse: navigate to Inf menu
+    meterNavPulse("navigate to Inf");
+
+    // 5s hold: switch Inf ON
+    Serial.println("  Activating Inf. ON (5s hold)...");
+    digitalWrite(irLedPin, HIGH); digitalWrite(ledPin, HIGH);
+    delay(5500);
+    digitalWrite(irLedPin, LOW); digitalWrite(ledPin, LOW);
+    delay(1500);
+
+    // 2x 1s pulse: confirm
+    meterNavPulse("confirm 1");
+    meterNavPulse("confirm 2");
+
+    Serial.println("Full interface mode activated. Waiting for meter to settle...");
+    delay(5000);
+}
 
 String extractVersionFromUrl(String url) {
     int lastUnderscoreIndex = url.lastIndexOf('_');
@@ -117,11 +204,14 @@ void setup() {
   pinMode(irPhototransistorPin, INPUT);   // Initialize the IR pin as an input
   pinMode(ledPin, OUTPUT); // Initialize the LED pin as an output
   digitalWrite(irLedPin, LOW);
-  digitalWrite(ledPin, LOW); 
+  digitalWrite(ledPin, LOW);
   // Turn the LED off
+  delay(3000);
   Serial.begin(115200);    // Start the Serial communication at 115200 baud rate
   Serial.print("SML Sensor Version:");
   Serial.println(version);
+Serial.println(String("Password compiled as: [") + WIFI_PASSWORDS + "]");
+
 
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
@@ -137,7 +227,8 @@ void setup() {
 
   mqtt_ConfigTopic += chipID;
 
-  // Connect to WiFi
+  delay(1000);
+  // Connect to WiFi (falls back to NVS/AP mode if WIFI_PASSWORDS is not defined)
   Serial.print("Connecting to WiFi ");
   wifiLib.scanAndSelectNetwork();
   wifiLib.connect();
@@ -244,6 +335,21 @@ void loop() {
 
                 // Check if the parsing was successful
                 if (smlData) {
+                    // INFO mode detection: send PIN once if meter is not yet in full mode
+                    if (!pinSent && smlData->isInfoMode) {
+                        Serial.println("INFO mode detected. Meter serial: " + smlData->deviceSerial);
+                        String pin = lookupMeterPin(smlData->deviceSerial);
+                        if (pin.length() > 0) {
+                            sendMeterPin(pin);
+                            String ts = timeClient.getFormattedTime();
+                            String msg = "INFO mode detected, PIN " + pin + " sent at " + ts;
+                            mqttClientLib->publish(("meta/SMLSensor/" + sensorName + "/LastPinSend").c_str(), msg, true, 0);
+                        } else {
+                            Serial.println("No PIN configured for serial " + smlData->deviceSerial + " - staying in INFO mode");
+                        }
+                        pinSent = true;
+                    }
+
                     // Output the parsed data
                     if (smlData->Tarif1.has_value()) {
                         Serial.print("Tarif1: ");

@@ -64,7 +64,27 @@ SMLList::SMLList(std::vector<std::shared_ptr<ISMLNode>> e) : elements(e) {}
 
 // SMLParser Methods
 std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
+#ifdef DEBUG_SML
+    Serial.print("=== RAW SML PAYLOAD (");
+    Serial.print(data.size());
+    Serial.println(" bytes) ===");
+    for (size_t i = 0; i < data.size(); ++i) {
+        if (data[i] < 0x10) Serial.print("0");
+        Serial.print(data[i], HEX);
+        Serial.print(" ");
+        if ((i + 1) % 16 == 0) Serial.println();
+    }
+    Serial.println();
+    Serial.println("=== END RAW PAYLOAD ===");
+#endif
+
     std::vector<std::shared_ptr<ISMLNode>> smlMessages = ExtractNodes(data);
+
+#ifdef DEBUG_SML
+    Serial.println("=== SML TREE ===");
+    DumpSMLTree(smlMessages);
+    Serial.println("=== END SML TREE ===");
+#endif
     
     if (smlMessages.empty()) {
         throw std::runtime_error("Error while parsing SML package. No SML messages could be identified");
@@ -109,7 +129,11 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
     if (valuesList.size() < 2) {
         throw std::runtime_error("Error while parsing SML package. Values list does not contain enough elements");
     }
-        
+
+#ifdef DEBUG_SML
+    DumpOBISValues(valuesList);
+#endif
+
     try {
         float tarif1 = 0;
         float tarif2 = 0;
@@ -118,42 +142,25 @@ std::shared_ptr<SMLData> SMLParser::Parse(std::vector<uint8_t>& data) {
         std::vector<uint8_t> consumptionEnergyTotalId = {0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF};
         auto consumptionEnergyTotalElement = SMLParser::FindElementByData(valuesList, consumptionEnergyTotalId);
         if (consumptionEnergyTotalElement) {
-            tarif1 = SMLParser::GetScaledValueFromSMLList(consumptionEnergyTotalElement);
-            //tarif1 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(consumptionEnergyTotalElement)->elements.at(5)));
-        } 
+            tarif1 = SMLParser::GetScaledValueFromSMLList(consumptionEnergyTotalElement) / 1000.0f;
+        }
 
         std::vector<uint8_t> feedEnergyTotalId = {0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF};
         auto feedEnergyTotalElement = SMLParser::FindElementByData(valuesList, feedEnergyTotalId);
         if (feedEnergyTotalElement) {
-            tarif2 = SMLParser::GetScaledValueFromSMLList(feedEnergyTotalElement);
-          // tarif2 = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(feedEnergyTotalElement)->elements.at(5)));
-        } 
+            tarif2 = SMLParser::GetScaledValueFromSMLList(feedEnergyTotalElement) / 1000.0f;
+        }
 
         std::vector<uint8_t> powerId = {0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF};
         auto powerElement = SMLParser::FindElementByData(valuesList, powerId);
         if (powerElement) {
             Leistung = SMLParser::GetScaledValueFromSMLList(powerElement);
-            //Leistung = SMLElementToInteger(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(powerElement)->elements.at(5)));
-        } 
+        }
 
-        // auto tarif1Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(2))->elements.at(5));
-        // auto tarif2Element = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(3))->elements.at(5));
-        // auto LeistungsElement = std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataList->elements.at(1))->elements.at(4))->elements.at(4))->elements.at(5));
+        bool infoMode = (valuesList.size() <= 4);
+        String serial = SMLParser::GetDeviceSerial(valuesList);
 
-        // Print the content of std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4)) as HEX values, all HEX values should have 2 digits
-        // for (size_t i = 0; i < std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements.size(); ++i) {
-        //     for (size_t j = 0; j < std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements[i])->data.size(); ++j) {
-        //         Serial.print(std::static_pointer_cast<SMLElement>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(std::static_pointer_cast<SMLList>(dataLevel2Element->elements.at(1))->elements.at(4))->elements.at(4))->elements[i])->data[j], HEX);
-        //         Serial.print(" ");
-        //     }
-        // }
-        // Serial.println();
-
-        // int tarif1 = SMLElementToInteger(tarif1Element);
-        // int tarif2 = SMLElementToInteger(tarif2Element);
-        // int Leistung = SMLElementToInteger(LeistungsElement);
-
-        return std::make_shared<SMLData>(tarif1 / 1000.0f, tarif2 / 1000.0f, Leistung);
+        return std::make_shared<SMLData>(tarif1, tarif2, Leistung, infoMode, serial);
 
     } catch (const std::exception& ex) {
         throw std::runtime_error("Error while parsing SML package. " + std::string(ex.what()));
@@ -350,6 +357,129 @@ std::shared_ptr<SMLList> SMLParser::FindElementByData(
         });
     
     return (it != valuesList.end()) ? std::static_pointer_cast<SMLList>(*it) : nullptr;
+}
+
+#ifdef DEBUG_SML
+void SMLParser::DumpSMLTree(const std::vector<std::shared_ptr<ISMLNode>>& nodes, int indent) {
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        for (int s = 0; s < indent; ++s) Serial.print("  ");
+        if (!nodes[i]) {
+            Serial.println("[null]");
+            continue;
+        }
+        if (nodes[i]->getType() == SMLNodeType::List) {
+            auto list = std::static_pointer_cast<SMLList>(nodes[i]);
+            Serial.print("LIST[");
+            Serial.print(list->elements.size());
+            Serial.println("] {");
+            DumpSMLTree(list->elements, indent + 1);
+            for (int s = 0; s < indent; ++s) Serial.print("  ");
+            Serial.println("}");
+        } else {
+            auto elem = std::static_pointer_cast<SMLElement>(nodes[i]);
+            Serial.print("ELEM[");
+            Serial.print(elem->data.size());
+            Serial.print("]: ");
+            for (size_t b = 0; b < elem->data.size(); ++b) {
+                if (elem->data[b] < 0x10) Serial.print("0");
+                Serial.print(elem->data[b], HEX);
+                if (b + 1 < elem->data.size()) Serial.print(" ");
+            }
+            Serial.println();
+        }
+    }
+}
+
+void SMLParser::DumpOBISValues(const std::vector<std::shared_ptr<ISMLNode>>& valuesList) {
+    Serial.println("=== DEBUG_SML: OBIS values in this SML packet ===");
+    for (size_t i = 0; i < valuesList.size(); ++i) {
+        auto node = valuesList[i];
+        if (!node || node->getType() != SMLNodeType::List) continue;
+        auto entry = std::static_pointer_cast<SMLList>(node);
+        if (entry->elements.size() < 6) continue;
+
+        // Element 0: OBIS identifier
+        if (!entry->elements[0] || entry->elements[0]->getType() != SMLNodeType::Element) continue;
+        auto obisEl = std::static_pointer_cast<SMLElement>(entry->elements[0]);
+        Serial.print("  OBIS[");
+        Serial.print(i);
+        Serial.print("]: ");
+        for (size_t b = 0; b < obisEl->data.size(); ++b) {
+            if (obisEl->data[b] < 0x10) Serial.print("0");
+            Serial.print(obisEl->data[b], HEX);
+            if (b + 1 < obisEl->data.size()) Serial.print(" ");
+        }
+
+        // Element 3: unit
+        uint8_t unit = 0;
+        if (entry->elements[3] && entry->elements[3]->getType() == SMLNodeType::Element) {
+            auto unitEl = std::static_pointer_cast<SMLElement>(entry->elements[3]);
+            if (unitEl->data.size() >= 2) unit = unitEl->data[1];
+        }
+        Serial.print("  unit=0x");
+        if (unit < 0x10) Serial.print("0");
+        Serial.print(unit, HEX);
+        Serial.print("(");
+        Serial.print(unit);
+        Serial.print(")");
+
+        // Element 4: scaler
+        int8_t scaler = 0;
+        if (entry->elements[4] && entry->elements[4]->getType() == SMLNodeType::Element) {
+            auto scalerEl = std::static_pointer_cast<SMLElement>(entry->elements[4]);
+            if (scalerEl->data.size() >= 2)
+                scaler = *reinterpret_cast<const int8_t*>(&scalerEl->data[1]);
+        }
+        Serial.print("  scaler=");
+        Serial.print(scaler);
+
+        // Element 5: raw value
+        if (entry->elements[5] && entry->elements[5]->getType() == SMLNodeType::Element) {
+            auto valEl = std::static_pointer_cast<SMLElement>(entry->elements[5]);
+            Serial.print("  rawBytes=");
+            for (size_t b = 0; b < valEl->data.size(); ++b) {
+                if (valEl->data[b] < 0x10) Serial.print("0");
+                Serial.print(valEl->data[b], HEX);
+                if (b + 1 < valEl->data.size()) Serial.print(" ");
+            }
+            uint8_t typeNibble = valEl->data[0] >> 4;
+            if (typeNibble == 5 || typeNibble == 6) {
+                try {
+                    int rawVal = SMLElementToInteger(valEl);
+                    Serial.print("  rawInt=");
+                    Serial.print(rawVal);
+                    float scaled = static_cast<float>(rawVal) * powf(10.0f, static_cast<float>(scaler));
+                    Serial.print("  scaled=");
+                    Serial.print(scaled, 6);
+                } catch (...) {
+                    Serial.print("  (could not parse value)");
+                }
+            } else {
+                Serial.print("  (non-integer type)");
+            }
+        }
+        Serial.println();
+    }
+    Serial.println("=== END DEBUG_SML ===");
+}
+#endif
+
+String SMLParser::GetDeviceSerial(const std::vector<std::shared_ptr<ISMLNode>>& valuesList) {
+    std::vector<uint8_t> deviceIdObis = {0x07, 0x01, 0x00, 0x60, 0x01, 0x00, 0xFF};
+    auto entry = SMLParser::FindElementByData(valuesList, deviceIdObis);
+    if (!entry || entry->elements.size() < 6) return "";
+
+    auto valEl = std::static_pointer_cast<SMLElement>(entry->elements[5]);
+    if (!valEl || valEl->data.size() < 2) return "";
+
+    // Skip the TL byte (first byte), hex-encode the rest
+    String result = "";
+    for (size_t i = 1; i < valEl->data.size(); ++i) {
+        if (valEl->data[i] < 0x10) result += "0";
+        result += String(valEl->data[i], HEX);
+    }
+    result.toUpperCase();
+    return result;
 }
 
 float SMLParser::GetScaledValueFromSMLList(const std::shared_ptr<SMLList>& valueList) {
