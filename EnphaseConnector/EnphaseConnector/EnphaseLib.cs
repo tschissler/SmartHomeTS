@@ -62,21 +62,29 @@ namespace EnphaseConnector
                     },
                 };
                 using var response = await client.SendAsync(request);
-                response.EnsureSuccessStatusCode();
+                Console.WriteLine($"{DateTime.Now} --- production.json [{deviceName}]: HTTP {(int)response.StatusCode} {response.StatusCode}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"  Response body: {errorBody[..Math.Min(200, errorBody.Length)]}");
+                    return (null, null);
+                }
                 var body = await response.Content.ReadAsStringAsync();
                 var rawData = JsonConvert.DeserializeObject<EnphaseProductionData>(body);
 
                 var pvProduktion = rawData?.Production?.FirstOrDefault(p => p.Type == "eim");
                 var hausverbrauch = rawData?.Consumption?.FirstOrDefault(c => c.MeasurementType == "total-consumption");
 
+                Console.WriteLine($"  PV Produktion: {pvProduktion?.WhLifetime} Wh, Hausverbrauch: {hausverbrauch?.WhLifetime} Wh (Types: {string.Join(", ", rawData?.Production?.Select(p => p.Type) ?? [])})");
+
                 return (
                     pvProduktion != null ? (decimal)pvProduktion.WhLifetime : null,
                     hausverbrauch != null ? (decimal)hausverbrauch.WhLifetime : null
                 );
             }
-            catch (HttpRequestException e)
+            catch (Exception e)
             {
-                Console.WriteLine("\nException beim Abruf der Produktionsdaten!");
+                Console.WriteLine($"\nException beim Abruf der Produktionsdaten für {deviceName}!");
                 Console.WriteLine("Message :{0} ", e);
                 return (null, null);
             }
