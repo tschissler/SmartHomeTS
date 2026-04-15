@@ -156,6 +156,7 @@ void mqttCallback(String &topic, String &payload) {
       location = payload;
       location.replace("Smartmeter_", "");
       Serial.println("Sensor name set to: " + sensorName);
+      mqttClientLib->publish(("meta/SMLSensor/" + sensorName + "/version/").c_str(), String(version), true, 2);
       return;
     } 
 
@@ -249,7 +250,6 @@ void setup() {
       }
   } 
 
-  mqttClientLib->publish(("meta/" + sensorName + "/version/SMLSensor").c_str(), String(version), true, 2);
   //serialPort.onReceive(receiveHandler);
 }
 
