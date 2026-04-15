@@ -368,3 +368,4 @@ MigrationBackup/
 FodyWeavers.xsd
 BMWConnector/bimmer.oauth
 /InfluxDB
+.idea/

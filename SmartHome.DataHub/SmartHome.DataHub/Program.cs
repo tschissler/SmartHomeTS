@@ -151,6 +151,7 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("data/thermostat/M3/shelly/#");
     await mqttClient.SubscribeToTopic("cangateway/#");
     await mqttClient.SubscribeToTopic("daten/Heizkörperlüfter/#");
+    await mqttClient.SubscribeToTopic("daten/zisterneFuellstand/#");
 
     var influx3Connector = scope.ServiceProvider.GetRequiredService<InfluxDB3Connector>();
     var converters = scope.ServiceProvider.GetRequiredService<Converters>();
@@ -372,6 +373,27 @@ using (var scope = app.Services.CreateScope())
                         SensorType = "TempSensor",
                         Location = location,
                         Device = "TempSensor",
+                        Measurement = measurement,
+                        Value_Percent = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                    },
+                    DateTimeOffset.UtcNow);
+                return;
+            }
+
+            if (topic.StartsWith("daten/zisterneFuellstand/") && payload != "nan")
+            {
+                var location = topicParts[2];
+                var measurement = "Zisterne";
+                var measurementId = "Fuellstand_" + location + "_" + measurement;
+                influx3Connector.WritePercentageValue(
+                    new InfluxPercentageRecord
+                    {
+                        MeasurementId = measurementId,
+                        SubCategory = "-",
+                        Category = MeasurementCategory.Water,
+                        SensorType = "DistanzSensor",
+                        Location = location,
+                        Device = "DistanzSensor",
                         Measurement = measurement,
                         Value_Percent = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
                     },
