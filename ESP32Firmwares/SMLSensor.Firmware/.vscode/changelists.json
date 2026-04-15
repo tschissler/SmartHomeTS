@@ -3,23 +3,15 @@
     {
       "name": "Default",
       "files": [
-        "ESP32Firmwares/SMLSensor.Firmware/.vscode/extensions.json",
-        "ESP32Firmwares/SMLSensor.Firmware/platformio.ini",
-        "ESP32Firmwares/SMLSensor.Firmware/src/SMLParser.cpp",
-        "ESP32Firmwares/SMLSensor.Firmware/src/SMLParser.h",
         "ESP32Firmwares/SMLSensor.Firmware/src/main.cpp",
         "ESP32Firmwares/TemperatureDisplay.Firmware/squareline/SquareLine_Project.sll",
         "ESP32Firmwares/TemperatureDisplay.Firmware/squareline/SquareLine_Project.spj",
         "ESP32Firmwares/TemperatureDisplay.Firmware/squareline/project.info",
         "ESP32Firmwares/TemperatureDisplay.Firmware/squareline/backup/SquareLine_Project_backup04.zip",
         "Kubernetes/k3s/ansible/docs/ssd-migration-guide.md",
-        "ESP32Firmwares/SMLSensor.Firmware/.vscode/changelists.json",
-        "ESP32Firmwares/SMLSensor.Firmware/src/SMLSensor.Firmware.code-workspace",
-        "ESP32Firmwares/SMLSensor.Firmware/.gitignore",
-        "ESP32Firmwares/SMLSensor.Firmware/set_env.fish",
         "CLAUDE.md",
-        "ESP32Firmwares/SMLSensor.Firmware/README.md",
-        "SmartHome.Web/.idea/.idea.SmartHome.Web/.idea/workspace.xml"
+        "SmartHome.Web/.idea/.idea.SmartHome.Web/.idea/workspace.xml",
+        "ESP32Firmwares/SMLSensor.Firmware/.vscode/changelists.json"
       ]
     }
   ],

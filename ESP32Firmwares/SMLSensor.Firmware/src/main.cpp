@@ -210,8 +210,6 @@ void setup() {
   Serial.begin(115200);    // Start the Serial communication at 115200 baud rate
   Serial.print("SML Sensor Version:");
   Serial.println(version);
-Serial.println(String("Password compiled as: [") + WIFI_PASSWORDS + "]");
-
 
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
