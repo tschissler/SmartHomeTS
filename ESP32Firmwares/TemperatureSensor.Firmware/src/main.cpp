@@ -44,6 +44,7 @@ static bool otaInProgress = false;
 static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
+static bool lastPingSuccess = false;
 static int lastMQTTSentMinute = 0;
 static int switchTopStatus = false;
 static int switchBottomStatus = false;
@@ -87,7 +88,7 @@ void printInformationOnTFT(String temperature, String humidity, bool displayMQTT
   data.displayMQTTMessage = displayMQTTMessage;
   data.mqttEnabled = sendMQTTMessages;
   data.mqttSuccess = mqttSuccess;
-  data.pingSuccess = Ping.ping(mqtt_broker.c_str());
+  data.pingSuccess = lastPingSuccess;
 
   tftDisplay.printInformation(data);
 }
@@ -259,6 +260,7 @@ void loop() {
       lastMQTTSentMinute = currentMinute;
 
       readSensorAndPublish();
+      lastPingSuccess = Ping.ping(mqtt_broker.c_str());
     } 
 
     if(!mqttClientLib->loop())
@@ -266,12 +268,10 @@ void loop() {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
     }
-    bool pingSuccess = Ping.ping(mqtt_broker.c_str());
-
     digitalWrite(LED_INTERNAL_PIN, HIGH);
     delay(BLINK_DURATION);
     digitalWrite(LED_INTERNAL_PIN, LOW);
-    if (!pingSuccess) {
+    if (!lastPingSuccess) {
       Serial.println("Ping failed");
       delay(BLINK_DURATION);
       digitalWrite(LED_INTERNAL_PIN, HIGH);
