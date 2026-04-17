@@ -8,6 +8,7 @@
         Voltage,
         Temperature,
         Status,
-        Counter
+        Counter,
+        Volume
     }
 }

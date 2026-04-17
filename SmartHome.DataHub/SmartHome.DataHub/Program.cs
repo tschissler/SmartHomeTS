@@ -400,6 +400,27 @@ using (var scope = app.Services.CreateScope())
                     DateTimeOffset.UtcNow);
                 return;
             }
+            
+            if (topic.StartsWith("daten/Wasser/") && payload != "nan")
+            {
+                var location = topicParts[2];
+                var measurement = "Wasserzaehler";
+                var measurementId = "Wasser_" + location + "_" + measurement;
+                influx3Connector.WriteVolumeValue(
+                    new InfluxVolumeRecord
+                    {
+                        MeasurementId = measurementId,
+                        SubCategory = "-",
+                        Category = MeasurementCategory.Water,
+                        SensorType = "Wasserzaehler",
+                        Location = location,
+                        Device = "Wasserzaehler",
+                        Measurement = measurement,
+                        Value_Volume = Decimal.Parse(payload, NumberStyles.Float, CultureInfo.InvariantCulture),
+                    },
+                    DateTimeOffset.UtcNow);
+                return;
+            }
 
             if (topic.StartsWith("data/thermostat/M1/shelly/") || topic.StartsWith("data/thermostat/M3/shelly/"))
             {

@@ -280,6 +280,25 @@ namespace Influx3Connector
                 pointsBatch.Add(point);
             }
         }
+        
+        
+        public void WriteVolumeValue(InfluxVolumeRecord record, DateTimeOffset timestamp)
+        {
+            var point = PointData.Measurement("volume_values")
+                .SetTag("measurement_id", record.MeasurementId)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory.ToString())
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_volume", Convert.ToDouble(record.Value_Volume))
+                .SetTimestamp(timestamp);
+            lock (pointsBatch)
+            {
+                pointsBatch.Add(point);
+            }
+        }
 
         public void WritePointDataToInfluxDb(
             string measurement,

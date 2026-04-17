@@ -87,4 +87,14 @@
             MeasurementType = MeasurementType.Counter;
         }
     }
+    
+    public record InfluxVolumeRecord : InfluxRecord
+    {
+        public required string SubCategory { get; init; }
+        public required decimal Value_Volume { get; init; }
+        public InfluxVolumeRecord()
+        {
+            MeasurementType = MeasurementType.Volume;
+        }
+    }
 }
