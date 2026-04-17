@@ -31,8 +31,8 @@ var healthCheckPort = int.Parse(configuration["HealthCheckPort"] ?? "8080");
 
 ConsoleHelpers.PrintInformation($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
 
-// Start health check HTTP server in background
-var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
+// Start health check HTTP server and wait until it is actually listening
+var healthCheckApp = await StartHealthCheckServer(healthCheckPort);
 
 ConsoleHelpers.PrintInformation(" ### Registering services");
 var host = Host.CreateDefaultBuilder(args)
@@ -157,6 +157,7 @@ ConsoleHelpers.PrintInformation(" ### Done");
 
 // Run the host to keep the application running and processing events
 await host.RunAsync();
+await healthCheckApp.StopAsync();
 
 static async Task TestDeviceConnection(List<ShellyConnector.DataContracts.ShellyDevice> powerDevices, List<ShellyConnector.DataContracts.ShellyDevice> thermostatDevices)
 {
@@ -206,17 +207,18 @@ static async Task SendUpdatedThermostatData(MQTTClient.MQTTClient mqttClient, Li
     await Task.WhenAll(tasks);
 }
 
-static void StartHealthCheckServer(int port)
+static async Task<WebApplication> StartHealthCheckServer(int port)
 {
     var builder = WebApplication.CreateBuilder();
-    
-    // Add health checks
+
+    builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
     builder.Services.AddHealthChecks()
         .AddCheck<ShellyConnectorHealthCheck>("shelly_connector");
-    
+
     var app = builder.Build();
-    
-    // Configure health check endpoints
+
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
     {
         ResponseWriter = async (context, report) =>
@@ -237,19 +239,19 @@ static void StartHealthCheckServer(int port)
             await context.Response.WriteAsync(result);
         }
     });
-    
-    // Simple liveness probe
+
     app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
-    
-    // Readiness probe
+
     app.MapGet("/ready", async (HealthCheckService healthCheckService) =>
     {
         var report = await healthCheckService.CheckHealthAsync();
-        return report.Status == HealthStatus.Healthy 
+        return report.Status == HealthStatus.Healthy
             ? Results.Ok(new { status = "ready" })
             : Results.StatusCode(503);
     });
-    
+
     ConsoleHelpers.PrintInformation($" ### Health check server starting on port {port}");
-    app.Run($"http://0.0.0.0:{port}");
+    await app.StartAsync();
+    ConsoleHelpers.PrintInformation($" ### Health check server listening on port {port}");
+    return app;
 }
