@@ -70,7 +70,9 @@ mqttClient.OnMessageReceived += async (sender, e) =>
     if (topicParts.Length < 2) return;
     var deviceName = topicParts[2];
     var device = powerDevices.FirstOrDefault(x =>
-        string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase));
+                     string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase)) ??
+                 thermostatDevices.FirstOrDefault(x =>
+                     string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase));
     if (device != null)
     {
         var state = e.Payload;
@@ -82,8 +84,11 @@ mqttClient.OnMessageReceived += async (sender, e) =>
     var location = topicParts[2];
     deviceName = topicParts[3];
     device = thermostatDevices.FirstOrDefault(x =>
-        string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
+                 string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase)) ??
+             powerDevices.FirstOrDefault(x =>
+                 string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
     if (device != null)
     {
         ShellyThermostatData? currentData = null;
