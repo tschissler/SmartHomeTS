@@ -69,14 +69,14 @@ mqttClient.OnMessageReceived += async (sender, e) =>
     }
 
     var topicParts = e.Topic.Split("/");
-    if (topicParts.Length < 2) return;
+    if (topicParts.Length < 3) return;
 
-    if (topicParts.Length == 2)
+    if (topicParts.Length == 3)
     {
         deviceName = topicParts[2];    
     }
 
-    if (topicParts.Length == 3)
+    if (topicParts.Length == 4)
     {
         location = topicParts[2];
         deviceName = topicParts[3];
