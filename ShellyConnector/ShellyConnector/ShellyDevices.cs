@@ -109,12 +109,12 @@ namespace ShellyConnector
                     IPAddress: new System.Net.IPAddress([192, 168,178, 119]),
                     Location: Location.M3
                 ),   
-               // new ShellyDevice(
-               //     DeviceName : "Thermomix",
-               //     DeviceType : DeviceType.ShellyPlusPlugS,
-               //     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 70 }),
-               //     Location : Location.M1
-               //)
+                new ShellyDevice(
+                    DeviceName : "Brutkasten",
+                    DeviceType : DeviceType.ShellyPlusPlugS,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 64 }),
+                    Location : Location.M1
+               )
             };
         }
 
