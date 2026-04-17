@@ -401,7 +401,7 @@ using (var scope = app.Services.CreateScope())
                 return;
             }
             
-            if (topic.StartsWith("daten/Wasser/") && payload != "nan")
+            if (topic.StartsWith("daten/Wasser/") && topic.EndsWith("main/value") && payload != "nan")
             {
                 var location = topicParts[2];
                 var measurement = "Wasserzaehler";
