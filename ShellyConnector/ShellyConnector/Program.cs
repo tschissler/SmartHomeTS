@@ -59,6 +59,8 @@ ConsoleHelpers.PrintInformation(" ### Subscribing to topics");
 await mqttClient.SubscribeToTopic("commands/shelly/#");
 mqttClient.OnMessageReceived += async (sender, e) =>
 {
+    string? deviceName = null;
+    string? location = null;
     ConsoleHelpers.PrintInformation($"  - Message received: {e.Topic}");
     if (string.IsNullOrEmpty(e.Payload))
     {
@@ -68,11 +70,24 @@ mqttClient.OnMessageReceived += async (sender, e) =>
 
     var topicParts = e.Topic.Split("/");
     if (topicParts.Length < 2) return;
-    var deviceName = topicParts[2];
+
+    if (topicParts.Length == 2)
+    {
+        deviceName = topicParts[2];    
+    }
+
+    if (topicParts.Length == 3)
+    {
+        location = topicParts[2];
+        deviceName = topicParts[3];
+    }
+    
     var device = powerDevices.FirstOrDefault(x =>
                      string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase)) ??
-                 thermostatDevices.FirstOrDefault(x =>
-                     string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase));
+                 powerDevices.FirstOrDefault(x =>
+                     string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
+                     string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
+                 
     if (device != null)
     {
         var state = e.Payload;
@@ -80,15 +95,13 @@ mqttClient.OnMessageReceived += async (sender, e) =>
         return;
     }
 
-    if (topicParts.Length < 3) return;
-    var location = topicParts[2];
-    deviceName = topicParts[3];
-    device = thermostatDevices.FirstOrDefault(x =>
-                 string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
-                 string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase)) ??
-             powerDevices.FirstOrDefault(x =>
-                 string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
-                 string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
+    device =
+        thermostatDevices.FirstOrDefault(x =>
+            string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase)) ??
+        thermostatDevices.FirstOrDefault(x =>
+            string.Equals(x.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.Location.ToString(), location, StringComparison.OrdinalIgnoreCase));
+             
     if (device != null)
     {
         ShellyThermostatData? currentData = null;
