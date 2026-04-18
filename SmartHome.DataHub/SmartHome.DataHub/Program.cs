@@ -36,9 +36,11 @@ GeoPosition? vwPosition = null;
 string[] cars = new string[] { "BMW", "Mini", "VW" };
 Dictionary<string, decimal> previousValues = new();
 
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json")
+    .AddJsonFile($"appsettings.{environment}.json", optional: true)
     .AddEnvironmentVariables()
     .Build();
 
@@ -152,6 +154,8 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("cangateway/#");
     await mqttClient.SubscribeToTopic("daten/Heizkörperlüfter/#");
     await mqttClient.SubscribeToTopic("daten/zisterneFuellstand/#");
+    await mqttClient.SubscribeToTopic("daten/Wasser/M1/Wasserzaehler/main/value");
+    await mqttClient.SubscribeToTopic("daten/Wasser/M3/Wasserzaehler/main/value");
 
     var influx3Connector = scope.ServiceProvider.GetRequiredService<InfluxDB3Connector>();
     var converters = scope.ServiceProvider.GetRequiredService<Converters>();
@@ -401,7 +405,8 @@ using (var scope = app.Services.CreateScope())
                 return;
             }
             
-            if (topic.StartsWith("daten/Wasser/") && topic.EndsWith("main/value") && payload != "nan")
+            if ((topic == "daten/Wasser/M1/Wasserzaehler/main/value" || 
+                 topic == "daten/Wasser/M3/Wasserzaehler/main/value") && payload != "nan")
             {
                 var location = topicParts[2];
                 var measurement = "Wasserzaehler";
