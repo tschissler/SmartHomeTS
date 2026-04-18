@@ -55,8 +55,6 @@ pio run -t upload          # Build and upload
 pio device monitor         # Serial monitor
 ```
 
-Shared libraries are referenced via `lib_dir = ../SharedLibs` in each project's `platformio.ini`.
-
 ### Python services
 ```bash
 pip install -r BMWConnector/requirements.txt
@@ -89,6 +87,13 @@ Docker image versions use format `1.0.{github.run_number}`.
 - **Shared .NET libraries** in `Libs/` (ShellyLib, MQTTControllerLib, HelpersLib) and `SharedContracts/`
 - **`Depricated/` folder** contains legacy/replaced projects — avoid modifying these
 
-## Copilot Instructions
+## Recommended Skills
 
-When working with Azure resources, use Azure best practices.
+Use these skills at the appropriate moments:
+
+- **`/simplify`** — Run after writing new code (connector changes, converters, etc.) to review for quality and efficiency before committing.
+- **`/review`** — Run when a PR is open to review the diff in full context before merging.
+- **`/security-review`** — Run before merging any changes that touch secrets handling (InfluxDB tokens, connector credentials, `Secrets.cs`).
+- **`/less-permission-prompts`** — Run when `dotnet build/test` or `kubectl` approval prompts become frequent during development.
+- **`/loop`** — Use to poll after deployment (e.g., query InfluxDB every 60s to verify new measurements are flowing).
+

@@ -9,11 +9,11 @@ using System.Text.Json;
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
-Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
-Console.WriteLine("║  EnphaseConnector Starting                                         ║");
-Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
+Console.WriteLine( "╔════════════════════════════════════════════════════════════════════╗");
+Console.WriteLine( "║  EnphaseConnector Starting                                         ║");
+Console.WriteLine( "╠════════════════════════════════════════════════════════════════════╣");
 Console.WriteLine($"║  {versionInfo.GetDisplayString().PadRight(66)}║");
-Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
+Console.WriteLine( "╚════════════════════════════════════════════════════════════════════╝");
 
 // Build configuration from appsettings.json and environment variables
 var configuration = new ConfigurationBuilder()

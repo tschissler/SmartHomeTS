@@ -10,11 +10,26 @@
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
+  <component name="CMakeProjectFlavorService">
+    <option name="flavorId" value="CMakePlainProjectFlavor" />
+  </component>
+  <component name="CMakeSettings">
+    <configurations />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="3ac5fbe4-d432-44ec-916a-fc37f8041ac7" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.SmartHome.Web/.idea/projectSettingsUpdater.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.SmartHome.Web/.idea/projectSettingsUpdater.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../BMWConnector/BMWConnector/appsettings.Development.json" beforeDir="false" afterPath="$PROJECT_DIR$/../BMWConnector/BMWConnector/appsettings.Development.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/../CLAUDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ESP32Firmwares/TemperatureDisplay.Firmware/squareline/SquareLine_Project.sll" beforeDir="false" afterPath="$PROJECT_DIR$/../ESP32Firmwares/TemperatureDisplay.Firmware/squareline/SquareLine_Project.sll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ESP32Firmwares/TemperatureDisplay.Firmware/squareline/SquareLine_Project.spj" beforeDir="false" afterPath="$PROJECT_DIR$/../ESP32Firmwares/TemperatureDisplay.Firmware/squareline/SquareLine_Project.spj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ESP32Firmwares/TemperatureDisplay.Firmware/squareline/project.info" beforeDir="false" afterPath="$PROJECT_DIR$/../ESP32Firmwares/TemperatureDisplay.Firmware/squareline/project.info" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../EnphaseConnector/EnphaseConnector/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../EnphaseConnector/EnphaseConnector/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../EnphaseConnector/EnphaseConnector/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/../EnphaseConnector/EnphaseConnector/appsettings.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SmartHome.DataHub/SmartHome.DataHub/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../SmartHome.DataHub/SmartHome.DataHub/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SmartHome.DataHub/SmartHome.DataHub/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/../SmartHome.DataHub/SmartHome.DataHub/appsettings.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.SmartHome.Web/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.SmartHome.Web/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SmartHome.Web/SmartHome.Web.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/SmartHome.Web/SmartHome.Web.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SmartHome.Web/appsettings.Development.json" beforeDir="false" afterPath="$PROJECT_DIR$/SmartHome.Web/appsettings.Development.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SmartHome.Web/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/SmartHome.Web/appsettings.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,8 +45,7 @@
     <option name="firstShow" value="false" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="4" />
-    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+    <option name="cachedIndexableFilesCount" value="1" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
@@ -49,15 +63,13 @@
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="mock:///Dummy.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$USER_HOME$/AppData/Local/Symbols/src/dotnet/runtime/80aa709f5d919c6814726788dc6dabe23e79e672/src/libraries/Microsoft.Extensions.DependencyInjection/src/ServiceProvider.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../InfluxImporter/InfluxConnector/InfluxDBConnector.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../BMWConnector/BMWConnector/appsettings.Development.json" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../SharedContracts/ChargingSession.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../SmartHome.DataHub/SmartHome.DataHub/Program.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../SmartHome.DataHub/SmartHome.DataHub/appsettings.json" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/SmartHome.Web/Components/Pages/ChargingOverview.razor" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/SmartHome.Web/Components/Pages/Charts.razor" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/SmartHome.Web/Program.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/SmartHome.Web/Services/ChargingSessionService.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock://C:/Users/ThomasSchissler/source/repos/GitHub/tschissler/SmartHomeTS/SmartHome.Web/SmartHome.Web/Services/ChargingSessionService.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/SmartHome.Web/Services/MQTTService.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="McpProjectServerCommands">
@@ -74,32 +86,37 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    ".NET Launch Settings Profile.SmartHome.Web: IIS Express.executor": "Debug",
-    ".NET Launch Settings Profile.SmartHome.Web: http.executor": "Run",
-    ".NET Launch Settings Profile.SmartHome.Web: httpWatch.executor": "Run",
-    ".NET Launch Settings Profile.SmartHome.Web: https.executor": "Debug",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "do_not_show_Azure_plugin_suggestion": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "junie.onboarding.icon.badge.shown": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "ml.llm.AcpAgentsConfigurable",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;.NET Launch Settings Profile.SmartHome.Web: IIS Express.executor&quot;: &quot;Debug&quot;,
+    &quot;.NET Launch Settings Profile.SmartHome.Web: http.executor&quot;: &quot;Run&quot;,
+    &quot;.NET Launch Settings Profile.SmartHome.Web: httpWatch.executor&quot;: &quot;Run&quot;,
+    &quot;.NET Launch Settings Profile.SmartHome.Web: https.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;do_not_show_Azure_plugin_suggestion&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/thomas/Repos/GitHub&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.AcpAgentsConfigurable&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected=".NET Launch Settings Profile.SmartHome.Web: httpWatch">
     <configuration name="SmartHome.Web: SmartHomeWeb - Web Deploy" type="DotNetMsBuildPublish" factoryName="Publish to IIS">
       <riderPublish configuration="Release" platform="Any CPU" publish_profile="SmartHomeWeb - Web Deploy.pubxml" pubxml_path="$PROJECT_DIR$/SmartHome.Web/Properties/PublishProfiles/SmartHomeWeb - Web Deploy.pubxml" user_name="$SmartHomeWeb" uuid_high="7320561476917281161" uuid_low="-7528676816829207729" />
@@ -185,6 +202,8 @@
       <workItem from="1772793638628" duration="4112000" />
       <workItem from="1772835195628" duration="263000" />
       <workItem from="1772835503200" duration="291000" />
+      <workItem from="1776197294119" duration="1183000" />
+      <workItem from="1776498191107" duration="4819000" />
     </task>
     <task id="LOCAL-00001" summary="Fixed Smarthome.Web">
       <option name="closed" value="true" />
@@ -202,6 +221,17 @@
   </component>
   <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="Fixed Smarthome.Web" />
@@ -221,7 +251,14 @@
         <line-breakpoint enabled="true" type="DotNet Breakpoints">
           <url>file://$PROJECT_DIR$/SmartHome.Web/Services/MQTTService.cs</url>
           <line>89</line>
-          <properties documentPath="C:\Users\ThomasSchissler\source\repos\GitHub\tschissler\SmartHomeTS\SmartHome.Web\SmartHome.Web\Services\MQTTService.cs" containingFunctionPresentation="Method 'UpdateSharedData'" />
+          <properties documentPath="C:\Users\ThomasSchissler\source\repos\GitHub\tschissler\SmartHomeTS\SmartHome.Web\SmartHome.Web\Services\MQTTService.cs" containingFunctionPresentation="Method 'PublishAsync'">
+            <startOffsets>
+              <option value="3410" />
+            </startOffsets>
+            <endOffsets>
+              <option value="3435" />
+            </endOffsets>
+          </properties>
           <option name="timeStamp" value="13" />
         </line-breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">

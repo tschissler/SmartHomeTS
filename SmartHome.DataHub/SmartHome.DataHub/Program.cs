@@ -49,10 +49,10 @@ if (string.IsNullOrEmpty(influx3Url))
     return;
 }
 
-string? influx3Token = configuration["SMARTHOME__INFLUXDB3_TOKEN"] ?? configuration["SMARTHOME:INFLUXDB3_TOKEN"];
+string? influx3Token = configuration["SMARTHOME__INFLUXDB_TOKEN"] ?? configuration["SMARTHOME:INFLUXDB_TOKEN"];
 if (string.IsNullOrEmpty(influx3Token))
 {
-    logger.LogError("Environmentvariable SMARTHOME__INFLUXDB3_TOKEN not set. Please set it to your InfluxDB token.");
+    logger.LogError("Environmentvariable SMARTHOME__INFLUXDB_TOKEN not set. Please set it to your InfluxDB token.");
     return;
 }
 
