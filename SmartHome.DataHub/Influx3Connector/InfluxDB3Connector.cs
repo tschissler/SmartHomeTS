@@ -1,7 +1,8 @@
-﻿using InfluxDB3.Client;
+using InfluxDB3.Client;
 using InfluxDB3.Client.Write;
 using Microsoft.Extensions.Logging;
 using SharedContracts;
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 
 namespace Influx3Connector
@@ -17,6 +18,7 @@ namespace Influx3Connector
         private DateTimeOffset nextBatchTime = DateTimeOffset.UtcNow.AddSeconds(batchIntervalSeconds); // Define batch interval
         private readonly ILogger logger;
         private DateTimeOffset lastSuccessfulWrite = DateTimeOffset.UtcNow;
+        private readonly ConcurrentDictionary<string, int> pointsEnqueuedByTable = new();
         private bool isDisposed = false;
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
@@ -63,7 +65,11 @@ namespace Influx3Connector
                 }
                 else
                 {
-                    logger.LogInformation($"InfluxDB3Connector: Health OK. Last write: {TimeSinceLastWrite.TotalSeconds:F0}s ago. Pending: {PendingPointsCount}");
+                    var snapshot = pointsEnqueuedByTable.ToDictionary(kv => kv.Key, kv => kv.Value);
+                    foreach (var key in snapshot.Keys) pointsEnqueuedByTable.TryRemove(key, out _);
+                    var total = snapshot.Values.Sum();
+                    var perTable = string.Join(", ", snapshot.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}: {kv.Value}"));
+                    logger.LogInformation($"InfluxDB3Connector: OK — {total} points in last 5 min, last write {TimeSinceLastWrite.TotalSeconds:F0}s ago, {PendingPointsCount} pending | {perTable}");
                 }
             }
         }
@@ -158,6 +164,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("percent_values", 1, (_, c) => c + 1);
         }
 
         public void WriteEnergyValue(
@@ -179,6 +186,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("energy_values", 1, (_, c) => c + 1);
         }
 
         public void WritePowerValue(
@@ -199,6 +207,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("power_values", 1, (_, c) => c + 1);
         }
 
         public void WriteTemperatureValue(
@@ -219,6 +228,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("temperature_values", 1, (_, c) => c + 1);
         }
 
         public void WriteStatusValue(
@@ -239,6 +249,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("status_values", 1, (_, c) => c + 1);
         }
 
         public void WriteCounterValue(
@@ -259,6 +270,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("counter_values", 1, (_, c) => c + 1);
         }
 
         public void WriteVoltageValue(
@@ -279,6 +291,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("voltage_values", 1, (_, c) => c + 1);
         }
         
         
@@ -298,6 +311,7 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            pointsEnqueuedByTable.AddOrUpdate("volume_values", 1, (_, c) => c + 1);
         }
 
         public void WritePointDataToInfluxDb(
@@ -375,7 +389,7 @@ namespace Influx3Connector
                         await FlushBatchAsync();
                         nextBatchTime = DateTimeOffset.UtcNow.AddSeconds(batchIntervalSeconds); // Reset timer
                         lastSuccessfulWrite = DateTimeOffset.UtcNow;
-                        logger.LogInformation("InfluxDB3Connector: Flushed batch to InfluxDB.");
+                        logger.LogDebug("InfluxDB3Connector: Flushed batch to InfluxDB.");
                         consecutiveFailures = 0; // Reset on success
                     }
                 }
