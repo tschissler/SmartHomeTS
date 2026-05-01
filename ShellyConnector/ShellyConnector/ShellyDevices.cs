@@ -114,7 +114,13 @@ namespace ShellyConnector
                     DeviceType : DeviceType.ShellyPlusPlugS,
                     IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 64 }),
                     Location : Location.M1
-               )
+               ),   
+                new ShellyDevice(
+                    DeviceName : "Luftentfeuchter",
+                    DeviceType : DeviceType.ShellyPlusPlugS,
+                    IPAddress : new System.Net.IPAddress(new byte[] { 192, 168, 178, 108 }),
+                    Location : Location.M1
+                )
             };
         }
 
