@@ -1,0 +1,51 @@
+---
+- name: Configure split-DNS on k3s nodes (.intern queries → AdGuard Home)
+  hosts: prodservers
+  become: yes
+  gather_facts: no
+  vars:
+    adguard_dns: "{{ adguard_home_lb_ip | default('192.168.178.223') }}"
+    fallback_dns: "{{ gateway | default('192.168.178.1') }}"
+
+  tasks:
+    - name: Ensure /etc/systemd/resolved.conf.d exists
+      ansible.builtin.file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Deploy AdGuard Home split-DNS drop-in
+      ansible.builtin.copy:
+        dest: /etc/systemd/resolved.conf.d/adguard.conf
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Resolve]
+          DNS={{ adguard_dns }}
+          Domains=~intern
+          FallbackDNS={{ fallback_dns }}
+      register: dropin_result
+
+    - name: Restart systemd-resolved to apply drop-in
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+      when: dropin_result.changed
+
+    - name: Verify .intern DNS resolves via AdGuard
+      ansible.builtin.command: resolvectl query adguard.intern
+      register: dns_check
+      changed_when: false
+      failed_when: false
+
+    - name: DNS verification result
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            'OK – adguard.intern resolved via AdGuard Home (' + adguard_dns + ')'
+            if dns_check.rc == 0 else
+            'WARNING – adguard.intern did not resolve. AdGuard erreichbar unter ' + adguard_dns + '?'
+          }}

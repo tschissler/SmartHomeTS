@@ -41,12 +41,18 @@ Adds cluster services in dependency order:
 1. **kube-vip** - HA API endpoint and LoadBalancer VIP allocation
 2. **Longhorn** - Replicated block storage on NVMe
 3. **AdGuard Home** - DNS and network filtering
-4. **CoreDNS forwarding** - Internal `.intern` zone resolution
-5. **Traefik ingress** - Host-based routing with VIP
+4. **CoreDNS forwarding** - Internal `.intern` zone resolution for pods
+5. **Node split-DNS** - `.intern` queries routed to AdGuard on each node (Step 2c)
+6. **Cluster CA trust** - SmartHome CA installed in node OS trust store (Step 3, requires cert-manager)
 
 ```bash
 ansible-playbook configure-cluster.yml -i inventory.ini --limit prodservers
 ```
+
+> **Note – Step 3 prerequisite:** `trust-cluster-ca.yml` requires ArgoCD and cert-manager to be running and the `ClusterCA` ArgoCD application to be healthy before it can be executed. If running `configure-cluster.yml` end-to-end on a fresh cluster, Step 3 will fail and must be re-run separately once cert-manager is ready:
+> ```bash
+> ./run-addons-prod.sh plays/trust-cluster-ca.yml
+> ```
 
 ## Architecture
 
@@ -102,7 +108,10 @@ Configuration tasks:
 - `expose-longhorn-ui.yml` - Expose UI via ingress
 - `prepare-minio-storage.yml` - MinIO object storage (optional)
 - `install-adguard-home.yml` - Deploy DNS service
+- `configure-adguard-rewrites.yml` - AdGuard DNS rewrites for `.intern` hostnames
 - `configure-coredns-intern-forward.yml` - Pod DNS zone forwarding
+- `configure-node-dns.yml` - Split-DNS drop-in on each node: routes `*.intern` queries to AdGuard Home, all other traffic stays on Fritz!Box (192.168.178.1). Does not change Netplan/network config.
+- `trust-cluster-ca.yml` - Installs SmartHome Cluster CA (from `cluster-ca-secret` in `cert-manager`) into the OS trust store on every node and restarts k3s/k3s-agent. Required for image pulls from `forgejo.intern` and TLS connections to internal services. Runs `serial: 1` to avoid simultaneous control-plane restarts.
 - `configure-ingress-hostnames.yml` - Host-based ingress routes
 - `configure-traefik-mqtt.yml` - MQTT service routing
 - `install-argocd.yml` - GitOps CD (optional)

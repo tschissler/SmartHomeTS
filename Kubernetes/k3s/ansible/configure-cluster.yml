@@ -36,7 +36,19 @@
 # so pods can resolve internal services like argocd.intern/longhorn.intern.
 - import_playbook: plays/configure-coredns-intern-forward.yml
 
-# Step 3: Ingress routes (host-based routing on shared VIP)
+# Step 2c: Node-level split-DNS for .intern zone
+# Configures systemd-resolved on each node to route *.intern queries to
+# AdGuard Home via a drop-in file. Other DNS traffic stays on Fritz!Box.
+# Prerequisite: AdGuard Home must be running (Step 2) with *.intern rewrites.
+- import_playbook: plays/configure-node-dns.yml
+
+# Step 3: Trust cluster CA on all nodes
+# Extracts cluster-ca-secret from cert-manager and installs it in the OS trust
+# store on every node so containerd can pull images from forgejo.intern.
+# Prerequisite: ArgoCD + cert-manager must be running and ClusterCA app healthy.
+- import_playbook: plays/trust-cluster-ca.yml
+
+# Step 4: Ingress routes (host-based routing on shared VIP)
 # NOTE: configure-ingress-hostnames.yml and configure-traefik-mqtt.yml are now
 # managed by ArgoCD Application: SmartHomeDeployments/Traefik.yaml
 # This configures Traefik MQTT and SMB entrypoints via HelmChartConfig.

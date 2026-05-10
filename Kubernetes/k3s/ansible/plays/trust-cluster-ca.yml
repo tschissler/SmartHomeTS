@@ -1,0 +1,53 @@
+---
+# Prerequisite: cert-manager must be running and cluster-ca-secret must exist
+# in the cert-manager namespace (deployed via ArgoCD ClusterCA application).
+- name: Install SmartHome Cluster CA on all k3s nodes
+  hosts: prodservers
+  become: yes
+  gather_facts: no
+  serial: 1
+  vars:
+    ca_cert_path: /usr/local/share/ca-certificates/smarthome-cluster-ca.crt
+    ca_secret_name: cluster-ca-secret
+    ca_secret_namespace: cert-manager
+
+  pre_tasks:
+    - name: Extract CA cert from cluster-ca-secret
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get secret {{ ca_secret_name }} \
+          -n {{ ca_secret_namespace }} \
+          -o jsonpath='{.data.ca\.crt}' | base64 -d
+      delegate_to: "{{ groups['k3s_servers'] | first }}"
+      register: ca_cert_content
+      changed_when: false
+      failed_when: ca_cert_content.rc != 0 or ca_cert_content.stdout | trim == ''
+
+  tasks:
+    - name: Install CA cert in OS trust store
+      ansible.builtin.copy:
+        content: "{{ ca_cert_content.stdout }}"
+        dest: "{{ ca_cert_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      register: ca_install_result
+
+    - name: Update CA trust store
+      ansible.builtin.command: update-ca-certificates
+      when: ca_install_result.changed
+      changed_when: true
+
+    - name: Restart k3s service to apply new CA trust
+      ansible.builtin.systemd:
+        name: "{{ 'k3s' if inventory_hostname in groups['k3s_servers'] else 'k3s-agent' }}"
+        state: restarted
+      when: ca_install_result.changed
+
+    - name: Verify CA cert is readable and valid
+      ansible.builtin.command: openssl x509 -in {{ ca_cert_path }} -noout -subject
+      changed_when: false
+      register: ca_verify
+
+    - name: CA verification result
+      ansible.builtin.debug:
+        msg: "OK – {{ ca_verify.stdout }} vertraut auf {{ inventory_hostname }}"
