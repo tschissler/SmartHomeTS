@@ -84,6 +84,8 @@ namespace SmartHome.DataHub
             string powerFromGridId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "PowerFromGrid";
             string energyFromPVId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "EnergyFromPV";
             string energyToHouseId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "EnergyToHouse";
+            string energyFromGridId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "EnergyFromGrid";
+            string energyToGridId = EnphaseData.sensorType + "_" + device + "_" + location + "_" + "EnergyToGrid";
 
             // ToDO: Read previous value from DB
             if (data.BatteryLevel.HasValue && !previousValues.ContainsKey(batteryLevelId))
@@ -113,6 +115,14 @@ namespace SmartHome.DataHub
             if (data.EnergyToHouseLifetime.HasValue && !previousValues.ContainsKey(energyToHouseId))
             {
                 previousValues.Add(energyToHouseId, data.EnergyToHouseLifetime.Value / 1000); // Convert Wh to kWh
+            }
+            if (data.EnergyFromGridLifetime.HasValue && !previousValues.ContainsKey(energyFromGridId))
+            {
+                previousValues.Add(energyFromGridId, data.EnergyFromGridLifetime.Value / 1000);
+            }
+            if (data.EnergyToGridLifetime.HasValue && !previousValues.ContainsKey(energyToGridId))
+            {
+                previousValues.Add(energyToGridId, data.EnergyToGridLifetime.Value / 1000);
             }
 
             var records = new List<InfluxRecord>
@@ -238,6 +248,44 @@ namespace SmartHome.DataHub
                     MeasurementType = MeasurementType.Energy
                 });
                 previousValues[energyToHouseId] = energyToHouseKwh;
+            }
+
+            if (data.EnergyFromGridLifetime.HasValue)
+            {
+                var energyFromGridKwh = data.EnergyFromGridLifetime.Value / 1000;
+                records.Add(new InfluxEnergyRecord
+                {
+                    MeasurementId = energyFromGridId,
+                    Category = EnphaseData.category,
+                    SubCategory = MeasurementSubCategory.Consumption,
+                    SensorType = EnphaseData.sensorType,
+                    Location = location,
+                    Device = device,
+                    Measurement = "EnergyFromGrid",
+                    Value_Cumulated_KWh = energyFromGridKwh,
+                    Value_Delta_KWh = energyFromGridKwh - previousValues[energyFromGridId],
+                    MeasurementType = MeasurementType.Energy
+                });
+                previousValues[energyFromGridId] = energyFromGridKwh;
+            }
+
+            if (data.EnergyToGridLifetime.HasValue)
+            {
+                var energyToGridKwh = data.EnergyToGridLifetime.Value / 1000;
+                records.Add(new InfluxEnergyRecord
+                {
+                    MeasurementId = energyToGridId,
+                    Category = EnphaseData.category,
+                    SubCategory = MeasurementSubCategory.Production,
+                    SensorType = EnphaseData.sensorType,
+                    Location = location,
+                    Device = device,
+                    Measurement = "EnergyToGrid",
+                    Value_Cumulated_KWh = energyToGridKwh,
+                    Value_Delta_KWh = energyToGridKwh - previousValues[energyToGridId],
+                    MeasurementType = MeasurementType.Energy
+                });
+                previousValues[energyToGridId] = energyToGridKwh;
             }
 
             return records;

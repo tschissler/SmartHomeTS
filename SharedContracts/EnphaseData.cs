@@ -12,10 +12,12 @@ namespace SharedContracts
         decimal PowerFromBattery, // in mW, negative when charging
         decimal PowerFromGrid, // in mW, negative when feeding into grid
         decimal PowerToHouse, // in mW
-        int? BatteryLevel = null, // Percent, sent every ~60s
-        decimal? BatteryEnergy = null, // in Wh, sent every ~60s
+        int? BatteryLevel = null, // Percent
+        decimal? BatteryEnergy = null, // in Wh
         decimal? EnergyFromPVLifetime = null, // in Wh, cumulative lifetime counter, sent every ~60s
-        decimal? EnergyToHouseLifetime = null  // in Wh, cumulative lifetime counter, sent every ~60s
+        decimal? EnergyToHouseLifetime = null, // in Wh, cumulative lifetime counter, sent every ~60s
+        decimal? EnergyFromGridLifetime = null, // in Wh, cumulative lifetime counter, from /ivp/meters/readings, sent every ~60s
+        decimal? EnergyToGridLifetime = null  // in Wh, cumulative lifetime counter, from /ivp/meters/readings, sent every ~60s
     )
     {
         public const MeasurementCategory category = MeasurementCategory.Electricity;

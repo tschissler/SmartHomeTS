@@ -1,4 +1,5 @@
 ﻿using EnphaseConnector.EnphaseRawData;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using SharedContracts;
 
@@ -7,7 +8,8 @@ namespace EnphaseConnector
     public class EnphaseLib
     {
         private const string LocalProductionApiUrl = "https://{devicename}/production.json";
-        private const string LocalInventoryApiUrl = "https://envoy.local/ivp/ensemble/inventory";
+        private const string LocalInventoryApiUrl = "https://{devicename}/ivp/ensemble/inventory";
+        private const string MeterReadingsUrl = "https://{devicename}/ivp/meters/readings";
         private const string LiveDataUrl = "https://{devicename}/ivp/livedata/status";
         private const string AKtiviereLiveDataStreamUrl = "https://{devicename}/ivp/livedata/stream";
         private Dictionary<string, DateTime> AktivierungszeitpunkteFuerLiveDataStream;
@@ -43,15 +45,15 @@ namespace EnphaseConnector
             }
         }
 
-        public async Task<(decimal? ErzeugteLebensenergie, decimal? VerbrauchteHausenergie)> FetchProductionDataAsync(EnphaseLocalToken token, string deviceName)
+        public async Task<(decimal? EnergyFromPV, decimal? EnergyToHouse, decimal? EnergyFromGrid, decimal? EnergyToGrid)> FetchProductionDataAsync(EnphaseLocalToken token, string deviceName)
         {
             try
             {
                 var clientHandler = new HttpClientHandler { UseCookies = false };
                 clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
-
                 var client = new HttpClient(clientHandler);
-                var request = new HttpRequestMessage
+
+                var productionRequest = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get,
                     RequestUri = new Uri(LocalProductionApiUrl.Replace("{devicename}", deviceName)),
@@ -61,32 +63,59 @@ namespace EnphaseConnector
                         { "Authorization", $"Bearer {token.Token}" },
                     },
                 };
-                using var response = await client.SendAsync(request);
-                Console.WriteLine($"{DateTime.Now} --- production.json [{deviceName}]: HTTP {(int)response.StatusCode} {response.StatusCode}");
-                if (!response.IsSuccessStatusCode)
+                using var productionResponse = await client.SendAsync(productionRequest);
+                Console.WriteLine($"{DateTime.Now} --- production.json [{deviceName}]: HTTP {(int)productionResponse.StatusCode} {productionResponse.StatusCode}");
+                if (!productionResponse.IsSuccessStatusCode)
                 {
-                    var errorBody = await response.Content.ReadAsStringAsync();
+                    var errorBody = await productionResponse.Content.ReadAsStringAsync();
                     Console.WriteLine($"  Response body: {errorBody[..Math.Min(200, errorBody.Length)]}");
-                    return (null, null);
+                    return (null, null, null, null);
                 }
-                var body = await response.Content.ReadAsStringAsync();
-                var rawData = JsonConvert.DeserializeObject<EnphaseProductionData>(body);
+                var productionBody = await productionResponse.Content.ReadAsStringAsync();
+                var productionData = JsonConvert.DeserializeObject<EnphaseProductionData>(productionBody);
 
-                var pvProduktion = rawData?.Production?.FirstOrDefault(p => p.Type == "eim");
-                var hausverbrauch = rawData?.Consumption?.FirstOrDefault(c => c.MeasurementType == "total-consumption");
+                var pvProduktion = productionData?.Production?.FirstOrDefault(p => p.Type == "eim");
+                var hausverbrauch = productionData?.Consumption?.FirstOrDefault(c => c.MeasurementType == "total-consumption");
 
-                Console.WriteLine($"  PV Produktion: {pvProduktion?.WhLifetime} Wh, Hausverbrauch: {hausverbrauch?.WhLifetime} Wh (Types: {string.Join(", ", rawData?.Production?.Select(p => p.Type) ?? [])})");
+                var meterRequest = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri(MeterReadingsUrl.Replace("{devicename}", deviceName)),
+                    Headers =
+                    {
+                        { "cookie", $"sessionId={token.SessionId}" },
+                        { "Authorization", $"Bearer {token.Token}" },
+                    },
+                };
+                using var meterResponse = await client.SendAsync(meterRequest);
+                List<EnphaseMeterReading>? meterReadings = null;
+                if (meterResponse.IsSuccessStatusCode)
+                {
+                    var meterBody = await meterResponse.Content.ReadAsStringAsync();
+                    meterReadings = JsonConvert.DeserializeObject<List<EnphaseMeterReading>>(meterBody);
+                }
+
+                // The grid meter has a different actEnergyDlvd than the PV production meter
+                // and has significant energy in both directions (delivered + received > 0)
+                var pvDlvd = pvProduktion?.WhLifetime ?? 0;
+                var gridMeter = meterReadings?
+                    .Where(m => m.ActEnergyDlvd > 1000 && m.ActEnergyRcvd > 1000)
+                    .FirstOrDefault(m => Math.Abs(m.ActEnergyDlvd - pvDlvd) > pvDlvd * 0.01);
+
+                Console.WriteLine($"  PV: {pvProduktion?.WhLifetime} Wh | Haus: {hausverbrauch?.WhLifetime} Wh | Netzbezug: {gridMeter?.ActEnergyDlvd} Wh | Einspeisung: {gridMeter?.ActEnergyRcvd} Wh");
 
                 return (
                     pvProduktion != null ? (decimal)pvProduktion.WhLifetime : null,
-                    hausverbrauch != null ? (decimal)hausverbrauch.WhLifetime : null
+                    hausverbrauch != null ? (decimal)hausverbrauch.WhLifetime : null,
+                    gridMeter != null ? (decimal)gridMeter.ActEnergyDlvd : null,
+                    gridMeter != null ? (decimal)gridMeter.ActEnergyRcvd : null
                 );
             }
             catch (Exception e)
             {
                 Console.WriteLine($"\nException beim Abruf der Produktionsdaten für {deviceName}!");
                 Console.WriteLine("Message :{0} ", e);
-                return (null, null);
+                return (null, null, null, null);
             }
         }
 
