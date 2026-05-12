@@ -37,7 +37,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = gridConsumptionId,
                     Category = SmartmeterData.Category,
-                    SubCategory = MeasurementSubCategory.Production,
+                    SubCategory = MeasurementSubCategory.Consumption,
                     SensorType = SmartmeterData.SensorType,
                     Location = location,
                     Device = device,
@@ -50,7 +50,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = gridSupplyId,
                     Category = SmartmeterData.Category,
-                    SubCategory = MeasurementSubCategory.Consumption,
+                    SubCategory = MeasurementSubCategory.Production,
                     SensorType = SmartmeterData.SensorType,
                     Location = location,
                     Device = device,
