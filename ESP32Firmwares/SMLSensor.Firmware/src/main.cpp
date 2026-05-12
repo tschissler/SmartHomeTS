@@ -370,7 +370,7 @@ void loop() {
                       jsonDoc["Netzbezug"] = smlData->Tarif1.value();
                     }
                     if (smlData->Tarif2.has_value()) {
-                      jsonDoc["Netzeinspeissung"] = smlData->Tarif2.value();
+                      jsonDoc["Netzeinspeisung"] = smlData->Tarif2.value();
                     }
                     if (smlData->Power.has_value()) {
                       jsonDoc["NetzanschlussMomentanleistung"] = smlData->Power.value();
