@@ -63,7 +63,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = currentPowerId,
                     Category = SmartmeterData.Category,
-                    SubCategory = data.NetzanschlussMomentanleistung < 0 ? "Verbrauch" : "Einspeisung",
+                    SubCategory = data.NetzanschlussMomentanleistung < 0 ? "Einspeisung" : "Verbrauch",
                     SensorType = SmartmeterData.SensorType,
                     Location = location,
                     Device = device,
@@ -158,7 +158,7 @@ namespace SmartHome.DataHub
                 {
                     MeasurementId = powerFromGridId,
                     Category = EnphaseData.category,
-                    SubCategory = data.PowerFromGrid < 0 ? "Verbrauch" : "Einspeisung",
+                    SubCategory = data.PowerFromGrid < 0 ? "Einspeisung" : "Verbrauch",
                     SensorType = EnphaseData.sensorType,
                     Location = location,
                     Device = device,
