@@ -72,6 +72,9 @@ namespace SmartHome.DataHub
                     MeasurementType = MeasurementType.Power
                 }
             };
+            previousValues[gridConsumptionId] = data.Netzbezug;
+            previousValues[gridSupplyId] = data.Netzeinspeisung;
+            previousValues[currentPowerId] = data.NetzanschlussMomentanleistung;
             return records;
         }
 
