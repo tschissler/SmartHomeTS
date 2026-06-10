@@ -271,6 +271,13 @@ void loop() {
     return;
   }
 
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("WiFi disconnected, rescanning and reconnecting...");
+    wifiLib.scanAndSelectNetwork();
+    wifiLib.connect();
+  }
+
   {
     bool mqttConnected = mqttClientLib->loop();
     if (!mqttConnected)
