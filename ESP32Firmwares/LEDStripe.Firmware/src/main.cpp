@@ -225,6 +225,10 @@ void setup() {
   wifiLib.scanAndSelectNetwork();
   wifiLib.connect();
 
+  // Disable WiFi modem sleep: power-save causes latency spikes/packet loss that
+  // break long TLS transfers (OTA download aborts with ECONNRESET / errno 104).
+  WiFi.setSleep(false);
+
   setupTime();
 
   initLEDGreen(LEFT);
