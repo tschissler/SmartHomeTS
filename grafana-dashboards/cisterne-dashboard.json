@@ -1,0 +1,214 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "Zisterne",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "red", "value": null},
+            {"color": "orange", "value": 20},
+            {"color": "yellow", "value": 40},
+            {"color": "green", "value": 80}
+          ]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 1},
+      "id": 101,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Füllstand\" FROM percent_values WHERE measurement_id = 'Fuellstand_M1_Zisterne' ORDER BY time DESC LIMIT 1",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Aktueller Füllstand",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "red", "value": null},
+            {"color": "orange", "value": 20},
+            {"color": "yellow", "value": 40},
+            {"color": "green", "value": 80}
+          ]},
+          "unit": "percent"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Füllstand"}, "properties": [{"id": "color", "value": {"fixedColor": "#3498DB", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Füllstand"}, "properties": [{"id": "custom.lineWidth", "value": 3}]}
+        ]
+      },
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 7},
+      "id": 102,
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "min", "max", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "desc"}
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Füllstand\" FROM percent_values WHERE $__timeFilter(time) AND measurement_id = 'Fuellstand_M1_Zisterne' ORDER BY time",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Füllstand über Zeit",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "dateTime:yyyy-MM-dd HH:mm"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 3, "w": 8, "x": 8, "y": 1},
+      "id": 103,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"Letzte Aktualisierung\" FROM percent_values WHERE measurement_id = 'Fuellstand_M1_Zisterne' ORDER BY time DESC LIMIT 1",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Letzte Messung",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "percent"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Füllstand"}, "properties": [{"id": "color", "value": {"fixedColor": "#E74C3C", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Füllstand"}, "properties": [{"id": "custom.pointSize", "value": 8}]}
+        ]
+      },
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 19},
+      "id": 104,
+      "options": {
+        "legend": {"calcs": [], "displayMode": "hidden", "placement": "bottom", "showLegend": false},
+        "tooltip": {"mode": "single", "sort": "desc"}
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Füllstand\" FROM percent_values WHERE $__timeFilter(time) AND measurement_id = 'Fuellstand_M1_Zisterne' ORDER BY time",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Alle Messpunkte (PunkteDiagramm)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "tags": ["water", "cisterne", "zisterne"],
+  "templating": {"list": []},
+  "time": {"from": "now-7d", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Zisterne Füllstand",
+  "uid": "zisterne-level",
+  "version": 1,
+  "weekStart": ""
+}

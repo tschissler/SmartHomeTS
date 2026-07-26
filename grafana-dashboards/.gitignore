@@ -1,0 +1,6 @@
+# Lokale Arbeitsdateien — bewusst nicht im öffentlichen Repo
+# (bei Bedarf einzelne Zeilen entfernen und Datei committen)
+.claude/
+influxdb-reference.md
+README.md
+gen_sankey.py

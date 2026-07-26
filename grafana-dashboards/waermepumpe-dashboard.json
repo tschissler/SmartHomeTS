@@ -1,0 +1,488 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Stromverbrauch der Wärmepumpe im gewählten Zeitraum nach Betriebsart (FA_Status: 1 = Heizen, 4 = Warmwasser). 'Sonstiges' = Abtauen/übrige Status sowie Stunden ohne Status-Daten (Logging-Lücken). Bei M3 kommt die separate Brauchwasser-WP als eigener Anteil dazu. Quelle: WP-interner Zähler (erfasst keinen Steuer-/Standby-Strom).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "mappings": [],
+          "unit": "suffix: kWh",
+          "decimals": 0
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Heizen"}, "properties": [{"id": "color", "value": {"fixedColor": "semi-dark-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Warmwasser"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Sonstiges"}, "properties": [{"id": "color", "value": {"fixedColor": "#A0A0A0", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Warmwasser-WP (separat)"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 9, "w": 8, "x": 0, "y": 0},
+      "id": 8,
+      "options": {
+        "renderer": "canvas",
+        "map": "none",
+        "getOption": "const ctx = (typeof context !== 'undefined') ? context : null;\nconst panelData = ctx ? ctx.panel.data : data;\nconst gTheme = (ctx && ctx.grafana) ? ctx.grafana.theme : null;\nconst textColor = (gTheme && gTheme.colors && gTheme.colors.text) ? gTheme.colors.text.primary : '#cccccc';\nconst bgColor = (gTheme && gTheme.colors && gTheme.colors.background) ? gTheme.colors.background.primary : '#181b1f';\nconst palette = {\n  'Heizen': '#3274D9',\n  'Warmwasser': '#6ED0E0',\n  'Sonstiges': '#A0A0A0',\n  'Warmwasser-WP (separat)': '#A352CC'\n};\nconst values = {};\npanelData.series.forEach((s) => {\n  s.fields.forEach((f) => {\n    if (f.type !== 'number') { return; }\n    const arr = (f.values && f.values.toArray) ? f.values.toArray() : f.values;\n    if (arr && arr.length) {\n      const v = arr[arr.length - 1];\n      if (v !== null && v !== undefined && !isNaN(v)) { values[f.name] = v; }\n    }\n  });\n});\nconst order = ['Heizen', 'Warmwasser', 'Sonstiges', 'Warmwasser-WP (separat)'];\nconst chartData = order.filter((n) => values[n] > 0).map((n) => ({ name: n, value: values[n], itemStyle: { color: palette[n] } }));\nif (!chartData.length) {\n  return { title: { text: 'Keine Daten', left: 'center', top: 'middle', textStyle: { color: textColor } } };\n}\nconst total = chartData.reduce((a, b) => a + b.value, 0);\nreturn {\n  tooltip: {\n    trigger: 'item',\n    formatter: (p) => p.name + ': ' + Math.round(p.value).toLocaleString('de-DE') + ' kWh (' + p.percent + ' %)'\n  },\n  graphic: [\n    { type: 'text', left: 'center', top: 'middle', style: { text: Math.round(total).toLocaleString('de-DE') + ' kWh', font: 'bold 30px sans-serif', fill: textColor, textAlign: 'center' } }\n  ],\n  series: [{\n    type: 'pie',\n    radius: ['52%', '78%'],\n    avoidLabelOverlap: true,\n    itemStyle: { borderWidth: 2, borderColor: bgColor },\n    label: { show: true, formatter: (p) => p.name + '\\n' + Math.round(p.value).toLocaleString('de-DE') + ' kWh', fontSize: 16, color: textColor, lineHeight: 22 },\n    labelLine: { length: 14, length2: 10 },\n    data: chartData\n  }]\n};"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH e AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1), d AS (SELECT h, v - LAG(v) OVER (ORDER BY h) AS kwh FROM e), m AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, SUM(CASE WHEN value_status = 4 THEN 1 ELSE 0 END) AS ww, SUM(CASE WHEN value_status = 1 THEN 1 ELSE 0 END) AS hz, SUM(CASE WHEN value_status NOT IN (0, 1, 4) THEN 1 ELSE 0 END) AS oth FROM status_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'FA_Status' AND location = '$location' GROUP BY 1) SELECT ROUND(SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.hz, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE 0 END)) AS \"Heizen\", ROUND(SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.ww, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE 0 END)) AS \"Warmwasser\", ROUND(SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.oth, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE d.kwh END)) AS \"Sonstiges\" FROM d LEFT JOIN m ON d.h = m.h WHERE d.kwh IS NOT NULL",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1) SELECT ROUND(SUM(w) / 1000.0) AS \"Warmwasser-WP (separat)\" FROM h",
+          "refId": "B",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Stromverbrauch im Zeitraum – $location",
+      "type": "volkovlabs-echarts-panel"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Durchschnittlicher Stromverbrauch pro Monat nach Betriebsart (Mittelwert der Monatswerte im gewählten Zeitraum; angebrochene Monate zählen als eigener Monat). Aufteilung wie im linken Donut.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "mappings": [],
+          "unit": "suffix: kWh",
+          "decimals": 0
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Heizen"}, "properties": [{"id": "color", "value": {"fixedColor": "semi-dark-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Warmwasser"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Sonstiges"}, "properties": [{"id": "color", "value": {"fixedColor": "#A0A0A0", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Warmwasser-WP (separat)"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 9, "w": 8, "x": 8, "y": 0},
+      "id": 9,
+      "options": {
+        "renderer": "canvas",
+        "map": "none",
+        "getOption": "const ctx = (typeof context !== 'undefined') ? context : null;\nconst panelData = ctx ? ctx.panel.data : data;\nconst gTheme = (ctx && ctx.grafana) ? ctx.grafana.theme : null;\nconst textColor = (gTheme && gTheme.colors && gTheme.colors.text) ? gTheme.colors.text.primary : '#cccccc';\nconst bgColor = (gTheme && gTheme.colors && gTheme.colors.background) ? gTheme.colors.background.primary : '#181b1f';\nconst palette = {\n  'Heizen': '#3274D9',\n  'Warmwasser': '#6ED0E0',\n  'Sonstiges': '#A0A0A0',\n  'Warmwasser-WP (separat)': '#A352CC'\n};\nconst values = {};\npanelData.series.forEach((s) => {\n  s.fields.forEach((f) => {\n    if (f.type !== 'number') { return; }\n    const arr = (f.values && f.values.toArray) ? f.values.toArray() : f.values;\n    if (arr && arr.length) {\n      const v = arr[arr.length - 1];\n      if (v !== null && v !== undefined && !isNaN(v)) { values[f.name] = v; }\n    }\n  });\n});\nconst order = ['Heizen', 'Warmwasser', 'Sonstiges', 'Warmwasser-WP (separat)'];\nconst chartData = order.filter((n) => values[n] > 0).map((n) => ({ name: n, value: values[n], itemStyle: { color: palette[n] } }));\nif (!chartData.length) {\n  return { title: { text: 'Keine Daten', left: 'center', top: 'middle', textStyle: { color: textColor } } };\n}\nconst total = chartData.reduce((a, b) => a + b.value, 0);\nreturn {\n  tooltip: {\n    trigger: 'item',\n    formatter: (p) => p.name + ': ' + Math.round(p.value).toLocaleString('de-DE') + ' kWh (' + p.percent + ' %)'\n  },\n  graphic: [\n    { type: 'text', left: 'center', top: 'middle', style: { text: Math.round(total).toLocaleString('de-DE') + ' kWh', font: 'bold 30px sans-serif', fill: textColor, textAlign: 'center' } }\n  ],\n  series: [{\n    type: 'pie',\n    radius: ['52%', '78%'],\n    avoidLabelOverlap: true,\n    itemStyle: { borderWidth: 2, borderColor: bgColor },\n    label: { show: true, formatter: (p) => p.name + '\\n' + Math.round(p.value).toLocaleString('de-DE') + ' kWh', fontSize: 16, color: textColor, lineHeight: 22 },\n    labelLine: { length: 14, length2: 10 },\n    data: chartData\n  }]\n};"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH e AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1), d AS (SELECT h, v - LAG(v) OVER (ORDER BY h) AS kwh FROM e), m AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, SUM(CASE WHEN value_status = 4 THEN 1 ELSE 0 END) AS ww, SUM(CASE WHEN value_status = 1 THEN 1 ELSE 0 END) AS hz, SUM(CASE WHEN value_status NOT IN (0, 1, 4) THEN 1 ELSE 0 END) AS oth FROM status_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'FA_Status' AND location = '$location' GROUP BY 1), mo AS (SELECT date_trunc('month', d.h) AS mon, SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.hz, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE 0 END) AS hz_kwh, SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.ww, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE 0 END) AS ww_kwh, SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.oth, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE d.kwh END) AS oth_kwh FROM d LEFT JOIN m ON d.h = m.h WHERE d.kwh IS NOT NULL GROUP BY 1) SELECT ROUND(AVG(hz_kwh)) AS \"Heizen\", ROUND(AVG(ww_kwh)) AS \"Warmwasser\", ROUND(AVG(oth_kwh)) AS \"Sonstiges\" FROM mo",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1), mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM h GROUP BY 1) SELECT ROUND(AVG(kwh)) AS \"Warmwasser-WP (separat)\" FROM mo",
+          "refId": "B",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Ø Stromverbrauch pro Monat – $location",
+      "type": "volkovlabs-echarts-panel"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Gesamter Stromverbrauch der Wärmepumpe im gewählten Zeitraum (WP-interner Zähler, MAX-MIN; MWh-Werte vor dem 10.12.2025 normalisiert, Nullwerte gefiltert). Entspricht der Summe der Segmente im linken Donut.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "blue", "mode": "fixed"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "suffix: kWh",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 3, "w": 8, "x": 16, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) - MIN(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS \"Gesamtverbrauch\" FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND device = 'Waermepumpe' AND value_cumulated_kwh > 0",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Gesamt im Zeitraum",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Durchschnittlicher Gesamt-Stromverbrauch pro Monat (Mittelwert der Monatswerte im gewählten Zeitraum). Entspricht der Summe der Segmente im rechten Donut.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "blue", "mode": "fixed"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "suffix: kWh",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 3, "w": 8, "x": 16, "y": 3},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["mean"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT date_trunc('month', time) AS time, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) - MIN(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS \"Monatsverbrauch\" FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND device = 'Waermepumpe' AND value_cumulated_kwh > 0 GROUP BY 1 ORDER BY 1",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Ø pro Monat (Gesamt)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Arbeitszahl über den gewählten Zeitraum: Wärmemenge geteilt durch elektrische Energie (WP-interner Zähler). Hinweis: Der Zähler Waermemenge_Heizen enthält in M1 auch die Warmwasser-Wärme — die JAZ ist damit die Gesamt-Arbeitszahl der WP.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "green", "mode": "fixed"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "none",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 3, "w": 4, "x": 16, "y": 6},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT (MAX(CASE WHEN measurement = 'Waermemenge_Heizen' THEN value_cumulated_kwh END) - MIN(CASE WHEN measurement = 'Waermemenge_Heizen' THEN value_cumulated_kwh END)) / NULLIF(MAX(CASE WHEN measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' THEN CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END END) - MIN(CASE WHEN measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' THEN CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END END), 0) AS \"JAZ\" FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND device = 'Waermepumpe' AND location = '$location' AND value_cumulated_kwh > 0",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "JAZ im Zeitraum",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Aktueller kumulierter Zählerstand der Wärmepumpe (elektrische Gesamtenergie, WP-intern).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "text", "mode": "fixed"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "text", "value": null}]},
+          "unit": "suffix: kWh",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 3, "w": 4, "x": 20, "y": 6},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_cumulated_kwh AS \"Zählerstand\" FROM energy_values WHERE sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND device = 'Waermepumpe' AND value_cumulated_kwh > 0 ORDER BY time DESC LIMIT 1",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Zählerstand Strom aktuell",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Aufteilung des WP-Stromverbrauchs nach Betriebsart über den CAN-Status FA_Status (1 = Heizen, 4 = Warmwasser; validiert: im Sommer tritt nur noch Status 4 auf). Stundenweise Energie-Deltas (LAG über den kumulierten Zähler) werden anteilig nach den Status-Samples der Stunde zugeordnet. 'Sonstiges' = Abtauen/übrige Status sowie Stunden ohne Status-Daten (Logging-Lücken, z. B. März 2026 ~48 kWh). 'Warmwasser-WP (separat)' ist die eigene Brauchwasser-WP in M3, integriert aus power_values (die energy_values dieses Geräts sind fehlerhaft — Connector-Bug); in M1 bleibt diese Serie leer. M3-Haupt-WP macht nie Warmwasser (Status 4 kommt dort nicht vor).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineWidth": 0,
+            "scaleDistribution": {"type": "linear"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "suffix: kWh",
+          "decimals": 0
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Heizen"}, "properties": [{"id": "color", "value": {"fixedColor": "semi-dark-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Warmwasser"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Sonstiges"}, "properties": [{"id": "color", "value": {"fixedColor": "#A0A0A0", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Warmwasser-WP (separat)"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 9},
+      "id": 5,
+      "options": {
+        "barRadius": 0.05,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "normal",
+        "tooltip": {"mode": "multi", "sort": "none"},
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH e AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1), d AS (SELECT h, v - LAG(v) OVER (ORDER BY h) AS kwh FROM e), m AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, SUM(CASE WHEN value_status = 4 THEN 1 ELSE 0 END) AS ww, SUM(CASE WHEN value_status = 1 THEN 1 ELSE 0 END) AS hz, SUM(CASE WHEN value_status NOT IN (0, 1, 4) THEN 1 ELSE 0 END) AS oth FROM status_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'FA_Status' AND location = '$location' GROUP BY 1) SELECT to_char(date_trunc('month', d.h), '%Y-%m') AS \"Monat\", ROUND(SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.hz, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE 0 END), 1) AS \"Heizen\", ROUND(SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.ww, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE 0 END), 1) AS \"Warmwasser\", ROUND(SUM(CASE WHEN COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0) > 0 THEN d.kwh * COALESCE(m.oth, 0) / (COALESCE(m.ww, 0) + COALESCE(m.hz, 0) + COALESCE(m.oth, 0)) ELSE d.kwh END), 1) AS \"Sonstiges\" FROM d LEFT JOIN m ON d.h = m.h WHERE d.kwh IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1) SELECT to_char(date_trunc('month', hr), '%Y-%m') AS \"Monat\", ROUND(SUM(w) / 1000.0, 1) AS \"Warmwasser-WP (separat)\" FROM h GROUP BY 1 ORDER BY 1",
+          "refId": "B",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "transformations": [
+        {"id": "joinByField", "options": {"byField": "Monat", "mode": "outer"}}
+      ],
+      "title": "Stromverbrauch nach Betriebsart – $location",
+      "type": "barchart"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Vergleich der drei Messquellen pro Monat: WP-interner Stromzähler (CAN), Summe der beiden Shelly-Stromkreise der WP (robust über stündliche LAG-Deltas, gefiltert gegen den Zähler-Glitch im April 2026) und die erzeugte Wärmemenge. Die Shelly-Summe liegt systematisch über dem CAN-Zähler — die Differenz ist Steuerungs-/Standby-Verbrauch, den der WP-interne Zähler nicht erfasst (in M3 im Sommer: 11–13 kWh/Monat bei CAN = 0). Der Zähler Waermemenge_Heizen enthält in M1 auch die Warmwasser-Wärme.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineWidth": 0,
+            "scaleDistribution": {"type": "linear"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "suffix: kWh",
+          "decimals": 0
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Strom (WP-Zähler)"}, "properties": [{"id": "color", "value": {"fixedColor": "blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Stromkreise (Shelly)"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Wärmemenge"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 11, "w": 24, "x": 0, "y": 21},
+      "id": 6,
+      "options": {
+        "barRadius": 0.05,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {"mode": "multi", "sort": "none"},
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(date_trunc('month', time), '%Y-%m') AS \"Monat\", ROUND(MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) - MIN(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END), 1) AS \"Strom (WP-Zähler)\" FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND device = 'Waermepumpe' AND value_cumulated_kwh > 0 GROUP BY 1 ORDER BY 1",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH e AS (SELECT device, date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10000 THEN value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device IN ('Wärmepumpe', 'Wärmepumpe ST') AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1, 2), d AS (SELECT device, h, v - LAG(v) OVER (PARTITION BY device ORDER BY h) AS kwh FROM e) SELECT to_char(date_trunc('month', h), '%Y-%m') AS \"Monat\", ROUND(SUM(CASE WHEN kwh > 0 AND kwh < 50 THEN kwh ELSE 0 END), 1) AS \"Stromkreise (Shelly)\" FROM d GROUP BY 1 ORDER BY 1",
+          "refId": "B",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(date_trunc('month', time), '%Y-%m') AS \"Monat\", ROUND(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 1) AS \"Wärmemenge\" FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Waermemenge_Heizen' AND location = '$location' AND device = 'Waermepumpe' AND value_cumulated_kwh > 0 GROUP BY 1 ORDER BY 1",
+          "refId": "C",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "transformations": [
+        {"id": "joinByField", "options": {"byField": "Monat", "mode": "outer"}}
+      ],
+      "title": "Strom & Wärmemenge im Vergleich – $location",
+      "type": "barchart"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "description": "Monatliche Arbeitszahl: Wärmemenge geteilt durch Stromverbrauch (beides WP-interne Zähler). In M1 enthält die Wärmemenge auch Warmwasser — die JAZ ist die Gesamt-Arbeitszahl. Monate ohne WP-Betrieb (M3 im Sommer) bleiben leer (NULLIF gegen Division durch 0).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "green", "mode": "fixed"},
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineWidth": 0,
+            "scaleDistribution": {"type": "linear"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "none",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 32},
+      "id": 7,
+      "options": {
+        "barRadius": 0.05,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false},
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {"mode": "single", "sort": "none"},
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(date_trunc('month', time), '%Y-%m') AS \"Monat\", (MAX(CASE WHEN measurement = 'Waermemenge_Heizen' THEN value_cumulated_kwh END) - MIN(CASE WHEN measurement = 'Waermemenge_Heizen' THEN value_cumulated_kwh END)) / NULLIF(MAX(CASE WHEN measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' THEN CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END END) - MIN(CASE WHEN measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' THEN CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END END), 0) AS \"JAZ\" FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND device = 'Waermepumpe' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1 ORDER BY 1",
+          "refId": "A",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        }
+      ],
+      "title": "Monatliche Arbeitszahl (JAZ) – $location",
+      "type": "barchart"
+    }
+  ],
+  "refresh": "1h",
+  "schemaVersion": 42,
+  "tags": ["energy", "waermepumpe"],
+  "templating": {
+    "list": [
+      {
+        "current": {"text": "M1", "value": "M1"},
+        "includeAll": false,
+        "label": "Standort",
+        "multi": false,
+        "name": "location",
+        "options": [
+          {"selected": true, "text": "M1", "value": "M1"},
+          {"selected": false, "text": "M3", "value": "M3"}
+        ],
+        "query": "M1, M3",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {"from": "2026-01-01T00:00:00.000Z", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Wärmepumpe – Stromverbrauch & JAZ",
+  "uid": "waermepumpe-m1-strom",
+  "version": 1,
+  "weekStart": ""
+}

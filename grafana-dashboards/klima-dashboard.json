@@ -1,0 +1,2514 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "title": "Klima-Dashboard",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "title": "Au\u00dfen",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 2
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Temperatur\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Au\u00dfentemperatur",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#003d00",
+                "value": null
+              },
+              {
+                "color": "#2e8b57",
+                "value": 30
+              },
+              {
+                "color": "#90ee90",
+                "value": 50
+              },
+              {
+                "color": "#e8f5e8",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 2
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Luftfeuchtigkeit\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Au\u00dfen-Luftfeuchtigkeit",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#003d00",
+                "value": null
+              },
+              {
+                "color": "#2e8b57",
+                "value": 30
+              },
+              {
+                "color": "#90ee90",
+                "value": 50
+              },
+              {
+                "color": "#e8f5e8",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 2
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"F\u00fcllstand\" FROM percent_values WHERE $__timeFilter(time) AND measurement_id = 'Fuellstand_M1_Zisterne' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Zisterne F\u00fcllstand",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 3,
+      "title": "Trends - Au\u00dfen (30 Tage)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": -10,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 10
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Au\u00dfentemperatur"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#1f60b4",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tages-Maximum"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#2ecc71",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tages-Minimum"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#e74c3c",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durchschnitt Tages-H\u00f6chsttemperatur"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#f39c12",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.dashes",
+                "value": [
+                  10,
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durchschnitt Tagestiefsttemperatur"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#9b59b6",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.dashes",
+                "value": [
+                  10,
+                  5
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 50,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Au\u00dfentemperatur\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "A"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time::date AS time, max(value_temp) AS \"Tages-Maximum\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' GROUP BY time::date ORDER BY time",
+          "refId": "B"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time::date AS time, min(value_temp) AS \"Tages-Minimum\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' GROUP BY time::date ORDER BY time",
+          "refId": "C"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH daily_max AS (SELECT time::date AS day, max(value_temp) AS max_value FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' GROUP BY time::date), avg_max AS (SELECT mean(max_value) AS avg_value FROM daily_max) SELECT day AS time, avg_value AS \"Durchschnitt Tages-H\u00f6chsttemperatur\" FROM daily_max, avg_max ORDER BY day",
+          "refId": "D"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH daily_min AS (SELECT time::date AS day, min(value_temp) AS min_value FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' GROUP BY time::date), avg_min AS (SELECT mean(min_value) AS avg_value FROM daily_min) SELECT day AS time, avg_value AS \"Durchschnitt Tagestiefsttemperatur\" FROM daily_min, avg_min ORDER BY day",
+          "refId": "E"
+        }
+      ],
+      "title": "Au\u00dfentemperatur mit Tages-Extremwerten",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 30
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 51,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Au\u00dfen-Luftfeuchtigkeit\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Aussen' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Au\u00dfen-Luftfeuchtigkeit",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "yellow",
+                "value": 40
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 52,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"F\u00fcllstand\" FROM percent_values WHERE $__timeFilter(time) AND measurement_id = 'Fuellstand_M1_Zisterne' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Zisterne F\u00fcllstand (Niederschlagsindikator)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 4,
+      "title": "Geb\u00e4ude M1 - R\u00e4ume",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 41,
+      "title": "Temperatur",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 33
+      },
+      "id": 20,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Wohnzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Wohnzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur Wohnzimmer",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 33
+      },
+      "id": 21,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Schlafzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Schlafzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur Schlafzimmer",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 33
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Keller\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Keller' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur Keller",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 33
+      },
+      "id": 23,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Bad\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Bad' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur Bad",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 37
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Kinderzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Kinderzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur Kinderzimmer",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "id": 42,
+      "title": "Luftfeuchtigkeit",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#003d00",
+                "value": null
+              },
+              {
+                "color": "#2e8b57",
+                "value": 30
+              },
+              {
+                "color": "#90ee90",
+                "value": 50
+              },
+              {
+                "color": "#e8f5e8",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 42
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Wohnzimmer\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Wohnzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Luftfeuchtigkeit Wohnzimmer",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#003d00",
+                "value": null
+              },
+              {
+                "color": "#2e8b57",
+                "value": 30
+              },
+              {
+                "color": "#90ee90",
+                "value": 50
+              },
+              {
+                "color": "#e8f5e8",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 42
+      },
+      "id": 26,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Schlafzimmer\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Schlafzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Luftfeuchtigkeit Schlafzimmer",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#003d00",
+                "value": null
+              },
+              {
+                "color": "#2e8b57",
+                "value": 30
+              },
+              {
+                "color": "#90ee90",
+                "value": 50
+              },
+              {
+                "color": "#e8f5e8",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 42
+      },
+      "id": 27,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Keller\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Keller' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Luftfeuchtigkeit Keller",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#003d00",
+                "value": null
+              },
+              {
+                "color": "#2e8b57",
+                "value": 30
+              },
+              {
+                "color": "#90ee90",
+                "value": 50
+              },
+              {
+                "color": "#e8f5e8",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 46
+      },
+      "id": 28,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Bad\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Bad' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Luftfeuchtigkeit Bad",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 43,
+      "title": "Trends - Geb\u00e4ude M1 (30 Tage)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 18
+              },
+              {
+                "color": "yellow",
+                "value": 22
+              },
+              {
+                "color": "red",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 60,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Wohnzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Wohnzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "A"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Schlafzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Schlafzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "B"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Keller\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Keller' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "C"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Bad\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Bad' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "D"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Kinderzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Kinderzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "E"
+        }
+      ],
+      "title": "Temperaturen M1",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 30
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "id": 61,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Wohnzimmer\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Wohnzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time",
+          "refId": "A"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Schlafzimmer\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Schlafzimmer' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time",
+          "refId": "B"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Keller\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Keller' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time",
+          "refId": "C"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_percent AS \"Bad\" FROM percent_values WHERE $__timeFilter(time) AND location = 'M1' AND measurement = 'Bad' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND sensor_type <> 'Thermostat' AND sensor_type <> 'Envoy' ORDER BY time",
+          "refId": "D"
+        }
+      ],
+      "title": "Luftfeuchtigkeit M1",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 5,
+      "title": "Geb\u00e4ude M3 - R\u00e4ume",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "id": 55,
+      "title": "Temperatur",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 64
+      },
+      "id": 30,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"K\u00fcche\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Kueche' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur K\u00fcche",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 64
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Wohnzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Wohnzimmer' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur Wohnzimmer",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 64
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Esszimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Esszimmer' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur Esszimmer",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 60
+      },
+      "id": 33,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"B\u00fcro\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Buero' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur B\u00fcro",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 64
+      },
+      "id": 34,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"B\u00fcro Thomas\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Buero_Thomas' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur B\u00fcro Thomas",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#001f3f",
+                "value": null
+              },
+              {
+                "color": "#004080",
+                "value": 18
+              },
+              {
+                "color": "#4682b4",
+                "value": 22
+              },
+              {
+                "color": "#add8e6",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 68
+      },
+      "id": 35,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"G\u00e4stezimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Gaestezimmer' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatur G\u00e4stezimmer",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "id": 6,
+      "title": "Trends - Geb\u00e4ude M3 (30 Tage)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 18
+              },
+              {
+                "color": "yellow",
+                "value": 22
+              },
+              {
+                "color": "red",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "id": 62,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"K\u00fcche\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Kueche' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "A"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Wohnzimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Wohnzimmer' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "B"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"Esszimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Esszimmer' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "C"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"B\u00fcro\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Buero' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "D"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"B\u00fcro Thomas\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Buero_Thomas' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "E"
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, value_temp AS \"G\u00e4stezimmer\" FROM temperature_values WHERE $__timeFilter(time) AND location = 'M3' AND device = 'Gaestezimmer' AND measurement = 'Isttemperatur' AND category <> 'Heizung' AND sensor_type <> 'Heizk\u00f6rperl\u00fcfter' AND measurement <> 'Solltemperatur' ORDER BY time",
+          "refId": "F"
+        }
+      ],
+      "title": "Temperaturen M3",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "tags": [
+    "klima",
+    "climate",
+    "temperatur",
+    "luftfeuchtigkeit",
+    "zisterne",
+    "au\u00dfen",
+    "r\u00e4ume"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Klima-Dashboard",
+  "uid": "klima-dashboard",
+  "version": 1,
+  "weekStart": ""
+}

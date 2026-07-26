@@ -1,0 +1,1086 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 10,
+                "color": "#EAB839"
+              },
+              {
+                "value": 20,
+                "color": "dark-green"
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "displayMode": "lcd",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, \"value_percent\" AS Prozent\nFROM \"percent_values\"\nWHERE measurement_id = 'Envoy_EnvoyM1_M1_BatteryLevel'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Batterie-Level M1",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*Envoy(M\\d+).*",
+            "renamePattern": "$1"
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 10,
+                "color": "#EAB839"
+              },
+              {
+                "value": 20,
+                "color": "dark-green"
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "displayMode": "lcd",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, \"value_percent\" AS Prozent\nFROM \"percent_values\"\nWHERE measurement_id = 'Envoy_EnvoyM3_M3_BatteryLevel'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Batterie-Level M3",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*Envoy(M\\d+).*",
+            "renamePattern": "$1"
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "id": 1,
+      "options": {
+        "getOption": "const getVal = (refId, fieldName) => {\n  const s = context.panel.data.series.find(s => s.refId === refId);\n  if (!s) return 0;\n  const f = s.fields.find(f => f.name === fieldName);\n  if (!f || !f.values || !f.values.length) return 0;\n  return Number(f.values[f.values.length - 1]) || 0;\n};\n\nconst fromMs    = Number(context.grafana.replaceVariables('$__from'));\nconst toMs      = Number(context.grafana.replaceVariables('$__to'));\nconst durationH = (toMs - fromMs) / 3_600_000;\n\nconst isLive = durationH < (6 / 60);   // < 6 min → current watts\nconst minVal = isLive ? 1 : durationH; // W cutoff (live) or Wh cutoff (energy, ≈1 Wh/h)\n\nconst fmtVal = (val) => {\n  if (isLive)      return `${Math.round(val)} W`;\n  if (val >= 1000) return `${(val / 1000).toFixed(2)} kWh`;\n  return `${Math.round(val)} Wh`;\n};\n\n// Live: latest watts  |  Energy: kWh × 1000 → Wh  |  Battery energy: AVG W × durationH → Wh\nconst pv        = isLive ? Math.max(0, getVal('A',  'PV'))              : Math.max(0, getVal('AE', 'PV_kwh'))          * 1000;\nconst battEntl  = isLive ? Math.max(0, getVal('B',  'BattEntl'))        : Math.max(0, getVal('BE', 'BattEntl'))        * durationH;\nconst battLaden = isLive ? Math.max(0, getVal('B',  'BattLaden'))       : Math.max(0, getVal('BE', 'BattLaden'))       * durationH;\nconst netzbezug = isLive ? Math.max(0, getVal('C',  'Netzbezug'))       : Math.max(0, getVal('CI', 'Netzbezug_kwh'))   * 1000;\nconst netzeinsp = isLive ? Math.max(0, getVal('C',  'Netzeinspeisung')) : Math.max(0, getVal('CX', 'Netzeinspeis_kwh')) * 1000;\nconst haus      = isLive ? Math.max(0, getVal('D',  'Haus'))            : Math.max(0, getVal('DE', 'Haus_kwh'))        * 1000;\n\nconst COLORS = {\n  'PV':                   '#F4D03F',\n  'Batterie':             '#2ECC71',\n  'Netzbezug':            '#E74C3C',\n  'Netzeinspeisung':      '#F39C12',\n  'Gesamt':               '#3498DB',\n  'Haus':                 '#8E44AD',\n  'Batterie laden':       '#27AE60',\n  'Fernseher':            '#1ABC9C',\n  'Geschirrspüler':       '#16A085',\n  'Hauswasserversorgung': '#2980B9',\n  'Herd':                 '#E67E22',\n  'Kaffeemaschine':       '#D35400',\n  'Kühlschrank':          '#8E44AD',\n  'Lampe':                '#F39C12',\n  'Trockner':             '#C0392B',\n  'Waschmaschine':        '#7F8C8D',\n  'Wärmepumpe':           '#1ABC9C',\n  'Wärmepumpe ST':        '#16A085',\n  'Zirkulationspumpe':    '#2C3E50',\n  'Sonstiges':            '#95A5A6',\n};\n\nconst DEPTH = {\n  'PV': 0, 'Batterie': 0, 'Netzbezug': 0,\n  'Gesamt': 1,\n  'Batterie laden': 2, 'Netzeinspeisung': 2, 'Haus': 2,\n};\n\nconst nodes = [];\nconst links = [];\nconst addNode = (name, depth) => {\n  if (!nodes.find(n => n.name === name)) {\n    const d = depth !== undefined ? depth : (DEPTH[name] !== undefined ? DEPTH[name] : 3);\n    nodes.push({name, depth: d, itemStyle: {color: COLORS[name] || '#95A5A6'}});\n  }\n};\n\nif (pv        > minVal) { addNode('PV');       addNode('Gesamt'); links.push({source:'PV',        target:'Gesamt', value:pv}); }\nif (battEntl  > minVal) { addNode('Batterie');  addNode('Gesamt'); links.push({source:'Batterie',  target:'Gesamt', value:battEntl}); }\nif (netzbezug > minVal) { addNode('Netzbezug'); addNode('Gesamt'); links.push({source:'Netzbezug', target:'Gesamt', value:netzbezug}); }\n\nif (battLaden > minVal) { addNode('Gesamt'); addNode('Batterie laden');  links.push({source:'Gesamt', target:'Batterie laden',  value:battLaden}); }\nif (netzeinsp > minVal) { addNode('Gesamt'); addNode('Netzeinspeisung'); links.push({source:'Gesamt', target:'Netzeinspeisung', value:netzeinsp}); }\nif (haus      > minVal) { addNode('Gesamt'); addNode('Haus');            links.push({source:'Gesamt', target:'Haus',            value:haus}); }\n\nconst addShelly = (powerRefId, energyRefId, hausNode) => {\n  const refId    = isLive ? powerRefId : energyRefId;\n  const valField = isLive ? 'watt' : 'kwh';\n  const scale    = isLive ? 1 : 1000; // watts (live) or kWh→Wh (energy)\n  const ser = context.panel.data.series.find(s => s.refId === refId);\n  let total = 0;\n  if (ser) {\n    const dF = ser.fields.find(f => f.name === 'device');\n    const vF = ser.fields.find(f => f.name === valField);\n    if (dF && vF) {\n      for (let i = 0; i < dF.values.length; i++) {\n        const name = dF.values[i];\n        const val  = Math.max(0, Number(vF.values[i]) || 0) * scale;\n        if (val > minVal) {\n          addNode(hausNode); addNode(name, 3);\n          links.push({source:hausNode, target:name, value:val});\n          total += val;\n        }\n      }\n    }\n  }\n  return total;\n};\n\nconst totalShelly = addShelly('E', 'EE', 'Haus');\nconst sonstiges = Math.max(0, haus - totalShelly);\nif (sonstiges > minVal) { addNode('Sonstiges', 3); links.push({source:'Haus', target:'Sonstiges', value:sonstiges}); }\n\nconst isDark = context.grafana.theme?.isDark !== false;\nreturn {\n  tooltip: {trigger:'item', formatter: p => `${p.name}<br/>${fmtVal(p.value)}`},\n  series: [{\n    type: 'sankey',\n    emphasis: {focus:'adjacency'},\n    data: nodes,\n    links,\n    label: {color: isDark ? '#fff' : '#333', formatter: p => `${p.name}\\n${fmtVal(p.value)}`},\n    lineStyle: {color:'gradient', opacity:0.4},\n    nodeWidth: 20,\n    nodeGap: 24,\n  }]\n};",
+        "editor": {
+          "format": "auto"
+        },
+        "editorMode": "code",
+        "renderer": "canvas",
+        "map": "none",
+        "baidu": {
+          "callback": "bmapReady",
+          "key": ""
+        },
+        "gaode": {
+          "key": "",
+          "plugin": "AMap.Scale,AMap.ToolBar"
+        },
+        "google": {
+          "callback": "gmapReady",
+          "key": ""
+        },
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "visualEditor": {
+          "code": "return {\n  dataset: context.editor.dataset,\n  series: context.editor.series,\n  xAxis: {\n    type: 'time',\n  },\n  yAxis: {\n    type: 'value',\n    min: 'dataMin',\n  },\n}\n",
+          "dataset": [],
+          "series": []
+        }
+      },
+      "pluginVersion": "7.2.4",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT value_watt AS \"PV\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerFromPV'\n  AND location = 'M1'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  CASE WHEN value_watt >= 0 THEN  value_watt ELSE 0 END AS \"BattEntl\",\n  CASE WHEN value_watt  < 0 THEN -value_watt ELSE 0 END AS \"BattLaden\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerFromBattery'\n  AND location = 'M1'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  CASE WHEN value_watt >= 0 THEN  value_watt ELSE 0 END AS \"Netzbezug\",\n  CASE WHEN value_watt  < 0 THEN -value_watt ELSE 0 END AS \"Netzeinspeisung\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerFromGrid'\n  AND location = 'M1'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "C",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT value_watt AS \"Haus\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerToHouse'\n  AND location = 'M1'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "D",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT device, AVG(value_watt) AS \"watt\"\nFROM \"power_values\"\nWHERE sensor_type = 'Shelly'\n  AND measurement = 'Power'\n  AND location = 'M1'\n  AND time >= now() - INTERVAL '2 minutes'\nGROUP BY device",
+          "refId": "E",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"PV_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Envoy'\n  AND measurement = 'EnergyFromPV'\n  AND location = 'M1'",
+          "refId": "AE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(AVG(CASE WHEN avg_w >= 0 THEN  avg_w ELSE 0 END), 0) AS \"BattEntl\",\n  COALESCE(AVG(CASE WHEN avg_w  < 0 THEN -avg_w ELSE 0 END), 0) AS \"BattLaden\"\nFROM (\n  SELECT date_bin(INTERVAL '1 minute', time,\n           TIMESTAMP '1970-01-01 00:00:00') AS t,\n         AVG(value_watt) AS avg_w\n  FROM \"power_values\"\n  WHERE $__timeFilter(time)\n    AND sensor_type = 'Envoy'\n    AND measurement = 'PowerFromBattery'\n    AND location = 'M1'\n  GROUP BY t\n)",
+          "refId": "BE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"Netzbezug_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'SMLSensor'\n  AND measurement = 'GridConsumption'\n  AND device = 'Smartmeter_M1'",
+          "refId": "CI",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"Netzeinspeis_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'SMLSensor'\n  AND measurement = 'GridSupply'\n  AND device = 'Smartmeter_M1'",
+          "refId": "CX",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"Haus_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Envoy'\n  AND measurement = 'EnergyToHouse'\n  AND location = 'M1'",
+          "refId": "DE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT device, COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Shelly'\n  AND measurement = 'TotalPower'\n  AND location = 'M1'\nGROUP BY device",
+          "refId": "EE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Energiefluss M1",
+      "type": "volkovlabs-echarts-panel"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "cf9jc6mgbsao0c"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "id": 2,
+      "options": {
+        "getOption": "const getVal = (refId, fieldName) => {\n  const s = context.panel.data.series.find(s => s.refId === refId);\n  if (!s) return 0;\n  const f = s.fields.find(f => f.name === fieldName);\n  if (!f || !f.values || !f.values.length) return 0;\n  return Number(f.values[f.values.length - 1]) || 0;\n};\n\nconst fromMs    = Number(context.grafana.replaceVariables('$__from'));\nconst toMs      = Number(context.grafana.replaceVariables('$__to'));\nconst durationH = (toMs - fromMs) / 3_600_000;\n\nconst isLive = durationH < (6 / 60);\nconst minVal = isLive ? 1 : durationH;\n\nconst fmtVal = (val) => {\n  if (isLive)      return `${Math.round(val)} W`;\n  if (val >= 1000) return `${(val / 1000).toFixed(2)} kWh`;\n  return `${Math.round(val)} Wh`;\n};\n\nconst pv           = isLive ? Math.max(0, getVal('A',  'PV'))               : Math.max(0, getVal('AE', 'PV_kwh'))           * 1000;\nconst battEntl     = isLive ? Math.max(0, getVal('B',  'BattEntl'))         : Math.max(0, getVal('BE', 'BattEntl'))         * durationH;\nconst battLaden    = isLive ? Math.max(0, getVal('B',  'BattLaden'))        : Math.max(0, getVal('BE', 'BattLaden'))        * durationH;\nconst netzbezug    = isLive ? Math.max(0, getVal('C',  'Netzbezug'))        : Math.max(0, getVal('CI', 'Netzbezug_kwh'))    * 1000;\nconst netzeinsp    = isLive ? Math.max(0, getVal('C',  'Netzeinspeisung'))  : Math.max(0, getVal('CX', 'Netzeinspeis_kwh')) * 1000;\nconst powerToHouse = isLive ? Math.max(0, getVal('D',  'Haus'))             : Math.max(0, getVal('DE', 'Haus_kwh'))         * 1000;\nconst wbStellplatz = isLive ? Math.max(0, getVal('F',  'WbStellplatz'))     : Math.max(0, getVal('FE', 'WbStellplatz_kwh')) * 1000;\nconst wbGarage     = isLive ? Math.max(0, getVal('G',  'WbGarage'))         : Math.max(0, getVal('GE', 'WbGarage_kwh'))     * 1000;\nconst haus         = Math.max(0, powerToHouse - wbStellplatz - wbGarage);\n\nconst COLORS = {\n  'PV':                '#F4D03F',\n  'Batterie':          '#2ECC71',\n  'Netzbezug':         '#E74C3C',\n  'Netzeinspeisung':   '#F39C12',\n  'Gesamt':            '#3498DB',\n  'Wallbox Stellplatz':'#E91E63',\n  'Wallbox Garage':    '#9C27B0',\n  'Haus':              '#8E44AD',\n  'Batterie laden':    '#27AE60',\n  'Heizung_Bad_M3':    '#FF5722',\n  'Warmwasser_M3':     '#03A9F4',\n  'Wärmepumpe':        '#1ABC9C',\n  'Wärmepumpe ST':     '#16A085',\n  'Sonstiges':         '#95A5A6',\n};\n\nconst DEPTH = {\n  'PV': 0, 'Batterie': 0, 'Netzbezug': 0,\n  'Gesamt': 1,\n  'Batterie laden': 2, 'Netzeinspeisung': 2, 'Wallbox Stellplatz': 2, 'Wallbox Garage': 2, 'Haus': 2,\n};\n\nconst nodes = [];\nconst links = [];\nconst addNode = (name, depth) => {\n  if (!nodes.find(n => n.name === name)) {\n    const d = depth !== undefined ? depth : (DEPTH[name] !== undefined ? DEPTH[name] : 3);\n    nodes.push({name, depth: d, itemStyle: {color: COLORS[name] || '#95A5A6'}});\n  }\n};\n\nif (pv           > minVal) { addNode('PV');       addNode('Gesamt'); links.push({source:'PV',        target:'Gesamt', value:pv}); }\nif (battEntl     > minVal) { addNode('Batterie');  addNode('Gesamt'); links.push({source:'Batterie',  target:'Gesamt', value:battEntl}); }\nif (netzbezug    > minVal) { addNode('Netzbezug'); addNode('Gesamt'); links.push({source:'Netzbezug', target:'Gesamt', value:netzbezug}); }\n\nif (battLaden    > minVal) { addNode('Gesamt'); addNode('Batterie laden');     links.push({source:'Gesamt', target:'Batterie laden',     value:battLaden}); }\nif (netzeinsp    > minVal) { addNode('Gesamt'); addNode('Netzeinspeisung');    links.push({source:'Gesamt', target:'Netzeinspeisung',    value:netzeinsp}); }\nif (wbStellplatz > minVal) { addNode('Gesamt'); addNode('Wallbox Stellplatz'); links.push({source:'Gesamt', target:'Wallbox Stellplatz', value:wbStellplatz}); }\nif (wbGarage     > minVal) { addNode('Gesamt'); addNode('Wallbox Garage');     links.push({source:'Gesamt', target:'Wallbox Garage',     value:wbGarage}); }\nif (haus         > minVal) { addNode('Gesamt'); addNode('Haus');               links.push({source:'Gesamt', target:'Haus',               value:haus}); }\n\nconst addShelly = (powerRefId, energyRefId, hausNode) => {\n  const refId    = isLive ? powerRefId : energyRefId;\n  const valField = isLive ? 'watt' : 'kwh';\n  const scale    = isLive ? 1 : 1000;\n  const ser = context.panel.data.series.find(s => s.refId === refId);\n  let total = 0;\n  if (ser) {\n    const dF = ser.fields.find(f => f.name === 'device');\n    const vF = ser.fields.find(f => f.name === valField);\n    if (dF && vF) {\n      for (let i = 0; i < dF.values.length; i++) {\n        const name = dF.values[i];\n        const val  = Math.max(0, Number(vF.values[i]) || 0) * scale;\n        if (val > minVal) {\n          addNode(hausNode); addNode(name, 3);\n          links.push({source:hausNode, target:name, value:val});\n          total += val;\n        }\n      }\n    }\n  }\n  return total;\n};\n\nconst totalShelly = addShelly('H', 'HE', 'Haus');\nconst sonstiges = Math.max(0, haus - totalShelly);\nif (sonstiges > minVal) { addNode('Sonstiges', 3); links.push({source:'Haus', target:'Sonstiges', value:sonstiges}); }\n\nconst isDark = context.grafana.theme?.isDark !== false;\nreturn {\n  tooltip: {trigger:'item', formatter: p => `${p.name}<br/>${fmtVal(p.value)}`},\n  series: [{\n    type: 'sankey',\n    emphasis: {focus:'adjacency'},\n    data: nodes,\n    links,\n    label: {color: isDark ? '#fff' : '#333', formatter: p => `${p.name}\\n${fmtVal(p.value)}`},\n    lineStyle: {color:'gradient', opacity:0.4},\n    nodeWidth: 20,\n    nodeGap: 24,\n  }]\n};",
+        "editor": {
+          "format": "auto"
+        },
+        "editorMode": "code",
+        "renderer": "canvas",
+        "map": "none",
+        "baidu": {
+          "callback": "bmapReady",
+          "key": ""
+        },
+        "gaode": {
+          "key": "",
+          "plugin": "AMap.Scale,AMap.ToolBar"
+        },
+        "google": {
+          "callback": "gmapReady",
+          "key": ""
+        },
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "visualEditor": {
+          "code": "return {\n  dataset: context.editor.dataset,\n  series: context.editor.series,\n  xAxis: {\n    type: 'time',\n  },\n  yAxis: {\n    type: 'value',\n    min: 'dataMin',\n  },\n}\n",
+          "dataset": [],
+          "series": []
+        }
+      },
+      "pluginVersion": "7.2.4",
+      "targets": [
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT value_watt AS \"PV\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerFromPV'\n  AND location = 'M3'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  CASE WHEN value_watt >= 0 THEN  value_watt ELSE 0 END AS \"BattEntl\",\n  CASE WHEN value_watt  < 0 THEN -value_watt ELSE 0 END AS \"BattLaden\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerFromBattery'\n  AND location = 'M3'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  CASE WHEN value_watt >= 0 THEN  value_watt ELSE 0 END AS \"Netzbezug\",\n  CASE WHEN value_watt  < 0 THEN -value_watt ELSE 0 END AS \"Netzeinspeisung\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerFromGrid'\n  AND location = 'M3'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "C",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT value_watt AS \"Haus\"\nFROM \"power_values\"\nWHERE sensor_type = 'Envoy'\n  AND measurement = 'PowerToHouse'\n  AND location = 'M3'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "D",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(AVG(value_watt), 0) AS \"WbStellplatz\"\nFROM \"power_values\"\nWHERE sensor_type = 'Wallbox'\n  AND measurement = 'AktuelleLadeleistung'\n  AND device = 'KebaOutside'\n  AND location = 'M3'\n  AND time >= now() - INTERVAL '2 minutes'",
+          "refId": "F",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(AVG(value_watt), 0) AS \"WbGarage\"\nFROM \"power_values\"\nWHERE sensor_type = 'Wallbox'\n  AND measurement = 'AktuelleLadeleistung'\n  AND device = 'KebaGarage'\n  AND location = 'M3'\n  AND time >= now() - INTERVAL '2 minutes'",
+          "refId": "G",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT device, AVG(value_watt) AS \"watt\"\nFROM \"power_values\"\nWHERE sensor_type = 'Shelly'\n  AND measurement = 'Power'\n  AND location = 'M3'\n  AND time >= now() - INTERVAL '2 minutes'\nGROUP BY device",
+          "refId": "H",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"PV_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Envoy'\n  AND measurement = 'EnergyFromPV'\n  AND location = 'M3'",
+          "refId": "AE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(AVG(CASE WHEN avg_w >= 0 THEN  avg_w ELSE 0 END), 0) AS \"BattEntl\",\n  COALESCE(AVG(CASE WHEN avg_w  < 0 THEN -avg_w ELSE 0 END), 0) AS \"BattLaden\"\nFROM (\n  SELECT date_bin(INTERVAL '1 minute', time,\n           TIMESTAMP '1970-01-01 00:00:00') AS t,\n         AVG(value_watt) AS avg_w\n  FROM \"power_values\"\n  WHERE $__timeFilter(time)\n    AND sensor_type = 'Envoy'\n    AND measurement = 'PowerFromBattery'\n    AND location = 'M3'\n  GROUP BY t\n)",
+          "refId": "BE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"Netzbezug_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'SMLSensor'\n  AND measurement = 'GridConsumption'\n  AND device = 'Smartmeter_M3'",
+          "refId": "CI",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"Netzeinspeis_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'SMLSensor'\n  AND measurement = 'GridSupply'\n  AND device = 'Smartmeter_M3'",
+          "refId": "CX",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"Haus_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Envoy'\n  AND measurement = 'EnergyToHouse'\n  AND location = 'M3'",
+          "refId": "DE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"WbStellplatz_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Wallbox'\n  AND measurement = 'EnergieGesamt'\n  AND device = 'KebaOutside'\n  AND location = 'M3'",
+          "refId": "FE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"WbGarage_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Wallbox'\n  AND measurement = 'EnergieGesamt'\n  AND device = 'KebaGarage'\n  AND location = 'M3'",
+          "refId": "GE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        },
+        {
+          "dataset": "iox",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "cf9jc6mgbsao0c"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT device, COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Shelly'\n  AND measurement = 'TotalPower'\n  AND location = 'M3'\nGROUP BY device",
+          "refId": "HE",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Energiefluss M3",
+      "type": "volkovlabs-echarts-panel"
+    }
+  ],
+  "refresh": "5s",
+  "tags": [
+    "energy",
+    "sankey",
+    "smarthome"
+  ],
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Energiefluss",
+  "uid": "KKRmiuzTb2oneWM9jbwRTONWHyTXMFiQKnjzZI5",
+  "version": 22
+}

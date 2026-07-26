@@ -1,0 +1,287 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "M1",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 12000, "thresholds": {"mode": "absolute", "steps": [{"color": "yellow", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 1},
+      "id": 101,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"PV Produktion\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM1' AND measurement = 'PowerFromPV'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "PV Produktion M1",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 12000, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 500}, {"color": "red", "value": 2000}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 1},
+      "id": 102,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"Netzbezug\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM1' AND measurement = 'PowerFromGrid' AND sub_category = 'Verbrauch'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Netzbezug M1",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 12000, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 1},
+      "id": 103,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"Einspeisung\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM1' AND measurement = 'PowerFromGrid' AND sub_category = 'Einspeisung'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Netzeinspeisung M1",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 20}, {"color": "yellow", "value": 50}, {"color": "green", "value": 80}]}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 1},
+      "id": 104,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_percent\" AS \"SOC\"\nFROM \"percent_values\"\nWHERE device = 'EnvoyM1' AND measurement = 'BatteryLevel'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Batterie SOC M1",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 5000, "thresholds": {"mode": "absolute", "steps": [{"color": "dark-blue", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 1},
+      "id": 105,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"Laden\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM1' AND measurement = 'PowerFromBattery' AND sub_category = 'Laden'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Batterie Laden M1",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 5000, "thresholds": {"mode": "absolute", "steps": [{"color": "light-blue", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 1},
+      "id": 106,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"Entladen\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM1' AND measurement = 'PowerFromBattery' AND sub_category = 'Entladen'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Batterie Entladen M1",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.6, "drawStyle": "line", "fillOpacity": 30, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "showValues": false, "spanNulls": false, "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "PV Produktion"}, "properties": [{"id": "color", "value": {"fixedColor": "yellow", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Batterie Entladung"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Netzbezug"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 5},
+      "id": 107,
+      "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"PV Produktion\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM1' AND measurement = 'PowerFromPV'\nGROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Batterie Entladung\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM1' AND measurement = 'PowerFromBattery' AND sub_category = 'Entladen'\nGROUP BY 1 ORDER BY time", "refId": "B", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Netzbezug\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM1' AND measurement = 'PowerFromGrid' AND sub_category = 'Verbrauch'\nGROUP BY 1 ORDER BY time", "refId": "C", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+      ],
+      "title": "Stromquellen M1",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.6, "drawStyle": "line", "fillOpacity": 30, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "showValues": false, "spanNulls": false, "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Batterie Laden"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Netzeinspeisung"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Sonstiges (Shelly)"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 5},
+      "id": 108,
+      "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Batterie Laden\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM1' AND measurement = 'PowerFromBattery' AND sub_category = 'Laden'\nGROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Netzeinspeisung\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM1' AND measurement = 'PowerFromGrid' AND sub_category = 'Einspeisung'\nGROUP BY 1 ORDER BY time", "refId": "B", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, SUM(\"value_watt\") AS \"Sonstiges (Shelly)\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND location = 'M1' AND measurement = 'Power'\nGROUP BY 1 ORDER BY time", "refId": "C", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+      ],
+      "title": "Hauptverbraucher M1",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 15},
+      "id": 200,
+      "title": "M3",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 12000, "thresholds": {"mode": "absolute", "steps": [{"color": "yellow", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 16},
+      "id": 201,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"PV Produktion\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM3' AND measurement = 'PowerFromPV'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "PV Produktion M3",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 12000, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 500}, {"color": "red", "value": 2000}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 16},
+      "id": 202,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"Netzbezug\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM3' AND measurement = 'PowerFromGrid' AND sub_category = 'Verbrauch'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Netzbezug M3",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 12000, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 16},
+      "id": 203,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"Einspeisung\"\nFROM \"power_values\"\nWHERE device = 'EnvoyM3' AND measurement = 'PowerFromGrid' AND sub_category = 'Einspeisung'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Netzeinspeisung M3",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 20}, {"color": "yellow", "value": 50}, {"color": "green", "value": 80}]}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 16},
+      "id": 204,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_percent\" AS \"SOC\"\nFROM \"percent_values\"\nWHERE device = 'EnvoyM3' AND measurement = 'BatteryLevel'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Batterie SOC M3",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 22000, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 16},
+      "id": 205,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"KebaOutside\"\nFROM \"power_values\"\nWHERE device = 'KebaOutside' AND measurement = 'AktuelleLadeleistung'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Wallbox Outside M3",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [], "min": 0, "max": 22000, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 16},
+      "id": 206,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"KebaGarage\"\nFROM \"power_values\"\nWHERE device = 'KebaGarage' AND measurement = 'AktuelleLadeleistung'\nORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Wallbox Garage M3",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.6, "drawStyle": "line", "fillOpacity": 30, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "showValues": false, "spanNulls": false, "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "PV Produktion"}, "properties": [{"id": "color", "value": {"fixedColor": "yellow", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Batterie Entladung"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Netzbezug"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 20},
+      "id": 207,
+      "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"PV Produktion\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM3' AND measurement = 'PowerFromPV'\nGROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Batterie Entladung\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM3' AND measurement = 'PowerFromBattery' AND sub_category = 'Entladen'\nGROUP BY 1 ORDER BY time", "refId": "B", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Netzbezug\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM3' AND measurement = 'PowerFromGrid' AND sub_category = 'Verbrauch'\nGROUP BY 1 ORDER BY time", "refId": "C", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+      ],
+      "title": "Stromquellen M3",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.6, "drawStyle": "line", "fillOpacity": 30, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "showValues": false, "spanNulls": false, "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Wallbox Outside"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Wallbox Garage"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-orange", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Batterie Laden"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Netzeinspeisung"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Sonstiges (Shelly)"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 20},
+      "id": 208,
+      "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Outside\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'KebaOutside' AND measurement = 'AktuelleLadeleistung'\nGROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Garage\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'KebaGarage' AND measurement = 'AktuelleLadeleistung'\nGROUP BY 1 ORDER BY time", "refId": "B", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Batterie Laden\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM3' AND measurement = 'PowerFromBattery' AND sub_category = 'Laden'\nGROUP BY 1 ORDER BY time", "refId": "C", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Netzeinspeisung\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND device = 'EnvoyM3' AND measurement = 'PowerFromGrid' AND sub_category = 'Einspeisung'\nGROUP BY 1 ORDER BY time", "refId": "D", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, SUM(\"value_watt\") AS \"Sonstiges (Shelly)\"\nFROM \"power_values\"\nWHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND location = 'M3' AND measurement = 'Power'\nGROUP BY 1 ORDER BY time", "refId": "E", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+      ],
+      "title": "Hauptverbraucher M3",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 42,
+  "tags": ["energy", "smarthome", "pv"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Energieübersicht",
+  "uid": "energy-overview",
+  "version": 1,
+  "weekStart": ""
+}

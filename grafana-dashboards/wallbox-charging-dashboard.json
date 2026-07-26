@@ -1,0 +1,124 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "Wallbox Charging Overview",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "min": 0,
+          "max": 22000,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "id": 101,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"CurrentChargingPower\" FROM \"power_values\" WHERE device = 'KebaOutside' AND measurement = 'AktuelleLadeleistung' ORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Wallbox Outside - Current Power",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "min": 0,
+          "max": 22000,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "id": 102,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "pluginVersion": "12.4.2",
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"CurrentChargingPower\" FROM \"power_values\" WHERE device = 'KebaGarage' AND measurement = 'AktuelleLadeleistung' ORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "title": "Wallbox Garage - Current Power",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.8, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "showValues": false, "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Wallbox Outside"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Wallbox Garage"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-orange", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 5},
+      "id": 103,
+      "options": {"legend": {"calcs": ["lastNotNull", "max", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Outside\" FROM \"power_values\" WHERE $__timeFilter(time) AND device = 'KebaOutside' AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Garage\" FROM \"power_values\" WHERE $__timeFilter(time) AND device = 'KebaGarage' AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "B", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+      ],
+      "title": "Wallbox Charging Power Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.8, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "showValues": false, "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "watt"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Total Charging Power"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-blue", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 17},
+      "id": 104,
+      "options": {"legend": {"calcs": ["lastNotNull", "max", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single", "sort": "desc"}},
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, (AVG(CASE WHEN device = 'KebaOutside' THEN \"value_watt\" ELSE 0 END) + AVG(CASE WHEN device = 'KebaGarage' THEN \"value_watt\" ELSE 0 END)) AS \"Total Charging Power\" FROM \"power_values\" WHERE $__timeFilter(time) AND (device = 'KebaOutside' OR device = 'KebaGarage') AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+      ],
+      "title": "Total Charging Power (Both Wallboxes Combined)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 42,
+  "tags": ["energy", "wallbox", "charging"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Wallbox Charging Energy",
+  "uid": "wallbox-charging",
+  "version": 1,
+  "weekStart": ""
+}
