@@ -10,7 +10,7 @@
   "panels": [
     {
       "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
-      "description": "Stromverbrauch der Wärmepumpe im gewählten Zeitraum nach Betriebsart (FA_Status: 1 = Heizen, 4 = Warmwasser). 'Sonstiges' = Abtauen/übrige Status sowie Stunden ohne Status-Daten (Logging-Lücken). Bei M3 kommt die separate Brauchwasser-WP als eigener Anteil dazu. Quelle: WP-interner Zähler (erfasst keinen Steuer-/Standby-Strom).",
+      "description": "Stromverbrauch der Wärmepumpe im gewählten Zeitraum nach Betriebsart (FA_Status: 1 = Heizen, 4 = Warmwasser). 'Sonstiges' = Abtauen/übrige Status sowie Stunden ohne Status-Daten (Logging-Lücken). Bei M3 kommen die separate Brauchwasser-WP und die Elektroheizung Bad als eigene Anteile dazu — der Donut zeigt dann den gesamten Wärmeerzeugungs-Strom des Hauses. Quelle: WP-interner Zähler (erfasst keinen Steuer-/Standby-Strom) bzw. power_values-Integration.",
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "palette-classic"},
@@ -23,7 +23,8 @@
           {"matcher": {"id": "byName", "options": "Heizen"}, "properties": [{"id": "color", "value": {"fixedColor": "semi-dark-blue", "mode": "fixed"}}]},
           {"matcher": {"id": "byName", "options": "Warmwasser"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
           {"matcher": {"id": "byName", "options": "Sonstiges"}, "properties": [{"id": "color", "value": {"fixedColor": "#A0A0A0", "mode": "fixed"}}]},
-          {"matcher": {"id": "byName", "options": "Warmwasser-WP"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+          {"matcher": {"id": "byName", "options": "Warmwasser-WP"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Heizung Bad"}, "properties": [{"id": "color", "value": {"fixedColor": "#FF780A", "mode": "fixed"}}]}
         ]
       },
       "gridPos": {"h": 9, "w": 8, "x": 0, "y": 0},
@@ -31,7 +32,7 @@
       "options": {
         "renderer": "canvas",
         "map": "none",
-        "getOption": "const ctx = (typeof context !== 'undefined') ? context : null;\nconst panelData = ctx ? ctx.panel.data : data;\nconst gTheme = (ctx && ctx.grafana) ? ctx.grafana.theme : null;\nconst textColor = (gTheme && gTheme.colors && gTheme.colors.text) ? gTheme.colors.text.primary : '#cccccc';\nconst bgColor = (gTheme && gTheme.colors && gTheme.colors.background) ? gTheme.colors.background.primary : '#181b1f';\nconst palette = {\n  'Heizen': '#3274D9',\n  'Warmwasser': '#6ED0E0',\n  'Sonstiges': '#A0A0A0',\n  'Warmwasser-WP': '#A352CC'\n};\nconst values = {};\npanelData.series.forEach((s) => {\n  s.fields.forEach((f) => {\n    if (f.type !== 'number') { return; }\n    const arr = (f.values && f.values.toArray) ? f.values.toArray() : f.values;\n    if (arr && arr.length) {\n      const v = arr[arr.length - 1];\n      if (v !== null && v !== undefined && !isNaN(v)) { values[f.name] = v; }\n    }\n  });\n});\nconst order = ['Heizen', 'Warmwasser', 'Sonstiges', 'Warmwasser-WP'];\nconst chartData = order.filter((n) => values[n] > 0).map((n) => ({ name: n, value: values[n], itemStyle: { color: palette[n] } }));\nif (!chartData.length) {\n  return { title: { text: 'Keine Daten', left: 'center', top: 'middle', textStyle: { color: textColor } } };\n}\nconst total = chartData.reduce((a, b) => a + b.value, 0);\nreturn {\n  tooltip: {\n    trigger: 'item',\n    formatter: (p) => p.name + ': ' + Math.round(p.value).toLocaleString('de-DE') + ' kWh (' + p.percent + ' %)'\n  },\n  graphic: [\n    { type: 'text', left: 'center', top: 'middle', style: { text: Math.round(total).toLocaleString('de-DE') + ' kWh', font: 'bold 30px sans-serif', fill: textColor, textAlign: 'center' } }\n  ],\n  series: [{\n    type: 'pie',\n    radius: ['52%', '78%'],\n    avoidLabelOverlap: true,\n    itemStyle: { borderWidth: 2, borderColor: bgColor },\n    label: { show: true, formatter: (p) => p.name + '\\n' + Math.round(p.value).toLocaleString('de-DE') + ' kWh', fontSize: 16, color: textColor, lineHeight: 22 },\n    labelLine: { length: 14, length2: 10 },\n    data: chartData\n  }]\n};"
+        "getOption": "const ctx = (typeof context !== 'undefined') ? context : null;\nconst panelData = ctx ? ctx.panel.data : data;\nconst gTheme = (ctx && ctx.grafana) ? ctx.grafana.theme : null;\nconst textColor = (gTheme && gTheme.colors && gTheme.colors.text) ? gTheme.colors.text.primary : '#cccccc';\nconst bgColor = (gTheme && gTheme.colors && gTheme.colors.background) ? gTheme.colors.background.primary : '#181b1f';\nconst palette = {\n  'Heizen': '#3274D9',\n  'Warmwasser': '#6ED0E0',\n  'Sonstiges': '#A0A0A0',\n  'Warmwasser-WP': '#A352CC',\n  'Heizung Bad': '#FF780A'\n};\nconst values = {};\npanelData.series.forEach((s) => {\n  s.fields.forEach((f) => {\n    if (f.type !== 'number') { return; }\n    const arr = (f.values && f.values.toArray) ? f.values.toArray() : f.values;\n    if (arr && arr.length) {\n      const v = arr[arr.length - 1];\n      if (v !== null && v !== undefined && !isNaN(v)) { values[f.name] = v; }\n    }\n  });\n});\nconst order = ['Heizen', 'Warmwasser', 'Sonstiges', 'Warmwasser-WP', 'Heizung Bad'];\nconst chartData = order.filter((n) => values[n] > 0).map((n) => ({ name: n, value: values[n], itemStyle: { color: palette[n] } }));\nif (!chartData.length) {\n  return { title: { text: 'Keine Daten', left: 'center', top: 'middle', textStyle: { color: textColor } } };\n}\nconst total = chartData.reduce((a, b) => a + b.value, 0);\nreturn {\n  tooltip: {\n    trigger: 'item',\n    formatter: (p) => p.name + ': ' + Math.round(p.value).toLocaleString('de-DE') + ' kWh (' + p.percent + ' %)'\n  },\n  graphic: [\n    { type: 'text', left: 'center', top: 'middle', style: { text: Math.round(total).toLocaleString('de-DE') + ' kWh', font: 'bold 30px sans-serif', fill: textColor, textAlign: 'center' } }\n  ],\n  series: [{\n    type: 'pie',\n    radius: ['52%', '78%'],\n    avoidLabelOverlap: true,\n    itemStyle: { borderWidth: 2, borderColor: bgColor },\n    label: { show: true, formatter: (p) => p.name + '\\n' + Math.round(p.value).toLocaleString('de-DE') + ' kWh', fontSize: 16, color: textColor, lineHeight: 22 },\n    labelLine: { length: 14, length2: 10 },\n    data: chartData\n  }]\n};"
       },
       "pluginVersion": "12.4.2",
       "targets": [
@@ -54,6 +55,16 @@
           "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1) SELECT ROUND(SUM(w) / 1000.0) AS \"Warmwasser-WP\" FROM h",
           "refId": "B",
           "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Heizung_Bad_M3' AND location = '$location' GROUP BY 1) SELECT ROUND(SUM(w) / 1000.0) AS \"Heizung Bad\" FROM h",
+          "refId": "C",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
         }
       ],
       "title": "Stromverbrauch im Zeitraum – $location",
@@ -74,7 +85,8 @@
           {"matcher": {"id": "byName", "options": "Heizen"}, "properties": [{"id": "color", "value": {"fixedColor": "semi-dark-blue", "mode": "fixed"}}]},
           {"matcher": {"id": "byName", "options": "Warmwasser"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
           {"matcher": {"id": "byName", "options": "Sonstiges"}, "properties": [{"id": "color", "value": {"fixedColor": "#A0A0A0", "mode": "fixed"}}]},
-          {"matcher": {"id": "byName", "options": "Warmwasser-WP"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+          {"matcher": {"id": "byName", "options": "Warmwasser-WP"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Heizung Bad"}, "properties": [{"id": "color", "value": {"fixedColor": "#FF780A", "mode": "fixed"}}]}
         ]
       },
       "gridPos": {"h": 9, "w": 8, "x": 8, "y": 0},
@@ -82,7 +94,7 @@
       "options": {
         "renderer": "canvas",
         "map": "none",
-        "getOption": "const ctx = (typeof context !== 'undefined') ? context : null;\nconst panelData = ctx ? ctx.panel.data : data;\nconst gTheme = (ctx && ctx.grafana) ? ctx.grafana.theme : null;\nconst textColor = (gTheme && gTheme.colors && gTheme.colors.text) ? gTheme.colors.text.primary : '#cccccc';\nconst bgColor = (gTheme && gTheme.colors && gTheme.colors.background) ? gTheme.colors.background.primary : '#181b1f';\nconst palette = {\n  'Heizen': '#3274D9',\n  'Warmwasser': '#6ED0E0',\n  'Sonstiges': '#A0A0A0',\n  'Warmwasser-WP': '#A352CC'\n};\nconst values = {};\npanelData.series.forEach((s) => {\n  s.fields.forEach((f) => {\n    if (f.type !== 'number') { return; }\n    const arr = (f.values && f.values.toArray) ? f.values.toArray() : f.values;\n    if (arr && arr.length) {\n      const v = arr[arr.length - 1];\n      if (v !== null && v !== undefined && !isNaN(v)) { values[f.name] = v; }\n    }\n  });\n});\nconst order = ['Heizen', 'Warmwasser', 'Sonstiges', 'Warmwasser-WP'];\nconst chartData = order.filter((n) => values[n] > 0).map((n) => ({ name: n, value: values[n], itemStyle: { color: palette[n] } }));\nif (!chartData.length) {\n  return { title: { text: 'Keine Daten', left: 'center', top: 'middle', textStyle: { color: textColor } } };\n}\nconst total = chartData.reduce((a, b) => a + b.value, 0);\nreturn {\n  tooltip: {\n    trigger: 'item',\n    formatter: (p) => p.name + ': ' + Math.round(p.value).toLocaleString('de-DE') + ' kWh (' + p.percent + ' %)'\n  },\n  graphic: [\n    { type: 'text', left: 'center', top: 'middle', style: { text: Math.round(total).toLocaleString('de-DE') + ' kWh', font: 'bold 30px sans-serif', fill: textColor, textAlign: 'center' } }\n  ],\n  series: [{\n    type: 'pie',\n    radius: ['52%', '78%'],\n    avoidLabelOverlap: true,\n    itemStyle: { borderWidth: 2, borderColor: bgColor },\n    label: { show: true, formatter: (p) => p.name + '\\n' + Math.round(p.value).toLocaleString('de-DE') + ' kWh', fontSize: 16, color: textColor, lineHeight: 22 },\n    labelLine: { length: 14, length2: 10 },\n    data: chartData\n  }]\n};"
+        "getOption": "const ctx = (typeof context !== 'undefined') ? context : null;\nconst panelData = ctx ? ctx.panel.data : data;\nconst gTheme = (ctx && ctx.grafana) ? ctx.grafana.theme : null;\nconst textColor = (gTheme && gTheme.colors && gTheme.colors.text) ? gTheme.colors.text.primary : '#cccccc';\nconst bgColor = (gTheme && gTheme.colors && gTheme.colors.background) ? gTheme.colors.background.primary : '#181b1f';\nconst palette = {\n  'Heizen': '#3274D9',\n  'Warmwasser': '#6ED0E0',\n  'Sonstiges': '#A0A0A0',\n  'Warmwasser-WP': '#A352CC',\n  'Heizung Bad': '#FF780A'\n};\nconst values = {};\npanelData.series.forEach((s) => {\n  s.fields.forEach((f) => {\n    if (f.type !== 'number') { return; }\n    const arr = (f.values && f.values.toArray) ? f.values.toArray() : f.values;\n    if (arr && arr.length) {\n      const v = arr[arr.length - 1];\n      if (v !== null && v !== undefined && !isNaN(v)) { values[f.name] = v; }\n    }\n  });\n});\nconst order = ['Heizen', 'Warmwasser', 'Sonstiges', 'Warmwasser-WP', 'Heizung Bad'];\nconst chartData = order.filter((n) => values[n] > 0).map((n) => ({ name: n, value: values[n], itemStyle: { color: palette[n] } }));\nif (!chartData.length) {\n  return { title: { text: 'Keine Daten', left: 'center', top: 'middle', textStyle: { color: textColor } } };\n}\nconst total = chartData.reduce((a, b) => a + b.value, 0);\nreturn {\n  tooltip: {\n    trigger: 'item',\n    formatter: (p) => p.name + ': ' + Math.round(p.value).toLocaleString('de-DE') + ' kWh (' + p.percent + ' %)'\n  },\n  graphic: [\n    { type: 'text', left: 'center', top: 'middle', style: { text: Math.round(total).toLocaleString('de-DE') + ' kWh', font: 'bold 30px sans-serif', fill: textColor, textAlign: 'center' } }\n  ],\n  series: [{\n    type: 'pie',\n    radius: ['52%', '78%'],\n    avoidLabelOverlap: true,\n    itemStyle: { borderWidth: 2, borderColor: bgColor },\n    label: { show: true, formatter: (p) => p.name + '\\n' + Math.round(p.value).toLocaleString('de-DE') + ' kWh', fontSize: 16, color: textColor, lineHeight: 22 },\n    labelLine: { length: 14, length2: 10 },\n    data: chartData\n  }]\n};"
       },
       "pluginVersion": "12.4.2",
       "targets": [
@@ -105,6 +117,16 @@
           "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1), mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM h GROUP BY 1) SELECT ROUND(AVG(kwh)) AS \"Warmwasser-WP\" FROM mo",
           "refId": "B",
           "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Heizung_Bad_M3' AND location = '$location' GROUP BY 1), mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM h GROUP BY 1) SELECT ROUND(AVG(kwh)) AS \"Heizung Bad\" FROM mo",
+          "refId": "C",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
         }
       ],
       "title": "Ø Stromverbrauch pro Monat – $location",
@@ -112,7 +134,7 @@
     },
     {
       "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
-      "description": "Gesamter Strom für die Wärmeerzeugung im Zeitraum: Haupt-WP (interner Zähler, stündliche Deltas) plus — nur bei M3 — die separate Brauchwasser-WP. Entspricht exakt der Summe der Segmente im linken Donut.",
+      "description": "Gesamter Strom für die Wärmeerzeugung im Zeitraum: Haupt-WP (interner Zähler, stündliche Deltas) plus — nur bei M3 — die separate Brauchwasser-WP und die Elektroheizung Bad. Entspricht exakt der Summe der Segmente im linken Donut.",
       "fieldConfig": {
         "defaults": {
           "color": {"fixedColor": "blue", "mode": "fixed"},
@@ -134,7 +156,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH e AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1), d AS (SELECT h, v - LAG(v) OVER (ORDER BY h) AS kwh FROM e), wp_mo AS (SELECT date_trunc('month', h) AS mon, SUM(kwh) AS kwh FROM d WHERE kwh IS NOT NULL GROUP BY 1), hh AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1), ww_mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM hh GROUP BY 1) SELECT ROUND(SUM(COALESCE(wp_mo.kwh, 0) + COALESCE(ww_mo.kwh, 0))) AS \"Gesamt\" FROM wp_mo FULL OUTER JOIN ww_mo ON wp_mo.mon = ww_mo.mon",
+          "rawSql": "WITH e AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1), d AS (SELECT h, v - LAG(v) OVER (ORDER BY h) AS kwh FROM e), wp_mo AS (SELECT date_trunc('month', h) AS mon, SUM(kwh) AS kwh FROM d WHERE kwh IS NOT NULL GROUP BY 1), hh AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1), ww_mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM hh GROUP BY 1), hb AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Heizung_Bad_M3' AND location = '$location' GROUP BY 1), hb_mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM hb GROUP BY 1), u AS (SELECT mon, kwh FROM wp_mo UNION ALL SELECT mon, kwh FROM ww_mo UNION ALL SELECT mon, kwh FROM hb_mo), msum AS (SELECT mon, SUM(kwh) AS kwh FROM u GROUP BY 1) SELECT ROUND(COALESCE(SUM(kwh), 0)) AS \"Gesamt\" FROM msum",
           "refId": "A",
           "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
         }
@@ -144,7 +166,7 @@
     },
     {
       "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
-      "description": "Durchschnittlicher Strom für die Wärmeerzeugung pro Monat (Mittelwert der Monatswerte, inkl. separater Brauchwasser-WP bei M3). Entspricht exakt der Summe der Segmente im rechten Donut.",
+      "description": "Durchschnittlicher Strom für die Wärmeerzeugung pro Monat (Mittelwert der Monatswerte, inkl. separater Brauchwasser-WP und Elektroheizung Bad bei M3). Entspricht exakt der Summe der Segmente im rechten Donut.",
       "fieldConfig": {
         "defaults": {
           "color": {"fixedColor": "blue", "mode": "fixed"},
@@ -166,7 +188,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH e AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1), d AS (SELECT h, v - LAG(v) OVER (ORDER BY h) AS kwh FROM e), wp_mo AS (SELECT date_trunc('month', h) AS mon, SUM(kwh) AS kwh FROM d WHERE kwh IS NOT NULL GROUP BY 1), hh AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1), ww_mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM hh GROUP BY 1) SELECT ROUND(AVG(COALESCE(wp_mo.kwh, 0) + COALESCE(ww_mo.kwh, 0))) AS \"Ø pro Monat\" FROM wp_mo FULL OUTER JOIN ww_mo ON wp_mo.mon = ww_mo.mon",
+          "rawSql": "WITH e AS (SELECT date_bin(INTERVAL '1 hour', time) AS h, MAX(CASE WHEN value_cumulated_kwh < 10 THEN value_cumulated_kwh * 1000 ELSE value_cumulated_kwh END) AS v FROM energy_values WHERE $__timeFilter(time) AND sensor_type = 'CanGateway' AND measurement = 'Elektrische_Gesamtenergie_WEZ_MWh' AND location = '$location' AND value_cumulated_kwh > 0 GROUP BY 1), d AS (SELECT h, v - LAG(v) OVER (ORDER BY h) AS kwh FROM e), wp_mo AS (SELECT date_trunc('month', h) AS mon, SUM(kwh) AS kwh FROM d WHERE kwh IS NOT NULL GROUP BY 1), hh AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1), ww_mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM hh GROUP BY 1), hb AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Heizung_Bad_M3' AND location = '$location' GROUP BY 1), hb_mo AS (SELECT date_trunc('month', hr) AS mon, SUM(w) / 1000.0 AS kwh FROM hb GROUP BY 1), u AS (SELECT mon, kwh FROM wp_mo UNION ALL SELECT mon, kwh FROM ww_mo UNION ALL SELECT mon, kwh FROM hb_mo), msum AS (SELECT mon, SUM(kwh) AS kwh FROM u GROUP BY 1) SELECT ROUND(AVG(kwh)) AS \"Ø pro Monat\" FROM msum",
           "refId": "A",
           "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
         }
@@ -240,7 +262,7 @@
     },
     {
       "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
-      "description": "Aufteilung des WP-Stromverbrauchs nach Betriebsart über den CAN-Status FA_Status (1 = Heizen, 4 = Warmwasser; validiert: im Sommer tritt nur noch Status 4 auf). Stundenweise Energie-Deltas (LAG über den kumulierten Zähler) werden anteilig nach den Status-Samples der Stunde zugeordnet. 'Sonstiges' = Abtauen/übrige Status sowie Stunden ohne Status-Daten (Logging-Lücken, z. B. März 2026 ~48 kWh). 'Warmwasser-WP' ist die eigene Brauchwasser-WP in M3, integriert aus power_values (die energy_values dieses Geräts sind fehlerhaft — Connector-Bug); in M1 bleibt diese Serie leer. M3-Haupt-WP macht nie Warmwasser (Status 4 kommt dort nicht vor).",
+      "description": "Aufteilung des WP-Stromverbrauchs nach Betriebsart über den CAN-Status FA_Status (1 = Heizen, 4 = Warmwasser; validiert: im Sommer tritt nur noch Status 4 auf). Stundenweise Energie-Deltas (LAG über den kumulierten Zähler) werden anteilig nach den Status-Samples der Stunde zugeordnet. 'Sonstiges' = Abtauen/übrige Status sowie Stunden ohne Status-Daten (Logging-Lücken, z. B. März 2026 ~48 kWh). 'Warmwasser-WP' ist die eigene Brauchwasser-WP in M3, 'Heizung Bad' die Elektro-Direktheizung im Bad (M3) — beide aus power_values integriert (die energy_values dieser Geräte sind fehlerhaft — Connector-Bug); in M1 bleiben diese Serien leer. M3-Haupt-WP macht nie Warmwasser (Status 4 kommt dort nicht vor).",
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "palette-classic"},
@@ -267,7 +289,8 @@
           {"matcher": {"id": "byName", "options": "Heizen"}, "properties": [{"id": "color", "value": {"fixedColor": "semi-dark-blue", "mode": "fixed"}}]},
           {"matcher": {"id": "byName", "options": "Warmwasser"}, "properties": [{"id": "color", "value": {"fixedColor": "light-blue", "mode": "fixed"}}]},
           {"matcher": {"id": "byName", "options": "Sonstiges"}, "properties": [{"id": "color", "value": {"fixedColor": "#A0A0A0", "mode": "fixed"}}]},
-          {"matcher": {"id": "byName", "options": "Warmwasser-WP"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]}
+          {"matcher": {"id": "byName", "options": "Warmwasser-WP"}, "properties": [{"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Heizung Bad"}, "properties": [{"id": "color", "value": {"fixedColor": "#FF780A", "mode": "fixed"}}]}
         ]
       },
       "gridPos": {"h": 12, "w": 24, "x": 0, "y": 9},
@@ -305,6 +328,16 @@
           "rawQuery": true,
           "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Warmwasser_M3' AND location = '$location' GROUP BY 1) SELECT to_char(date_trunc('month', hr), '%Y-%m') AS \"Monat\", ROUND(SUM(w) / 1000.0, 1) AS \"Warmwasser-WP\" FROM h GROUP BY 1 ORDER BY 1",
           "refId": "B",
+          "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
+        },
+        {
+          "dataset": "iox",
+          "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH h AS (SELECT date_bin(INTERVAL '1 hour', time) AS hr, AVG(value_watt) AS w FROM power_values WHERE $__timeFilter(time) AND sensor_type = 'Shelly' AND device = 'Heizung_Bad_M3' AND location = '$location' GROUP BY 1) SELECT to_char(date_trunc('month', hr), '%Y-%m') AS \"Monat\", ROUND(SUM(w) / 1000.0, 1) AS \"Heizung Bad\" FROM h GROUP BY 1 ORDER BY 1",
+          "refId": "C",
           "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}
         }
       ],
