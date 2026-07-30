@@ -73,10 +73,19 @@
         /// </summary>
         public decimal OutsideChargingCurrentSessionWh { get; set; }
 
+        /// <summary>
+        /// Hysteresis state for battery supported charging (ChargingLevel 3):
+        /// switched off when the battery drops below the minimum level and only
+        /// switched on again once the battery has recovered a few percent above it,
+        /// so the charging does not oscillate around the minimum level.
+        /// </summary>
+        public bool BatterySupportedChargingActive { get; set; }
+
         public ChargingSituation()
         {
             InsideChargingLatestmA = -1;
             OutsideChargingLatestmA = -1;
+            BatterySupportedChargingActive = true;
         }
     }
 }

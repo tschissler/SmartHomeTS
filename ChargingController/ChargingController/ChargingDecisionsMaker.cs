@@ -12,6 +12,10 @@ namespace ChargingController
         private const int MinimumChargingPower = 230 * 6 * 3;
         private const int BatteryChargingMaxPower = 3800;
         private const int BatteryDischargingMaxPower = 3500;
+        // Hysteresis for battery supported charging (level 3): switch off below the
+        // lower level, switch on again only once the battery recovered to the upper level
+        private const int BatterySupportOffBelowLevel = 25;
+        private const int BatterySupportOnAboveLevel = 30;
 
         public static async Task<ChargingResult> CalculateChargingData(ChargingSituation situation, ChargingSettings settings)
         {
@@ -82,8 +86,18 @@ namespace ChargingController
                 case 2:
                     break;
                 case 3:
-                    if (situation.BatteryLevel < 25)
+                    if (situation.BatteryLevel < BatterySupportOffBelowLevel)
                     {
+                        situation.BatterySupportedChargingActive = false;
+                    }
+                    else if (situation.BatteryLevel >= BatterySupportOnAboveLevel)
+                    {
+                        situation.BatterySupportedChargingActive = true;
+                    }
+
+                    if (!situation.BatterySupportedChargingActive)
+                    {
+                        // Battery gets priority until it has recovered: charge the car from real surplus only
                         if (availableChargingPower > MinimumChargingPower + BatteryChargingMaxPower)
                         {
                             availableChargingPower -= BatteryChargingMaxPower;
@@ -93,18 +107,10 @@ namespace ChargingController
                             availableChargingPower = MinimumChargingPower;
                         }
                     }
-                    else if (situation.BatteryLevel < 90)
-                    {
-                        if (availableChargingPower + BatteryDischargingMaxPower >= MinimumChargingPower
-                            && availableChargingPower < MinimumChargingPower)
-                        {
-                            availableChargingPower = MinimumChargingPower;
-                        }
-                    }
                     else
                     {
-                        if (availableChargingPower < MinimumChargingPower &&
-                            availableChargingPower + BatteryDischargingMaxPower >= MinimumChargingPower)
+                        if (availableChargingPower < MinimumChargingPower
+                            && availableChargingPower + BatteryDischargingMaxPower >= MinimumChargingPower)
                         {
                             availableChargingPower = MinimumChargingPower;
                         }
