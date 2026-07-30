@@ -1,4 +1,4 @@
-﻿using MQTTnet;
+using MQTTnet;
 using MQTTnet.Protocol;
 using SmartHomeHelpers.Logging;
 using System.Text;
@@ -9,8 +9,11 @@ namespace MQTTClient
 {
     public class MQTTClient : IDisposable
     {
-        private IMqttClient _client;
-        private MqttClientOptions _options;
+        private readonly IMqttClient _client;
+        private readonly MqttClientOptions _options;
+        private readonly HashSet<string> _subscribedTopics = new();
+        private readonly SemaphoreSlim _connectLock = new(1, 1);
+        private volatile bool _closing = false;
         public string ClientId { get; init; }
         public string BrokerName { get; init; }
         public int BrokerPort { get; init; }
@@ -18,6 +21,12 @@ namespace MQTTClient
         private DateTimeOffset lastMessageReceived = DateTimeOffset.UtcNow;
 
         public event EventHandler<MqttMessageReceivedEventArgs> OnMessageReceived;
+
+        /// <summary>
+        /// Raised with false when the broker connection is lost and with true once it is
+        /// re-established (subscriptions are restored before the event fires).
+        /// </summary>
+        public event EventHandler<bool>? OnConnectionStateChanged;
 
         /// <summary>
         /// Returns the time since the last MQTT message was received
@@ -29,19 +38,15 @@ namespace MQTTClient
             ClientId = clientId + "_" + Environment.MachineName;
             BrokerName = brokerName;
             BrokerPort = brokerPort;
-            Task.Run(async () => await ConnectAsync()).Wait();
-        }
 
-        public async Task ConnectAsync()
-        {
             var factory = new MqttClientFactory();
             _client = factory.CreateMqttClient();
 
             _options = new MqttClientOptionsBuilder()
-            .WithTcpServer(BrokerName, BrokerPort)
-            .WithClientId(ClientId)
-            .WithKeepAlivePeriod(new TimeSpan(0, 1, 0, 0))
-            .Build();
+                .WithTcpServer(BrokerName, BrokerPort)
+                .WithClientId(ClientId)
+                .WithKeepAlivePeriod(TimeSpan.FromSeconds(60))
+                .Build();
 
             _client.ApplicationMessageReceivedAsync += e =>
             {
@@ -58,19 +63,82 @@ namespace MQTTClient
                 return Task.CompletedTask;
             };
 
-            await _client.ConnectAsync(_options);
+            _client.DisconnectedAsync += HandleDisconnectedAsync;
+
+            Task.Run(async () => await ConnectAsync()).Wait();
+        }
+
+        public async Task ConnectAsync()
+        {
+            if (_client.IsConnected || _closing)
+                return;
+
+            await _connectLock.WaitAsync();
+            try
+            {
+                if (_client.IsConnected || _closing)
+                    return;
+
+                await _client.ConnectAsync(_options);
+
+                string[] topics;
+                lock (_subscribedTopics)
+                {
+                    topics = _subscribedTopics.ToArray();
+                }
+                foreach (var topic in topics)
+                {
+                    await _client.SubscribeAsync(topic);
+                }
+            }
+            finally
+            {
+                _connectLock.Release();
+            }
+
+            OnConnectionStateChanged?.Invoke(this, true);
+        }
+
+        private async Task HandleDisconnectedAsync(MqttClientDisconnectedEventArgs e)
+        {
+            if (_closing)
+                return;
+
+            Console.WriteLine($"MQTT connection to {BrokerName} lost ({e.Reason}), reconnecting...");
+            OnConnectionStateChanged?.Invoke(this, false);
+
+            while (!_closing && !_client.IsConnected)
+            {
+                try
+                {
+                    await ConnectAsync();
+                    Console.WriteLine($"MQTT connection to {BrokerName} re-established, subscriptions restored");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"MQTT reconnect to {BrokerName} failed: {ex.Message}, retrying in 5s");
+                    await Task.Delay(5000);
+                }
+            }
         }
 
         public async Task MQTTDisconnectAsync()
         {
+            _closing = true;
             await _client.DisconnectAsync();
         }
 
         public async Task SubscribeToTopic(string topic)
         {
+            lock (_subscribedTopics)
+            {
+                _subscribedTopics.Add(topic);
+            }
             if (!_client.IsConnected)
             {
+                // ConnectAsync restores all tracked subscriptions, including this one
                 await ConnectAsync();
+                return;
             }
             await _client.SubscribeAsync(topic);
         }
@@ -91,9 +159,19 @@ namespace MQTTClient
             await _client.PublishAsync(message, CancellationToken.None);
         }
 
-        public async void Dispose()
+        public void Dispose()
         {
-            await MQTTDisconnectAsync();
+            _closing = true;
+            try
+            {
+                if (_client.IsConnected)
+                    _client.DisconnectAsync().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Best effort on shutdown
+            }
+            _client.Dispose();
         }
     }
 

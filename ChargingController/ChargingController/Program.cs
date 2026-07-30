@@ -10,7 +10,9 @@ ChargingSituation currentChargingSituation = new ChargingSituation();
 ChargingSettings currentChargingSettings = new ChargingSettings();
 DateTime lastOutsideSetTime = DateTime.MinValue;
 DateTime lastInsideSetTime = DateTime.MinValue;
+DateTime lastHeartbeatTime = DateTime.MinValue;
 const int minimumSetIntervalSeconds = 10;
+const int heartbeatIntervalSeconds = 60;
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
@@ -53,7 +55,47 @@ while (true)
         ChargingControllerHealthCheck.UpdateMqttConnectionStatus(false);
         await MQTTConnectAsync();
     }
+    if (DateTime.Now.Subtract(lastHeartbeatTime).TotalSeconds >= heartbeatIntervalSeconds)
+    {
+        lastHeartbeatTime = DateTime.Now;
+        await PublishHeartbeat();
+    }
     await Task.Delay(1000);
+}
+
+// The KebaConnector only enforces a setpoint while it is fresh (wallboxes fall back to
+// autonomous full-power charging when the controller is silent), so the latest sent
+// values are re-published periodically as a heartbeat.
+async Task PublishHeartbeat()
+{
+    try
+    {
+        if (!mqttClient.IsConnected)
+            return;
+        if (currentChargingSituation.InsideChargingLatestmA >= 0)
+        {
+            await PublishChargingCommand("commands/charging/KebaGarage", currentChargingSituation.InsideChargingLatestmA);
+        }
+        if (currentChargingSituation.OutsideChargingLatestmA >= 0)
+        {
+            await PublishChargingCommand("commands/charging/KebaOutside", currentChargingSituation.OutsideChargingLatestmA);
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error publishing heartbeat: {ex.Message}");
+    }
+}
+
+async Task PublishChargingCommand(string topic, int chargingCurrentmA)
+{
+    var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingCurrentmA });
+    await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+        .WithTopic(topic)
+        .WithPayload(payloadOut)
+        .WithRetainFlag()
+        .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
+        .Build());
 }
 
 
@@ -109,36 +151,26 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation, currentChargingSettings);
         if (chargingResult.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
         {
-            if (DateTime.Now.Subtract(lastInsideSetTime).Seconds > minimumSetIntervalSeconds)
+            if (DateTime.Now.Subtract(lastInsideSetTime).TotalSeconds > minimumSetIntervalSeconds)
             {
-                var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingResult.InsideChargingCurrentmA });
-                await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
-                    .WithTopic("commands/charging/KebaGarage")
-                    .WithPayload(payloadOut)
-                    .WithRetainFlag()
-                    .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
-                    .Build());
-                Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
+                await PublishChargingCommand("commands/charging/KebaGarage", chargingResult.InsideChargingCurrentmA);
+                Console.WriteLine($"Sent charging command for KebaGarage: {chargingResult.InsideChargingCurrentmA} mA");
                 currentChargingSituation.InsideChargingLatestmA = chargingResult.InsideChargingCurrentmA;
+                lastInsideSetTime = DateTime.Now;
             }
             else
             {
                 Console.WriteLine($"Inside charging current was set too recently. Skipping.");
             }
         }
-        if (chargingResult.OutsideChargingCurrentmA != currentChargingSituation.OutsideCurrentChargingPower)
+        if (chargingResult.OutsideChargingCurrentmA != currentChargingSituation.OutsideChargingLatestmA)
         {
-            if (DateTime.Now.Subtract(lastOutsideSetTime).Seconds > minimumSetIntervalSeconds)
+            if (DateTime.Now.Subtract(lastOutsideSetTime).TotalSeconds > minimumSetIntervalSeconds)
             {
-                var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingResult.OutsideChargingCurrentmA });
-                await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
-                    .WithTopic("commands/charging/KebaOutside")
-                    .WithPayload(payloadOut)
-                    .WithRetainFlag()
-                    .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
-                    .Build());
-                Console.WriteLine($"Sent MQTT message with payload; {payloadOut}");
+                await PublishChargingCommand("commands/charging/KebaOutside", chargingResult.OutsideChargingCurrentmA);
+                Console.WriteLine($"Sent charging command for KebaOutside: {chargingResult.OutsideChargingCurrentmA} mA");
                 currentChargingSituation.OutsideChargingLatestmA = chargingResult.OutsideChargingCurrentmA;
+                lastOutsideSetTime = DateTime.Now;
             }
             else
             {
@@ -203,6 +235,8 @@ async Task MQTTConnectAsync()
 static void StartHealthCheckServer(int port)
 {
     var builder = WebApplication.CreateBuilder();
+    // Health check probes would otherwise rotate away the useful log lines within hours
+    builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
 
     // Add health checks
     builder.Services.AddHealthChecks()

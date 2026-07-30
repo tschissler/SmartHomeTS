@@ -65,6 +65,7 @@ Console.WriteLine("  - Connecting to MQTT Broker");
 mqttClient = new MQTTClient.MQTTClient("KebaConnector", mqttBroker, mqttPort);
 Console.WriteLine($"    ClientId: {mqttClient.ClientId}");
 KebaConnectorHealthCheck.UpdateMqttConnectionStatus(true);
+mqttClient.OnConnectionStateChanged += (_, connected) => KebaConnectorHealthCheck.UpdateMqttConnectionStatus(connected);
 
 mqttClient.OnMessageReceived += MqttMessageReceived;
 
@@ -77,52 +78,41 @@ var timer = new Timer(Update, null, 2000, 5000);
 Thread.Sleep(Timeout.Infinite);
 
 
-// Fix for CS4014: Add 'await' to asynchronous calls to ensure proper execution order.
 async void Update(object? state)
 {
     try
     {
-        await kebaOutside.ReadDeviceData().ContinueWith((task) =>
+        var dataOutside = await kebaOutside.ReadDeviceData();
+        if (dataOutside is not null)
         {
-            if (task.IsCompletedSuccessfully && task.Result is not null)
-            {
-                var data = task.Result;
-                Console.WriteLine($"Keba Outside: {data.PlugStatus,-50} {data.CurrentChargingPower,10} W {data.EnergyCurrentChargingSession,15:#,##0} Wh {data.EnergyTotal,15:#,##0} Wh");
-                SendDataAsMQTTMessage(mqttClient, data, "KebaOutside").Wait();
-                KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
-            }
-        });
+            Console.WriteLine($"Keba Outside: {dataOutside.PlugStatus,-50} {dataOutside.CurrentChargingPower,10} W {dataOutside.EnergyCurrentChargingSession,15:#,##0} Wh {dataOutside.EnergyTotal,15:#,##0} Wh");
+            await SendDataAsMQTTMessage(mqttClient, dataOutside, "KebaOutside");
+            KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
+            await kebaOutside.EnforceDesiredState(dataOutside, "Outside");
+        }
 
-        await kebaGarage.ReadDeviceData().ContinueWith((task) =>
+        var dataGarage = await kebaGarage.ReadDeviceData();
+        if (dataGarage is not null)
         {
-            if (task.IsCompletedSuccessfully && task.Result is not null)
-            {
-                var data = task.Result;
-                Console.WriteLine($"Keba Garage : {data.PlugStatus,-50} {data.CurrentChargingPower,10} W {data.EnergyCurrentChargingSession,15:#,##0} Wh {data.EnergyTotal,15:#,##0} Wh");
-                SendDataAsMQTTMessage(mqttClient, data, "KebaGarage").Wait();
-                KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
-            }
-        });
+            Console.WriteLine($"Keba Garage : {dataGarage.PlugStatus,-50} {dataGarage.CurrentChargingPower,10} W {dataGarage.EnergyCurrentChargingSession,15:#,##0} Wh {dataGarage.EnergyTotal,15:#,##0} Wh");
+            await SendDataAsMQTTMessage(mqttClient, dataGarage, "KebaGarage");
+            KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
+            await kebaGarage.EnforceDesiredState(dataGarage, "Garage");
+        }
 
-        await kebaGarage.CheckIfChargingSessionEnded("Garage").ContinueWith((task) =>
+        var sessionGarage = await kebaGarage.CheckIfChargingSessionEnded("Garage");
+        if (sessionGarage is not null)
         {
-            if (task.IsCompletedSuccessfully && task.Result is not null)
-            {
-                var data = task.Result;
-                Console.WriteLine($"--- Keba Garage Charging Session ended ---\n  SessionID {data.SessionId,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
-                SendChargingSessionAsMQTTMessage(mqttClient, data, "KebaGarage").Wait();
-            }
-        });
+            Console.WriteLine($"--- Keba Garage Charging Session ended ---\n  SessionID {sessionGarage.SessionId,-5} {sessionGarage.StartTime,-30} {sessionGarage.EndTime,-30} {sessionGarage.EnergyOfChargingSession,15:#,##0} Wh {sessionGarage.TatalEnergyAtStart,15:#,##0} Wh");
+            await SendChargingSessionAsMQTTMessage(mqttClient, sessionGarage, "KebaGarage");
+        }
 
-        await kebaOutside.CheckIfChargingSessionEnded("Stellplatz").ContinueWith((task) =>
+        var sessionOutside = await kebaOutside.CheckIfChargingSessionEnded("Stellplatz");
+        if (sessionOutside is not null)
         {
-            if (task.IsCompletedSuccessfully && task.Result is not null)
-            {
-                var data = task.Result;
-                Console.WriteLine($"--- Keba Outside Charging Session ended ---\n  SessionID {data.SessionId,-5} {data.StartTime,-30} {data.EndTime,-30} {data.EnergyOfChargingSession,15:#,##0} Wh {data.TatalEnergyAtStart,15:#,##0} Wh");
-                SendChargingSessionAsMQTTMessage(mqttClient, data, "KebaOutside").Wait();
-            }
-        });
+            Console.WriteLine($"--- Keba Outside Charging Session ended ---\n  SessionID {sessionOutside.SessionId,-5} {sessionOutside.StartTime,-30} {sessionOutside.EndTime,-30} {sessionOutside.EnergyOfChargingSession,15:#,##0} Wh {sessionOutside.TatalEnergyAtStart,15:#,##0} Wh");
+            await SendChargingSessionAsMQTTMessage(mqttClient, sessionOutside, "KebaOutside");
+        }
     }
     catch (Exception ex)
     {
@@ -208,6 +198,8 @@ static async Task SendChargingSessionAsMQTTMessage(MQTTClient.MQTTClient mqttCli
 static void StartHealthCheckServer(int port)
 {
     var builder = WebApplication.CreateBuilder();
+    // Health check probes would otherwise rotate away the useful log lines within hours
+    builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
 
     // Add health checks
     builder.Services.AddHealthChecks()

@@ -11,14 +11,37 @@ namespace KebaConnector
     {
         private IPAddress ipAddress;
         private int uDPPort;
-        private volatile int actualCurrentFromDevice = -1; // -1 = unknown (not yet read from device)
-        private readonly SemaphoreSlim udpSemaphore = new(1, 1);
+        // Shared across all instances: both wallboxes answer to local port 7090, so concurrent
+        // commands to different boxes can receive each other's responses. Serialize all UDP traffic.
+        private static readonly SemaphoreSlim udpSemaphore = new(1, 1);
         private int LastChargingSessionPublishedViaMQTT = 0;
+
+        // Last value successfully written to the device via currtime (-1 = nothing written yet)
+        private volatile int lastWrittenCurrent = -1;
+        // Last desired current received from the ChargingController and when it arrived.
+        // The wallbox forgets its current limit when a charging session ends, so the desired
+        // value is re-applied as long as it is fresh (controller heartbeats every 60s).
+        private volatile int desiredCurrent = -1;
+        private DateTimeOffset desiredCurrentReceivedAt;
+        private DateTimeOffset lastEnforcementWriteAt = DateTimeOffset.MinValue;
+        private bool staleReleaseDone = false;
+        private static readonly TimeSpan SetpointFreshDuration = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan StaleReleaseAfter = TimeSpan.FromMinutes(10);
+        // Written when the controller goes silent: the box caps at its hardware limit (Curr HW),
+        // so the car can always charge even if the control loop is down.
+        private const int ReleaseCurrent = 63000;
 
         public KebaDeviceConnector(IPAddress IpAddress, int UDPPort, object? lockObject = null)
         {
             ipAddress = IpAddress;
             uDPPort = UDPPort;
+            desiredCurrentReceivedAt = DateTimeOffset.UtcNow;
+        }
+
+        private static bool WritesEnabled()
+        {
+            string? writeToDeviceFlag = Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE");
+            return writeToDeviceFlag != null && writeToDeviceFlag.ToLower() == "true";
         }
 
         /// <summary>
@@ -32,20 +55,68 @@ namespace KebaConnector
         /// <param name="state"></param>
         public async Task UpdateDeviceDesiredCurrent(int newCurrent)
         {
-            string? writeToDeviceFlag = Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE");
-            if (writeToDeviceFlag == null || writeToDeviceFlag.ToLower() != "true")
+            desiredCurrent = newCurrent;
+            desiredCurrentReceivedAt = DateTimeOffset.UtcNow;
+            staleReleaseDone = false;
+
+            if (!WritesEnabled())
             {
                 Console.WriteLine("Environment variable KEBA_WRITE_TO_DEVICE is not set to 'true', so we will not write to the device");
                 Console.WriteLine($"Would have written {newCurrent} mA as charging current to device otherwise");
                 return;
             }
-            if (actualCurrentFromDevice >= 0 && newCurrent == actualCurrentFromDevice)
+            if (newCurrent == lastWrittenCurrent)
             {
-                Console.WriteLine($"Charging current already at {newCurrent} mA on device, skipping write to device");
+                // Already written; if the wallbox lost the value (e.g. session ended),
+                // EnforceDesiredState detects the deviation from the device data and re-applies it.
                 return;
             }
             WriteChargingCurrentToDevice(newCurrent);
             return;
+        }
+
+        /// <summary>
+        /// Reconciles the device with the last desired current from the ChargingController.
+        /// The wallbox falls back to its default (full) current when a charging session ends,
+        /// so a fresh setpoint is re-applied whenever the device deviates. When the controller
+        /// has been silent for too long, the box is released to full current once, so charging
+        /// stays possible without the control loop (autonomous fallback).
+        /// </summary>
+        public async Task EnforceDesiredState(KebaData data, string deviceName)
+        {
+            if (!WritesEnabled())
+                return;
+
+            var now = DateTimeOffset.UtcNow;
+            var setpointAge = now - desiredCurrentReceivedAt;
+
+            if (desiredCurrent >= 0 && setpointAge <= SetpointFreshDuration)
+            {
+                // A setpoint of 0 shows up as "Enable sys" = 0 on the box while "Curr user" keeps its old value
+                var inSync = desiredCurrent == 0
+                    ? !data.ChargingEnabled
+                    : data.TargetCurrency == desiredCurrent;
+                // Only relevant while a vehicle is connected; on plug-in the next read cycle corrects the box
+                var vehicleConnected = data.PlugStatus == PlugStatus.CablePluggedInChargingStationAndVehicleAndLocked;
+                if (!inSync && vehicleConnected && now - lastEnforcementWriteAt >= TimeSpan.FromSeconds(10))
+                {
+                    Console.WriteLine($"Keba {deviceName}: device deviates from desired {desiredCurrent} mA " +
+                        $"(Curr user={data.TargetCurrency} mA, charging enabled={data.ChargingEnabled}), re-applying");
+                    lastEnforcementWriteAt = now;
+                    WriteChargingCurrentToDevice(desiredCurrent);
+                }
+            }
+            else if (setpointAge >= StaleReleaseAfter && !staleReleaseDone)
+            {
+                staleReleaseDone = true;
+                var restricted = data.TargetCurrency != ReleaseCurrent || !data.ChargingEnabled;
+                if (restricted)
+                {
+                    Console.WriteLine($"Keba {deviceName}: no charging command received for " +
+                        $"{setpointAge.TotalMinutes:F0} minutes, releasing device to full current so charging stays possible");
+                    WriteChargingCurrentToDevice(ReleaseCurrent);
+                }
+            }
         }
 
         public async Task<KebaData?> ReadDeviceData()
@@ -58,7 +129,6 @@ namespace KebaConnector
             try
             {
                 var data = GetDeviceStatus();
-                actualCurrentFromDevice = data.MaxCurrency;
                 return new KebaData(
                     (PlugStatus)data.PlugStatus,
                     data.ChargingEnabled == 1,
@@ -207,7 +277,7 @@ namespace KebaConnector
                     if (result == "TCH-OK :done\n")
                     {
                         Console.WriteLine("Updated charging current to " + current);
-                        actualCurrentFromDevice = current;
+                        lastWrittenCurrent = current;
                         return;
                     }
 
@@ -297,8 +367,13 @@ namespace KebaConnector
             }
             catch (Exception ex)
             {
+                // Rethrow instead of returning an empty object: zeroed data must not be published
+                // as real values or feed the desired-state reconciliation
                 Console.WriteLine($"Error while reading device status: {ex.Message}\n {dataString}");
+                throw;
             }
+            if (data is null)
+                throw new InvalidOperationException("Could not parse device status reports");
             return data;
         }
 
