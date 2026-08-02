@@ -66,9 +66,10 @@ dotnet test RulesEngine/RulesEngine.sln
 ## Deployment
 
 CI (`.github/workflows/RulesEngine.yml`): Tests → arm64-Image →
-`tschissler/rulesengine` (nur arm64 — läuft auf den Raspberry-Nodes,
-`nodeSelector` in `kube.yaml`; amd64-Nodes bleiben für leistungshungrige
-Anwendungen frei).
+`tschissler/rulesengine` (nur arm64 — läuft auf den Raspberry-Nodes;
+amd64-Nodes bleiben für leistungshungrige Anwendungen frei).
 
-Deployment auf den Cluster erfolgt über **ArgoCD** (Einrichtung noch offen);
-`kube.yaml` ist das Manifest dafür.
+Deployment auf den Cluster erfolgt über **ArgoCD**; das Helm-Chart samt
+Application-Manifest liegt im GitOps-Repo `SmartHomeDeployments`
+(forgejo.intern, `RulesEngine.yaml` + `RulesEngine/`). Der
+argocd-image-updater zieht neue SemVer-Tags automatisch nach.
