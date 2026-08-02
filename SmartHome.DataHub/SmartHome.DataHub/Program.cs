@@ -153,6 +153,7 @@ using (var scope = app.Services.CreateScope())
     await mqttClient.SubscribeToTopic("data/thermostat/M3/shelly/#");
     await mqttClient.SubscribeToTopic("cangateway/#");
     await mqttClient.SubscribeToTopic("daten/Heizkörperlüfter/#");
+    await mqttClient.SubscribeToTopic("daten/Heizung/+/Mischersteuerung/#");
     await mqttClient.SubscribeToTopic("daten/zisterneFuellstand/#");
     await mqttClient.SubscribeToTopic("daten/Wasser/M1/Wasserzaehler/main/value");
     await mqttClient.SubscribeToTopic("daten/Wasser/M3/Wasserzaehler/main/value");
@@ -496,6 +497,56 @@ using (var scope = app.Services.CreateScope())
                             Device = device,
                             Measurement = "Batterie",
                             Value_Percent = data.BatteryLevel,
+                        },
+                        DateTimeOffset.UtcNow);
+                }
+                return;
+            }
+
+            if (topic.StartsWith("daten/Heizung/") && topicParts.Length >= 5 && topicParts[3] == "Mischersteuerung")
+            {
+                MixerStatusData? mixerStatus;
+                try
+                {
+                    mixerStatus = JsonSerializer.Deserialize<MixerStatusData>(payload, jsonOptions);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError($"####Error deserializing mixer status for topic {topic}: {ex.Message}");
+                    logger.LogError($"Payload: {payload}");
+                    mixerStatus = null;
+                }
+
+                // During a travel the actual position is not defined — write nothing
+                if (mixerStatus != null && !mixerStatus.Moving &&
+                    (mixerStatus.Position == "open" || mixerStatus.Position == "closed"))
+                {
+                    var location = topicParts[2];
+                    var device = topicParts[4];
+                    influx3Connector.WriteStatusValue(
+                        new InfluxStatusRecord
+                        {
+                            MeasurementId = $"Heizung_{location}_Mischersteuerung_{device}_PositionIst",
+                            Category = MeasurementCategory.Heizung,
+                            SubCategory = "Ist",
+                            SensorType = "MixerController",
+                            Location = location,
+                            Device = device,
+                            Measurement = "PositionIst",
+                            Value_Status = mixerStatus.Position == "open" ? 1m : 0m,
+                        },
+                        DateTimeOffset.UtcNow);
+                    influx3Connector.WriteStatusValue(
+                        new InfluxStatusRecord
+                        {
+                            MeasurementId = $"Heizung_{location}_Mischersteuerung_{device}_PositionSoll",
+                            Category = MeasurementCategory.Heizung,
+                            SubCategory = "Soll",
+                            SensorType = "MixerController",
+                            Location = location,
+                            Device = device,
+                            Measurement = "PositionSoll",
+                            Value_Status = mixerStatus.Target == "open" ? 1m : 0m,
                         },
                         DateTimeOffset.UtcNow);
                 }
