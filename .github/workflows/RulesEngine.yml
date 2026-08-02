@@ -1,0 +1,84 @@
+name: RulesEngine CD
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - .github/workflows/RulesEngine.yml
+      - RulesEngine/**
+      - MQTTClient/**
+      - SmartHomeHelpers/**
+  workflow_dispatch:
+
+env:
+  PROJECT_NAME: RulesEngine
+  IMAGE_NAME: rulesengine
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    # A red test must never produce an image
+    - name: Run unit tests
+      run: dotnet test ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.sln -c Release
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Set up QEMU for multi-architecture builds
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    # Set up Docker Buildx for multi-platform builds
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+    # Generate version info
+    - name: Generate version information
+      id: version
+      run: |
+        echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+        echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+        echo "GIT_SHA=${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "GIT_SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+    # arm64 only — the RulesEngine runs on the Raspberry nodes, amd64 nodes
+    # are reserved for resource-hungry workloads
+    - name: Build and publish Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./${{ env.PROJECT_NAME }}/Dockerfile
+        platforms: linux/arm64
+        push: true
+        tags: |
+          tschissler/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          tschissler/${{ env.IMAGE_NAME }}:latest
+        build-args: |
+          PROJECT_NAME=${{ env.PROJECT_NAME }}
+          VERSION=${{ steps.version.outputs.VERSION }}
+          BUILD_DATE=${{ steps.version.outputs.BUILD_DATE }}
+          GIT_COMMIT=${{ steps.version.outputs.GIT_SHORT_SHA }}
+          BUILD_NUMBER=${{ github.run_number }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: false
+        sbom: false
