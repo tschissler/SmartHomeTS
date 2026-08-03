@@ -21,10 +21,10 @@ struct RelayChannel {
 };
 
 const RelayChannel channels[] = {
-    {16, "Mischer 1 Fahrt"},
-    {17, "Mischer 1 Richtung"},
-    {18, "Mischer 2 Fahrt"},
-    {19, "Mischer 2 Richtung"},
+    {16, "Mischer_FBHZ Fahrt"},
+    {17, "Mischer_FBHZ Richtung"},
+    {18, "Mischer_HK Fahrt"},
+    {19, "Mischer_HK Richtung"},
     {21, "Reserve 1"},
     {22, "Reserve 2"},
     {23, "Reserve 3"},

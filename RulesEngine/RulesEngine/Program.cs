@@ -24,7 +24,7 @@ var mqttPort = int.Parse(configuration["MqttPort"] ?? "32004");
 var healthCheckPort = int.Parse(configuration["HealthCheckPort"] ?? "8080");
 var faStatusTopic = configuration["FaStatusTopic"] ?? "cangateway/M1/WEZ/Status/FA_Status";
 var mixerCommandTopics = (configuration["MixerCommandTopics"]
-    ?? "commands/MixerController/M1/Mischer1,commands/MixerController/M1/Mischer2")
+    ?? "commands/MixerController/M1/Mischer_FBHZ,commands/MixerController/M1/Mischer_HK")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 var maxStatusAgeMinutes = int.Parse(configuration["MaxStatusAgeMinutes"] ?? "15");
 var evaluationIntervalSeconds = int.Parse(configuration["EvaluationIntervalSeconds"] ?? "60");

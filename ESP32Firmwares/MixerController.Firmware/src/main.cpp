@@ -199,8 +199,8 @@ class MixerActuator {
 };
 
 MixerActuator mixers[] = {
-    MixerActuator("Mischer1", MIXER1_DIRECTION_PIN, MIXER1_RUN_PIN),
-    MixerActuator("Mischer2", MIXER2_DIRECTION_PIN, MIXER2_RUN_PIN),
+    MixerActuator("Mischer_FBHZ", MIXER1_DIRECTION_PIN, MIXER1_RUN_PIN),
+    MixerActuator("Mischer_HK", MIXER2_DIRECTION_PIN, MIXER2_RUN_PIN),
 };
 const int mixerCount = sizeof(mixers) / sizeof(mixers[0]);
 

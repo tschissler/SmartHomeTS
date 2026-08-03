@@ -42,8 +42,8 @@ bekannt):
 
 | Funktion | GPIO |
 |---|---|
-| Mischer 1 Fahrt / Richtung | 16 / 17 |
-| Mischer 2 Fahrt / Richtung | 18 / 19 |
+| Mischer_FBHZ (1) Fahrt / Richtung | 16 / 17 |
+| Mischer_HK (2) Fahrt / Richtung | 18 / 19 |
 | Reserve-Relais 1–5 | 21, 22, 23, 32, 33 |
 | OneWire Bus 1 / 2 / 3 | 25 / 26 / 27 |
 
@@ -54,7 +54,7 @@ Nicht verwenden: 0, 2, 5, 12, 15 (Strapping), 1, 3 (UART), 6–11 (Flash),
 
 | Topic | Richtung | Inhalt |
 |---|---|---|
-| `commands/MixerController/{location}/Mischer1\|Mischer2` | in (retained) | Zielposition `open` / `close` von der RulesEngine (publiziert bei Entscheidungsänderung) |
+| `commands/MixerController/{location}/Mischer_FBHZ\|Mischer_HK` | in (retained) | Zielposition `open` / `close` von der RulesEngine (publiziert bei Entscheidungsänderung) |
 | `config/MixerController/{chipID}` | in (retained) | Konfiguration, siehe unten |
 | `daten/Heizung/{location}/Mischersteuerung/{Mischer}` | out (retained) | Zustand als JSON (position = Ist, target = Soll, moving, timestamp) — publiziert bei Fahrtbeginn und -ende |
 | `daten/temperatur/{location}/{sensorName}` | out (retained) | Temperaturwert in °C |
@@ -93,13 +93,13 @@ Das Projekt enthält drei PlatformIO-Environments (`platformio.ini`):
 1. **Relais-Verdrahtung testen:** `pio run -e relaytest -t upload`, dann
    `pio device monitor`.
 2. **Mischer testen:** `pio run -e mixertest -t upload`. Im seriellen Monitor:
-   `1`/`2` = Mischer 1 auf/zu, `3`/`4` = Mischer 2 auf/zu, `0` = Stopp,
+   `1`/`2` = Mischer_FBHZ auf/zu, `3`/`4` = Mischer_HK auf/zu, `0` = Stopp,
    `h` = Hilfe. Dabei die tatsächliche Laufzeit der Antriebe messen und
    prüfen, dass „auf"/„zu" richtig herum wirken (sonst Auf-/Zu-Adern am
    Richtungs-Relais tauschen).
 3. **Voll integrierte Firmware deployen** (`esp32dev`): gemessene Laufzeit in
-   der Firmware-Konfiguration hinterlegen, WW-Statuswerte in der
-   RulesEngine-Konfiguration (`kube.yaml`) eintragen, RulesEngine deployen.
+   der Firmware-Konfiguration hinterlegen (die RulesEngine läuft bereits via
+   ArgoCD, siehe RulesEngine-README).
    Manuelle Tests: Zielposition direkt retained auf das Command-Topic
    publizieren — sie bleibt stehen, bis die RulesEngine das nächste Mal anders
    entscheidet. Für längere manuelle Eingriffe die RulesEngine auf 0 Replicas

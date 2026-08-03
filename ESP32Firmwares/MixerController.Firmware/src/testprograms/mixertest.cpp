@@ -7,8 +7,8 @@
 // monitor, so direction wiring and actual mixer behavior can be verified
 // on site before deploying the full firmware:
 //
-//   1 = Mischer 1 auffahren        3 = Mischer 2 auffahren
-//   2 = Mischer 1 zufahren         4 = Mischer 2 zufahren
+//   1 = Mischer_FBHZ auffahren        3 = Mischer_HK auffahren
+//   2 = Mischer_FBHZ zufahren         4 = Mischer_HK zufahren
 //   0 = alle Antriebe sofort stoppen
 //   h = Hilfe anzeigen
 //
@@ -33,8 +33,8 @@ struct Mixer {
 
 Mixer mixers[] = {
     // {name, directionPin, runPin} — wired: run relays on 16/18, direction relays on 17/19
-    {"Mischer 1", 17, 16},
-    {"Mischer 2", 19, 18},
+    {"Mischer_FBHZ", 17, 16},
+    {"Mischer_HK", 19, 18},
 };
 const int mixerCount = sizeof(mixers) / sizeof(mixers[0]);
 
@@ -71,8 +71,8 @@ void printHelp() {
   Serial.println();
   Serial.println("=======================================================");
   Serial.println("MixerController mixer test");
-  Serial.println("  1 = Mischer 1 auffahren    3 = Mischer 2 auffahren");
-  Serial.println("  2 = Mischer 1 zufahren     4 = Mischer 2 zufahren");
+  Serial.println("  1 = Mischer_FBHZ auffahren    3 = Mischer_HK auffahren");
+  Serial.println("  2 = Mischer_FBHZ zufahren     4 = Mischer_HK zufahren");
   Serial.println("  0 = alle Antriebe sofort stoppen");
   Serial.println("  h = diese Hilfe");
   Serial.println("Laufzeit pro Fahrt: " + String(travelMs / 1000) + "s (" +

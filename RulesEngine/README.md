@@ -29,7 +29,7 @@ Betriebsmodus der Hoval-Wärmepumpe:
 | Topic | Richtung | Inhalt |
 |---|---|---|
 | `cangateway/M1/WEZ/Status/FA_Status` | in | Betriebsmodus der WP (CAN-Gateway) |
-| `commands/MixerController/M1/Mischer1` + `Mischer2` | out (retained) | Zielposition `open` / `close` |
+| `commands/MixerController/M1/Mischer_FBHZ` + `Mischer_HK` | out (retained) | Zielposition `open` / `close` |
 | `meta/RulesEngine/version` | out (retained) | Service-Version |
 
 Die Zielposition wird retained publiziert — einmal beim Start und danach nur
