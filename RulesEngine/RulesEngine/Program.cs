@@ -35,6 +35,8 @@ var coolingStatusValues = (configuration["CoolingStatusValues"] ?? "2")
 var fbhzFlowTempTopic = configuration["FbhzFlowTempTopic"] ?? "cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist";
 var fbhzPumpTopic = configuration["FbhzPumpTopic"] ?? "cangateway/M1/FBHZ/Status/Pumpe";
 var fbhzMixerCommandTopic = configuration["FbhzMixerCommandTopic"] ?? "commands/MixerController/M1/Mischer_FBHZ";
+var configTopic = configuration["ConfigTopic"] ?? "config/RulesEngine";
+// Startup default only — the retained config/RulesEngine message overrides it at runtime
 var coolingFlowTargetTemperature = double.Parse(configuration["CoolingFlowTargetTemperature"] ?? "15.0", System.Globalization.CultureInfo.InvariantCulture);
 var coolingFlowDeadbandKelvin = double.Parse(configuration["CoolingFlowDeadbandKelvin"] ?? "0.5", System.Globalization.CultureInfo.InvariantCulture);
 var pulseSecondsPerKelvin = double.Parse(configuration["PulseSecondsPerKelvin"] ?? "5.0", System.Globalization.CultureInfo.InvariantCulture);
@@ -46,13 +48,14 @@ Console.WriteLine($" ### FA_Status topic: {faStatusTopic}");
 Console.WriteLine($" ### Mixer command topics: {string.Join(", ", mixerCommandTopics)}");
 Console.WriteLine($" ### Max status age: {maxStatusAgeMinutes} min, evaluation interval: {evaluationIntervalSeconds} s");
 Console.WriteLine($" ### Cooling regulation: FA_Status in [{string.Join(", ", coolingStatusValues)}], target {coolingFlowTargetTemperature}°C ±{coolingFlowDeadbandKelvin}K, {pulseSecondsPerKelvin} s/K ({minPulseSeconds}-{maxPulseSeconds} s) -> {fbhzMixerCommandTopic}");
+Console.WriteLine($" ### Config topic: {configTopic} (retained JSON, overrides CoolingFlowTargetTemperature at runtime)");
 
 // FA_Status 4 = Warmwasserladung der Hoval Belaria — fixed by the heat pump, not configuration
 string[] warmWaterStatusValues = ["4"];
 var mixerRule = new MixerPositionRule(warmWaterStatusValues, TimeSpan.FromMinutes(maxStatusAgeMinutes));
 var coolingRule = new CoolingFlowTemperatureRule(
     coolingStatusValues, TimeSpan.FromMinutes(maxStatusAgeMinutes),
-    coolingFlowTargetTemperature, coolingFlowDeadbandKelvin,
+    coolingFlowDeadbandKelvin,
     pulseSecondsPerKelvin, minPulseSeconds, maxPulseSeconds);
 
 string? lastFaStatus = null;
@@ -77,6 +80,7 @@ mqttClient.OnMessageReceived += MqttMessageReceived;
 await mqttClient.SubscribeToTopic(faStatusTopic);
 await mqttClient.SubscribeToTopic(fbhzFlowTempTopic);
 await mqttClient.SubscribeToTopic(fbhzPumpTopic);
+await mqttClient.SubscribeToTopic(configTopic);
 Console.WriteLine("    ...Done");
 
 await mqttClient.PublishAsync("meta/RulesEngine/version", versionInfo.Version, MqttQualityOfServiceLevel.AtLeastOnce, true);
@@ -98,6 +102,12 @@ Thread.Sleep(Timeout.Infinite);
 
 void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
 {
+    if (e.Topic == configTopic)
+    {
+        ApplyConfig(e.Payload);
+        return;
+    }
+
     if (e.Topic == fbhzFlowTempTopic)
     {
         lock (evaluationLock)
@@ -179,14 +189,17 @@ void EvaluateCoolingPulse()
     try
     {
         MixerPulse? pulse;
+        double target;
         lock (evaluationLock)
         {
             var now = DateTimeOffset.UtcNow;
+            target = coolingFlowTargetTemperature;
             pulse = coolingRule.Evaluate(
                 lastPublishedPosition,
                 lastFaStatus, Age(lastFaStatusTime, now),
                 lastFbhzPumpRunning, Age(lastFbhzPumpTime, now),
-                lastFbhzFlowTemp, Age(lastFbhzFlowTempTime, now));
+                lastFbhzFlowTemp, Age(lastFbhzFlowTempTime, now),
+                target);
         }
 
         if (pulse == null)
@@ -197,7 +210,7 @@ void EvaluateCoolingPulse()
         // Not retained: a pulse is a relative move, replaying it after a
         // reconnect would drift the mixer without any temperature reason
         var payload = $"{(pulse.Direction == PulseDirection.Open ? "open" : "close")}:{pulse.Seconds}";
-        Console.WriteLine($"Cooling pulse '{payload}' (Vorlauf={lastFbhzFlowTemp}°C, Soll={coolingFlowTargetTemperature}°C)");
+        Console.WriteLine($"Cooling pulse '{payload}' (Vorlauf={lastFbhzFlowTemp}°C, Soll={target}°C)");
         mqttClient.PublishAsync(fbhzMixerCommandTopic, payload, MqttQualityOfServiceLevel.AtLeastOnce, false)
             .GetAwaiter().GetResult();
         RulesEngineHealthCheck.UpdateLastEvaluation();
@@ -205,6 +218,30 @@ void EvaluateCoolingPulse()
     catch (Exception ex)
     {
         Console.WriteLine($"Error publishing cooling pulse: {ex.Message}");
+    }
+}
+
+void ApplyConfig(string payload)
+{
+    try
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(payload);
+        if (doc.RootElement.TryGetProperty("CoolingFlowTargetTemperature", out var targetElement)
+            && targetElement.TryGetDouble(out var newTarget))
+        {
+            lock (evaluationLock)
+            {
+                if (Math.Abs(newTarget - coolingFlowTargetTemperature) > 0.001)
+                {
+                    Console.WriteLine($"Config: CoolingFlowTargetTemperature {coolingFlowTargetTemperature}°C -> {newTarget}°C");
+                }
+                coolingFlowTargetTemperature = newTarget;
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error parsing config message: {ex.Message}");
     }
 }
 

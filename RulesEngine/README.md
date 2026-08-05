@@ -52,6 +52,7 @@ B:65535) und trotzdem Kühlleistung ankommt (zu warm).
 | `cangateway/M1/WEZ/Status/FA_Status` | in | Betriebsmodus der WP (CAN-Gateway) |
 | `cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist` | in | FBHZ-Vorlauftemperatur (Regelgröße) |
 | `cangateway/M1/FBHZ/Status/Pumpe` | in | FBHZ-Umwälzpumpe (1 = läuft) |
+| `config/RulesEngine` | in (retained) | Laufzeit-Konfiguration als JSON, z. B. `{"CoolingFlowTargetTemperature": 18.0}` — überschreibt den Env-Default ohne Redeploy |
 | `commands/MixerController/M1/Mischer_FBHZ` + `Mischer_HK` | out (retained) | Zielposition `open` / `close` |
 | `commands/MixerController/M1/Mischer_FBHZ` | out (nicht retained) | Fahrpulse `open:N` / `close:N` (Sekunden) |
 | `meta/RulesEngine/version` | out (retained) | Service-Version |
@@ -83,7 +84,8 @@ Abweichung über Fahrtdauer + Puffer → Alarm.
 | `FbhzFlowTempTopic` | `cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist` | Quelle der FBHZ-Vorlauftemperatur |
 | `FbhzPumpTopic` | `cangateway/M1/FBHZ/Status/Pumpe` | Quelle des FBHZ-Pumpenstatus |
 | `FbhzMixerCommandTopic` | `commands/MixerController/M1/Mischer_FBHZ` | Ziel-Topic der Fahrpulse |
-| `CoolingFlowTargetTemperature` | `15.0` | Vorlauf-Sollwert im Kühlbetrieb (°C) — bei Taupunkt-Auslösungen anheben |
+| `ConfigTopic` | `config/RulesEngine` | Retained JSON-Konfiguration zur Laufzeit |
+| `CoolingFlowTargetTemperature` | `15.0` | Vorlauf-Sollwert im Kühlbetrieb (°C), nur Startup-Default — zur Laufzeit über das Config-Topic setzen (bei Taupunkt-Auslösungen anheben) |
 | `CoolingFlowDeadbandKelvin` | `0.5` | Totband um den Sollwert (K) |
 | `PulseSecondsPerKelvin` | `5.0` | Pulslänge pro Kelvin Regelabweichung |
 | `MinPulseSeconds` / `MaxPulseSeconds` | `2` / `20` | Begrenzung der Pulslänge |

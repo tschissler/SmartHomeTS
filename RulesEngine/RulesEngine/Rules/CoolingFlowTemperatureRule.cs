@@ -25,7 +25,6 @@ public class CoolingFlowTemperatureRule
 {
     private readonly StatusWhitelist coolingStatus;
     private readonly TimeSpan maxInputAge;
-    private readonly double targetTemperature;
     private readonly double deadbandKelvin;
     private readonly double pulseSecondsPerKelvin;
     private readonly int minPulseSeconds;
@@ -34,7 +33,6 @@ public class CoolingFlowTemperatureRule
     public CoolingFlowTemperatureRule(
         IEnumerable<string> coolingStatusValues,
         TimeSpan maxInputAge,
-        double targetTemperature,
         double deadbandKelvin,
         double pulseSecondsPerKelvin,
         int minPulseSeconds,
@@ -42,18 +40,20 @@ public class CoolingFlowTemperatureRule
     {
         coolingStatus = new StatusWhitelist(coolingStatusValues);
         this.maxInputAge = maxInputAge;
-        this.targetTemperature = targetTemperature;
         this.deadbandKelvin = deadbandKelvin;
         this.pulseSecondsPerKelvin = pulseSecondsPerKelvin;
         this.minPulseSeconds = minPulseSeconds;
         this.maxPulseSeconds = maxPulseSeconds;
     }
 
+    // targetTemperature is an input, not construction config: it is
+    // adjustable at runtime via the retained config/RulesEngine message
     public MixerPulse? Evaluate(
         MixerPosition? basePosition,
         string? faStatus, TimeSpan faStatusAge,
         bool? pumpRunning, TimeSpan pumpStatusAge,
-        double? flowTemperature, TimeSpan flowTemperatureAge)
+        double? flowTemperature, TimeSpan flowTemperatureAge,
+        double targetTemperature)
     {
         // The base rule owns the mixer whenever it does not say "open"
         if (basePosition != MixerPosition.Open)

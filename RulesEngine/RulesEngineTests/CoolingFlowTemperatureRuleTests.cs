@@ -10,12 +10,11 @@ public class CoolingFlowTemperatureRuleTests
     private static readonly TimeSpan Stale = TimeSpan.FromMinutes(16);
 
     private static CoolingFlowTemperatureRule CreateRule(
-        double target = 15.0,
         double deadband = 0.5,
         double pulseSecondsPerKelvin = 5.0,
         int minPulseSeconds = 2,
         int maxPulseSeconds = 20)
-        => new(["2"], MaxAge, target, deadband, pulseSecondsPerKelvin, minPulseSeconds, maxPulseSeconds);
+        => new(["2"], MaxAge, deadband, pulseSecondsPerKelvin, minPulseSeconds, maxPulseSeconds);
 
     private static MixerPulse? Evaluate(
         CoolingFlowTemperatureRule rule,
@@ -25,12 +24,14 @@ public class CoolingFlowTemperatureRuleTests
         bool? pumpRunning = true,
         TimeSpan? pumpAge = null,
         double? flowTemperature = 15.0,
-        TimeSpan? flowAge = null)
+        TimeSpan? flowAge = null,
+        double target = 15.0)
         => rule.Evaluate(
             basePosition,
             faStatus, faStatusAge ?? Fresh,
             pumpRunning, pumpAge ?? Fresh,
-            flowTemperature, flowAge ?? Fresh);
+            flowTemperature, flowAge ?? Fresh,
+            target);
 
     [Fact]
     public void DoesNothing_WhenTemperatureIsWithinDeadband()
@@ -161,8 +162,22 @@ public class CoolingFlowTemperatureRuleTests
     [Fact]
     public void SupportsMultipleCoolingStatusValues()
     {
-        var rule = new CoolingFlowTemperatureRule(["2", "8"], MaxAge, 15.0, 0.5, 5.0, 2, 20);
+        var rule = new CoolingFlowTemperatureRule(["2", "8"], MaxAge, 0.5, 5.0, 2, 20);
 
         Evaluate(rule, faStatus: "8", flowTemperature: 13.0).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void UsesTargetTemperaturePassedPerEvaluation()
+    {
+        var rule = CreateRule();
+
+        // 15.2°C flow: within deadband for target 15, but 2.8 K too cold for target 18
+        Evaluate(rule, flowTemperature: 15.2, target: 15.0).Should().BeNull();
+
+        var pulse = Evaluate(rule, flowTemperature: 15.2, target: 18.0);
+        pulse!.Direction.Should().Be(PulseDirection.Close);
+        pulse.Seconds.Should().Be(14); // 2,8 K * 5 s/K
+
     }
 }
