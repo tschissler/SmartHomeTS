@@ -29,17 +29,38 @@ var mixerCommandTopics = (configuration["MixerCommandTopics"]
 var maxStatusAgeMinutes = int.Parse(configuration["MaxStatusAgeMinutes"] ?? "15");
 var evaluationIntervalSeconds = int.Parse(configuration["EvaluationIntervalSeconds"] ?? "60");
 
+// Kühlbetriebs-Regelung (Taupunktschutz FBHZ)
+var coolingStatusValues = (configuration["CoolingStatusValues"] ?? "2")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var fbhzFlowTempTopic = configuration["FbhzFlowTempTopic"] ?? "cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist";
+var fbhzPumpTopic = configuration["FbhzPumpTopic"] ?? "cangateway/M1/FBHZ/Status/Pumpe";
+var fbhzMixerCommandTopic = configuration["FbhzMixerCommandTopic"] ?? "commands/MixerController/M1/Mischer_FBHZ";
+var coolingFlowTargetTemperature = double.Parse(configuration["CoolingFlowTargetTemperature"] ?? "15.0", System.Globalization.CultureInfo.InvariantCulture);
+var coolingFlowDeadbandKelvin = double.Parse(configuration["CoolingFlowDeadbandKelvin"] ?? "0.5", System.Globalization.CultureInfo.InvariantCulture);
+var pulseSecondsPerKelvin = double.Parse(configuration["PulseSecondsPerKelvin"] ?? "5.0", System.Globalization.CultureInfo.InvariantCulture);
+var minPulseSeconds = int.Parse(configuration["MinPulseSeconds"] ?? "2");
+var maxPulseSeconds = int.Parse(configuration["MaxPulseSeconds"] ?? "20");
+
 Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
 Console.WriteLine($" ### FA_Status topic: {faStatusTopic}");
 Console.WriteLine($" ### Mixer command topics: {string.Join(", ", mixerCommandTopics)}");
 Console.WriteLine($" ### Max status age: {maxStatusAgeMinutes} min, evaluation interval: {evaluationIntervalSeconds} s");
+Console.WriteLine($" ### Cooling regulation: FA_Status in [{string.Join(", ", coolingStatusValues)}], target {coolingFlowTargetTemperature}°C ±{coolingFlowDeadbandKelvin}K, {pulseSecondsPerKelvin} s/K ({minPulseSeconds}-{maxPulseSeconds} s) -> {fbhzMixerCommandTopic}");
 
 // FA_Status 4 = Warmwasserladung der Hoval Belaria — fixed by the heat pump, not configuration
 string[] warmWaterStatusValues = ["4"];
 var mixerRule = new MixerPositionRule(warmWaterStatusValues, TimeSpan.FromMinutes(maxStatusAgeMinutes));
+var coolingRule = new CoolingFlowTemperatureRule(
+    coolingStatusValues, TimeSpan.FromMinutes(maxStatusAgeMinutes),
+    coolingFlowTargetTemperature, coolingFlowDeadbandKelvin,
+    pulseSecondsPerKelvin, minPulseSeconds, maxPulseSeconds);
 
 string? lastFaStatus = null;
 DateTimeOffset lastFaStatusTime = DateTimeOffset.MinValue;
+bool? lastFbhzPumpRunning = null;
+DateTimeOffset lastFbhzPumpTime = DateTimeOffset.MinValue;
+double? lastFbhzFlowTemp = null;
+DateTimeOffset lastFbhzFlowTempTime = DateTimeOffset.MinValue;
 MixerPosition? lastPublishedPosition = null;
 var evaluationLock = new object();
 
@@ -54,6 +75,8 @@ mqttClient.OnConnectionStateChanged += (_, connected) => RulesEngineHealthCheck.
 
 mqttClient.OnMessageReceived += MqttMessageReceived;
 await mqttClient.SubscribeToTopic(faStatusTopic);
+await mqttClient.SubscribeToTopic(fbhzFlowTempTopic);
+await mqttClient.SubscribeToTopic(fbhzPumpTopic);
 Console.WriteLine("    ...Done");
 
 await mqttClient.PublishAsync("meta/RulesEngine/version", versionInfo.Version, MqttQualityOfServiceLevel.AtLeastOnce, true);
@@ -63,12 +86,40 @@ await mqttClient.PublishAsync("meta/RulesEngine/version", versionInfo.Version, M
 // (MaxStatusAge) also fires when the CAN gateway stops sending — decisions
 // must not depend on messages that are no longer arriving.
 var initialPublishTimer = new Timer(_ => EvaluateAndPublish("startup", force: true), null, 2000, Timeout.Infinite);
-var evaluationTimer = new Timer(_ => EvaluateAndPublish("periodic evaluation"), null, evaluationIntervalSeconds * 1000, evaluationIntervalSeconds * 1000);
+// Pulses only from the periodic tick: they are relative moves, so their rate
+// must be fixed by the timer, not by how often the CAN gateway publishes.
+var evaluationTimer = new Timer(_ =>
+{
+    EvaluateAndPublish("periodic evaluation");
+    EvaluateCoolingPulse();
+}, null, evaluationIntervalSeconds * 1000, evaluationIntervalSeconds * 1000);
 
 Thread.Sleep(Timeout.Infinite);
 
 void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
 {
+    if (e.Topic == fbhzFlowTempTopic)
+    {
+        lock (evaluationLock)
+        {
+            lastFbhzFlowTemp = double.TryParse(e.Payload.Trim(), System.Globalization.CultureInfo.InvariantCulture, out var temp)
+                ? temp
+                : null;
+            lastFbhzFlowTempTime = DateTimeOffset.UtcNow;
+        }
+        return;
+    }
+
+    if (e.Topic == fbhzPumpTopic)
+    {
+        lock (evaluationLock)
+        {
+            lastFbhzPumpRunning = e.Payload.Trim() == "1";
+            lastFbhzPumpTime = DateTimeOffset.UtcNow;
+        }
+        return;
+    }
+
     if (e.Topic != faStatusTopic)
     {
         return;
@@ -96,10 +147,7 @@ void EvaluateAndPublish(string trigger, bool force = false)
         bool shouldPublish;
         lock (evaluationLock)
         {
-            var statusAge = lastFaStatusTime == DateTimeOffset.MinValue
-                ? TimeSpan.MaxValue
-                : DateTimeOffset.UtcNow - lastFaStatusTime;
-            position = mixerRule.Evaluate(lastFaStatus, statusAge);
+            position = mixerRule.Evaluate(lastFaStatus, Age(lastFaStatusTime, DateTimeOffset.UtcNow));
 
             shouldPublish = force || position != lastPublishedPosition;
             if (position != lastPublishedPosition)
@@ -125,6 +173,43 @@ void EvaluateAndPublish(string trigger, bool force = false)
         Console.WriteLine($"Error publishing mixer position: {ex.Message}");
     }
 }
+
+void EvaluateCoolingPulse()
+{
+    try
+    {
+        MixerPulse? pulse;
+        lock (evaluationLock)
+        {
+            var now = DateTimeOffset.UtcNow;
+            pulse = coolingRule.Evaluate(
+                lastPublishedPosition,
+                lastFaStatus, Age(lastFaStatusTime, now),
+                lastFbhzPumpRunning, Age(lastFbhzPumpTime, now),
+                lastFbhzFlowTemp, Age(lastFbhzFlowTempTime, now));
+        }
+
+        if (pulse == null)
+        {
+            return;
+        }
+
+        // Not retained: a pulse is a relative move, replaying it after a
+        // reconnect would drift the mixer without any temperature reason
+        var payload = $"{(pulse.Direction == PulseDirection.Open ? "open" : "close")}:{pulse.Seconds}";
+        Console.WriteLine($"Cooling pulse '{payload}' (Vorlauf={lastFbhzFlowTemp}°C, Soll={coolingFlowTargetTemperature}°C)");
+        mqttClient.PublishAsync(fbhzMixerCommandTopic, payload, MqttQualityOfServiceLevel.AtLeastOnce, false)
+            .GetAwaiter().GetResult();
+        RulesEngineHealthCheck.UpdateLastEvaluation();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error publishing cooling pulse: {ex.Message}");
+    }
+}
+
+static TimeSpan Age(DateTimeOffset timestamp, DateTimeOffset now)
+    => timestamp == DateTimeOffset.MinValue ? TimeSpan.MaxValue : now - timestamp;
 
 static string PositionToPayload(MixerPosition position)
     => position == MixerPosition.Closed ? "close" : "open";

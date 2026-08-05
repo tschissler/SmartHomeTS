@@ -24,12 +24,36 @@ Betriebsmodus der Hoval-Wärmepumpe:
 - alles andere (unbekannte Werte, veralteter Status) → `open`
   (Failsafe: offen kostet nur Effizienz, nie Komfort)
 
+### CoolingFlowTemperatureRule
+
+Dreipunkt-Schrittregler für den `Mischer_FBHZ` im **Kühlbetrieb**: hält die
+FBHZ-Vorlauftemperatur nahe am Sollwert (Default 15 °C), damit der
+Taupunktwächter nicht anspricht (zu kalt → Kondenswasser → WP-Blockierung
+B:65535) und trotzdem Kühlleistung ankommt (zu warm).
+
+- Aktiv **nur** wenn: FA_Status ∈ `CoolingStatusValues` (Default `2` =
+  Kühlbetrieb, **im Heizbetrieb noch zu verifizieren!**), FBHZ-Pumpe läuft
+  (ohne Umwälzung misst der Fühler stehendes Wasser) und alle Eingänge frisch.
+- Regelabweichung > Totband → kurzer Fahrpuls (`close:N` bei zu kalt,
+  `open:N` bei zu warm), Pulslänge proportional zur Abweichung
+  (`PulseSecondsPerKelvin`, geclampt auf Min/Max).
+- Pulse werden **nur im Zyklustakt** ausgewertet (nicht pro Message) und
+  **nicht retained** publiziert — ein Puls ist eine Relativbewegung, ein
+  Replay nach Reconnect würde den Mischer grundlos verfahren.
+- Die Warmwasser-Regel hat Vorrang: solange sie `close` sagt, gibt es keine
+  Pulse. Nach jedem retained `open` (z. B. Ende der WW-Bereitung oder
+  ESP32-Reconnect) macht der Mischer eine Referenzfahrt auf und der Regler
+  trimmt danach wieder ein — selbstkorrigierend.
+
 ## MQTT
 
 | Topic | Richtung | Inhalt |
 |---|---|---|
 | `cangateway/M1/WEZ/Status/FA_Status` | in | Betriebsmodus der WP (CAN-Gateway) |
+| `cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist` | in | FBHZ-Vorlauftemperatur (Regelgröße) |
+| `cangateway/M1/FBHZ/Status/Pumpe` | in | FBHZ-Umwälzpumpe (1 = läuft) |
 | `commands/MixerController/M1/Mischer_FBHZ` + `Mischer_HK` | out (retained) | Zielposition `open` / `close` |
+| `commands/MixerController/M1/Mischer_FBHZ` | out (nicht retained) | Fahrpulse `open:N` / `close:N` (Sekunden) |
 | `meta/RulesEngine/version` | out (retained) | Service-Version |
 
 Die Zielposition wird retained publiziert — einmal beim Start und danach nur
@@ -53,8 +77,16 @@ Abweichung über Fahrtdauer + Puffer → Alarm.
 | `HealthCheckPort` | `8080` | HTTP-Port für `/health`, `/healthz`, `/ready` |
 | `FaStatusTopic` | `cangateway/M1/WEZ/Status/FA_Status` | Quelle des WP-Status |
 | `MixerCommandTopics` | beide M1-Mischer | Ziel-Topics, kommasepariert |
-| `MaxStatusAgeMinutes` | `15` | Älterer FA_Status gilt als veraltet → open |
+| `MaxStatusAgeMinutes` | `15` | Ältere Eingänge gelten als veraltet → open bzw. keine Pulse |
 | `EvaluationIntervalSeconds` | `60` | Intervall der internen Regel-Auswertung (publiziert nur bei Änderung) |
+| `CoolingStatusValues` | `2` | FA_Status-Werte, die als Kühlbetrieb gelten (kommasepariert) |
+| `FbhzFlowTempTopic` | `cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist` | Quelle der FBHZ-Vorlauftemperatur |
+| `FbhzPumpTopic` | `cangateway/M1/FBHZ/Status/Pumpe` | Quelle des FBHZ-Pumpenstatus |
+| `FbhzMixerCommandTopic` | `commands/MixerController/M1/Mischer_FBHZ` | Ziel-Topic der Fahrpulse |
+| `CoolingFlowTargetTemperature` | `15.0` | Vorlauf-Sollwert im Kühlbetrieb (°C) — bei Taupunkt-Auslösungen anheben |
+| `CoolingFlowDeadbandKelvin` | `0.5` | Totband um den Sollwert (K) |
+| `PulseSecondsPerKelvin` | `5.0` | Pulslänge pro Kelvin Regelabweichung |
+| `MinPulseSeconds` / `MaxPulseSeconds` | `2` / `20` | Begrenzung der Pulslänge |
 
 ## Build & Test
 

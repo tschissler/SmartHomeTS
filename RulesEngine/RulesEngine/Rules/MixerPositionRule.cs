@@ -17,15 +17,12 @@ public enum MixerPosition
 /// </summary>
 public class MixerPositionRule
 {
-    private readonly HashSet<string> warmWaterStatusValues;
+    private readonly StatusWhitelist warmWaterStatus;
     private readonly TimeSpan maxStatusAge;
 
     public MixerPositionRule(IEnumerable<string> warmWaterStatusValues, TimeSpan maxStatusAge)
     {
-        this.warmWaterStatusValues = warmWaterStatusValues
-            .Select(value => value.Trim())
-            .Where(value => value.Length > 0)
-            .ToHashSet();
+        warmWaterStatus = new StatusWhitelist(warmWaterStatusValues);
         this.maxStatusAge = maxStatusAge;
     }
 
@@ -36,12 +33,7 @@ public class MixerPositionRule
             return MixerPosition.Open;
         }
 
-        if (string.IsNullOrWhiteSpace(faStatus))
-        {
-            return MixerPosition.Open;
-        }
-
-        return warmWaterStatusValues.Contains(faStatus.Trim())
+        return warmWaterStatus.Matches(faStatus)
             ? MixerPosition.Closed
             : MixerPosition.Open;
     }
