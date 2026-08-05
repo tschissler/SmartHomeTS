@@ -518,24 +518,34 @@ using (var scope = app.Services.CreateScope())
                 }
 
                 // During a travel the actual position is not defined — write nothing
-                if (mixerStatus != null && !mixerStatus.Moving &&
-                    (mixerStatus.Position == "open" || mixerStatus.Position == "closed"))
+                if (mixerStatus != null && !mixerStatus.Moving)
                 {
+                    // 1 = open, 0 = closed, in between = firmware travel-time estimate
+                    decimal? positionValue = mixerStatus.Position switch
+                    {
+                        "open" => 1m,
+                        "closed" => 0m,
+                        "partial" when mixerStatus.OpenPercent is int percent => percent / 100m,
+                        _ => null,
+                    };
                     var location = topicParts[2];
                     var device = topicParts[4];
-                    influx3Connector.WriteStatusValue(
-                        new InfluxStatusRecord
-                        {
-                            MeasurementId = $"Heizung_{location}_Mischersteuerung_{device}_PositionIst",
-                            Category = MeasurementCategory.Heizung,
-                            SubCategory = "Ist",
-                            SensorType = "MixerController",
-                            Location = location,
-                            Device = device,
-                            Measurement = "PositionIst",
-                            Value_Status = mixerStatus.Position == "open" ? 1m : 0m,
-                        },
-                        DateTimeOffset.UtcNow);
+                    if (positionValue != null)
+                    {
+                        influx3Connector.WriteStatusValue(
+                            new InfluxStatusRecord
+                            {
+                                MeasurementId = $"Heizung_{location}_Mischersteuerung_{device}_PositionIst",
+                                Category = MeasurementCategory.Heizung,
+                                SubCategory = "Ist",
+                                SensorType = "MixerController",
+                                Location = location,
+                                Device = device,
+                                Measurement = "PositionIst",
+                                Value_Status = positionValue.Value,
+                            },
+                            DateTimeOffset.UtcNow);
+                    }
                     influx3Connector.WriteStatusValue(
                         new InfluxStatusRecord
                         {
