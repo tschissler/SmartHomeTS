@@ -14,13 +14,11 @@ public class CoolingFlowTemperatureRuleTests
         double pulseSecondsPerKelvin = 5.0,
         int minPulseSeconds = 2,
         int maxPulseSeconds = 20)
-        => new(["2"], MaxAge, deadband, pulseSecondsPerKelvin, minPulseSeconds, maxPulseSeconds);
+        => new(MaxAge, deadband, pulseSecondsPerKelvin, minPulseSeconds, maxPulseSeconds);
 
     private static MixerPulse? Evaluate(
         CoolingFlowTemperatureRule rule,
         MixerPosition? basePosition = MixerPosition.Open,
-        string? faStatus = "2",
-        TimeSpan? faStatusAge = null,
         bool? pumpRunning = true,
         TimeSpan? pumpAge = null,
         double? flowTemperature = 15.0,
@@ -28,7 +26,6 @@ public class CoolingFlowTemperatureRuleTests
         double target = 15.0)
         => rule.Evaluate(
             basePosition,
-            faStatus, faStatusAge ?? Fresh,
             pumpRunning, pumpAge ?? Fresh,
             flowTemperature, flowAge ?? Fresh,
             target);
@@ -92,37 +89,10 @@ public class CoolingFlowTemperatureRuleTests
     {
         var rule = CreateRule();
 
-        // Warm water preparation (base rule "close") has priority over trimming
+        // Warm water preparation (base rule "close") has priority: the heat
+        // pump flow is hot then, opening would warm instead of cool
         Evaluate(rule, basePosition: MixerPosition.Closed, flowTemperature: 13.0).Should().BeNull();
         Evaluate(rule, basePosition: null, flowTemperature: 13.0).Should().BeNull();
-    }
-
-    [Fact]
-    public void DoesNothing_WhenStatusIsNotACoolingValue()
-    {
-        var rule = CreateRule();
-
-        Evaluate(rule, faStatus: "0", flowTemperature: 13.0).Should().BeNull();
-        Evaluate(rule, faStatus: "4", flowTemperature: 13.0).Should().BeNull();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void DoesNothing_WhenStatusIsMissing(string? faStatus)
-    {
-        var rule = CreateRule();
-
-        Evaluate(rule, faStatus: faStatus, flowTemperature: 13.0).Should().BeNull();
-    }
-
-    [Fact]
-    public void DoesNothing_WhenStatusIsStale()
-    {
-        var rule = CreateRule();
-
-        Evaluate(rule, faStatusAge: Stale, flowTemperature: 13.0).Should().BeNull();
     }
 
     [Fact]
@@ -152,22 +122,6 @@ public class CoolingFlowTemperatureRuleTests
     }
 
     [Fact]
-    public void TrimsWhitespaceAroundStatusValue()
-    {
-        var rule = CreateRule();
-
-        Evaluate(rule, faStatus: " 2 \n", flowTemperature: 13.0).Should().NotBeNull();
-    }
-
-    [Fact]
-    public void SupportsMultipleCoolingStatusValues()
-    {
-        var rule = new CoolingFlowTemperatureRule(["2", "8"], MaxAge, 0.5, 5.0, 2, 20);
-
-        Evaluate(rule, faStatus: "8", flowTemperature: 13.0).Should().NotBeNull();
-    }
-
-    [Fact]
     public void UsesTargetTemperaturePassedPerEvaluation()
     {
         var rule = CreateRule();
@@ -178,6 +132,5 @@ public class CoolingFlowTemperatureRuleTests
         var pulse = Evaluate(rule, flowTemperature: 15.2, target: 18.0);
         pulse!.Direction.Should().Be(PulseDirection.Close);
         pulse.Seconds.Should().Be(14); // 2,8 K * 5 s/K
-
     }
 }

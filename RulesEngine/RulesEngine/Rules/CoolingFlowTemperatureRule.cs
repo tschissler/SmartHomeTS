@@ -9,21 +9,26 @@ public enum PulseDirection
 public record MixerPulse(PulseDirection Direction, int Seconds);
 
 /// <summary>
-/// Dreipunkt-Schrittregler: trims the FBHZ mixer during cooling so the
-/// circuit flow temperature stays near the configured target. Too cold causes
-/// condensation (dew point watchdog blocks the heat pump), too warm wastes
-/// cooling capacity.
+/// Dreipunkt-Schrittregler: trims the FBHZ mixer so the circuit flow
+/// temperature stays near the target. Too cold causes condensation (dew
+/// point watchdog blocks the heat pump), too warm wastes cooling capacity.
+///
+/// Regulates whenever the base rule leaves the mixer open — warm water
+/// preparation (base rule "close") has priority, because then the heat pump
+/// flow is hot and opening would warm the circuit instead of cooling it.
+///
+/// The pulse direction assumes the cooling season: open = more cold buffer
+/// water = colder. During heating the same logic simply converges to fully
+/// open (warm flow reads as "too warm" → open pulses), which is the legacy
+/// mixer behavior; proper heating-mode regulation is a later step.
 ///
 /// Returns a short pulse towards close (less cold water) or open (more cold
 /// water), or null when the mixer must not move. Fail-safe null: pulses are
-/// emitted ONLY while the base rule leaves the mixer open (warm water
-/// preparation has priority), the heat pump reports a configured cooling
-/// status, the circuit pump is running and all inputs are fresh — in every
-/// other case the mixer stays wherever the base rule put it.
+/// emitted ONLY while the circuit pump is running and all inputs are fresh —
+/// in every other case the mixer stays wherever the base rule put it.
 /// </summary>
 public class CoolingFlowTemperatureRule
 {
-    private readonly StatusWhitelist coolingStatus;
     private readonly TimeSpan maxInputAge;
     private readonly double deadbandKelvin;
     private readonly double pulseSecondsPerKelvin;
@@ -31,14 +36,12 @@ public class CoolingFlowTemperatureRule
     private readonly int maxPulseSeconds;
 
     public CoolingFlowTemperatureRule(
-        IEnumerable<string> coolingStatusValues,
         TimeSpan maxInputAge,
         double deadbandKelvin,
         double pulseSecondsPerKelvin,
         int minPulseSeconds,
         int maxPulseSeconds)
     {
-        coolingStatus = new StatusWhitelist(coolingStatusValues);
         this.maxInputAge = maxInputAge;
         this.deadbandKelvin = deadbandKelvin;
         this.pulseSecondsPerKelvin = pulseSecondsPerKelvin;
@@ -50,7 +53,6 @@ public class CoolingFlowTemperatureRule
     // adjustable at runtime via the retained config/RulesEngine message
     public MixerPulse? Evaluate(
         MixerPosition? basePosition,
-        string? faStatus, TimeSpan faStatusAge,
         bool? pumpRunning, TimeSpan pumpStatusAge,
         double? flowTemperature, TimeSpan flowTemperatureAge,
         double targetTemperature)
@@ -61,12 +63,7 @@ public class CoolingFlowTemperatureRule
             return null;
         }
 
-        if (faStatusAge > maxInputAge || pumpStatusAge > maxInputAge || flowTemperatureAge > maxInputAge)
-        {
-            return null;
-        }
-
-        if (!coolingStatus.Matches(faStatus))
+        if (pumpStatusAge > maxInputAge || flowTemperatureAge > maxInputAge)
         {
             return null;
         }

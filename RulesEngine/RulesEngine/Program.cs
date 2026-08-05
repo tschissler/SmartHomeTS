@@ -29,9 +29,7 @@ var mixerCommandTopics = (configuration["MixerCommandTopics"]
 var maxStatusAgeMinutes = int.Parse(configuration["MaxStatusAgeMinutes"] ?? "15");
 var evaluationIntervalSeconds = int.Parse(configuration["EvaluationIntervalSeconds"] ?? "60");
 
-// Kühlbetriebs-Regelung (Taupunktschutz FBHZ)
-var coolingStatusValues = (configuration["CoolingStatusValues"] ?? "2")
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+// Vorlauftemperatur-Regelung FBHZ (Taupunktschutz)
 var fbhzFlowTempTopic = configuration["FbhzFlowTempTopic"] ?? "cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist";
 var fbhzPumpTopic = configuration["FbhzPumpTopic"] ?? "cangateway/M1/FBHZ/Status/Pumpe";
 var fbhzMixerCommandTopic = configuration["FbhzMixerCommandTopic"] ?? "commands/MixerController/M1/Mischer_FBHZ";
@@ -47,14 +45,14 @@ Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Hea
 Console.WriteLine($" ### FA_Status topic: {faStatusTopic}");
 Console.WriteLine($" ### Mixer command topics: {string.Join(", ", mixerCommandTopics)}");
 Console.WriteLine($" ### Max status age: {maxStatusAgeMinutes} min, evaluation interval: {evaluationIntervalSeconds} s");
-Console.WriteLine($" ### Cooling regulation: FA_Status in [{string.Join(", ", coolingStatusValues)}], target {coolingFlowTargetTemperature}°C ±{coolingFlowDeadbandKelvin}K, {pulseSecondsPerKelvin} s/K ({minPulseSeconds}-{maxPulseSeconds} s) -> {fbhzMixerCommandTopic}");
+Console.WriteLine($" ### Flow regulation: target {coolingFlowTargetTemperature}°C ±{coolingFlowDeadbandKelvin}K, {pulseSecondsPerKelvin} s/K ({minPulseSeconds}-{maxPulseSeconds} s) -> {fbhzMixerCommandTopic}");
 Console.WriteLine($" ### Config topic: {configTopic} (retained JSON, overrides CoolingFlowTargetTemperature at runtime)");
 
 // FA_Status 4 = Warmwasserladung der Hoval Belaria — fixed by the heat pump, not configuration
 string[] warmWaterStatusValues = ["4"];
 var mixerRule = new MixerPositionRule(warmWaterStatusValues, TimeSpan.FromMinutes(maxStatusAgeMinutes));
 var coolingRule = new CoolingFlowTemperatureRule(
-    coolingStatusValues, TimeSpan.FromMinutes(maxStatusAgeMinutes),
+    TimeSpan.FromMinutes(maxStatusAgeMinutes),
     coolingFlowDeadbandKelvin,
     pulseSecondsPerKelvin, minPulseSeconds, maxPulseSeconds);
 
@@ -196,7 +194,6 @@ void EvaluateCoolingPulse()
             target = coolingFlowTargetTemperature;
             pulse = coolingRule.Evaluate(
                 lastPublishedPosition,
-                lastFaStatus, Age(lastFaStatusTime, now),
                 lastFbhzPumpRunning, Age(lastFbhzPumpTime, now),
                 lastFbhzFlowTemp, Age(lastFbhzFlowTempTime, now),
                 target);

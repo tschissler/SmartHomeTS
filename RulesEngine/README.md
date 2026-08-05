@@ -26,14 +26,19 @@ Betriebsmodus der Hoval-Wärmepumpe:
 
 ### CoolingFlowTemperatureRule
 
-Dreipunkt-Schrittregler für den `Mischer_FBHZ` im **Kühlbetrieb**: hält die
-FBHZ-Vorlauftemperatur nahe am Sollwert (Default 15 °C), damit der
+Dreipunkt-Schrittregler für den `Mischer_FBHZ`: hält die
+FBHZ-Vorlauftemperatur nahe am Sollwert (Laufzeit-Config, s. u.), damit der
 Taupunktwächter nicht anspricht (zu kalt → Kondenswasser → WP-Blockierung
 B:65535) und trotzdem Kühlleistung ankommt (zu warm).
 
-- Aktiv **nur** wenn: FA_Status ∈ `CoolingStatusValues` (Default `2` =
-  Kühlbetrieb, **im Heizbetrieb noch zu verifizieren!**), FBHZ-Pumpe läuft
-  (ohne Umwälzung misst der Fühler stehendes Wasser) und alle Eingänge frisch.
+- Regelt **immer**, außer die Warmwasser-Regel sagt `close` (bei WW-Bereitung
+  ist der WP-Vorlauf heiß — Mischer auf würde wärmen statt kühlen).
+  Zusätzliche Gates: FBHZ-Pumpe läuft (ohne Umwälzung misst der Fühler
+  stehendes Wasser) und alle Eingänge frisch.
+- Die Wirkrichtung (auf = kälter) gilt für die Kühlsaison. Im Heizbetrieb
+  konvergiert dieselbe Logik automatisch auf „ganz auf" (warmer Vorlauf →
+  Auf-Pulse) = bisheriges Verhalten; echte Heizbetriebs-Regelung ist ein
+  späterer Schritt.
 - Regelabweichung > Totband → kurzer Fahrpuls (`close:N` bei zu kalt,
   `open:N` bei zu warm), Pulslänge proportional zur Abweichung
   (`PulseSecondsPerKelvin`, geclampt auf Min/Max).
@@ -80,7 +85,6 @@ Abweichung über Fahrtdauer + Puffer → Alarm.
 | `MixerCommandTopics` | beide M1-Mischer | Ziel-Topics, kommasepariert |
 | `MaxStatusAgeMinutes` | `15` | Ältere Eingänge gelten als veraltet → open bzw. keine Pulse |
 | `EvaluationIntervalSeconds` | `60` | Intervall der internen Regel-Auswertung (publiziert nur bei Änderung) |
-| `CoolingStatusValues` | `2` | FA_Status-Werte, die als Kühlbetrieb gelten (kommasepariert) |
 | `FbhzFlowTempTopic` | `cangateway/M1/FBHZ/Temperatur/Vorlauf_Ist` | Quelle der FBHZ-Vorlauftemperatur |
 | `FbhzPumpTopic` | `cangateway/M1/FBHZ/Status/Pumpe` | Quelle des FBHZ-Pumpenstatus |
 | `FbhzMixerCommandTopic` | `commands/MixerController/M1/Mischer_FBHZ` | Ziel-Topic der Fahrpulse |
