@@ -12,9 +12,18 @@ bekannt):
 
 - Nach jedem Boot: Referenzfahrt „auf" (Position ist ohne Rückmeldung
   unbekannt); das retained Kommando der RulesEngine übernimmt direkt danach.
-- Es gibt nur Vollfahrten (115 % der konfigurierten Laufzeit, die
-  Endlagenabschaltung des Antriebs fängt den Überlauf ab). Jede Fahrt ist
+- **Vollfahrten** (`open`/`close`): 115 % der konfigurierten Laufzeit, die
+  Endlagenabschaltung des Antriebs fängt den Überlauf ab. Jede Vollfahrt ist
   damit zugleich eine Referenzfahrt.
+- **Fahrpulse** (`open:N`/`close:N`, N Sekunden): Relativbewegung für
+  Zwischenstellungen, genutzt vom Schrittregler der RulesEngine
+  (Vorlauftemperatur-Regelung im Kühlbetrieb). Die Firmware schätzt die
+  Position über die Fahrzeit seit der letzten Referenzfahrt und publiziert
+  sie als `openPercent` (100 = ganz offen); `position` ist dann `partial`,
+  `target` bleibt das letzte Vollfahrt-Soll. Pulse werden an der geschätzten
+  Endlage gekappt. Ein Puls hält die erreichte Stellung, bis das nächste
+  Vollfahrt-Kommando kommt (z. B. retained `open` nach Reconnect → neue
+  Referenzfahrt, der Regler trimmt danach wieder ein).
 - **Kein lokaler Watchdog** (bewusste Entscheidung): Absicherung erfolgt über
   Monitoring — das Status-JSON enthält Soll (`target`) und Ist (`position`);
   Abweichung über Fahrtdauer + Puffer bzw. ausbleibende Ist-Meldung nach einem
@@ -54,9 +63,9 @@ Nicht verwenden: 0, 2, 5, 12, 15 (Strapping), 1, 3 (UART), 6–11 (Flash),
 
 | Topic | Richtung | Inhalt |
 |---|---|---|
-| `commands/MixerController/{location}/Mischer_FBHZ\|Mischer_HK` | in (retained) | Zielposition `open` / `close` von der RulesEngine (publiziert bei Entscheidungsänderung) |
+| `commands/MixerController/{location}/Mischer_FBHZ\|Mischer_HK` | in | Zielposition `open` / `close` (retained, bei Entscheidungsänderung) oder Fahrpuls `open:N` / `close:N` in Sekunden (nicht retained) von der RulesEngine |
 | `config/MixerController/{chipID}` | in (retained) | Konfiguration, siehe unten |
-| `daten/Heizung/{location}/Mischersteuerung/{Mischer}` | out (retained) | Zustand als JSON (position = Ist, target = Soll, moving, timestamp) — publiziert bei Fahrtbeginn und -ende |
+| `daten/Heizung/{location}/Mischersteuerung/{Mischer}` | out (retained) | Zustand als JSON (position = Ist [`open`/`closed`/`partial`/`unknown`], target = Soll, moving, openPercent = Positionsschätzung, timestamp) — publiziert bei Fahrtbeginn und -ende |
 | `daten/temperatur/{location}/{sensorName}` | out (retained) | Temperaturwert in °C |
 | `meta/MixerController/{location}/sensors` | out (retained) | Gefundene OneWire-Adressen je Bus (für die Zuordnung) |
 | `meta/MixerController/{location}/version` | out (retained) | Firmware-Version |

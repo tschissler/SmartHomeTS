@@ -74,16 +74,21 @@ static std::map<String, String> sensorNames;    // ROM address -> display name
 // ---------------------------------------------------------------------------
 // Mixer state machine
 //
-// Only full travels are used (the mixer acts as a switching valve, there is
-// no position feedback). Every move runs 115% of the configured travel time,
-// so each move is also a reference run against the actuator's end stop.
+// Two kinds of moves, both without position feedback:
+// - Full travels ("open"/"close"): run 115% of the configured travel time,
+//   so each move is also a reference run against the actuator's end stop.
+// - Pulses ("open:N"/"close:N"): run exactly N seconds towards one end,
+//   used by the RulesEngine step controller to hold intermediate positions.
+//   The position is then only an estimate (seconds since the last reference
+//   run); a full travel restores certainty.
 // ---------------------------------------------------------------------------
-enum class MixerPosition { Unknown, Open, Closed };
+enum class MixerPosition { Unknown, Open, Closed, Partial };
 
 static const char* positionToString(MixerPosition p) {
   switch (p) {
     case MixerPosition::Open: return "open";
     case MixerPosition::Closed: return "closed";
+    case MixerPosition::Partial: return "partial";
     default: return "unknown";
   }
 }
@@ -108,11 +113,31 @@ class MixerActuator {
   // Commands are published retained by the RulesEngine, so the target is
   // restored right after every reconnect. Monitoring compares target vs.
   // position via the published state instead of a local watchdog.
-  void setTarget(MixerPosition t) { target = t; }
+  // target always keeps the last commanded full-travel position; a completed
+  // pulse sets `holding` instead, so the actuator stays put even though
+  // position (partial) and target differ.
+  void setTarget(MixerPosition t) {
+    target = t;
+    holding = false;
+  }
+
+  // Queue a relative move; executed as soon as the actuator is idle.
+  // A later full-travel command discards a still pending pulse.
+  void requestPulse(bool towardsClose, uint32_t seconds) {
+    pulsePending = true;
+    pulseTowardsClose = towardsClose;
+    pulseSeconds = seconds;
+  }
 
   MixerPosition getTarget() const { return target; }
   MixerPosition getPosition() const { return current; }
   bool isMoving() const { return state == State::Running; }
+  bool hasPositionEstimate() const { return estimateValid; }
+  int getOpenPercent() const {
+    if (!estimateValid || travelTimeSeconds == 0) return -1;
+    float fraction = 1.0f - estimatedSeconds / (float)travelTimeSeconds;
+    return (int)(fraction * 100.0f + 0.5f);
+  }
 
   const char* name;
 
@@ -121,9 +146,27 @@ class MixerActuator {
     unsigned long now = millis();
     switch (state) {
       case State::Idle:
-        if (current != target || current == MixerPosition::Unknown) {
-          setDirection(target);
+        if (!holding && current != target) {
+          pulsePending = false;  // full travel supersedes a queued pulse
+          setDirection(target == MixerPosition::Closed);
           movingTo = target;
+          targetAtMoveStart = target;
+          moveMs = 0;  // 0 = full travel
+          state = State::PrepareDirection;
+          stateMs = now;
+        } else if (pulsePending) {
+          pulsePending = false;
+          uint32_t effective = clampPulseToRemainingTravel(pulseTowardsClose, pulseSeconds);
+          if (effective == 0) {
+            Serial.println(String(name) + ": pulse ignored, already at end stop");
+            return false;
+          }
+          setDirection(pulseTowardsClose);
+          movingTo = MixerPosition::Partial;
+          targetAtMoveStart = target;
+          holding = false;  // moving, not holding — restored when the pulse completes
+          moveTowardsClose = pulseTowardsClose;
+          moveMs = effective * 1000UL;
           state = State::PrepareDirection;
           stateMs = now;
         }
@@ -135,26 +178,43 @@ class MixerActuator {
           relayOn(runPin);
           state = State::Running;
           stateMs = now;
-          Serial.println(String(name) + ": driving to " + positionToString(movingTo));
+          Serial.println(String(name) + (moveMs == 0
+              ? ": driving to " + String(positionToString(movingTo))
+              : ": pulse " + String(moveMs / 1000UL) + "s towards " + (moveTowardsClose ? "close" : "open")));
           return true;
         }
         return false;
 
       case State::Running:
-        if (movingTo != target) {
-          // Target changed mid-move: stop and restart cleanly
+        if (target != targetAtMoveStart) {
+          // A new command arrived mid-move: stop and let Idle restart cleanly
           relayOff(runPin);
           current = MixerPosition::Unknown;
+          estimateValid = false;
           state = State::Cooldown;
           stateMs = now;
           return true;
         }
-        if (now - stateMs >= travelMs()) {
+        if (now - stateMs >= (moveMs != 0 ? moveMs : fullTravelMs())) {
           relayOff(runPin);
-          current = movingTo;
+          if (moveMs == 0) {
+            current = movingTo;
+            estimatedSeconds = (movingTo == MixerPosition::Closed) ? (float)travelTimeSeconds : 0.0f;
+            estimateValid = true;
+          } else {
+            float deltaSeconds = (float)(moveMs / 1000UL);
+            estimatedSeconds += moveTowardsClose ? deltaSeconds : -deltaSeconds;
+            if (estimatedSeconds < 0.0f) estimatedSeconds = 0.0f;
+            if (estimatedSeconds > (float)travelTimeSeconds) estimatedSeconds = (float)travelTimeSeconds;
+            current = MixerPosition::Partial;
+            // Hold here until the next command — without this the Idle state
+            // would immediately drive back to the retained full-travel target
+            holding = true;
+          }
           state = State::Cooldown;
           stateMs = now;
-          Serial.println(String(name) + ": reached " + positionToString(current));
+          Serial.println(String(name) + ": reached " + positionToString(current) +
+                         (estimateValid ? " (~" + String(getOpenPercent()) + "% open)" : ""));
           return true;
         }
         return false;
@@ -179,14 +239,33 @@ class MixerActuator {
   MixerPosition target = MixerPosition::Open;
   MixerPosition current = MixerPosition::Unknown;
   MixerPosition movingTo = MixerPosition::Unknown;
+  MixerPosition targetAtMoveStart = MixerPosition::Open;
+  bool holding = false;          // completed pulse: stay put despite current != target
   State state = State::Idle;
   unsigned long stateMs = 0;
+  unsigned long moveMs = 0;      // duration of the current move, 0 = full travel
+  bool moveTowardsClose = false; // direction of the current pulse
+  bool pulsePending = false;
+  bool pulseTowardsClose = false;
+  uint32_t pulseSeconds = 0;
+  // Position estimate in seconds from the open end stop (0 = open,
+  // travelTimeSeconds = closed); valid only after a completed full travel
+  float estimatedSeconds = 0.0f;
+  bool estimateValid = false;
 
-  static unsigned long travelMs() { return (unsigned long)travelTimeSeconds * 1000UL * 115UL / 100UL; }
+  static unsigned long fullTravelMs() { return (unsigned long)travelTimeSeconds * 1000UL * 115UL / 100UL; }
 
-  void setDirection(MixerPosition pos) {
+  uint32_t clampPulseToRemainingTravel(bool towardsClose, uint32_t seconds) const {
+    if (!estimateValid) return seconds;
+    float remaining = towardsClose ? ((float)travelTimeSeconds - estimatedSeconds) : estimatedSeconds;
+    if (remaining <= 0.0f) return 0;
+    if ((float)seconds > remaining) return (uint32_t)(remaining + 0.5f);
+    return seconds;
+  }
+
+  void setDirection(bool towardsClose) {
     // De-energized (NC) = direction OPEN, so any electrical failure defaults to open
-    if (pos == MixerPosition::Closed) {
+    if (towardsClose) {
       relayOn(directionPin);
     } else {
       relayOff(directionPin);
@@ -250,6 +329,9 @@ void publishMixerState(MixerActuator& mixer) {
   doc["position"] = positionToString(mixer.getPosition());
   doc["target"] = positionToString(mixer.getTarget());
   doc["moving"] = mixer.isMoving();
+  if (mixer.hasPositionEstimate()) {
+    doc["openPercent"] = mixer.getOpenPercent();
+  }
   doc["timestamp"] = getCurrentTimestamp();
   String jsonOutput;
   serializeJson(doc, jsonOutput);
@@ -339,19 +421,27 @@ bool updateConfiguration(const String& jsonConfig) {
 // ---------------------------------------------------------------------------
 void mqttCallback(String& topic, String& payload) {
   if (topic.startsWith("commands/MixerController/")) {
-    // commands/MixerController/{location}/{mixerName} with payload open|close
-    // (published retained by the RulesEngine service on every decision change)
+    // commands/MixerController/{location}/{mixerName} from the RulesEngine:
+    // - "open" | "close" (retained): full travel to the end stop
+    // - "open:N" | "close:N" (not retained): pulse N seconds towards that end,
+    //   used by the step controller to hold intermediate positions
     String mixerName = topic.substring(topic.lastIndexOf('/') + 1);
     mixerName.trim();  // tolerate stray whitespace in manually published topics
     String command = payload;
     command.trim();
     command.toLowerCase();
+    int separator = command.indexOf(':');
+    String action = separator >= 0 ? command.substring(0, separator) : command;
+    long seconds = separator >= 0 ? command.substring(separator + 1).toInt() : 0;
     for (int i = 0; i < mixerCount; i++) {
       if (mixerName == mixers[i].name) {
-        if (command == "open") mixers[i].setTarget(MixerPosition::Open);
-        else if (command == "close") mixers[i].setTarget(MixerPosition::Closed);
-        else {
-          Serial.println("Invalid mixer command '" + command + "'. Use open|close.");
+        if (separator < 0 && action == "open") mixers[i].setTarget(MixerPosition::Open);
+        else if (separator < 0 && action == "close") mixers[i].setTarget(MixerPosition::Closed);
+        else if (separator >= 0 && (action == "open" || action == "close") &&
+                 seconds > 0 && seconds <= (long)travelTimeSeconds) {
+          mixers[i].requestPulse(action == "close", (uint32_t)seconds);
+        } else {
+          Serial.println("Invalid mixer command '" + command + "'. Use open|close|open:N|close:N.");
         }
         return;
       }
