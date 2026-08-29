@@ -94,6 +94,10 @@ else
                                     <span title="WLAN @l.Rssi dBm"><i class="bi @RssiIcon(l.Rssi)"></i> @l.Rssi</span>
                                     <span title="Freier Speicher"><i class="bi bi-memory"></i> @(l.FreeHeap / 1024) KB</span>
                                     <span title="Verbindungen seit Neustart"><i class="bi bi-plug"></i> @l.MqttConnects</span>
+                                    @if (DataAge(l) is { } dataAge)
+                                    {
+                                        <span title="Zuletzt Daten gesendet"><i class="bi bi-graph-up-arrow"></i> Daten @Humanize(dataAge)</span>
+                                    }
                                     @if (IsNoteworthyReset(l.ResetReason))
                                     {
                                         <span class="reset-warn" title="Letzter Neustart"><i class="bi bi-exclamation-triangle"></i> @l.ResetReason</span>
@@ -326,6 +330,12 @@ else
     }
 
     // Everything except poweron/software hints at a crash or watchdog
+    // Age of the last data publish, seen from now: heartbeat age plus the device-reported
+    // distance between data and heartbeat. Shown without coloring - publish cadences differ
+    // wildly per type (SML every second, relay boards only on commands).
+    private static TimeSpan? DataAge(DeviceStatus device) =>
+        device.LastDataSecondsAgo is { } seconds ? device.Age + TimeSpan.FromSeconds(seconds) : null;
+
     private static bool IsNoteworthyReset(string reason) =>
         reason is not ("" or "poweron" or "software" or "external");
 

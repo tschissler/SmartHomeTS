@@ -22,6 +22,10 @@ namespace SmartHome.Web.Services
         public string ResetReason { get; set; } = "";
         public int MqttConnects { get; set; }
 
+        /// <summary>Seconds between the last data publish and this heartbeat; null when the
+        /// firmware does not report it or nothing was sent yet.</summary>
+        public long? LastDataSecondsAgo { get; set; }
+
         /// <summary>Device clock at the time of sending; empty when the device has no NTP time yet.</summary>
         public string Timestamp { get; set; } = "";
 
