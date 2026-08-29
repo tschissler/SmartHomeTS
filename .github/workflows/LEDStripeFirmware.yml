@@ -41,6 +41,9 @@ jobs:
       run: |
         pio run
 
+    - name: Check firmware fits the OTA partition
+      run: python ../tools/check_firmware_size.py
+
     - name: Upload Firmware to Azure Blob Storage
       run: |
         az storage blob upload --account-name smarthomestorageprod \
