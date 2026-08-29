@@ -1,149 +1,170 @@
 @page "/devices"
 @implements IDisposable
+@using System.Text.Json
 @using SmartHome.Web.Services
 @inject MqttService MqttService
 
-<h3>Geräte</h3>
+<PageTitle>Geräte</PageTitle>
 
-<p class="text-muted">
-    @HeartbeatDevices.Count Geräte mit Heartbeat,
-    @HeartbeatDevices.Count(d => d.Age > StaleAfter) davon stumm,
-    @HeartbeatDevices.Count(d => IsOutdated(d)) mit veralteter Firmware,
-    @LegacyDevices.Count Geräte ohne Heartbeat.
-</p>
-<p class="text-muted small">
-    Das Heartbeat-Alter wird lokal gemessen und beginnt beim Start der Anwendung.
-    Ein Gerät gilt erst nach drei ausgebliebenen Heartbeats als auffällig – direkt nach einem
-    Neustart der Anwendung sehen deshalb kurzzeitig alle Geräte aktuell aus.
-</p>
+<div class="devices-header">
+    <h3>Geräte</h3>
+    <div class="filter-chips">
+        <button class="chip @(Filter == StatusFilter.All ? "active" : "")"
+                @onclick="() => Filter = StatusFilter.All">
+            Alle <span class="count">@AllDevices.Count</span>
+        </button>
+        <button class="chip chip-ok @(Filter == StatusFilter.Ok ? "active" : "")"
+                @onclick="() => Filter = StatusFilter.Ok">
+            <i class="bi bi-check-circle-fill"></i> OK <span class="count">@CountOk</span>
+        </button>
+        <button class="chip chip-stale @(Filter == StatusFilter.Silent ? "active" : "")"
+                @onclick="() => Filter = StatusFilter.Silent">
+            <i class="bi bi-volume-mute-fill"></i> Stumm <span class="count">@CountSilent</span>
+        </button>
+        <button class="chip chip-update @(Filter == StatusFilter.Outdated ? "active" : "")"
+                @onclick="() => Filter = StatusFilter.Outdated">
+            <i class="bi bi-arrow-up-circle-fill"></i> Update fällig <span class="count">@CountOutdated</span>
+        </button>
+    </div>
+</div>
 
-@if (HeartbeatDevices.Count == 0)
+@if (AllDevices.Count == 0)
 {
-    <div class="alert alert-secondary">Noch keine Heartbeats empfangen.</div>
+    <div class="empty-state">
+        <i class="bi bi-broadcast"></i>
+        <p>Noch keine Heartbeats empfangen.</p>
+    </div>
 }
 else
 {
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>Standort</th>
-                    <th>Typ</th>
-                    <th>Gerät</th>
-                    <th>Chip</th>
-                    <th>Version</th>
-                    <th>Soll</th>
-                    <th>Letzter Heartbeat</th>
-                    <th>Laufzeit</th>
-                    <th>WLAN</th>
-                    <th>Freier Speicher</th>
-                    <th>Letzter Neustart</th>
-                    <th>Verbindungen</th>
-                    <th>IP</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var device in HeartbeatDevices)
+    @foreach (var group in FilteredGroups)
+    {
+        <div class="location-group">
+            <h5 class="location-title"><i class="bi bi-geo-alt"></i> @group.Key</h5>
+            <div class="device-grid">
+                @foreach (var device in group)
                 {
-                    <tr class="@RowClass(device)">
-                        <td>@device.Location</td>
-                        <td>@device.DeviceType</td>
-                        <td>
-                            <strong>@device.DeviceName</strong>
-                            @if (device.Extra.Count > 0)
-                            {
-                                <br /><small class="text-muted">@device.ExtraSummary</small>
-                            }
-                        </td>
-                        <td><small class="text-muted">@device.ChipModel</small></td>
-                        <td>@device.Version</td>
-                        <td>
+                    var state = StateOf(device);
+                    <div class="device-card @CardClass(state)">
+                        <div class="card-head">
+                            <span class="status-dot" title="@StateTitle(state)"></span>
+                            <div class="identity">
+                                <div class="dev-name">@DisplayName(device)</div>
+                                <div class="dev-sub">@device.DeviceType@(string.IsNullOrEmpty(device.ChipModel) ? "" : $" · {device.ChipModel}")</div>
+                            </div>
+                            <div class="age" title="Letzter Heartbeat">@Humanize(device.Age)</div>
+                        </div>
+
+                        <div class="version-row">
+                            <span class="version">@device.Version</span>
                             @if (OfferedVersion(device) is { } offered)
                             {
                                 @if (offered == device.Version)
                                 {
-                                    <span class="text-muted">aktuell</span>
+                                    <span class="ver-ok"><i class="bi bi-check-lg"></i> aktuell</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-warning text-dark">@offered</span>
+                                    <span class="ver-update"><i class="bi bi-arrow-up-circle"></i> @offered verfügbar</span>
                                 }
                             }
-                            else
+                        </div>
+
+                        <div class="meta-row">
+                            <span title="Laufzeit"><i class="bi bi-clock-history"></i> @Humanize(TimeSpan.FromSeconds(device.UptimeSeconds))</span>
+                            <span title="WLAN @device.Rssi dBm"><i class="bi @RssiIcon(device.Rssi)"></i> @device.Rssi</span>
+                            <span title="Freier Speicher"><i class="bi bi-memory"></i> @(device.FreeHeap / 1024) KB</span>
+                            <span title="Verbindungen seit Neustart"><i class="bi bi-plug"></i> @device.MqttConnects</span>
+                            @if (IsNoteworthyReset(device.ResetReason))
                             {
-                                <span class="text-muted">–</span>
+                                <span class="reset-warn" title="Letzter Neustart"><i class="bi bi-exclamation-triangle"></i> @device.ResetReason</span>
                             }
-                        </td>
-                        <td><span class="badge @AgeBadge(device.Age)">@Humanize(device.Age)</span></td>
-                        <td>@Humanize(TimeSpan.FromSeconds(device.UptimeSeconds))</td>
-                        <td>@device.Rssi dBm</td>
-                        <td>@(device.FreeHeap / 1024) KB</td>
-                        <td>@device.ResetReason</td>
-                        <td>@device.MqttConnects</td>
-                        <td><small>@device.Ip</small></td>
-                    </tr>
+                        </div>
+
+                        @if (RelayStates(device) is { Count: > 0 } relays)
+                        {
+                            <div class="extra-row">
+                                @foreach (var relay in relays)
+                                {
+                                    <span class="relay-chip @(relay.Value ? "on" : "")">@relay.Key</span>
+                                }
+                            </div>
+                        }
+                    </div>
                 }
-            </tbody>
-        </table>
-    </div>
+            </div>
+        </div>
+    }
+
+    @if (Filter != StatusFilter.All && !FilteredGroups.Any())
+    {
+        <div class="empty-state"><p>Kein Gerät in dieser Kategorie.</p></div>
+    }
 }
 
 @if (LegacyDevices.Count > 0)
 {
-    <h4 class="mt-4">Ohne Heartbeat</h4>
-    <p class="text-muted">
-        Diese Geräte melden nur eine Version. Ob sie noch laufen, lässt sich hier nicht sagen –
-        die Angabe stammt aus einer retained Nachricht und kann beliebig alt sein.
-    </p>
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle">
-            <thead>
-                <tr><th>Topic</th><th>Version</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var device in LegacyDevices)
-                {
-                    <tr>
-                        <td><small>@device.Topic</small></td>
-                        <td>@device.Version</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+    <details class="extra-section">
+        <summary>Ohne Heartbeat (@LegacyDevices.Count)</summary>
+        <p class="hint">Diese Geräte melden nur eine Version; ob sie laufen, ist daraus nicht ablesbar.</p>
+        <ul class="legacy-list">
+            @foreach (var device in LegacyDevices)
+            {
+                <li><span class="legacy-topic">@device.Topic</span><span class="legacy-ver">@device.Version</span></li>
+            }
+        </ul>
+    </details>
 }
 
 @if (OfferedVersions.Count > 0)
 {
-    <h4 class="mt-4">Angebotene Firmware</h4>
-    <div class="table-responsive">
-        <table class="table table-sm align-middle" style="max-width: 32rem;">
-            <thead>
-                <tr><th>Gerätetyp</th><th>Version</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var offered in OfferedVersions)
-                {
-                    <tr><td>@offered.Key</td><td>@offered.Value</td></tr>
-                }
-            </tbody>
-        </table>
-    </div>
+    <details class="extra-section">
+        <summary>Angebotene Firmware (@OfferedVersions.Count)</summary>
+        <ul class="legacy-list">
+            @foreach (var offered in OfferedVersions)
+            {
+                <li><span class="legacy-topic">@offered.Key</span><span class="legacy-ver">@offered.Value</span></li>
+            }
+        </ul>
+    </details>
 }
 
+<p class="footnote">
+    Heartbeat-Alter wird lokal gemessen und beginnt mit dem Start der Anwendung –
+    nach einem Neustart sehen kurzzeitig alle Geräte aktuell aus.
+</p>
+
 @code {
-    // Three missed heartbeats - the devices send one per minute
     private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan DeadAfter = TimeSpan.FromMinutes(10);
 
+    private enum StatusFilter { All, Ok, Silent, Outdated }
+    private enum DeviceState { Ok, Stale, Dead }
+
+    private StatusFilter Filter { get; set; } = StatusFilter.All;
     private System.Threading.Timer? refreshTimer;
 
-    private List<DeviceStatus> HeartbeatDevices => MqttService.Devices.Values
-        .OrderBy(d => d.Location).ThenBy(d => d.DeviceType).ThenBy(d => d.DeviceName)
+    private List<DeviceStatus> AllDevices => MqttService.Devices.Values
+        .OrderBy(d => d.DeviceType).ThenBy(d => d.DeviceName)
         .ToList();
 
-    // A device with a heartbeat still publishes its version topic; listing it here as well
-    // would suggest it has no heartbeat.
+    private int CountOk => AllDevices.Count(d => StateOf(d) == DeviceState.Ok && !IsOutdated(d));
+    private int CountSilent => AllDevices.Count(d => StateOf(d) != DeviceState.Ok);
+    private int CountOutdated => AllDevices.Count(IsOutdated);
+
+    private IEnumerable<IGrouping<string, DeviceStatus>> FilteredGroups => AllDevices
+        .Where(MatchesFilter)
+        .GroupBy(d => d.Location)
+        .OrderBy(g => g.Key == "unknown" ? 1 : 0).ThenBy(g => g.Key);
+
+    private bool MatchesFilter(DeviceStatus device) => Filter switch
+    {
+        StatusFilter.Ok => StateOf(device) == DeviceState.Ok && !IsOutdated(device),
+        StatusFilter.Silent => StateOf(device) != DeviceState.Ok,
+        StatusFilter.Outdated => IsOutdated(device),
+        _ => true,
+    };
+
     private List<LegacyDevice> LegacyDevices => MqttService.LegacyDevices.Values
         .Where(legacy => !MqttService.Devices.Values.Any(
             device => device.DeviceName.Length > 0 && legacy.Topic.Contains(device.DeviceName)))
@@ -157,8 +178,6 @@ else
     protected override void OnInitialized()
     {
         MqttService.OnMessageReceived += HandleMessageReceived;
-
-        // The age column has to keep counting up even while nothing arrives
         refreshTimer = new System.Threading.Timer(
             _ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
     }
@@ -171,17 +190,62 @@ else
         }
     }
 
+    private DeviceState StateOf(DeviceStatus device) =>
+        device.Age > DeadAfter ? DeviceState.Dead : device.Age > StaleAfter ? DeviceState.Stale : DeviceState.Ok;
+
+    private string CardClass(DeviceState state) => state switch
+    {
+        DeviceState.Dead => "state-dead",
+        DeviceState.Stale => "state-stale",
+        _ => "state-ok",
+    };
+
+    private string StateTitle(DeviceState state) => state switch
+    {
+        DeviceState.Dead => "Seit über 10 Minuten kein Heartbeat",
+        DeviceState.Stale => "Heartbeat überfällig",
+        _ => "Meldet sich regelmäßig",
+    };
+
     private string? OfferedVersion(DeviceStatus device) =>
         MqttService.OfferedVersions.TryGetValue(device.DeviceType, out var version) ? version : null;
 
     private bool IsOutdated(DeviceStatus device) =>
         OfferedVersion(device) is { } offered && offered != device.Version;
 
-    private string RowClass(DeviceStatus device) =>
-        device.Age > DeadAfter ? "table-danger" : device.Age > StaleAfter ? "table-warning" : "";
+    // "Relaismodule_M1_EG" repeats type and location; the card already shows both
+    private string DisplayName(DeviceStatus device)
+    {
+        var name = device.DeviceName;
+        var prefix = device.DeviceType + "_";
+        if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && name.Length > prefix.Length)
+        {
+            name = name[prefix.Length..];
+        }
+        return name;
+    }
 
-    private string AgeBadge(TimeSpan age) =>
-        age > DeadAfter ? "bg-danger" : age > StaleAfter ? "bg-warning text-dark" : "bg-success";
+    // Everything except poweron/software hints at a crash or watchdog
+    private static bool IsNoteworthyReset(string reason) =>
+        reason is not ("" or "poweron" or "software" or "external");
+
+    private static string RssiIcon(int rssi) => rssi switch
+    {
+        >= -60 => "bi-reception-4",
+        >= -70 => "bi-reception-3",
+        >= -80 => "bi-reception-2",
+        _ => "bi-reception-1",
+    };
+
+    private Dictionary<string, bool>? RelayStates(DeviceStatus device)
+    {
+        if (!device.Extra.TryGetValue("relays", out var relays) || relays.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        return relays.EnumerateObject()
+            .ToDictionary(p => p.Name, p => p.Value.ValueKind == JsonValueKind.String && p.Value.GetString() == "ON");
+    }
 
     private static string Humanize(TimeSpan span)
     {
