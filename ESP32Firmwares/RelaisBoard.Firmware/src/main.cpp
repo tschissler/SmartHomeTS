@@ -95,7 +95,9 @@ static String mqtt_config_Topic = "";
 static String mqtt_CommandsTopic = "commands/Heating/#";
 static String mqtt_Data_Topic = "";
 static String site = "";
-static const char* DEVICE_TYPE = "RelaisModule";
+// Must match the OTA topic segment (OTAUpdate/Relaismodule) so a consumer can pair the
+// running version with the version currently offered for this device type.
+static const char* DEVICE_TYPE = "Relaismodule";
 // Heartbeats used to live here before the shared status/ tree existed. Cleared once
 // after an update so the stale retained message does not linger as a phantom device.
 static String legacyStatusTopic = "";
