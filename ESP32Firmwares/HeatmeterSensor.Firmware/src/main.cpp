@@ -296,7 +296,10 @@ void setup() {
 }
 
 void loop() {
-  otaInProgress = AzureOTAUpdater::CheckUpdateStatus();
+  // CheckUpdateStatus() returns an int: 1 while updating, -1 on failure. Assigning it
+  // straight to a bool made a failed update read as "still updating" forever, which
+  // left the loop dead until the next power cycle.
+  otaInProgress = (AzureOTAUpdater::CheckUpdateStatus() == 1);
   if (otaInProgress) { state = SystemStatus::OTA_IN_PROGRESS; delay (500); return; }
   else if (state == SystemStatus::OTA_IN_PROGRESS) { state = SystemStatus::HEALTHY; }
 

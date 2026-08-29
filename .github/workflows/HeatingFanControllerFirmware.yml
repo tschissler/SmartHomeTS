@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/HeatingFanControllerFirmware.yml
       - ESP32Firmwares/HeatingFanController.Firmware/**
+  workflow_dispatch:
   
 jobs:
   build:
