@@ -94,7 +94,12 @@ static String mqtt_config_Base = "config/Relaismodule/";
 static String mqtt_config_Topic = "";
 static String mqtt_CommandsTopic = "commands/Heating/#";
 static String mqtt_Data_Topic = "";
-static String mqtt_Status_Topic = "";
+static String site = "";
+static const char* DEVICE_TYPE = "RelaisModule";
+// Heartbeats used to live here before the shared status/ tree existed. Cleared once
+// after an update so the stale retained message does not linger as a phantom device.
+static String legacyStatusTopic = "";
+static bool legacyStatusTopicCleared = false;
 
 // Subscription bookkeeping. Every flag is cleared on every (re)connect and is only set
 // once the broker has actually acknowledged the subscription.
@@ -385,22 +390,15 @@ void publishPendingStates() {
 }
 
 void publishHeartbeat() {
-  if (!mqttConnected || mqtt_Status_Topic.isEmpty()) {
+  if (!mqttConnected || sensorName.isEmpty()) {
     return;
   }
 
+  // Fields the shared heartbeat does not know about. Serialized through ArduinoJson and
+  // stripped of its outer braces, so room names are escaped properly.
   JsonDocument doc;
-  doc["version"] = version;
-  doc["chipId"] = chipID;
-  doc["ip"] = WiFi.localIP().toString();
-  doc["rssi"] = WiFi.RSSI();
-  doc["uptimeSeconds"] = millis() / 1000;
-  doc["freeHeap"] = ESP.getFreeHeap();
-  doc["resetReason"] = getResetReason();
   doc["wifiReconnects"] = wifiReconnects;
-  doc["mqttReconnects"] = mqttReconnects;
   doc["otaFailures"] = otaFailures;
-  doc["timestamp"] = getCurrentTimestamp();
 
   JsonObject relays = doc["relays"].to<JsonObject>();
   for (const auto& mapping : roomToPinMapping) {
@@ -408,10 +406,12 @@ void publishHeartbeat() {
     relays[mapping.first] = ((it != desiredRelayState.end()) && it->second) ? "ON" : "OFF";
   }
 
-  String jsonOutput;
-  serializeJson(doc, jsonOutput);
+  String extraFields;
+  serializeJson(doc, extraFields);
+  extraFields = extraFields.substring(1, extraFields.length() - 1);
 
-  mqttClient->publish(mqtt_Status_Topic, jsonOutput, true, 0, false);
+  mqttClient->publishStatus(site, DEVICE_TYPE, sensorName, String(version),
+                            getCurrentTimestamp(), extraFields);
 }
 
 // ---------------------------------------------------------------------------
@@ -437,10 +437,18 @@ void applySensorName(const String& name) {
   }
 
   mqtt_Data_Topic = "daten/Heizung/" + location + "/FussbodenHeizungSteuerung";
-  mqtt_Status_Topic = "meta/" + sensorName + "/status/RelaisModule";
+  legacyStatusTopic = "meta/" + sensorName + "/status/RelaisModule";
+
+  // location is "M1_EG"; the status tree groups by site, so strip the floor
+  site = location;
+  int floorSeparator = site.indexOf('_');
+  if (floorSeparator > 0) {
+    site = site.substring(0, floorSeparator);
+  }
 
   Serial.println("Sensor name set to: " + sensorName);
   Serial.println("Location set to: " + location);
+  Serial.println("Site set to: " + site);
   Serial.println("Config topic set to: " + mqtt_config_Topic);
 
   if (preferences.getString(NVS_KEY_NAME, "") != sensorName) {
@@ -663,6 +671,11 @@ void connectToMQTT() {
 
   if (!sensorName.isEmpty()) {
     mqttClient->publish("meta/" + sensorName + "/version/RelaisModule", String(version), true, 0);
+  }
+
+  if (!legacyStatusTopicCleared && !legacyStatusTopic.isEmpty()) {
+    mqttClient->publish(legacyStatusTopic, "", true, 0, false);
+    legacyStatusTopicCleared = true;
   }
 
   // Publish the current state right away so consumers see where we stand after a reconnect
