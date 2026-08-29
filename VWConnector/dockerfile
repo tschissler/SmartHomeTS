@@ -6,6 +6,10 @@ ARG BUILD_DATE=unknown
 ARG GIT_COMMIT=unknown
 ARG BUILD_NUMBER=0
 
+# Unbuffered stdout, otherwise print() output sits in a block buffer and
+# the connector's log lines never reach kubectl logs.
+ENV PYTHONUNBUFFERED=1
+
 # Set the working directory in the container
 WORKDIR /app
 

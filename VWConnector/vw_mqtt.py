@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 import os
 import asyncio
 import json
@@ -6,6 +7,7 @@ import threading
 from typing import Optional
 from carconnectivity import carconnectivity
 import paho.mqtt.client as mqtt
+import flask.cli
 from flask import Flask, jsonify
 from typing import TYPE_CHECKING
 
@@ -76,6 +78,12 @@ def get_version_info():
 
 def start_health_server(port):
     """Start Flask health check server in a background thread."""
+    # Kubernetes probes /ready every 5s and /healthz every 10s. Werkzeug logs
+    # every one of those, which buries the two connector messages per 15 min
+    # under ~35k lines a day, so only surface actual errors.
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
+    flask.cli.show_server_banner = lambda *args, **kwargs: None
+
     app = Flask(__name__)
 
     def _is_healthy():
