@@ -60,6 +60,10 @@ static bool otaEnable = true;
 const String mqtt_broker = "mosquitto.intern";
 const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/MixerController";
+// Retained device heartbeat on status/<location>/<deviceType>/<deviceName>, so a consumer
+// can tell a silent device from a healthy one. Must match the OTA topic segment.
+static const uint32_t HEARTBEAT_INTERVAL_MS = 60000;
+static uint32_t lastHeartbeatMs = 0;
 static String mqtt_ConfigTopic = "config/MixerController/";       // + chipID
 static String mqtt_CommandsTopic = "commands/MixerController/#";
 
@@ -568,6 +572,11 @@ void loop() {
   if (!mqttClient->loop()) {
     Serial.println("MQTT Client not connected, reconnecting in loop...");
     connectToMQTT(false);
+  }
+
+  if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
+    lastHeartbeatMs = millis();
+    mqttClient->publishStatus(location, "MixerController", "MixerController_" + location, String(version), getCurrentTimestamp());
   }
 
   for (int i = 0; i < mixerCount; i++) {

@@ -76,6 +76,10 @@ static String location = "unknown";
 const String mqtt_broker = "mosquitto.intern";
 const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/TemperaturSensor2";
+// Retained device heartbeat on status/<location>/<deviceType>/<deviceName>, so a consumer
+// can tell a silent device from a healthy one. Must match the OTA topic segment.
+static const uint32_t HEARTBEAT_INTERVAL_MS = 60000;
+static uint32_t lastHeartbeatMs = 0;
 static String mqtt_ConfigTopic = "config/TemperaturSensor2/{ID}";
 static int brightness = 255;
 static int blinkCount = 0;
@@ -647,6 +651,11 @@ void loop()
     }
 
     bool mqttConnected = mqttClientLib->loop();
+
+    if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
+      lastHeartbeatMs = millis();
+      mqttClientLib->publishStatus(location, "TemperaturSensor2", sensorName, String(version));
+    }
     if (!mqttConnected)
     {
       // Log detailed information about the disconnection

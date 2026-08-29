@@ -36,6 +36,10 @@ static bool otaEnable = String(OTA_ENABLED) != "false";
 static const String mqtt_broker = "mosquitto.intern";
 static const int mqtt_port = 1883;
 static const String mqtt_update_topic = "OTAUpdate/LEDStripe";
+// Retained device heartbeat on status/<location>/<deviceType>/<deviceName>, so a consumer
+// can tell a silent device from a healthy one. Must match the OTA topic segment.
+static const uint32_t HEARTBEAT_INTERVAL_MS = 60000;
+static uint32_t lastHeartbeatMs = 0;
 static const String mqtt_data_topic = "commands/illumination/LEDStripe/setColor";
 
 static void mqttCallback(String &topic, String &payload);
@@ -284,6 +288,11 @@ void loop() {
 
   {
     bool mqttConnected = mqttClientLib->loop();
+
+    if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
+      lastHeartbeatMs = millis();
+      mqttClientLib->publishStatus("unknown", "LEDStripe", "LEDStripe", String(version));
+    }
     if (!mqttConnected)
     {
       int lastErr = mqttClientLib->lastError();

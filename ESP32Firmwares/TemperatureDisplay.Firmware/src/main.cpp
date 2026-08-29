@@ -31,6 +31,10 @@ static String deviceName = "";
 const String mqtt_broker = "mosquitto.intern";
 const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/TemperatureDisplay";
+// Retained device heartbeat on status/<location>/<deviceType>/<deviceName>, so a consumer
+// can tell a silent device from a healthy one. Must match the OTA topic segment.
+static const uint32_t HEARTBEAT_INTERVAL_MS = 60000;
+static uint32_t lastHeartbeatMs = 0;
 static String mqtt_DeviceNameTopic = "config/TemperaturDisplay/{ID}/DeviceName";
 static String mqtt_OutsideTempTopic = "cangateway/M3/WPAE/Temperatur/AF1_Aussenfuehler";
 static String mqtt_OutsideTempGardenTopic = "daten/temperatur/M1/Aussen";
@@ -287,6 +291,11 @@ void loop()
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
+    }
+
+    if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
+      lastHeartbeatMs = millis();
+      mqttClientLib->publishStatus("unknown", "TemperatureDisplay", deviceName, String(version));
     }
 
     display.updateTransferProgress();

@@ -277,7 +277,10 @@ namespace SmartHome.Web.Services
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                     if (status is not null)
                     {
-                        status.ReceivedAt = DateTimeOffset.Now;
+                        status.RawPayload = payload;
+                        // An unchanged repeat is a retained replay, not a sign of life
+                        var unchanged = Devices.TryGetValue(topic, out var known) && known.RawPayload == payload;
+                        status.ReceivedAt = unchanged ? known!.ReceivedAt : DateTimeOffset.Now;
                         Devices[topic] = status;
                     }
                 }

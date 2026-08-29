@@ -28,29 +28,25 @@ namespace SmartHome.Web.Services
         [JsonExtensionData]
         public Dictionary<string, JsonElement> Extra { get; set; } = new();
 
-        /// <summary>When this process received the message. Set by the service, not by the device.</summary>
+        /// <summary>
+        /// When a heartbeat with *changed* content last arrived. Deliberately not updated for an
+        /// identical repeat: on every reconnect the broker replays all retained messages, which
+        /// would otherwise make long-dead devices look freshly alive.
+        /// </summary>
         [JsonIgnore]
         public DateTimeOffset ReceivedAt { get; set; }
 
+        /// <summary>The payload behind ReceivedAt, used to recognise an unchanged repeat.</summary>
+        [JsonIgnore]
+        public string RawPayload { get; set; } = "";
+
         /// <summary>
-        /// Age of the heartbeat. Prefers the device timestamp, because a retained message can be
-        /// picked up long after it was sent - the receive time would then look deceptively fresh.
+        /// Age of the heartbeat, measured locally. The device timestamp is shown but not used
+        /// here: the firmwares configure different NTP offsets, so a device on UTC would appear
+        /// an hour older than it is and be flagged dead.
         /// </summary>
         [JsonIgnore]
-        public TimeSpan Age
-        {
-            get
-            {
-                if (DateTime.TryParse(Timestamp, out var sent))
-                {
-                    // The devices send local time (UTC+1 offset configured in their NTP client)
-                    var sentOffset = new DateTimeOffset(sent, TimeSpan.FromHours(1));
-                    var age = DateTimeOffset.Now - sentOffset;
-                    if (age > TimeSpan.Zero) return age;
-                }
-                return DateTimeOffset.Now - ReceivedAt;
-            }
-        }
+        public TimeSpan Age => DateTimeOffset.Now - ReceivedAt;
 
         [JsonIgnore]
         public string ExtraSummary =>

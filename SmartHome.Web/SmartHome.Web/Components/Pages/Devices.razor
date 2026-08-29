@@ -11,6 +11,11 @@
     @HeartbeatDevices.Count(d => IsOutdated(d)) mit veralteter Firmware,
     @LegacyDevices.Count Geräte ohne Heartbeat.
 </p>
+<p class="text-muted small">
+    Das Heartbeat-Alter wird lokal gemessen und beginnt beim Start der Anwendung.
+    Ein Gerät gilt erst nach drei ausgebliebenen Heartbeats als auffällig – direkt nach einem
+    Neustart der Anwendung sehen deshalb kurzzeitig alle Geräte aktuell aus.
+</p>
 
 @if (HeartbeatDevices.Count == 0)
 {

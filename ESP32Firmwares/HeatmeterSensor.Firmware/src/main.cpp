@@ -36,6 +36,10 @@ static String location = "";
 const String mqtt_broker = "mosquitto.intern";
 const int mqtt_port = 1883;
 static String mqtt_OTAtopic = "OTAUpdate/HeatMeter";
+// Retained device heartbeat on status/<location>/<deviceType>/<deviceName>, so a consumer
+// can tell a silent device from a healthy one. Must match the OTA topic segment.
+static const uint32_t HEARTBEAT_INTERVAL_MS = 60000;
+static uint32_t lastHeartbeatMs = 0;
 static String mqtt_ConfigTopic = "config/HeatMeter/Sensorname/";
 
 enum SystemStatus { HEALTHY, TRANSMITTING, NO_METER_RESPONSE, NO_WIFI, NO_MQTT, OTA_IN_PROGRESS };
@@ -308,6 +312,11 @@ void loop() {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
     }
+
+  if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
+    lastHeartbeatMs = millis();
+    mqttClient->publishStatus(location, "HeatMeter", sensorName, String(version));
+  }
 
   if (millis() - lastBlinkTime >= LED_BLINK_INTERVAL_MS) {
     lastBlinkTime = millis();
