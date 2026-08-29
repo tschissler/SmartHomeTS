@@ -193,7 +193,14 @@ else
                 {
                     continue;
                 }
-                cards.Add(ParseLegacy(legacy));
+                var parsed = ParseLegacy(legacy);
+                if (parsed.DeviceType == "Unbekannt")
+                {
+                    // Services like the RulesEngine publish meta versions too; only topics
+                    // matching a known device type (an OTAUpdate topic exists) are devices.
+                    continue;
+                }
+                cards.Add(parsed);
             }
             return cards;
         }
