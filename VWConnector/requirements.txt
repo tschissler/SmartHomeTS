@@ -1,4 +1,4 @@
-carconnectivity>=0.10.5
-carconnectivity-connector-volkswagen>=0.10.5
+carconnectivity>=0.11.10
+carconnectivity-connector-vw-eu-data-act>=0.3.0
 paho-mqtt
 flask
