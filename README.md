@@ -149,7 +149,7 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 - **Purpose**: Firmware for ESP32-based devices, including LED strips, temperature sensors, and more.
 - **Inspiration**: Learn how to program microcontrollers for IoT applications.
 
-  Quick links: [`SMLSensor.Firmware`](ESP32Firmwares/SMLSensor.Firmware/README.md) · [`TemperatureDisplay.Firmware`](ESP32Firmwares/TemperatureDisplay.Firmware/README.md) · [`HeatmeterSensor.Firmware`](ESP32Firmwares/HeatmeterSensor.Firmware/README.md) · [`RelaisBoard.Firmware`](ESP32Firmwares/RelaisBoard.Firmware/README.md) · [`CANBusGateway.Firmware`](ESP32Firmwares/CANBusGateway.Firmware/README.md)
+  Quick links: [`SMLSensor.Firmware`](ESP32Firmwares/SMLSensor.Firmware/README.md) · [`TemperatureDisplay.Firmware`](ESP32Firmwares/TemperatureDisplay.Firmware/README.md) · [`HeatmeterSensor.Firmware`](ESP32Firmwares/HeatmeterSensor.Firmware/README.md) · [`RelaisBoard.Firmware`](ESP32Firmwares/RelaisBoard.Firmware/README.md)
 
 #### SMLSensor.Firmware
 
