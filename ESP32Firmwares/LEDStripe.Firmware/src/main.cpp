@@ -291,7 +291,7 @@ void loop() {
 
     if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
       lastHeartbeatMs = millis();
-      mqttClientLib->publishStatus("unknown", "LEDStripe", "LEDStripe", String(version));
+      mqttClientLib->publishStatus("M1", "LEDStripe", "LEDStripe", String(version));
     }
     if (!mqttConnected)
     {
