@@ -1,0 +1,16 @@
+# Larger OTA slots for TemperatureSensor2.
+#
+# The default table gives each app slot 0x140000 (1.31 MB) and reserves 1.4 MB for a
+# SPIFFS partition this firmware never touches. The image passed 100% of that slot with
+# 0.0.51, so devices downloaded every update and then refused to install it. Taking the
+# space from the unused filesystem gives each slot 0x1E0000 (1.97 MB) instead.
+#
+# Changing this table requires flashing the device over USB once - OTA only ever writes
+# the app partition, never the table itself.
+#
+# Name,   Type, SubType, Offset,   Size,     Flags
+nvs,      data, nvs,     0x9000,   0x5000,
+otadata,  data, ota,     0xe000,   0x2000,
+app0,     app,  ota_0,   0x10000,  0x1E0000,
+app1,     app,  ota_1,   0x1F0000, 0x1E0000,
+spiffs,   data, spiffs,  0x3D0000, 0x20000,
