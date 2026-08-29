@@ -1,6 +1,7 @@
 @page "/devices"
 @implements IDisposable
 @using System.Text.Json
+@using System.Text.RegularExpressions
 @using SmartHome.Web.Services
 @inject MqttService MqttService
 
@@ -11,7 +12,7 @@
     <div class="filter-chips">
         <button class="chip @(Filter == StatusFilter.All ? "active" : "")"
                 @onclick="() => Filter = StatusFilter.All">
-            Alle <span class="count">@AllDevices.Count</span>
+            Alle <span class="count">@Cards.Count</span>
         </button>
         <button class="chip chip-ok @(Filter == StatusFilter.Ok ? "active" : "")"
                 @onclick="() => Filter = StatusFilter.Ok">
@@ -25,95 +26,107 @@
                 @onclick="() => Filter = StatusFilter.Outdated">
             <i class="bi bi-arrow-up-circle-fill"></i> Update fällig <span class="count">@CountOutdated</span>
         </button>
+        @if (CountNoHeartbeat > 0)
+        {
+            <button class="chip chip-unknown @(Filter == StatusFilter.NoHeartbeat ? "active" : "")"
+                    @onclick="() => Filter = StatusFilter.NoHeartbeat">
+                <i class="bi bi-question-circle-fill"></i> Kein Heartbeat <span class="count">@CountNoHeartbeat</span>
+            </button>
+        }
     </div>
 </div>
 
-@if (AllDevices.Count == 0)
+@if (Cards.Count == 0)
 {
     <div class="empty-state">
         <i class="bi bi-broadcast"></i>
-        <p>Noch keine Heartbeats empfangen.</p>
+        <p>Noch keine Geräte bekannt.</p>
     </div>
 }
 else
 {
-    @foreach (var group in FilteredGroups)
+    @foreach (var locationGroup in FilteredCards.GroupBy(c => c.Location)
+        .OrderBy(g => g.Key == "unknown" ? 1 : 0).ThenBy(g => g.Key))
     {
         <div class="location-group">
-            <h5 class="location-title"><i class="bi bi-geo-alt"></i> @group.Key</h5>
-            <div class="device-grid">
-                @foreach (var device in group)
-                {
-                    var state = StateOf(device);
-                    <div class="device-card @CardClass(state)">
-                        <div class="card-head">
-                            <span class="status-dot" title="@StateTitle(state)"></span>
-                            <div class="identity">
-                                <div class="dev-name">@DisplayName(device)</div>
-                                <div class="dev-sub">@device.DeviceType@(string.IsNullOrEmpty(device.ChipModel) ? "" : $" · {device.ChipModel}")</div>
-                            </div>
-                            <div class="age" title="Letzter Heartbeat">@Humanize(device.Age)</div>
-                        </div>
-
-                        <div class="version-row">
-                            <span class="version">@device.Version</span>
-                            @if (OfferedVersion(device) is { } offered)
-                            {
-                                @if (offered == device.Version)
+            <h5 class="location-title"><i class="bi bi-geo-alt"></i> @(locationGroup.Key == "unknown" ? "Ohne Standort" : locationGroup.Key)</h5>
+            @foreach (var typeGroup in locationGroup.GroupBy(c => c.DeviceType).OrderBy(g => g.Key))
+            {
+                <div class="type-title">@typeGroup.Key <span class="type-count">@typeGroup.Count()</span></div>
+                <div class="device-grid">
+                    @foreach (var card in typeGroup.OrderBy(c => c.Name))
+                    {
+                        var state = StateOf(card);
+                        <div class="device-card @CardClass(state)">
+                            <div class="card-head">
+                                <span class="status-dot" title="@StateTitle(state)"></span>
+                                <div class="identity">
+                                    <div class="dev-name">@card.Name</div>
+                                    <div class="dev-sub">
+                                        @card.DeviceType@(string.IsNullOrEmpty(card.Live?.ChipModel) ? "" : $" · {card.Live!.ChipModel}")
+                                    </div>
+                                </div>
+                                @if (card.Live is { } live)
                                 {
-                                    <span class="ver-ok"><i class="bi bi-check-lg"></i> aktuell</span>
-                                }
-                                else
-                                {
-                                    <span class="ver-update"><i class="bi bi-arrow-up-circle"></i> @offered verfügbar</span>
-                                }
-                            }
-                        </div>
-
-                        <div class="meta-row">
-                            <span title="Laufzeit"><i class="bi bi-clock-history"></i> @Humanize(TimeSpan.FromSeconds(device.UptimeSeconds))</span>
-                            <span title="WLAN @device.Rssi dBm"><i class="bi @RssiIcon(device.Rssi)"></i> @device.Rssi</span>
-                            <span title="Freier Speicher"><i class="bi bi-memory"></i> @(device.FreeHeap / 1024) KB</span>
-                            <span title="Verbindungen seit Neustart"><i class="bi bi-plug"></i> @device.MqttConnects</span>
-                            @if (IsNoteworthyReset(device.ResetReason))
-                            {
-                                <span class="reset-warn" title="Letzter Neustart"><i class="bi bi-exclamation-triangle"></i> @device.ResetReason</span>
-                            }
-                        </div>
-
-                        @if (RelayStates(device) is { Count: > 0 } relays)
-                        {
-                            <div class="extra-row">
-                                @foreach (var relay in relays)
-                                {
-                                    <span class="relay-chip @(relay.Value ? "on" : "")">@relay.Key</span>
+                                    <div class="age" title="Letzter Heartbeat">@Humanize(live.Age)</div>
                                 }
                             </div>
-                        }
-                    </div>
-                }
-            </div>
+
+                            <div class="version-row">
+                                <span class="version">@card.Version</span>
+                                @if (OfferedVersion(card) is { } offered)
+                                {
+                                    @if (offered == card.Version)
+                                    {
+                                        <span class="ver-ok"><i class="bi bi-check-lg"></i> aktuell</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ver-update"><i class="bi bi-arrow-up-circle"></i> @offered verfügbar</span>
+                                    }
+                                }
+                            </div>
+
+                            @if (card.Live is { } l)
+                            {
+                                <div class="meta-row">
+                                    <span title="Laufzeit"><i class="bi bi-clock-history"></i> @Humanize(TimeSpan.FromSeconds(l.UptimeSeconds))</span>
+                                    <span title="WLAN @l.Rssi dBm"><i class="bi @RssiIcon(l.Rssi)"></i> @l.Rssi</span>
+                                    <span title="Freier Speicher"><i class="bi bi-memory"></i> @(l.FreeHeap / 1024) KB</span>
+                                    <span title="Verbindungen seit Neustart"><i class="bi bi-plug"></i> @l.MqttConnects</span>
+                                    @if (IsNoteworthyReset(l.ResetReason))
+                                    {
+                                        <span class="reset-warn" title="Letzter Neustart"><i class="bi bi-exclamation-triangle"></i> @l.ResetReason</span>
+                                    }
+                                </div>
+
+                                @if (RelayStates(l) is { Count: > 0 } relays)
+                                {
+                                    <div class="extra-row">
+                                        @foreach (var relay in relays)
+                                        {
+                                            <span class="relay-chip @(relay.Value ? "on" : "")">@relay.Key</span>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="meta-row unknown-hint">
+                                    <span><i class="bi bi-question-circle"></i> Firmware ohne Heartbeat – Status unbekannt</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
 
-    @if (Filter != StatusFilter.All && !FilteredGroups.Any())
+    @if (Filter != StatusFilter.All && !FilteredCards.Any())
     {
         <div class="empty-state"><p>Kein Gerät in dieser Kategorie.</p></div>
     }
-}
-
-@if (LegacyDevices.Count > 0)
-{
-    <details class="extra-section">
-        <summary>Ohne Heartbeat (@LegacyDevices.Count)</summary>
-        <p class="hint">Diese Geräte melden nur eine Version; ob sie laufen, ist daraus nicht ablesbar.</p>
-        <ul class="legacy-list">
-            @foreach (var device in LegacyDevices)
-            {
-                <li><span class="legacy-topic">@device.Topic</span><span class="legacy-ver">@device.Version</span></li>
-            }
-        </ul>
-    </details>
 }
 
 @if (OfferedVersions.Count > 0)
@@ -138,38 +151,111 @@ else
     private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan DeadAfter = TimeSpan.FromMinutes(10);
 
-    private enum StatusFilter { All, Ok, Silent, Outdated }
-    private enum DeviceState { Ok, Stale, Dead }
+    private enum StatusFilter { All, Ok, Silent, Outdated, NoHeartbeat }
+    private enum DeviceState { Ok, Stale, Dead, Unknown }
 
     private StatusFilter Filter { get; set; } = StatusFilter.All;
     private System.Threading.Timer? refreshTimer;
 
-    private List<DeviceStatus> AllDevices => MqttService.Devices.Values
-        .OrderBy(d => d.DeviceType).ThenBy(d => d.DeviceName)
-        .ToList();
-
-    private int CountOk => AllDevices.Count(d => StateOf(d) == DeviceState.Ok && !IsOutdated(d));
-    private int CountSilent => AllDevices.Count(d => StateOf(d) != DeviceState.Ok);
-    private int CountOutdated => AllDevices.Count(IsOutdated);
-
-    private IEnumerable<IGrouping<string, DeviceStatus>> FilteredGroups => AllDevices
-        .Where(MatchesFilter)
-        .GroupBy(d => d.Location)
-        .OrderBy(g => g.Key == "unknown" ? 1 : 0).ThenBy(g => g.Key);
-
-    private bool MatchesFilter(DeviceStatus device) => Filter switch
+    /// <summary>One entry per known device - with live heartbeat data when available.</summary>
+    private sealed class CardModel
     {
-        StatusFilter.Ok => StateOf(device) == DeviceState.Ok && !IsOutdated(device),
-        StatusFilter.Silent => StateOf(device) != DeviceState.Ok,
-        StatusFilter.Outdated => IsOutdated(device),
+        public string Location = "unknown";
+        public string DeviceType = "";
+        public string Name = "";
+        public string Version = "";
+        public DeviceStatus? Live;
+    }
+
+    private List<CardModel> Cards
+    {
+        get
+        {
+            var cards = MqttService.Devices.Values
+                .Select(d => new CardModel
+                {
+                    Location = string.IsNullOrEmpty(d.Location) ? "unknown" : d.Location,
+                    DeviceType = d.DeviceType,
+                    Name = DisplayName(d),
+                    Version = d.Version,
+                    Live = d,
+                })
+                .ToList();
+
+            // Devices whose firmware predates the heartbeat only leave a retained version
+            // topic. Their location and type are parsed out of the topic on a best-effort
+            // basis; these entries disappear by themselves once the device updates.
+            var heartbeatNames = MqttService.Devices.Values
+                .Select(d => d.DeviceName).Where(n => n.Length > 0).ToList();
+            foreach (var legacy in MqttService.LegacyDevices.Values)
+            {
+                if (heartbeatNames.Any(n => legacy.Topic.Contains(n)))
+                {
+                    continue;
+                }
+                cards.Add(ParseLegacy(legacy));
+            }
+            return cards;
+        }
+    }
+
+    private CardModel ParseLegacy(LegacyDevice legacy)
+    {
+        var knownTypes = MqttService.OfferedVersions.Keys.ToList();
+        var segments = legacy.Topic
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Where(s => s is not ("meta" or "version"))
+            .ToList();
+
+        var card = new CardModel { Version = legacy.Version };
+        var rest = new List<string>();
+        foreach (var segment in segments)
+        {
+            if (card.DeviceType.Length == 0 &&
+                knownTypes.FirstOrDefault(t => segment.StartsWith(t, StringComparison.OrdinalIgnoreCase)) is { } type)
+            {
+                card.DeviceType = type;
+                if (segment.Length > type.Length) rest.Add(segment); // e.g. "Heatmeter_M1"
+                continue;
+            }
+            if (card.Location == "unknown" && Regex.IsMatch(segment, @"^M\d+$"))
+            {
+                card.Location = segment;
+                continue;
+            }
+            if (segment == "unknown")
+            {
+                continue; // a literal "unknown" location segment is not part of the name
+            }
+            rest.Add(segment);
+        }
+
+        card.Name = rest.Count > 0 ? string.Join("/", rest) : card.DeviceType;
+        if (card.DeviceType.Length == 0) card.DeviceType = "Unbekannt";
+
+        // No location segment, but names like "Smartmeter_M1" carry it
+        if (card.Location == "unknown" && Regex.Match(card.Name, @"_M(\d+)") is { Success: true } match)
+        {
+            card.Location = "M" + match.Groups[1].Value;
+        }
+        return card;
+    }
+
+    private int CountOk => Cards.Count(c => StateOf(c) == DeviceState.Ok && !IsOutdated(c));
+    private int CountSilent => Cards.Count(c => StateOf(c) is DeviceState.Stale or DeviceState.Dead);
+    private int CountOutdated => Cards.Count(IsOutdated);
+    private int CountNoHeartbeat => Cards.Count(c => c.Live is null);
+
+    private IEnumerable<CardModel> FilteredCards => Cards.Where(MatchesFilter);
+
+    private bool MatchesFilter(CardModel card) => Filter switch
+    {
+        StatusFilter.Ok => StateOf(card) == DeviceState.Ok && !IsOutdated(card),
+        StatusFilter.Silent => StateOf(card) is DeviceState.Stale or DeviceState.Dead,
+        StatusFilter.Outdated => IsOutdated(card),
+        StatusFilter.NoHeartbeat => card.Live is null,
         _ => true,
     };
-
-    private List<LegacyDevice> LegacyDevices => MqttService.LegacyDevices.Values
-        .Where(legacy => !MqttService.Devices.Values.Any(
-            device => device.DeviceName.Length > 0 && legacy.Topic.Contains(device.DeviceName)))
-        .OrderBy(d => d.Topic)
-        .ToList();
 
     private List<KeyValuePair<string, string>> OfferedVersions => MqttService.OfferedVersions
         .OrderBy(o => o.Key)
@@ -190,13 +276,19 @@ else
         }
     }
 
-    private DeviceState StateOf(DeviceStatus device) =>
-        device.Age > DeadAfter ? DeviceState.Dead : device.Age > StaleAfter ? DeviceState.Stale : DeviceState.Ok;
+    private DeviceState StateOf(CardModel card) => card.Live switch
+    {
+        null => DeviceState.Unknown,
+        { } live when live.Age > DeadAfter => DeviceState.Dead,
+        { } live when live.Age > StaleAfter => DeviceState.Stale,
+        _ => DeviceState.Ok,
+    };
 
     private string CardClass(DeviceState state) => state switch
     {
         DeviceState.Dead => "state-dead",
         DeviceState.Stale => "state-stale",
+        DeviceState.Unknown => "state-unknown",
         _ => "state-ok",
     };
 
@@ -204,17 +296,18 @@ else
     {
         DeviceState.Dead => "Seit über 10 Minuten kein Heartbeat",
         DeviceState.Stale => "Heartbeat überfällig",
+        DeviceState.Unknown => "Firmware meldet keinen Heartbeat",
         _ => "Meldet sich regelmäßig",
     };
 
-    private string? OfferedVersion(DeviceStatus device) =>
-        MqttService.OfferedVersions.TryGetValue(device.DeviceType, out var version) ? version : null;
+    private string? OfferedVersion(CardModel card) =>
+        MqttService.OfferedVersions.TryGetValue(card.DeviceType, out var version) ? version : null;
 
-    private bool IsOutdated(DeviceStatus device) =>
-        OfferedVersion(device) is { } offered && offered != device.Version;
+    private bool IsOutdated(CardModel card) =>
+        OfferedVersion(card) is { } offered && offered != card.Version;
 
     // "Relaismodule_M1_EG" repeats type and location; the card already shows both
-    private string DisplayName(DeviceStatus device)
+    private static string DisplayName(DeviceStatus device)
     {
         var name = device.DeviceName;
         var prefix = device.DeviceType + "_";
@@ -237,7 +330,7 @@ else
         _ => "bi-reception-1",
     };
 
-    private Dictionary<string, bool>? RelayStates(DeviceStatus device)
+    private static Dictionary<string, bool>? RelayStates(DeviceStatus device)
     {
         if (!device.Extra.TryGetValue("relays", out var relays) || relays.ValueKind != JsonValueKind.Object)
         {

@@ -51,6 +51,7 @@
 }
 
 .chip-ok i { color: #2e9e5b; }
+.chip-unknown i { color: #8a939c; }
 .chip-stale i { color: #d9534f; }
 .chip-update i { color: #e0a800; }
 .chip.active i { color: #fff; }
@@ -74,6 +75,20 @@
     margin-right: 0.3rem;
 }
 
+.type-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #8a939c;
+    margin: 0.6rem 0 0.4rem;
+}
+
+.type-title .type-count {
+    background: #eef1f4;
+    border-radius: 999px;
+    padding: 0 0.4rem;
+    font-size: 0.72rem;
+}
+
 .device-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
@@ -94,6 +109,7 @@
 .device-card.state-ok { border-left-color: #2e9e5b; }
 .device-card.state-stale { border-left-color: #e0a800; background: #fffdf5; }
 .device-card.state-dead { border-left-color: #d9534f; background: #fff8f7; }
+.device-card.state-unknown { border-left-color: #adb5bd; border-style: solid solid solid dashed; opacity: 0.85; }
 
 .card-head {
     display: flex;
@@ -112,6 +128,7 @@
 .state-ok .status-dot { background: #2e9e5b; }
 .state-stale .status-dot { background: #e0a800; }
 .state-dead .status-dot { background: #d9534f; }
+.state-unknown .status-dot { background: #adb5bd; }
 
 .identity {
     flex: 1;
@@ -190,6 +207,10 @@
 .reset-warn {
     color: #c9302c;
     font-weight: 600;
+}
+
+.unknown-hint {
+    font-style: italic;
 }
 
 /* ---- Relais-Chips ---- */
