@@ -14,6 +14,7 @@ namespace SmartHome.Web.Services
         public string DeviceName { get; set; } = "";
         public string Version { get; set; } = "";
         public string Mac { get; set; } = "";
+        public string ChipModel { get; set; } = "";
         public string Ip { get; set; } = "";
         public int Rssi { get; set; }
         public long UptimeSeconds { get; set; }

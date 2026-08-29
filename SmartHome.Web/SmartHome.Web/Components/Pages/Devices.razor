@@ -30,6 +30,7 @@ else
                     <th>Standort</th>
                     <th>Typ</th>
                     <th>Gerät</th>
+                    <th>Chip</th>
                     <th>Version</th>
                     <th>Soll</th>
                     <th>Letzter Heartbeat</th>
@@ -54,6 +55,7 @@ else
                                 <br /><small class="text-muted">@device.ExtraSummary</small>
                             }
                         </td>
+                        <td><small class="text-muted">@device.ChipModel</small></td>
                         <td>@device.Version</td>
                         <td>
                             @if (OfferedVersion(device) is { } offered)
