@@ -27,10 +27,12 @@ A lightweight firmware to switch heating circuits per room using an ESP32 microc
 | `OTAUpdate/Relaismodule` | in | Firmware URL |
 | `daten/Heizung/<location>/FussbodenHeizungSteuerung<Room>` | out | Retained relay state |
 | `meta/<name>/version/RelaisModule` | out | Retained firmware version |
-| `meta/<name>/status/RelaisModule` | out | Retained heartbeat, every 60 s |
+| `status/<site>/RelaisModule/<name>` | out | Retained heartbeat, every 60 s |
 
-The heartbeat carries uptime, RSSI, free heap, reset reason, Wi‑Fi/MQTT reconnect
-counters, OTA failure count and the current state of every mapped relay. **A status
+The heartbeat is published through `MQTTClientLib::publishStatus()`, so it shares the
+`status/<site>/<deviceType>/<deviceName>` layout with every other device. It carries
+version, MAC, IP, uptime, RSSI, free heap, reset reason, connect counters, the OTA
+failure count and the current state of every mapped relay. **A status
 message older than a few minutes means the board is no longer healthy** – this is the
 intended way to monitor it, and it detects the "connected but deaf" case that a plain
 MQTT last will cannot.
