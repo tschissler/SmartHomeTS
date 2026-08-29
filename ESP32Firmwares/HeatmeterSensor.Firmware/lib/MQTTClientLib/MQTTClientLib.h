@@ -11,6 +11,16 @@
 // How long to wait before retrying a subscription the broker did not acknowledge
 #define MQTT_SUBSCRIBE_RETRY_INTERVAL_MS 5000
 
+// Self-healing: if the main task stops calling loop() - stuck in a blocking socket
+// operation, a frozen library call, anything - the task watchdog restarts the device.
+// A reboot every few minutes beats a device that stays dead until someone unplugs it.
+#define MQTT_LIB_WATCHDOG_TIMEOUT_MS 300000
+
+// connect() blocks while it retries. If the broker stays unreachable this long, the
+// device restarts instead of looping forever - a restart recovers stuck network state
+// that a retry from the same socket cannot.
+#define MQTT_CONNECT_RESTART_AFTER_MS 300000
+
 
 class MQTTClientLib {
 public:
@@ -48,6 +58,8 @@ private:
         bool acknowledged;
     };
 
+    void armWatchdog();
+    void feedWatchdog();
     bool sendSubscribe(const String& topic);
     static String sanitizeTopicLevel(const String& value);
     static String jsonEscape(const String& value);
@@ -62,6 +74,9 @@ private:
     std::vector<Subscription> subscriptions;
     uint32_t nextSubscribeRetryMs = 0;
     uint32_t connects = 0;
+    uint32_t lastDataPublishMs = 0;
+    bool hasPublishedData = false;
+    bool watchdogArmed = false;
 };
 
 #endif // MQTTCLIENTLIB_H
