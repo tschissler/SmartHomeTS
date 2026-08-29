@@ -3,7 +3,9 @@ using MQTTnet.Protocol;
 using SharedContracts;
 using System.Globalization;
 using System.Text;
+using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SmartHome.Web.Services
 {
@@ -23,6 +25,18 @@ namespace SmartHome.Web.Services
         public HeatingCommandData? HeatingKinderzimmerCommand { get; private set; }
         public HeatingCommandData? HeatingEsszimmerCommand { get; private set; }
         public bool IsConnected => _client?.IsConnected ?? false;
+
+        /// <summary>Heartbeats keyed by status topic. Devices appear here as soon as they report one.</summary>
+        public ConcurrentDictionary<string, DeviceStatus> Devices { get; } = new();
+
+        /// <summary>Firmware version currently offered per device type, taken from the OTA topics.</summary>
+        public ConcurrentDictionary<string, string> OfferedVersions { get; } = new();
+
+        /// <summary>Devices that only publish a version topic - they still run firmware without a heartbeat.</summary>
+        public ConcurrentDictionary<string, LegacyDevice> LegacyDevices { get; } = new();
+
+        private static readonly Regex VersionInUrl = new(@"_([0-9]+(?:\.[0-9]+)+)\.bin", RegexOptions.Compiled);
+        private static readonly Regex PlainVersion = new(@"^[0-9]+(?:\.[0-9]+)+$", RegexOptions.Compiled);
 
 
         public MqttService()
@@ -55,6 +69,9 @@ namespace SmartHome.Web.Services
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
                 await _client.SubscribeAsync("commands/shelly/Lampe");
                 await _client.SubscribeAsync("commands/Heating/#");
+                await _client.SubscribeAsync("status/#");
+                await _client.SubscribeAsync("OTAUpdate/#");
+                await _client.SubscribeAsync("meta/#");
             };
 
             _client.DisconnectedAsync += async e =>
@@ -104,12 +121,27 @@ namespace SmartHome.Web.Services
         {
             //Console.WriteLine("Received message on topic: " + message.Topic);
 
+            // An empty retained payload deletes a topic - that is how a device is removed from
+            // the list, so it has to be handled before the empty-payload guard below.
             if (message.Payload.Length == 0)
             {
+                if (message.Topic.StartsWith("status/"))
+                {
+                    Devices.TryRemove(message.Topic, out _);
+                }
+                else if (message.Topic.StartsWith("meta/"))
+                {
+                    LegacyDevices.TryRemove(message.Topic, out _);
+                }
                 return;
             }
 
             var payload = Encoding.UTF8.GetString(message.Payload);
+
+            if (TrackDeviceTopics(message.Topic, payload))
+            {
+                return;
+            }
 
             switch (message.Topic)
             {
@@ -229,6 +261,56 @@ namespace SmartHome.Web.Services
                         break;
                     }
             }
+        }
+
+        /// <summary>
+        /// Handles the topics that describe devices rather than measurements.
+        /// Returns true when the message was consumed here.
+        /// </summary>
+        private bool TrackDeviceTopics(string topic, string payload)
+        {
+            if (topic.StartsWith("status/"))
+            {
+                try
+                {
+                    var status = JsonSerializer.Deserialize<DeviceStatus>(payload,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (status is not null)
+                    {
+                        status.ReceivedAt = DateTimeOffset.Now;
+                        Devices[topic] = status;
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine($"Ignoring malformed heartbeat on {topic}: {ex.Message}");
+                }
+                return true;
+            }
+
+            if (topic.StartsWith("OTAUpdate/"))
+            {
+                var deviceType = topic["OTAUpdate/".Length..];
+                var match = VersionInUrl.Match(payload);
+                if (match.Success)
+                {
+                    OfferedVersions[deviceType] = match.Groups[1].Value;
+                }
+                return true;
+            }
+
+            if (topic.StartsWith("meta/") && PlainVersion.IsMatch(payload.Trim()))
+            {
+                LegacyDevices[topic] = new LegacyDevice
+                {
+                    Topic = topic,
+                    Version = payload.Trim(),
+                    ReceivedAt = DateTimeOffset.Now
+                };
+                return true;
+            }
+
+            return false;
         }
 
         private DataPoint? CreateDataPoint(string payload)

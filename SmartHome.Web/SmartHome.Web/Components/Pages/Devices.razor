@@ -1,0 +1,193 @@
+@page "/devices"
+@implements IDisposable
+@using SmartHome.Web.Services
+@inject MqttService MqttService
+
+<h3>Geräte</h3>
+
+<p class="text-muted">
+    @HeartbeatDevices.Count Geräte mit Heartbeat,
+    @HeartbeatDevices.Count(d => d.Age > StaleAfter) davon stumm,
+    @HeartbeatDevices.Count(d => IsOutdated(d)) mit veralteter Firmware,
+    @LegacyDevices.Count Geräte ohne Heartbeat.
+</p>
+
+@if (HeartbeatDevices.Count == 0)
+{
+    <div class="alert alert-secondary">Noch keine Heartbeats empfangen.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Standort</th>
+                    <th>Typ</th>
+                    <th>Gerät</th>
+                    <th>Version</th>
+                    <th>Soll</th>
+                    <th>Letzter Heartbeat</th>
+                    <th>Laufzeit</th>
+                    <th>WLAN</th>
+                    <th>Freier Speicher</th>
+                    <th>Letzter Neustart</th>
+                    <th>Verbindungen</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var device in HeartbeatDevices)
+                {
+                    <tr class="@RowClass(device)">
+                        <td>@device.Location</td>
+                        <td>@device.DeviceType</td>
+                        <td>
+                            <strong>@device.DeviceName</strong>
+                            @if (device.Extra.Count > 0)
+                            {
+                                <br /><small class="text-muted">@device.ExtraSummary</small>
+                            }
+                        </td>
+                        <td>@device.Version</td>
+                        <td>
+                            @if (OfferedVersion(device) is { } offered)
+                            {
+                                @if (offered == device.Version)
+                                {
+                                    <span class="text-muted">aktuell</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">@offered</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">–</span>
+                            }
+                        </td>
+                        <td><span class="badge @AgeBadge(device.Age)">@Humanize(device.Age)</span></td>
+                        <td>@Humanize(TimeSpan.FromSeconds(device.UptimeSeconds))</td>
+                        <td>@device.Rssi dBm</td>
+                        <td>@(device.FreeHeap / 1024) KB</td>
+                        <td>@device.ResetReason</td>
+                        <td>@device.MqttConnects</td>
+                        <td><small>@device.Ip</small></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (LegacyDevices.Count > 0)
+{
+    <h4 class="mt-4">Ohne Heartbeat</h4>
+    <p class="text-muted">
+        Diese Geräte melden nur eine Version. Ob sie noch laufen, lässt sich hier nicht sagen –
+        die Angabe stammt aus einer retained Nachricht und kann beliebig alt sein.
+    </p>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead>
+                <tr><th>Topic</th><th>Version</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var device in LegacyDevices)
+                {
+                    <tr>
+                        <td><small>@device.Topic</small></td>
+                        <td>@device.Version</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (OfferedVersions.Count > 0)
+{
+    <h4 class="mt-4">Angebotene Firmware</h4>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle" style="max-width: 32rem;">
+            <thead>
+                <tr><th>Gerätetyp</th><th>Version</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var offered in OfferedVersions)
+                {
+                    <tr><td>@offered.Key</td><td>@offered.Value</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    // Three missed heartbeats - the devices send one per minute
+    private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan DeadAfter = TimeSpan.FromMinutes(10);
+
+    private System.Threading.Timer? refreshTimer;
+
+    private List<DeviceStatus> HeartbeatDevices => MqttService.Devices.Values
+        .OrderBy(d => d.Location).ThenBy(d => d.DeviceType).ThenBy(d => d.DeviceName)
+        .ToList();
+
+    // A device with a heartbeat still publishes its version topic; listing it here as well
+    // would suggest it has no heartbeat.
+    private List<LegacyDevice> LegacyDevices => MqttService.LegacyDevices.Values
+        .Where(legacy => !MqttService.Devices.Values.Any(
+            device => device.DeviceName.Length > 0 && legacy.Topic.Contains(device.DeviceName)))
+        .OrderBy(d => d.Topic)
+        .ToList();
+
+    private List<KeyValuePair<string, string>> OfferedVersions => MqttService.OfferedVersions
+        .OrderBy(o => o.Key)
+        .ToList();
+
+    protected override void OnInitialized()
+    {
+        MqttService.OnMessageReceived += HandleMessageReceived;
+
+        // The age column has to keep counting up even while nothing arrives
+        refreshTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
+
+    private void HandleMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
+    {
+        if (e.Topic.StartsWith("status/") || e.Topic.StartsWith("OTAUpdate/") || e.Topic.StartsWith("meta/"))
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string? OfferedVersion(DeviceStatus device) =>
+        MqttService.OfferedVersions.TryGetValue(device.DeviceType, out var version) ? version : null;
+
+    private bool IsOutdated(DeviceStatus device) =>
+        OfferedVersion(device) is { } offered && offered != device.Version;
+
+    private string RowClass(DeviceStatus device) =>
+        device.Age > DeadAfter ? "table-danger" : device.Age > StaleAfter ? "table-warning" : "";
+
+    private string AgeBadge(TimeSpan age) =>
+        age > DeadAfter ? "bg-danger" : age > StaleAfter ? "bg-warning text-dark" : "bg-success";
+
+    private static string Humanize(TimeSpan span)
+    {
+        if (span < TimeSpan.Zero) span = TimeSpan.Zero;
+        if (span.TotalMinutes < 1) return $"{(int)span.TotalSeconds} s";
+        if (span.TotalHours < 1) return $"{(int)span.TotalMinutes} min";
+        if (span.TotalDays < 1) return $"{(int)span.TotalHours} h {span.Minutes} min";
+        return $"{(int)span.TotalDays} d {span.Hours} h";
+    }
+
+    public void Dispose()
+    {
+        MqttService.OnMessageReceived -= HandleMessageReceived;
+        refreshTimer?.Dispose();
+    }
+}
