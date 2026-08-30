@@ -10,7 +10,7 @@ nameservers:
 ansible_become_timeout: 60
 
 # Pin k3s version for consistent installs.
-k3s_version: v1.33.6+k3s1
+k3s_version: v1.33.13+k3s2
 
 # Ingress hostnames
 nextcloud_domain: nextcloud.intern

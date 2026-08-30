@@ -1,0 +1,146 @@
+---
+# Upgrade eines bestehenden Clusters auf {{ k3s_version }} (group_vars/all.yml).
+#
+# Offizieller k3s-Weg: Installer mit denselben Flags wie bei der Installation
+# erneut ausfuehren - er tauscht das Binary und regeneriert die systemd-Unit
+# identisch. Kein Drain noetig: Container laufen durch (Shims), Longhorn-
+# Replicas bleiben online, pro Node gibt es nur einen kurzen API-Blip.
+#
+# Reihenfolge: Server nacheinander (serial: 1), dann Agents - Agents duerfen
+# nie neuer sein als die Server. Idempotent: Nodes auf Zielversion werden
+# uebersprungen, daher sind --limit-Laeufe (z.B. erst nur k3snode3.intern
+# als Kanarienvogel) problemlos moeglich.
+#
+# ACHTUNG: Das erste aktualisierte Server-Update rollt auch die eingebetteten
+# Addons aus (insb. Traefik-Chart, z.B. 37->40 bei v1.33.13+k3s2) - siehe
+# SmartHomeDeployments traefik/helmchartconfig.yaml (Redirect doppelt
+# deklariert fuer die Chart-Migration).
+
+- name: Upgrade init server
+  hosts: k3s_init
+  become: yes
+  serial: 1
+  tasks:
+    - name: Get current k3s version
+      ansible.builtin.command: /usr/local/bin/k3s --version
+      register: k3s_ver_out
+      changed_when: false
+
+    - name: Set current version fact
+      ansible.builtin.set_fact:
+        k3s_current: "{{ k3s_ver_out.stdout_lines[0].split(' ')[2] }}"
+
+    - name: Upgrade k3s server binary (same flags as install-k3s.yml)
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - server --cluster-init --write-kubeconfig-mode '0644' --disable servicelb
+      args:
+        executable: /bin/bash
+      when: k3s_current != k3s_version
+
+    - name: Wait for k3s service to be active
+      ansible.builtin.command: systemctl is-active k3s
+      register: k3s_active
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: k3s_active.rc == 0 and (k3s_active.stdout | trim) == 'active'
+
+    - name: Wait for node to be Ready on target version
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get node {{ inventory_hostname.split('.')[0] }} --no-headers
+      register: node_ready
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: node_ready.rc == 0 and ' Ready' in node_ready.stdout and k3s_version.split('+')[0] in node_ready.stdout
+
+- name: Upgrade remaining control-plane servers
+  hosts: k3s_servers:!k3s_init
+  become: yes
+  serial: 1
+  tasks:
+    - name: Get current k3s version
+      ansible.builtin.command: /usr/local/bin/k3s --version
+      register: k3s_ver_out
+      changed_when: false
+
+    - name: Set current version fact
+      ansible.builtin.set_fact:
+        k3s_current: "{{ k3s_ver_out.stdout_lines[0].split(' ')[2] }}"
+
+    - name: Read k3s join token from init server
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      register: k3s_init_token
+      when: k3s_current != k3s_version
+
+    - name: Upgrade k3s server binary (same flags as install-k3s.yml)
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ (k3s_init_token.content | b64decode) | trim }}" sh -s - server --write-kubeconfig-mode '0644' --disable servicelb
+      args:
+        executable: /bin/bash
+      when: k3s_current != k3s_version
+
+    - name: Wait for k3s service to be active
+      ansible.builtin.command: systemctl is-active k3s
+      register: k3s_active
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: k3s_active.rc == 0 and (k3s_active.stdout | trim) == 'active'
+
+    - name: Wait for node to be Ready on target version
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get node {{ inventory_hostname.split('.')[0] }} --no-headers
+      register: node_ready
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: node_ready.rc == 0 and ' Ready' in node_ready.stdout and k3s_version.split('+')[0] in node_ready.stdout
+
+- name: Upgrade agents
+  hosts: k3s_agents
+  become: yes
+  serial: 1
+  tasks:
+    - name: Get current k3s version
+      ansible.builtin.command: /usr/local/bin/k3s --version
+      register: k3s_ver_out
+      changed_when: false
+
+    - name: Set current version fact
+      ansible.builtin.set_fact:
+        k3s_current: "{{ k3s_ver_out.stdout_lines[0].split(' ')[2] }}"
+
+    - name: Read k3s join token from init server
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      register: k3s_init_token
+      when: k3s_current != k3s_version
+
+    - name: Upgrade k3s agent binary (same flags as install-k3s.yml)
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" K3S_URL="https://{{ hostvars[groups['k3s_init'][0]].static_ip }}:6443" K3S_TOKEN="{{ (k3s_init_token.content | b64decode) | trim }}" INSTALL_K3S_EXEC='agent' sh -s -
+      args:
+        executable: /bin/bash
+      when: k3s_current != k3s_version
+
+    - name: Wait for k3s-agent service to be active
+      ansible.builtin.command: systemctl is-active k3s-agent
+      register: k3s_active
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: k3s_active.rc == 0 and (k3s_active.stdout | trim) == 'active'
+
+    - name: Wait for node to be Ready on target version
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get node {{ inventory_hostname.split('.')[0] }} --no-headers
+      delegate_to: "{{ groups['k3s_init'][0] }}"
+      register: node_ready
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: node_ready.rc == 0 and ' Ready' in node_ready.stdout and k3s_version.split('+')[0] in node_ready.stdout
