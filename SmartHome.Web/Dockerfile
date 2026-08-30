@@ -7,8 +7,11 @@ USER app
 WORKDIR /app
 EXPOSE 8080
 
-# Build image
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Build image. Pinned to the build platform: the SDK always runs natively and
+# cross-compiles via -a $TARGETARCH. Without this pin, buildx runs the whole
+# .NET build for arm64 under QEMU emulation - that alone made the pipeline
+# take over 30 minutes.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 ARG TARGETARCH
 ARG PROJECT_NAME
