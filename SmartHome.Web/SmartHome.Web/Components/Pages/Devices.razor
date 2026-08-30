@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @using SmartHome.Web.Services
+@using MQTTnet.Protocol
 @inject MqttService MqttService
 
 <PageTitle>Geräte</PageTitle>
@@ -98,9 +99,12 @@ else
                                     {
                                         <span title="Zuletzt Daten gesendet"><i class="bi bi-graph-up-arrow"></i> Daten @Humanize(dataAge)</span>
                                     }
-                                    @if (IsNoteworthyReset(l.ResetReason))
+                                    @if (IsNoteworthyReset(l.ResetReason) && !IsResetAcknowledged(card))
                                     {
-                                        <span class="reset-warn" title="Letzter Neustart"><i class="bi bi-exclamation-triangle"></i> @l.ResetReason</span>
+                                        <span class="reset-warn" title="Unerwarteter Neustart – mit × bestätigen; erscheint wieder, wenn das Gerät erneut neu startet">
+                                            <i class="bi bi-exclamation-triangle"></i> @l.ResetReason
+                                            <button class="ack-btn" @onclick="() => AcknowledgeResetAsync(card)">×</button>
+                                        </span>
                                     }
                                 </div>
 
@@ -283,7 +287,8 @@ else
 
     private void HandleMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
     {
-        if (e.Topic.StartsWith("status/") || e.Topic.StartsWith("OTAUpdate/") || e.Topic.StartsWith("meta/"))
+        if (e.Topic.StartsWith("status/") || e.Topic.StartsWith("OTAUpdate/") ||
+            e.Topic.StartsWith("meta/") || e.Topic.StartsWith("config/DeviceMonitor/"))
         {
             InvokeAsync(StateHasChanged);
         }
@@ -337,13 +342,33 @@ else
         return name;
     }
 
-    // Everything except poweron/software hints at a crash or watchdog
     // Age of the last data publish, seen from now: heartbeat age plus the device-reported
     // distance between data and heartbeat. Shown without coloring - publish cadences differ
     // wildly per type (SML every second, relay boards only on commands).
     private static TimeSpan? DataAge(DeviceStatus device) =>
         device.LastDataSecondsAgo is { } seconds ? device.Age + TimeSpan.FromSeconds(seconds) : null;
 
+    private string AckKey(CardModel card) =>
+        $"{card.Location}/{card.DeviceType}/{card.Live?.DeviceName ?? card.Name}";
+
+    // Acknowledged means: acknowledged for THIS boot. A later crash produces a different
+    // boot epoch, so the warning comes back by itself - that is how recurrence stays visible.
+    private bool IsResetAcknowledged(CardModel card) =>
+        card.Live is { } live &&
+        MqttService.ResetAcks.TryGetValue(AckKey(card), out var acknowledgedBoot) &&
+        Math.Abs(acknowledgedBoot - live.BootEpochSeconds) < 120;
+
+    private async Task AcknowledgeResetAsync(CardModel card)
+    {
+        if (card.Live is not { } live)
+        {
+            return;
+        }
+        await MqttService.PublishAsync("config/DeviceMonitor/ack/" + AckKey(card),
+            live.BootEpochSeconds.ToString(), MqttQualityOfServiceLevel.AtLeastOnce, true);
+    }
+
+    // Everything except poweron/software hints at a crash or watchdog
     private static bool IsNoteworthyReset(string reason) =>
         reason is not ("" or "poweron" or "software" or "external");
 

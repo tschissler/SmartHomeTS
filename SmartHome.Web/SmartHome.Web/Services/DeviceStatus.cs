@@ -53,6 +53,12 @@ namespace SmartHome.Web.Services
         [JsonIgnore]
         public TimeSpan Age => DateTimeOffset.Now - ReceivedAt;
 
+        /// <summary>Approximate boot time of the current run. Stable within one boot (up to a
+        /// few seconds of jitter), different after every reset - which is what identifies a
+        /// reset warning the user has already acknowledged.</summary>
+        [JsonIgnore]
+        public long BootEpochSeconds => ReceivedAt.ToUnixTimeSeconds() - UptimeSeconds;
+
         [JsonIgnore]
         public string ExtraSummary =>
             string.Join(", ", Extra.Select(e => $"{e.Key}={e.Value}"));

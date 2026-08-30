@@ -35,6 +35,10 @@ namespace SmartHome.Web.Services
         /// <summary>Devices that only publish a version topic - they still run firmware without a heartbeat.</summary>
         public ConcurrentDictionary<string, LegacyDevice> LegacyDevices { get; } = new();
 
+        /// <summary>Acknowledged reset warnings: device key -> boot epoch the user confirmed.
+        /// Retained on the broker, so the acknowledgment holds across clients and restarts.</summary>
+        public ConcurrentDictionary<string, long> ResetAcks { get; } = new();
+
         private static readonly Regex VersionInUrl = new(@"_([0-9]+(?:\.[0-9]+)+)\.bin", RegexOptions.Compiled);
         private static readonly Regex PlainVersion = new(@"^[0-9]+(?:\.[0-9]+)+$", RegexOptions.Compiled);
 
@@ -70,6 +74,7 @@ namespace SmartHome.Web.Services
                 await _client.SubscribeAsync("commands/shelly/Lampe");
                 await _client.SubscribeAsync("commands/Heating/#");
                 await _client.SubscribeAsync("status/#");
+                await _client.SubscribeAsync("config/DeviceMonitor/ack/#");
                 await _client.SubscribeAsync("OTAUpdate/#");
                 await _client.SubscribeAsync("meta/#");
             };
@@ -132,6 +137,10 @@ namespace SmartHome.Web.Services
                 else if (message.Topic.StartsWith("meta/"))
                 {
                     LegacyDevices.TryRemove(message.Topic, out _);
+                }
+                else if (message.Topic.StartsWith("config/DeviceMonitor/ack/"))
+                {
+                    ResetAcks.TryRemove(message.Topic["config/DeviceMonitor/ack/".Length..], out _);
                 }
                 return;
             }
@@ -287,6 +296,15 @@ namespace SmartHome.Web.Services
                 catch (JsonException ex)
                 {
                     Console.WriteLine($"Ignoring malformed heartbeat on {topic}: {ex.Message}");
+                }
+                return true;
+            }
+
+            if (topic.StartsWith("config/DeviceMonitor/ack/"))
+            {
+                if (long.TryParse(payload.Trim(), out var bootEpoch))
+                {
+                    ResetAcks[topic["config/DeviceMonitor/ack/".Length..]] = bootEpoch;
                 }
                 return true;
             }
