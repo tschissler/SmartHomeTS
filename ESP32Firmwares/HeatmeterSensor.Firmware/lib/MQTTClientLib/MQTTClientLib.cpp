@@ -74,6 +74,25 @@ void MQTTClientLib::connect(bool cleanSession) {
     Serial.println("Connected to MQTT Broker");
     connects++;
 
+    // Self-healing: connecting and losing the connection again right away keeps both
+    // connect() and the task watchdog satisfied while the device stays mute. Once that has
+    // happened often enough in a row, restart - a fresh session recovers protocol state
+    // that reconnecting on the same one cannot.
+    uint32_t connectedAtMs = millis();
+    if (connects > 1 && (int32_t)(connectedAtMs - lastConnectMs) < (int32_t)MQTT_RECONNECT_STORM_WINDOW_MS) {
+        rapidReconnects++;
+        Serial.println("MQTTClientLib: reconnected after " + String(connectedAtMs - lastConnectMs) + " ms (" +
+                       String(rapidReconnects) + "/" + String(MQTT_RECONNECT_STORM_LIMIT) + ")");
+        if (rapidReconnects >= MQTT_RECONNECT_STORM_LIMIT) {
+            Serial.println("MQTT connection keeps dropping right after connecting - restarting the device to recover");
+            Serial.flush();
+            ESP.restart();
+        }
+    } else {
+        rapidReconnects = 0;
+    }
+    lastConnectMs = connectedAtMs;
+
     // Restore every known subscription on the fresh connection
     resubscribeAll();
 }

@@ -21,6 +21,14 @@
 // that a retry from the same socket cannot.
 #define MQTT_CONNECT_RESTART_AFTER_MS 300000
 
+// A connection that is established and then dies again within seconds is a failure mode
+// neither of the two guards above can see: connect() returns successfully and loop() keeps
+// being called, yet nothing the device sends ever reaches the broker. Count connects that
+// follow the previous one within this window and restart once reconnecting is all the
+// device still does.
+#define MQTT_RECONNECT_STORM_WINDOW_MS 60000
+#define MQTT_RECONNECT_STORM_LIMIT 10
+
 
 class MQTTClientLib {
 public:
@@ -74,6 +82,8 @@ private:
     std::vector<Subscription> subscriptions;
     uint32_t nextSubscribeRetryMs = 0;
     uint32_t connects = 0;
+    uint32_t lastConnectMs = 0;
+    uint32_t rapidReconnects = 0;
     uint32_t lastDataPublishMs = 0;
     bool hasPublishedData = false;
     bool watchdogArmed = false;

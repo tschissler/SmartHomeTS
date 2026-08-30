@@ -38,6 +38,9 @@ static bool otaEnable = true;
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
 static bool pinSent = false;
+// Set by the MQTT callback, acted on in loop() - see mqttCallback() for why the publish
+// cannot happen where the message arrives.
+static bool versionPublishPending = false;
 
 static String baseTopic = "data/electricity";
 static String sensorName = "";
@@ -160,7 +163,12 @@ void mqttCallback(String &topic, String &payload) {
       location = payload;
       location.replace("Smartmeter_", "");
       Serial.println("Sensor name set to: " + sensorName);
-      mqttClientLib->publish(("meta/SMLSensor/" + sensorName + "/version/").c_str(), String(version), true, 2);
+      // Publishing from here is not safe: the callback runs inside a blocking read in the
+      // MQTT library, which is not reentrant. A nested QoS 2 publish waits for its own
+      // handshake on the same socket, runs into the 10s command timeout and takes the
+      // connection down with it - after which the device reconnects, receives the retained
+      // config message again and repeats the whole thing forever. loop() publishes instead.
+      versionPublishPending = true;
       return;
     } 
 
@@ -200,7 +208,6 @@ void connectToMQTT(bool cleanSession = false) {
     wifiLib.connect();
   }
   mqttClientLib->connect(cleanSession);
-  mqttClientLib->subscribe({mqtt_OTAtopic, mqtt_ConfigTopic});
   Serial.println("MQTT Client is connected");
 }
 
@@ -241,6 +248,9 @@ void setup() {
   String mqttClientID = "ESP32SMLSensorClient_" + chipID;
   mqttClientLib = std::make_unique<MQTTClientLib>(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT(true);
+  // Only the first connection has to register these; connect() restores every known
+  // subscription by itself after a reconnect.
+  mqttClientLib->subscribe({mqtt_OTAtopic, mqtt_ConfigTopic});
   
   // Print the IP address
   Serial.print("IP Address: ");
@@ -424,6 +434,11 @@ void loop() {
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
+    }
+
+    if (versionPublishPending && mqttClientLib->connected()) {
+      versionPublishPending = false;
+      mqttClientLib->publish(("meta/SMLSensor/" + sensorName + "/version/").c_str(), String(version), true, 0);
     }
 
     if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {

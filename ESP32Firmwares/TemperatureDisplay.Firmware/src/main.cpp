@@ -26,6 +26,9 @@ static int otaInProgress = 0;
 static bool otaEnable = OTA_ENABLED != "false";
 static bool sendMQTTMessages = true;
 static bool mqttSuccess = false;
+// Set by the MQTT callback, acted on in loop() - see mqttCallback() for why the publish
+// cannot happen where the message arrives.
+static bool versionPublishPending = false;
 static String baseTopic = "daten";
 static String deviceName = "";
 const String mqtt_broker = "mosquitto.intern";
@@ -83,7 +86,12 @@ void mqttCallback(String &topic, String &payload) {
     if (topic == mqtt_DeviceNameTopic) {
       deviceName = payload;
       Serial.println("Sensor name set to: " + deviceName);
-      mqttClientLib->publish(("meta/" + deviceName + "/version/TemperatureDisplay").c_str(), String(version), true, 2);
+      // Publishing from here is not safe: the callback runs inside a blocking read in the
+      // MQTT library, which is not reentrant. A nested QoS 2 publish waits for its own
+      // handshake on the same socket, runs into the 10s command timeout and takes the
+      // connection down with it - after which the device reconnects, receives the retained
+      // config message again and repeats the whole thing forever. loop() publishes instead.
+      versionPublishPending = true;
       return;
     } 
 
@@ -193,18 +201,6 @@ void connectToMQTT() {
     wifiLib.connect();
   }
   mqttClientLib->connect(false);
-  mqttClientLib->subscribe({
-    mqtt_DeviceNameTopic, 
-    mqtt_OTAtopic, 
-    mqtt_ThermostatBueroTopic, 
-    mqtt_ThermostatEsszimmerTopic, 
-    mqtt_ThermostatKuecheTopic, 
-    mqtt_ThermostatWohnzimmerTopic, 
-    mqtt_ThermostatGaestezimmerTopic,
-    mqtt_OutsideTempTopic,
-    mqtt_OutsideTempGardenTopic,
-    mqtt_HeatPumpCurrentPower
-  });
   Serial.println("MQTT Client is connected");
 }
 
@@ -256,6 +252,20 @@ void setup()
   mqtt_DeviceNameTopic.replace("{ID}", chipID);
   mqttClientLib = new MQTTClientLib(mqtt_broker, mqtt_port, mqttClientID, wifiClient, mqttCallback);
   connectToMQTT();
+  // Only the first connection has to register these; connect() restores every known
+  // subscription by itself after a reconnect.
+  mqttClientLib->subscribe({
+    mqtt_DeviceNameTopic, 
+    mqtt_OTAtopic, 
+    mqtt_ThermostatBueroTopic, 
+    mqtt_ThermostatEsszimmerTopic, 
+    mqtt_ThermostatKuecheTopic, 
+    mqtt_ThermostatWohnzimmerTopic, 
+    mqtt_ThermostatGaestezimmerTopic,
+    mqtt_OutsideTempTopic,
+    mqtt_OutsideTempGardenTopic,
+    mqtt_HeatPumpCurrentPower
+  });
 
   timeClient.begin();
   timeClient.setTimeOffset(0); // Set your time offset from UTC in seconds
@@ -291,6 +301,11 @@ void loop()
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
+    }
+
+    if (versionPublishPending && mqttClientLib->connected()) {
+      versionPublishPending = false;
+      mqttClientLib->publish(("meta/" + deviceName + "/version/TemperatureDisplay").c_str(), String(version), true, 0);
     }
 
     if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
