@@ -193,7 +193,9 @@ else
                 .Select(d => d.DeviceName).Where(n => n.Length > 0).ToList();
             foreach (var legacy in MqttService.LegacyDevices.Values)
             {
-                if (heartbeatNames.Any(n => legacy.Topic.Contains(n)))
+                // Names join their parts with underscores, topics with slashes -
+                // MixerController_M1 has to match meta/MixerController/M1/version
+                if (heartbeatNames.Any(n => legacy.Topic.Replace('/', '_').Contains(n)))
                 {
                     continue;
                 }
