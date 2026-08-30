@@ -1,4 +1,4 @@
-# Set a default project name, can be overridden with --build-arg PROJECT_NAME=<new-name> at build time
+﻿# Set a default project name, can be overridden with --build-arg PROJECT_NAME=<new-name> at build time
 ARG PROJECT_NAME=RulesEngine
 
 # Base image
@@ -8,7 +8,9 @@ WORKDIR /app
 EXPOSE 8080
 
 # Build image
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Pinned to the build platform: the SDK runs natively and the arm64 image is
+# produced without QEMU emulation, which used to dominate the pipeline time.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 # Install dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

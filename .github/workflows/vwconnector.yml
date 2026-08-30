@@ -8,6 +8,11 @@ on:
       - VWConnector/**
   workflow_dispatch:
 
+# A newer push supersedes a running build of the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PROJECT_NAME: VWConnector
   IMAGE_NAME: vwconnector
