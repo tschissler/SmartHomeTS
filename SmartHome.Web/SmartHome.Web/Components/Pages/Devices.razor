@@ -319,14 +319,20 @@ else
     private bool IsOutdated(CardModel card) =>
         OfferedVersion(card) is { } offered && offered != card.Version;
 
-    // "Relaismodule_M1_EG" repeats type and location; the card already shows both
+    // "Relaismodule_M1_EG" repeats type and location; the card already shows both.
+    // But when stripping leaves only the location - MixerController_M1 would become a
+    // card titled "M1" - the full name reads better.
     private static string DisplayName(DeviceStatus device)
     {
         var name = device.DeviceName;
         var prefix = device.DeviceType + "_";
         if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && name.Length > prefix.Length)
         {
-            name = name[prefix.Length..];
+            var stripped = name[prefix.Length..];
+            if (!stripped.Equals(device.Location, StringComparison.OrdinalIgnoreCase))
+            {
+                name = stripped;
+            }
         }
         return name;
     }
