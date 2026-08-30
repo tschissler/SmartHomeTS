@@ -103,9 +103,13 @@ builder.Services.AddSingleton<Converters>();
 builder.Services.AddSignalR();
 builder.Services.AddLogging();
 
-// Register health checks
+// Register health checks.
+// Liveness must not depend on downstream systems (InfluxDB, MQTT broker):
+// a liveness restart discards the in-memory write buffer that bridges exactly
+// those outages. The strict pipeline check remains available via readiness.
 builder.Services.AddHealthChecks()
-    .AddCheck<DataPipelineHealthCheck>("data-pipeline", tags: new[] { "live", "ready" });
+    .AddCheck<LivenessHealthCheck>("process-liveness", tags: new[] { "live" })
+    .AddCheck<DataPipelineHealthCheck>("data-pipeline", tags: new[] { "ready" });
 
 var app = builder.Build();
 

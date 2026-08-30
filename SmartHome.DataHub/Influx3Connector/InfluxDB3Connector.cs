@@ -15,6 +15,10 @@ namespace Influx3Connector
         private readonly string token;
         private readonly List<PointData> pointsBatch = new List<PointData>();
         private const int batchIntervalSeconds = 5;
+        // Retry buffer depth for InfluxDB outages. At the current ingest rate of
+        // ~65 points/s this covers roughly 50 minutes (~200 MB of heap).
+        // Sized together with the pod memory limit (1Gi) in SmartHomeDeployments.
+        private const int maxBufferedPoints = 200_000;
         private DateTimeOffset nextBatchTime = DateTimeOffset.UtcNow.AddSeconds(batchIntervalSeconds); // Define batch interval
         private readonly ILogger logger;
         private DateTimeOffset lastSuccessfulWrite = DateTimeOffset.UtcNow;
@@ -361,10 +365,10 @@ namespace Influx3Connector
                     lock (pointsBatch)
                     {
                         pointsBatch.InsertRange(0, batchCopy);
-                        // Prevent unbounded growth - limit to last 10000 points
-                        if (pointsBatch.Count > 10000)
+                        // Prevent unbounded growth - keep only the newest points
+                        if (pointsBatch.Count > maxBufferedPoints)
                         {
-                            var droppedCount = pointsBatch.Count - 10000;
+                            var droppedCount = pointsBatch.Count - maxBufferedPoints;
                             pointsBatch.RemoveRange(0, droppedCount);
                             logger.LogWarning($"InfluxDB3Connector: Dropped {droppedCount} oldest points due to buffer overflow.");
                         }
