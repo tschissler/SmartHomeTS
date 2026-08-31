@@ -66,6 +66,19 @@ static const int MAX_READINGS = 24;  // 2.5 seconds * 24 = 60 seconds (1 minute)
 static const unsigned long READING_INTERVAL = 2500;  // 5 seconds between readings
 static unsigned long lastReadingTime = 0;
 
+// Cistern measurement plausibility
+// The ultrasonic sensor has a blind zone of roughly 20 cm. Measured data shows it saturating
+// at 19.3 cm and, once the water reaches further in, either timing out (the library returns -1)
+// or reporting multi-path echoes of up to 194 cm. Neither is a real distance, so both are
+// discarded here instead of being averaged into the published value.
+static const float DISTANCE_MIN_VALID_CM = 18.0;
+static const float DISTANCE_MAX_VALID_CM = 105.0;
+static const float SENSOR_HEIGHT_ABOVE_FLOOR_CM = 100.0;
+// Above this the sensor is inside its blind zone: the level is at least this high, but the exact
+// value is unknowable. Reporting the cap keeps the graph flat instead of letting it flutter.
+static const float MAX_RELIABLE_FILL_LEVEL_PERCENT = 80.0;
+static float lastValidFillLevel = NAN;
+
 struct SensorData {
   float temperature;
   float humidity;
@@ -175,6 +188,36 @@ void connectToMQTT(bool cleanSession = false) {
   Serial.println("MQTT Client is connected");
 }
 
+// Median of the valid fill level readings. A single bad echo shifts the mean by tens of
+// percentage points, the median shrugs it off as long as most readings are sound.
+float medianFillLevel(int &validCount) {
+  float values[MAX_READINGS];
+  validCount = 0;
+  for (int i = 0; i < readingCount; i++) {
+    if (!isnan(readings[i].cisterneFillLevel)) {
+      values[validCount++] = readings[i].cisterneFillLevel;
+    }
+  }
+  if (validCount == 0) {
+    return NAN;
+  }
+
+  for (int i = 1; i < validCount; i++) {
+    float key = values[i];
+    int j = i - 1;
+    while (j >= 0 && values[j] > key) {
+      values[j + 1] = values[j];
+      j--;
+    }
+    values[j + 1] = key;
+  }
+
+  if (validCount % 2 == 1) {
+    return values[validCount / 2];
+  }
+  return (values[validCount / 2 - 1] + values[validCount / 2]) / 2.0;
+}
+
 void readSensorData() {
   if (sensorName == "") {
     Serial.println("Sensor name not set, skipping sensor reading");
@@ -184,13 +227,22 @@ void readSensorData() {
 
   SensorData data = {NAN, NAN, NAN, 0};
 
-  if (readingCount <= MAX_READINGS) {
+  if (readingCount < MAX_READINGS) {
     sensors_event_t humidity, temp;
     shtc3.getEvent(&humidity, &temp);
     data.humidity = humidity.relative_humidity;
     data.temperature = temp.temperature;
 
-    data.cisterneFillLevel = 100 - distanceSensor.measureDistanceCm();
+    // -1 signals a timeout, anything outside the valid window is a multi-path echo.
+    // Both are marked NAN and dropped when the median is taken.
+    float distance = distanceSensor.measureDistanceCm();
+    if (distance >= DISTANCE_MIN_VALID_CM && distance <= DISTANCE_MAX_VALID_CM) {
+      data.cisterneFillLevel = SENSOR_HEIGHT_ABOVE_FLOOR_CM - distance;
+    }
+    else {
+      data.cisterneFillLevel = NAN;
+      Serial.println("Discarding implausible distance reading: " + String(distance) + " cm");
+    }
 
     if (isnan(data.humidity) || isnan(data.temperature)) {
       Serial.println("Failed to read from SHTC3 sensor!");
@@ -230,20 +282,37 @@ void publishSensorData()
   // Calculate average temperature and humidity
   float avgTemperature = 0;
   float avgHumidity = 0;
-  float avgCisternFillLevel = 0;
   for (int i = 0; i < readingCount; i++) {
     avgTemperature += readings[i].temperature;
     avgHumidity += readings[i].humidity;
-    avgCisternFillLevel += readings[i].cisterneFillLevel;
   }
   avgTemperature /= readingCount;
   avgHumidity /= readingCount;
-  avgCisternFillLevel /= readingCount;
+
+  int validFillLevelCount = 0;
+  float fillLevel = medianFillLevel(validFillLevelCount);
   readingCount = 0; // Reset reading count after publishing
+
+  if (isnan(fillLevel)) {
+    // Every reading this minute was implausible. Hold the last known level rather than
+    // publishing a gap, and skip the reading entirely until we ever had a valid one.
+    Serial.println("No valid distance readings this cycle, holding last known fill level");
+    if (isnan(lastValidFillLevel)) {
+      Serial.println("No fill level known yet, skipping publish");
+      return;
+    }
+    fillLevel = lastValidFillLevel;
+  }
+  else {
+    if (fillLevel > MAX_RELIABLE_FILL_LEVEL_PERCENT) {
+      fillLevel = MAX_RELIABLE_FILL_LEVEL_PERCENT;
+    }
+    lastValidFillLevel = fillLevel;
+  }
 
   dtostrf(avgTemperature, 1, 2, tempString);
   dtostrf(avgHumidity, 1, 2, humString);
-  dtostrf(avgCisternFillLevel, 1, 2, cisternFillString);
+  dtostrf(fillLevel, 1, 2, cisternFillString);
 
   if (sendMQTTMessages)
   {
@@ -252,7 +321,7 @@ void publishSensorData()
     mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/M1/" + sensorName).c_str(), String(humString), true, 2);
     mqttClientLib->publish((baseTopic + "/zisterneFuellstand/M1/" + sensorName).c_str(), String(cisternFillString), true, 2);
   }
-  Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Cistern Fill Level: " + String(avgCisternFillLevel) + "%, Version: " + version);
+  Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Cistern Fill Level: " + String(fillLevel) + "% (from " + String(validFillLevelCount) + " valid readings), Version: " + version);
 }
 
 void setup() {
