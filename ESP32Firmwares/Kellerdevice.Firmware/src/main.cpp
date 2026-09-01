@@ -47,6 +47,14 @@ static const uint32_t HEARTBEAT_INTERVAL_MS = 60000;
 static uint32_t lastHeartbeatMs = 0;
 static String mqtt_SensorNameTopic = "config/KellerDevice/{ID}/Sensorname";
 static String mqtt_BrightnessTopic = "config/KellerDevice/{ID}/Brightness";
+// Only known once the sensor name has arrived, so the subscription cannot be set up in setup().
+static String mqtt_FillLevelTopic = "";
+// The level we published before the reboot is a far better starting point for the slew rate
+// limit than the "full" default. Subscribing to our own retained message gets it back. The
+// network calls stay out of the MQTT callback and are done from loop() instead.
+static bool initialFillLevelRestored = false;
+static bool fillLevelSubscribePending = false;
+static bool fillLevelUnsubscribePending = false;
 static int brightness = 255;
 static int blinkCount = 0;
 static const int MAX_BLINK_COUNT = 20;
@@ -150,8 +158,30 @@ void mqttCallback(String &topic, String &payload) {
     if (topic == mqtt_SensorNameTopic) {
       sensorName = payload;
       Serial.println("Sensor name set to: " + sensorName);
+      mqtt_FillLevelTopic = baseTopic + "/zisterneFuellstand/M1/" + sensorName;
+      if (!initialFillLevelRestored) {
+        fillLevelSubscribePending = true;
+      }
       return;
-    } 
+    }
+
+    if (mqtt_FillLevelTopic != "" && topic == mqtt_FillLevelTopic) {
+      // Our own retained level, picked up once after a reboot. Everything after that is the
+      // echo of what we just published ourselves, so unsubscribe as soon as we have it.
+      if (!initialFillLevelRestored) {
+        float restored = payload.toFloat();
+        if (payload != "nan" && restored > 0 && restored <= MAX_RELIABLE_FILL_LEVEL_PERCENT) {
+          lastValidFillLevel = restored;
+          Serial.println("Restored fill level from retained message: " + String(restored) + "%");
+        }
+        else {
+          Serial.println("Retained fill level '" + payload + "' unusable, keeping default");
+        }
+        initialFillLevelRestored = true;
+        fillLevelUnsubscribePending = true;
+      }
+      return;
+    }
 
     if (topic == mqtt_BrightnessTopic) {
       brightness = payload.toInt();
@@ -368,7 +398,8 @@ void publishSensorData()
     mqttSuccess = mqttClientLib->publish((baseTopic + "/temperatur/M1/" + sensorName).c_str(), String(tempString), true, 2);
     mqttSuccess ? blinkLed(GREEN) : blinkLed(RED, true);
     mqttClientLib->publish((baseTopic + "/luftfeuchtigkeit/M1/" + sensorName).c_str(), String(humString), true, 2);
-    mqttClientLib->publish((baseTopic + "/zisterneFuellstand/M1/" + sensorName).c_str(), String(cisternFillString), true, 2);
+    // Same string the restore subscribes to, so the two can never drift apart.
+    mqttClientLib->publish(mqtt_FillLevelTopic.c_str(), String(cisternFillString), true, 2);
   }
   Serial.println("Temperature: " + String(avgTemperature) + "°C, Humidity: " + String(avgHumidity) + "%, Cistern Fill Level: " + String(fillLevel) + "% (shortest of " + String(validDistanceCount) + " readings, " + String(timeouts) + " timeouts), Version: " + version);
 }
@@ -448,6 +479,16 @@ void loop() {
     {
       Serial.println("MQTT Client not connected, reconnecting in loop...");
       connectToMQTT();
+    }
+
+    if (fillLevelSubscribePending) {
+      fillLevelSubscribePending = false;
+      mqttClientLib->subscribe(mqtt_FillLevelTopic);
+    }
+
+    if (fillLevelUnsubscribePending) {
+      fillLevelUnsubscribePending = false;
+      mqttClientLib->unsubscribe(mqtt_FillLevelTopic);
     }
 
     if (millis() - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
