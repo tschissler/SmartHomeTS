@@ -82,7 +82,17 @@ static const int SHORTEST_READING_INDEX = 2;
 // Inside the blind zone the level is at least this high but the exact value is unknowable.
 // Reporting the cap keeps the graph flat instead of letting it flutter.
 static const float MAX_RELIABLE_FILL_LEVEL_PERCENT = 80.0;
-static float lastValidFillLevel = NAN;
+// Losing the direct echo makes the level appear to collapse - 45 percentage points within a
+// single minute has been measured, against a 99th percentile of 0.63 for real changes. A step
+// beyond these bounds is the sensor slipping, not the water moving. Rises get more headroom than
+// drops: heavy rain fills the tank faster than any draw-off empties it, and a detour echo can
+// only ever make the level look lower, never higher.
+static const float MAX_LEVEL_DROP_PER_CYCLE = 2.0;
+static const float MAX_LEVEL_RISE_PER_CYCLE = 5.0;
+// Start from "full" rather than from whatever detour echo the first cycle after a reboot picks
+// up. The sensor only ever fails when the water is in its blind zone, so on a fresh boot that is
+// by far the likelier state - and it is the safer error, since it holds off the pump.
+static float lastValidFillLevel = MAX_RELIABLE_FILL_LEVEL_PERCENT;
 
 struct SensorData {
   float temperature;
@@ -321,13 +331,8 @@ void publishSensorData()
     lastValidFillLevel = fillLevel;
   }
   else if (isnan(distance)) {
-    // Nothing usable came in at all. Hold the last known level rather than publishing a gap,
-    // and stay quiet entirely until we ever had a valid one.
+    // Nothing usable came in at all. Hold the last known level rather than publishing a gap.
     Serial.println("No usable distance readings this cycle, holding last known fill level");
-    if (isnan(lastValidFillLevel)) {
-      Serial.println("No fill level known yet, skipping publish");
-      return;
-    }
     fillLevel = lastValidFillLevel;
   }
   else if (distance < DISTANCE_BLIND_ZONE_CM) {
@@ -337,11 +342,21 @@ void publishSensorData()
     lastValidFillLevel = fillLevel;
   }
   else {
-    fillLevel = SENSOR_HEIGHT_ABOVE_FLOOR_CM - distance;
-    if (fillLevel > MAX_RELIABLE_FILL_LEVEL_PERCENT) {
-      fillLevel = MAX_RELIABLE_FILL_LEVEL_PERCENT;
+    float measured = SENSOR_HEIGHT_ABOVE_FLOOR_CM - distance;
+    if (measured > MAX_RELIABLE_FILL_LEVEL_PERCENT) {
+      measured = MAX_RELIABLE_FILL_LEVEL_PERCENT;
     }
-    lastValidFillLevel = fillLevel;
+
+    float change = measured - lastValidFillLevel;
+    if (change < -MAX_LEVEL_DROP_PER_CYCLE || change > MAX_LEVEL_RISE_PER_CYCLE) {
+      // Water cannot move this fast, so the sensor lost the direct echo. Keep what we had.
+      Serial.println("Rejecting jump from " + String(lastValidFillLevel) + "% to " + String(measured) + "%, holding");
+      fillLevel = lastValidFillLevel;
+    }
+    else {
+      fillLevel = measured;
+      lastValidFillLevel = fillLevel;
+    }
   }
 
   dtostrf(avgTemperature, 1, 2, tempString);
