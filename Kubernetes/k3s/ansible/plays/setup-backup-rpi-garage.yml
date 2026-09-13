@@ -57,6 +57,13 @@
     # den kompletten Bestand neu — Nextcloud allein bringt ~650 GiB mit.
     garage_min_free_gb: 700
 
+    # === MONITORING ===
+    # Gleiche Version wie der node-exporter im Cluster (kube-prometheus-stack),
+    # damit die Metriken zwischen Pi und k3s-Nodes vergleichbar bleiben.
+    node_exporter_version: "1.12.1"
+    node_exporter_port: 9100
+    node_exporter_user: "node_exporter"
+
     # === VELERO ===
     velero_bucket: "velero-backups"
     velero_key_name: "velero"
@@ -410,6 +417,103 @@
         velero_secret_key: "{{ key_info.stdout | regex_search('Secret key:\\s+(\\S+)', '\\1') | first }}"
       no_log: true
 
+    # === MONITORING ===
+    # Der Backup-Pi war bisher gar nicht ueberwacht -- ausgerechnet der Server,
+    # auf dem alle Backups liegen. Ein Ausfall (volle Platte, toter Dienst,
+    # Netzwerkverlust) waere erst aufgefallen, wenn Backups scheitern.
+    #
+    # Mit node_exporter greift der Alert NodeFilesystemAlmostOutOfSpace, der in
+    # Monitoring.yaml bereits auf der Mail-Allowlist steht. Damit ersetzt das
+    # Alerting die manuelle Kontrolle per Web-UI, die es bei MinIO gab.
+
+    - name: Create node_exporter system user
+      ansible.builtin.user:
+        name: "{{ node_exporter_user }}"
+        system: yes
+        shell: /usr/sbin/nologin
+        create_home: no
+        comment: "Prometheus Node Exporter"
+
+    - name: Check installed node_exporter version
+      ansible.builtin.command: /usr/local/bin/node_exporter --version
+      register: ne_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Download and unpack node_exporter
+      ansible.builtin.unarchive:
+        src: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-arm64.tar.gz"
+        dest: "{{ garage_bin_dir }}"
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0755'
+        extra_opts:
+          - --strip-components=1
+          - --wildcards
+          - '*/node_exporter'
+      when: node_exporter_version not in (ne_installed.stdout | default('') + ne_installed.stderr | default(''))
+      notify: restart node_exporter
+
+    - name: Create node_exporter systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/node_exporter.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Prometheus Node Exporter
+          Documentation=https://github.com/prometheus/node_exporter
+          After=network-online.target
+          Wants=network-online.target
+          AssertFileIsExecutable={{ garage_bin_dir }}/node_exporter
+
+          [Service]
+          Type=simple
+          User={{ node_exporter_user }}
+          Group={{ node_exporter_user }}
+          ExecStart={{ garage_bin_dir }}/node_exporter --web.listen-address=:{{ node_exporter_port }}
+          Restart=on-failure
+          RestartSec=10
+
+          NoNewPrivileges=true
+          PrivateTmp=true
+          ProtectSystem=strict
+          ProtectHome=true
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: restart node_exporter
+
+    - name: Enable and start node_exporter
+      ansible.builtin.systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Flush handlers for node_exporter
+      ansible.builtin.meta: flush_handlers
+
+    - name: Smoke test - node_exporter exposes the /data filesystem
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ node_exporter_port }}/metrics"
+        return_content: yes
+      register: ne_metrics
+      retries: 5
+      delay: 5
+      until: ne_metrics.status == 200
+
+    - name: GATE - /data must appear in the metrics
+      ansible.builtin.assert:
+        that:
+          - "'mountpoint=\"/data\"' in ne_metrics.content"
+        fail_msg: |
+          ABORT: node_exporter liefert keine Metriken fuer /data.
+          Ohne die greift NodeFilesystemAlmostOutOfSpace nicht -- also genau der
+          Alert, der die manuelle Platzkontrolle ersetzen soll.
+
     # === SMOKE-TEST ===
     # Beweist, dass die S3-API von außen erreichbar ist und schreiben kann,
     # BEVOR Velero überhaupt davon erfährt.
@@ -467,6 +571,14 @@
 
           3. Testbackup + Restore fahren, dann die Schedules umstellen.
 
+          4. Prometheus auf den Pi zeigen lassen (monitoring/ im Repo):
+             - node_exporter:  {{ ansible_host }}:{{ node_exporter_port }}/metrics
+               -> damit greift NodeFilesystemAlmostOutOfSpace, der bereits auf
+                  der Mail-Allowlist steht. Ersetzt die manuelle Platzkontrolle.
+             - Garage:         {{ ansible_host }}:{{ garage_admin_port }}/metrics
+               -> braucht "Authorization: Bearer <admin_token>",
+                  Token steht in {{ garage_config_dir }}/garage.toml
+
           Hinweis zu checksumAlgorithm:
           Das AWS-Plugin sendet ab v1.13 Checksummen, mit denen mehrere
           S3-Implementierungen (Ceph, Backblaze) "XAmzContentSHA256Mismatch"
@@ -505,6 +617,12 @@
               {{ garage_bin_dir }}/garage key info {{ velero_key_name }} --show-secret'
 
   handlers:
+    - name: restart node_exporter
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: restarted
+        daemon_reload: yes
+
     - name: restart garage
       ansible.builtin.systemd:
         name: garage
