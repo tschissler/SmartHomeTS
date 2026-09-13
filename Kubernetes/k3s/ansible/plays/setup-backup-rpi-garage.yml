@@ -37,6 +37,13 @@
     garage_data_root: "/data/garage"
     garage_user: "garage"
 
+    # LMDB mappt per Default einen sehr grossen virtuellen Adressraum. Auf dem Pi
+    # (1,8 GB RAM + 1,8 GB Swap, vm.overcommit_memory=0) lehnt der Kernel das
+    # heuristisch ab -> "OutOfMemory error while trying to open LMDB database".
+    # 2 GiB sind fuer die Metadaten reichlich: Kopia legt grosse Blobs an (20-50 MB),
+    # bei ~650 GiB Nutzdaten also nur Zehntausende Objekte.
+    garage_lmdb_map_size: "2GiB"
+
     garage_s3_port: 3900
     garage_rpc_port: 3901
     garage_admin_port: 3903
@@ -166,14 +173,14 @@
       register: garage_conf
 
     - name: Read existing rpc_secret
-      ansible.builtin.shell: "grep -oP '(?<=^rpc_secret = \")[a-f0-9]+' {{ garage_config_dir }}/garage.toml"
+      ansible.builtin.shell: "grep -oP '^rpc_secret\\s*=\\s*\"\\K[a-f0-9]+' {{ garage_config_dir }}/garage.toml"
       register: existing_rpc
       changed_when: false
       when: garage_conf.stat.exists
       no_log: true
 
     - name: Read existing admin_token
-      ansible.builtin.shell: "grep -oP '(?<=^admin_token = \")[a-zA-Z0-9+/=]+' {{ garage_config_dir }}/garage.toml"
+      ansible.builtin.shell: "grep -oP '^admin_token\\s*=\\s*\"\\K[a-zA-Z0-9+/=]+' {{ garage_config_dir }}/garage.toml"
       register: existing_admin
       changed_when: false
       when: garage_conf.stat.exists
@@ -220,6 +227,11 @@
           metadata_dir = "{{ garage_data_root }}/meta"
           data_dir     = "{{ garage_data_root }}/data"
           db_engine    = "lmdb"
+
+          # Ohne diesen Wert scheitert der Start auf RAM-armen Maschinen, siehe
+          # Kommentar bei garage_lmdb_map_size. Vergroessern geht spaeter, erfordert
+          # aber einen Neustart des Dienstes.
+          lmdb_map_size = "{{ garage_lmdb_map_size }}"
 
           # Single-Node: keine Replikation. Die Redundanz liegt darin, dass dies
           # die externe Kopie der Cluster-Daten ist, nicht in Garage selbst.
@@ -462,9 +474,35 @@
           nötig – falls Backups ohne Fehlermeldung hängen, hier zuerst schauen.
           ============================================================
 
-    - name: Display secret key separately
+    # Das Secret wird bewusst NICHT ins Ansible-Log geschrieben, sondern nur
+    # auf dem Pi abgelegt. Sonst landet es in jeder Konsolenhistorie und in
+    # jedem CI-Log, das den Play-Lauf mitschneidet.
+    - name: Write credentials to a root-only file on the host
+      ansible.builtin.copy:
+        dest: "{{ garage_config_dir }}/velero-credentials.txt"
+        owner: root
+        group: root
+        mode: '0600'
+        content: |
+          # Garage-Zugangsdaten fuer Velero
+          # Generiert von Ansible (plays/setup-backup-rpi-garage.yml)
+          S3_ENDPOINT={{ ansible_host }}:{{ garage_s3_port }}
+          BUCKET={{ velero_bucket }}
+          AWS_ACCESS_KEY_ID={{ velero_access_key }}
+          AWS_SECRET_ACCESS_KEY={{ velero_secret_key }}
+      no_log: true
+
+    - name: Where to read the secret
       ansible.builtin.debug:
-        msg: "Secret Key: {{ velero_secret_key }}"
+        msg: |
+          Secret Key absichtlich nicht im Log. Auslesen mit:
+
+            ssh {{ inventory_hostname }} 'sudo cat {{ garage_config_dir }}/velero-credentials.txt'
+
+          Oder jederzeit direkt aus Garage:
+
+            ssh {{ inventory_hostname }} 'sudo GARAGE_CONFIG_FILE={{ garage_config_dir }}/garage.toml \
+              {{ garage_bin_dir }}/garage key info {{ velero_key_name }} --show-secret'
 
   handlers:
     - name: restart garage
