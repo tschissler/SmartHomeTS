@@ -1,0 +1,474 @@
+---
+# ===========================================================================
+# Garage S3 auf dem Backup-Raspberry-Pi einrichten
+# ===========================================================================
+# Ablöse für MinIO als Velero-Backend. MinIO wird von diesem Play NICHT
+# angefasst und läuft weiter — die beiden koexistieren auf getrennten Ports:
+#
+#   MinIO   9000 (S3) / 9001 (Console)   Daten: /data/minio
+#   Garage  3900 (S3) / 3901 (RPC) / 3903 (Admin)   Daten: /data/garage
+#
+# Hintergrund: Das MinIO-Community-Repo wurde am 25.04.2026 archiviert —
+# keine Releases, keine Patches, keine offiziellen Binaries mehr. Garage ist
+# aktiv gepflegt, AGPL und deutlich genügsamer (relevant bei 1,8 GB RAM).
+#
+# Migration ohne Datentransfer: Velero unterstützt mehrere
+# BackupStorageLocations. Die Garage-BSL wird "default", neue Backups landen
+# dort, die MinIO-BSL bleibt lesbar bis die längste Retention (720h bei
+# forgejo-daily) abgelaufen ist. Danach kann MinIO abgeschaltet werden.
+#
+# Aufruf:
+#   ansible-playbook plays/setup-backup-rpi-garage.yml -i inventory.ini
+#
+# Beim ersten Lauf werden rpc_secret und admin_token generiert und in der
+# garage.toml abgelegt. Jeder weitere Lauf liest sie von dort — sie werden
+# NICHT neu erzeugt, sonst wäre der Node nicht mehr ansprechbar.
+# ===========================================================================
+
+- name: Setup Garage S3 on Backup Raspberry Pi (parallel to MinIO)
+  hosts: backup_server
+  become: yes
+  gather_facts: yes
+  vars:
+    # === GARAGE ===
+    garage_version: "v2.4.1"
+    garage_bin_dir: "/usr/local/bin"
+    garage_config_dir: "/etc/garage"
+    garage_data_root: "/data/garage"
+    garage_user: "garage"
+
+    garage_s3_port: 3900
+    garage_rpc_port: 3901
+    garage_admin_port: 3903
+
+    # Zone und Kapazität für das Cluster-Layout (Single-Node).
+    # Kapazität großzügig, aber unter dem real freien Platz halten.
+    garage_zone: "backup"
+    garage_capacity: "900G"
+
+    # Mindestens benötigter freier Platz. Das erste Vollbackup überträgt
+    # den kompletten Bestand neu — Nextcloud allein bringt ~650 GiB mit.
+    garage_min_free_gb: 700
+
+    # === VELERO ===
+    velero_bucket: "velero-backups"
+    velero_key_name: "velero"
+
+  pre_tasks:
+    - name: Check that /data is mounted
+      ansible.builtin.command: mountpoint -q /data
+      register: data_mounted
+      changed_when: false
+      failed_when: false
+
+    - name: GATE - Abort if /data is not mounted
+      ansible.builtin.assert:
+        that:
+          - data_mounted.rc == 0
+        fail_msg: |
+          ABORT: /data ist nicht gemountet.
+          Garage-Daten gehören auf die USB-Platte, nicht auf die SD-Karte.
+          Prüfen: mount | grep /data   bzw. plays/setup-backup-rpi.yml
+
+    - name: Get free space on /data
+      ansible.builtin.shell: df -BG /data | awk 'NR==2 {print $4}' | sed 's/G//'
+      register: free_space
+      changed_when: false
+
+    - name: GATE - Verify sufficient free space
+      ansible.builtin.assert:
+        that:
+          - free_space.stdout | int >= garage_min_free_gb
+        fail_msg: |
+          ABORT: Zu wenig freier Platz auf /data
+          Verfügbar: {{ free_space.stdout }}G, benötigt: mind. {{ garage_min_free_gb }}G
+
+          Das erste Garage-Backup überträgt den kompletten Datenbestand neu
+          (Kopia dedupliziert nur innerhalb eines Repositories, nicht über
+          zwei Backends hinweg). Nextcloud allein bringt ~650 GiB mit.
+
+    - name: Check MinIO is still running (must not be disturbed)
+      ansible.builtin.command: systemctl is-active minio
+      register: minio_state
+      changed_when: false
+      failed_when: false
+
+    - name: Display setup plan
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          Garage-Setup auf {{ inventory_hostname }} ({{ ansible_host }})
+          ============================================================
+          Version:        {{ garage_version }} ({{ ansible_architecture }})
+          Daten:          {{ garage_data_root }}
+          Freier Platz:   {{ free_space.stdout }}G
+          Kapazität:      {{ garage_capacity }}
+          Ports:          S3 {{ garage_s3_port }} / RPC {{ garage_rpc_port }} / Admin {{ garage_admin_port }}
+
+          MinIO-Status:   {{ minio_state.stdout }} (bleibt unangetastet)
+          ============================================================
+
+  tasks:
+    # === BENUTZER UND VERZEICHNISSE ===
+
+    - name: Create garage system user
+      ansible.builtin.user:
+        name: "{{ garage_user }}"
+        system: yes
+        shell: /usr/sbin/nologin
+        home: "{{ garage_data_root }}"
+        create_home: no
+        comment: "Garage S3 Service User"
+
+    - name: Create garage directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ garage_user }}"
+        group: "{{ garage_user }}"
+        mode: '0750'
+      loop:
+        - "{{ garage_data_root }}"
+        - "{{ garage_data_root }}/meta"
+        - "{{ garage_data_root }}/data"
+        - "{{ garage_config_dir }}"
+
+    # === BINARY ===
+
+    - name: Download Garage binary
+      ansible.builtin.get_url:
+        url: "https://garagehq.deuxfleurs.fr/_releases/{{ garage_version }}/aarch64-unknown-linux-musl/garage"
+        dest: "{{ garage_bin_dir }}/garage"
+        mode: '0755'
+        owner: root
+        group: root
+      notify: restart garage
+
+    - name: Verify binary runs and reports the expected version
+      ansible.builtin.command: "{{ garage_bin_dir }}/garage --version"
+      register: garage_bin_version
+      changed_when: false
+
+    - name: GATE - Binary version must match requested version
+      ansible.builtin.assert:
+        that:
+          - garage_version.lstrip('v') in garage_bin_version.stdout
+        fail_msg: |
+          ABORT: Heruntergeladenes Binary meldet eine andere Version.
+          Erwartet: {{ garage_version }}
+          Gemeldet: {{ garage_bin_version.stdout }}
+
+    # === SECRETS (nur beim ersten Lauf erzeugen!) ===
+
+    - name: Check whether a config already exists
+      ansible.builtin.stat:
+        path: "{{ garage_config_dir }}/garage.toml"
+      register: garage_conf
+
+    - name: Read existing rpc_secret
+      ansible.builtin.shell: "grep -oP '(?<=^rpc_secret = \")[a-f0-9]+' {{ garage_config_dir }}/garage.toml"
+      register: existing_rpc
+      changed_when: false
+      when: garage_conf.stat.exists
+      no_log: true
+
+    - name: Read existing admin_token
+      ansible.builtin.shell: "grep -oP '(?<=^admin_token = \")[a-zA-Z0-9+/=]+' {{ garage_config_dir }}/garage.toml"
+      register: existing_admin
+      changed_when: false
+      when: garage_conf.stat.exists
+      no_log: true
+
+    - name: Generate new secrets (first run only)
+      ansible.builtin.set_fact:
+        garage_rpc_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        garage_admin_token: "{{ lookup('pipe', 'openssl rand -base64 32') }}"
+      when: not garage_conf.stat.exists
+      no_log: true
+
+    - name: Reuse existing secrets (subsequent runs)
+      ansible.builtin.set_fact:
+        garage_rpc_secret: "{{ existing_rpc.stdout }}"
+        garage_admin_token: "{{ existing_admin.stdout }}"
+      when: garage_conf.stat.exists
+      no_log: true
+
+    - name: GATE - Secrets must not be empty
+      ansible.builtin.assert:
+        that:
+          - garage_rpc_secret | length >= 32
+          - garage_admin_token | length >= 16
+        fail_msg: |
+          ABORT: rpc_secret oder admin_token konnte nicht ermittelt werden.
+          Bei einer bestehenden Installation: {{ garage_config_dir }}/garage.toml
+          prüfen — die Werte werden von dort gelesen und dürfen nicht neu
+          erzeugt werden, sonst ist der Node nicht mehr ansprechbar.
+
+    # === KONFIGURATION ===
+
+    - name: Write garage.toml
+      ansible.builtin.copy:
+        dest: "{{ garage_config_dir }}/garage.toml"
+        owner: "{{ garage_user }}"
+        group: "{{ garage_user }}"
+        mode: '0640'
+        content: |
+          # Garage S3 – Backup-Backend für Velero
+          # Generiert von Ansible (plays/setup-backup-rpi-garage.yml)
+          # NICHT manuell bearbeiten – Änderungen gehen beim nächsten Lauf verloren.
+
+          metadata_dir = "{{ garage_data_root }}/meta"
+          data_dir     = "{{ garage_data_root }}/data"
+          db_engine    = "lmdb"
+
+          # Single-Node: keine Replikation. Die Redundanz liegt darin, dass dies
+          # die externe Kopie der Cluster-Daten ist, nicht in Garage selbst.
+          replication_factor = 1
+
+          rpc_bind_addr   = "[::]:{{ garage_rpc_port }}"
+          rpc_public_addr = "127.0.0.1:{{ garage_rpc_port }}"
+          rpc_secret      = "{{ garage_rpc_secret }}"
+
+          [s3_api]
+          s3_region     = "garage"
+          api_bind_addr = "[::]:{{ garage_s3_port }}"
+          root_domain   = ".s3.garage"
+
+          [admin]
+          api_bind_addr = "[::]:{{ garage_admin_port }}"
+          admin_token   = "{{ garage_admin_token }}"
+      notify: restart garage
+      no_log: true
+
+    - name: Create garage systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/garage.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Garage S3 Object Store (Backup Server)
+          Documentation=https://garagehq.deuxfleurs.fr/
+          After=network-online.target
+          Wants=network-online.target
+          AssertFileIsExecutable={{ garage_bin_dir }}/garage
+
+          [Service]
+          Type=simple
+          User={{ garage_user }}
+          Group={{ garage_user }}
+          Environment=GARAGE_CONFIG_FILE={{ garage_config_dir }}/garage.toml
+          Environment=RUST_LOG=garage=info
+          ExecStart={{ garage_bin_dir }}/garage server
+          Restart=on-failure
+          RestartSec=10
+          LimitNOFILE=65536
+
+          # Härtung – Garage braucht nur sein Datenverzeichnis
+          NoNewPrivileges=true
+          PrivateTmp=true
+          ProtectSystem=strict
+          ProtectHome=true
+          ReadWritePaths={{ garage_data_root }}
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: restart garage
+
+    - name: Enable and start garage
+      ansible.builtin.systemd:
+        name: garage
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Flush handlers so the service is up before we talk to it
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for the admin API to answer
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ garage_admin_port }}"
+        timeout: 60
+
+    # === CLUSTER-LAYOUT (Single-Node) ===
+    # Ohne zugewiesenes Layout nimmt Garage keine Daten an.
+
+    - name: Get node id
+      ansible.builtin.shell: "{{ garage_bin_dir }}/garage node id -q 2>/dev/null | cut -d'@' -f1"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      register: garage_node_id
+      changed_when: false
+      retries: 5
+      delay: 5
+      until: garage_node_id.stdout | length > 30
+
+    - name: Show current layout
+      ansible.builtin.command: "{{ garage_bin_dir }}/garage layout show"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      register: layout_show
+      changed_when: false
+      failed_when: false
+
+    - name: Assign node to layout (only if not yet assigned)
+      ansible.builtin.command: >
+        {{ garage_bin_dir }}/garage layout assign
+        -z {{ garage_zone }} -c {{ garage_capacity }} {{ garage_node_id.stdout }}
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      when: garage_node_id.stdout[:16] not in layout_show.stdout
+
+    - name: Determine next layout version
+      ansible.builtin.shell: >
+        {{ garage_bin_dir }}/garage layout show
+        | grep -oP '(?<=Current cluster layout version: )[0-9]+' || echo 0
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      register: layout_version
+      changed_when: false
+
+    - name: Apply layout (only if there are staged changes)
+      ansible.builtin.command: >
+        {{ garage_bin_dir }}/garage layout apply
+        --version {{ (layout_version.stdout | int) + 1 }}
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      when: garage_node_id.stdout[:16] not in layout_show.stdout
+
+    - name: GATE - Node must be healthy in the layout
+      ansible.builtin.shell: "{{ garage_bin_dir }}/garage status"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      register: garage_status
+      changed_when: false
+      retries: 6
+      delay: 5
+      until: "'HEALTHY NODES' in garage_status.stdout"
+
+    # === BUCKET UND VELERO-KEY ===
+
+    - name: List existing buckets
+      ansible.builtin.command: "{{ garage_bin_dir }}/garage bucket list"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      register: bucket_list
+      changed_when: false
+
+    - name: Create velero bucket
+      ansible.builtin.command: "{{ garage_bin_dir }}/garage bucket create {{ velero_bucket }}"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      when: velero_bucket not in bucket_list.stdout
+
+    - name: List existing keys
+      ansible.builtin.command: "{{ garage_bin_dir }}/garage key list"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      register: key_list
+      changed_when: false
+
+    - name: Create velero access key
+      ansible.builtin.command: "{{ garage_bin_dir }}/garage key create {{ velero_key_name }}"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      when: velero_key_name not in key_list.stdout
+
+    - name: Grant the key read/write on the bucket
+      ansible.builtin.command: >
+        {{ garage_bin_dir }}/garage bucket allow
+        --read --write {{ velero_bucket }} --key {{ velero_key_name }}
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      changed_when: false
+
+    - name: Read key credentials for the Velero secret
+      ansible.builtin.shell: "{{ garage_bin_dir }}/garage key info {{ velero_key_name }} --show-secret"
+      environment:
+        GARAGE_CONFIG_FILE: "{{ garage_config_dir }}/garage.toml"
+      register: key_info
+      changed_when: false
+      no_log: true
+
+    - name: Extract access key id and secret
+      ansible.builtin.set_fact:
+        velero_access_key: "{{ key_info.stdout | regex_search('Key ID:\\s+(\\S+)', '\\1') | first }}"
+        velero_secret_key: "{{ key_info.stdout | regex_search('Secret key:\\s+(\\S+)', '\\1') | first }}"
+      no_log: true
+
+    # === SMOKE-TEST ===
+    # Beweist, dass die S3-API von außen erreichbar ist und schreiben kann,
+    # BEVOR Velero überhaupt davon erfährt.
+
+    - name: Smoke test - S3 API answers on the LAN address
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:{{ garage_s3_port }}/"
+        status_code: [400, 403]   # ohne Signatur erwartet, Hauptsache es antwortet
+      register: s3_probe
+      retries: 3
+      delay: 5
+
+  post_tasks:
+    - name: Display result and next steps
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          ✓ Garage läuft auf {{ inventory_hostname }}
+          ============================================================
+          S3 Endpoint:  http://{{ ansible_host }}:{{ garage_s3_port }}
+          Region:       garage
+          Bucket:       {{ velero_bucket }}
+          Access Key:   {{ velero_access_key }}
+          Secret Key:   (siehe unten – nicht ins Log kopieren!)
+
+          MinIO:        {{ minio_state.stdout }} – läuft unverändert weiter
+
+          Nächste Schritte im GitOps-Repo (SmartHomeDeployments):
+          ------------------------------------------------------------
+          1. SealedSecret für die Credentials anlegen:
+
+             read -s -P "Secret Key: " sk
+             kubectl create secret generic velero-garage-credentials -n velero \
+               --from-literal=cloud="[default]
+             aws_access_key_id={{ velero_access_key }}
+             aws_secret_access_key=$sk" \
+               --dry-run=client -o yaml | kubeseal --format yaml \
+               > velero/sealed-garage-credentials.yaml
+             set -e sk
+
+          2. Zweite BackupStorageLocation in Velero.yaml ergänzen:
+
+             - name: garage
+               provider: aws
+               bucket: {{ velero_bucket }}
+               default: true            # MinIO-BSL verliert default
+               credential:
+                 name: velero-garage-credentials
+                 key: cloud
+               config:
+                 region: garage
+                 s3ForcePathStyle: "true"
+                 s3Url: http://{{ ansible_host }}:{{ garage_s3_port }}
+                 checksumAlgorithm: ""  # WICHTIG – siehe unten
+
+          3. Testbackup + Restore fahren, dann die Schedules umstellen.
+
+          Hinweis zu checksumAlgorithm:
+          Das AWS-Plugin sendet ab v1.13 Checksummen, mit denen mehrere
+          S3-Implementierungen (Ceph, Backblaze) "XAmzContentSHA256Mismatch"
+          werfen. Leerer Wert schaltet das ab. Für Garage sehr wahrscheinlich
+          nötig – falls Backups ohne Fehlermeldung hängen, hier zuerst schauen.
+          ============================================================
+
+    - name: Display secret key separately
+      ansible.builtin.debug:
+        msg: "Secret Key: {{ velero_secret_key }}"
+
+  handlers:
+    - name: restart garage
+      ansible.builtin.systemd:
+        name: garage
+        state: restarted
+        daemon_reload: yes
