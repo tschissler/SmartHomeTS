@@ -1,0 +1,123 @@
+---
+# ===========================================================================
+# Read-only diagnostic user for node-level troubleshooting
+# ===========================================================================
+# Purpose: read logs and system state on every node without granting any
+# ability to change it. Reading the journal needs no sudo at all -- membership
+# in the systemd-journal group is enough, and adm covers /var/log/*.
+#
+# Deliberately NOT granted:
+#   - no sudo (no sudoers drop-in is created; sudo -n must fail)
+#   - no write access anywhere outside the user's own home
+#   - no port/agent/X11 forwarding (restricted in authorized_keys)
+#
+# Changes to the cluster keep going through Git -> ArgoCD, and changes to the
+# node substrate keep going through the other plays in this directory with the
+# admin account. This user is for looking, not for fixing.
+#
+# Background: diagnosing the k3snode5 reset of 2026-09-12 required reading
+# journals from the previous boot. That worked through a throwaway pod with
+# hostPath mounted, but that path needs a running kubelet -- exactly what is
+# missing when a node is NotReady or k3s is dead.
+#
+# Usage:
+#   ssh-keygen -t ed25519 -f ~/.ssh/claude_ro -C claude-ro -N ""
+#   ansible-playbook plays/setup-diagnostic-readonly-user.yml -K \
+#     --limit k3snode5.intern          # canary first, then the full run
+# ===========================================================================
+- name: Create read-only diagnostic user on all nodes
+  hosts: prodservers
+  gather_facts: yes
+  become: yes
+  vars:
+    diag_user: claude-ro
+    diag_pubkey_path: "{{ lookup('env','HOME') }}/.ssh/claude_ro.pub"
+    # Restrictions apply to this key only, not to the account as a whole.
+    diag_key_options: "no-agent-forwarding,no-port-forwarding,no-X11-forwarding"
+  tasks:
+    - name: Fail early if the public key is missing on the control host
+      ansible.builtin.assert:
+        that:
+          - diag_pubkey_path is exists
+        fail_msg: >-
+          {{ diag_pubkey_path }} not found. Create the keypair first:
+          ssh-keygen -t ed25519 -f ~/.ssh/claude_ro -C claude-ro -N ""
+        success_msg: "Public key found: {{ diag_pubkey_path }}"
+      delegate_to: localhost
+      become: no
+      run_once: yes
+
+    - name: Read public key from control host
+      ansible.builtin.set_fact:
+        diag_pubkey: "{{ lookup('file', diag_pubkey_path) | trim }}"
+      run_once: yes
+
+    # adm            -> /var/log/* (syslog, kern.log, ...)
+    # systemd-journal -> the full journal, including previous boots
+    - name: Create the diagnostic user without sudo rights
+      ansible.builtin.user:
+        name: "{{ diag_user }}"
+        comment: "Read-only diagnostics (Claude Code) -- no sudo"
+        shell: /bin/bash
+        groups: adm,systemd-journal
+        append: no
+        create_home: yes
+        state: present
+
+    - name: Ensure .ssh directory exists
+      ansible.builtin.file:
+        path: "/home/{{ diag_user }}/.ssh"
+        state: directory
+        owner: "{{ diag_user }}"
+        group: "{{ diag_user }}"
+        mode: "0700"
+
+    - name: Install the authorized key (replaces the file, so it stays the only key)
+      ansible.builtin.copy:
+        content: "{{ diag_key_options }} {{ diag_pubkey }}\n"
+        dest: "/home/{{ diag_user }}/.ssh/authorized_keys"
+        owner: "{{ diag_user }}"
+        group: "{{ diag_user }}"
+        mode: "0600"
+
+    - name: Make sure no sudoers drop-in exists for this user
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/99-{{ diag_user }}"
+        state: absent
+
+    - name: Verify the user can read the journal
+      ansible.builtin.command:
+        cmd: journalctl --no-pager -n 1 --quiet
+      become_user: "{{ diag_user }}"
+      register: diag_journal_test
+      changed_when: false
+
+    - name: Verify the user can read previous boots
+      ansible.builtin.command:
+        cmd: journalctl --no-pager --list-boots
+      become_user: "{{ diag_user }}"
+      register: diag_boots_test
+      changed_when: false
+
+    - name: Verify the user has NO sudo rights
+      ansible.builtin.command:
+        cmd: sudo -n true
+      become_user: "{{ diag_user }}"
+      register: diag_sudo_test
+      changed_when: false
+      failed_when: false
+
+    - name: Assert the account is usable for diagnostics but powerless
+      ansible.builtin.assert:
+        that:
+          - diag_journal_test.rc == 0
+          - diag_boots_test.stdout_lines | length >= 1
+          - diag_sudo_test.rc != 0
+        fail_msg: >-
+          Verification failed on {{ inventory_hostname }} --
+          journal rc={{ diag_journal_test.rc }},
+          boots={{ diag_boots_test.stdout_lines | length }},
+          sudo rc={{ diag_sudo_test.rc }} (must be non-zero).
+        success_msg: >-
+          {{ diag_user }} can read {{ diag_boots_test.stdout_lines | length }}
+          boots and has no sudo rights.

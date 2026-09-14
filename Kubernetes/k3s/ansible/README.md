@@ -121,6 +121,24 @@ Backup infrastructure:
 
 - `setup-backup-rpi.yml` - Setup Raspberry Pi as MinIO backup server (Velero S3 backend)
 
+Diagnostics:
+
+- `setup-diagnostic-readonly-user.yml` - Creates the `claude-ro` account on every prod node
+  for log and state inspection: member of `adm` and `systemd-journal`, **no sudo**, key
+  restricted to `no-agent-forwarding,no-port-forwarding,no-X11-forwarding`. Reading the
+  journal (including previous boots) needs no root, so the account stays powerless while
+  covering node-level diagnosis. The play asserts both halves: the journal must be readable
+  and `sudo -n` must fail. Requires `~/.ssh/claude_ro.pub` on the control host:
+
+  ```bash
+  ssh-keygen -t ed25519 -f ~/.ssh/claude_ro -C claude-ro -N ""
+  ansible-playbook plays/setup-diagnostic-readonly-user.yml -K --limit k3snode5.intern
+  ```
+
+  Rationale: the alternative path -- a throwaway pod with `hostPath: /` and `journalctl -D`
+  -- works, but needs a running kubelet, which is exactly what is gone when a node goes
+  NotReady. Fixing anything still goes through Git -> ArgoCD or the admin account.
+
 ## Wrapper Scripts
 
 ```bash
