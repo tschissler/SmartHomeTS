@@ -144,3 +144,10 @@
       retries: 30
       delay: 5
       until: node_ready.rc == 0 and ' Ready' in node_ready.stdout and k3s_version.split('+')[0] in node_ready.stdout
+
+# Das Server-Upgrade rollt die eingebetteten Addons neu aus -- darunter CoreDNS
+# mit replicas: 1. Ohne diesen Schritt waere die Redundanz nach jedem Upgrade
+# wieder weg, und zwar unbemerkt. Idempotent, kostet bei bereits korrekter
+# Replica-Zahl nur zwei Leseoperationen.
+- import_playbook: configure-coredns-replicas.yml
+

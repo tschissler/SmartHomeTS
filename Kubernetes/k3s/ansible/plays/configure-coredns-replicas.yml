@@ -1,0 +1,128 @@
+---
+# CoreDNS auf redundante Replicas heben.
+#
+# WARUM DIESES PLAY EXISTIERT
+# k3s liefert CoreDNS mit `replicas: 1` aus. CoreDNS ist aber keine
+# Steuerungskomponente, sondern eine Abhaengigkeit JEDES Pods: alles, was einen
+# Namen statt einer IP benutzt, geht ueber 10.43.0.10. Faellt der eine Pod aus
+# oder wird sein Node gedraint, verlieren alle Pods gleichzeitig die
+# Namensaufloesung -- inklusive der .intern-Zone, die CoreDNS an AdGuard
+# weiterleitet.
+#
+# Am 2026-09-17 lag der einzige CoreDNS-Pod auf k3snode6, also auf einem der
+# Pi-Nodes mit den bcmgenet-Aussetzern. Siehe SmartHomeDeployments Issue #23.
+#
+# WARUM ES EIN ANSIBLE-PLAY BRAUCHT UND KEIN `kubectl scale`
+# CoreDNS ist ein k3s-Addon, reconciled aus
+# /var/lib/rancher/k3s/server/manifests/coredns.yaml (nachpruefbar mit
+# `k3s kubectl get addons.k3s.cattle.io -n kube-system coredns`).
+# Ein manueller Scale haelt im Normalbetrieb, wird aber ueberschrieben, sobald
+# das Addon neu angewendet wird -- also bei jedem k3s-Server-Neustart und damit
+# genau in dem Moment, fuer den man die Redundanz haben wollte.
+#
+# Deshalb laeuft dieses Play am Ende von upgrade-k3s.yml mit. Es ist idempotent
+# und kann jederzeit einzeln nachgezogen werden:
+#   ansible-playbook plays/configure-coredns-replicas.yml -K
+#
+# Die coredns-custom-ConfigMap (configure-coredns-intern-forward.yml) ist vom
+# Addon-Controller NICHT betroffen -- Corefile-Bloecke ueberleben, Replicas nicht.
+
+- name: Ensure CoreDNS runs with redundant replicas
+  hosts: k3s_servers
+  become: yes
+  gather_facts: no
+  vars:
+    coredns_namespace: kube-system
+    coredns_replicas: 2
+    # PodDisruptionBudget mit maxUnavailable (NICHT minAvailable): bei
+    # minAvailable: 1 wuerde ein Drain blockieren, sollte das Addon die Replicas
+    # zwischenzeitlich auf 1 zurueckgesetzt haben. maxUnavailable: 1 erlaubt
+    # immer genau eine Eviction und ist in beiden Faellen korrekt.
+    manage_coredns_pdb: true
+
+  tasks:
+    - name: Read current CoreDNS replica count
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get deployment coredns \
+          -o jsonpath='{.spec.replicas}'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: coredns_current_replicas
+
+    - name: Scale CoreDNS to {{ coredns_replicas }} replicas
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} scale deployment coredns \
+          --replicas={{ coredns_replicas }}
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      when: (coredns_current_replicas.stdout | trim | int) != (coredns_replicas | int)
+      register: coredns_scaled
+      changed_when: true
+
+    - name: Wait for CoreDNS rollout to finish
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} rollout status deployment/coredns \
+          --timeout=180s
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      when: coredns_scaled is defined and coredns_scaled.changed
+
+    - name: Ensure PodDisruptionBudget for CoreDNS
+      ansible.builtin.shell: |
+        cat <<'EOF' | /usr/local/bin/k3s kubectl apply -f -
+        apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: coredns
+          namespace: {{ coredns_namespace }}
+        spec:
+          maxUnavailable: 1
+          selector:
+            matchLabels:
+              k8s-app: kube-dns
+        EOF
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: coredns_pdb_apply
+      changed_when: coredns_pdb_apply.stdout is defined and ("configured" in coredns_pdb_apply.stdout or "created" in coredns_pdb_apply.stdout)
+      when: manage_coredns_pdb | bool
+
+    - name: Verify replica count, node spread and ready endpoints
+      ansible.builtin.shell: |
+        set -e
+        echo "=== Deployment ==="
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get deployment coredns \
+          -o jsonpath='spec.replicas={.spec.replicas} readyReplicas={.status.readyReplicas}{"\n"}'
+        echo "=== Pods und Nodes ==="
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get pods -l k8s-app=kube-dns \
+          -o custom-columns='POD:.metadata.name,NODE:.spec.nodeName,READY:.status.containerStatuses[*].ready' \
+          --no-headers
+        echo "=== Verschiedene Nodes? ==="
+        nodes=$(/usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get pods -l k8s-app=kube-dns \
+          -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l)
+        pods=$(/usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get pods -l k8s-app=kube-dns \
+          --no-headers | wc -l)
+        echo "Pods=$pods auf $nodes verschiedenen Nodes"
+        # Redundanz ist nur echt, wenn die Pods nicht auf demselben Node liegen.
+        # topologySpreadConstraints sind im k3s-Manifest gesetzt, das sollte also
+        # von sich aus passen -- wenn nicht, ist es ein echter Fehlerfall.
+        if [ "$pods" -gt 1 ] && [ "$nodes" -lt 2 ]; then
+          echo "FEHLER: alle CoreDNS-Pods liegen auf demselben Node" >&2
+          exit 1
+        fi
+        echo "=== Ready Endpoints im kube-dns-Service ==="
+        /usr/local/bin/k3s kubectl -n {{ coredns_namespace }} get endpointslices \
+          -l kubernetes.io/service-name=kube-dns \
+          -o jsonpath='{range .items[*].endpoints[*]}{.addresses[0]}{" ready="}{.conditions.ready}{"\n"}{end}'
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: coredns_verify
+
+    - name: Show CoreDNS verification
+      ansible.builtin.debug:
+        msg: "{{ coredns_verify.stdout_lines | default([]) }}"
+      run_once: true
+      changed_when: false

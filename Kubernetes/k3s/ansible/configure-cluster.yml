@@ -36,6 +36,13 @@
 # so pods can resolve internal services like argocd.intern/longhorn.intern.
 - import_playbook: plays/configure-coredns-intern-forward.yml
 
+# Step 2b-2: CoreDNS redundant machen
+# k3s liefert CoreDNS mit replicas: 1 aus. Das ist die einzige Komponente, deren
+# Ausfall JEDEN Pod trifft (Namensaufloesung), deshalb zwei Replicas + PDB.
+# Muss nach jedem k3s-Neustart nachgezogen werden, weil der Addon-Controller das
+# Manifest mit replicas: 1 neu anwendet -- laeuft daher auch in upgrade-k3s.yml.
+- import_playbook: plays/configure-coredns-replicas.yml
+
 # Step 2c: Node-level split-DNS for .intern zone
 # Configures systemd-resolved on each node to route *.intern queries to
 # AdGuard Home via a drop-in file. Other DNS traffic stays on Fritz!Box.
