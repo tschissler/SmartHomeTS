@@ -38,11 +38,26 @@
     garage_user: "garage"
 
     # LMDB mappt per Default einen sehr grossen virtuellen Adressraum. Auf dem Pi
-    # (1,8 GB RAM + 1,8 GB Swap, vm.overcommit_memory=0) lehnt der Kernel das
+    # (1,8 GB RAM + 1,8 GB Swap) lehnt der Kernel das mit vm.overcommit_memory=0
     # heuristisch ab -> "OutOfMemory error while trying to open LMDB database".
-    # 2 GiB sind fuer die Metadaten reichlich: Kopia legt grosse Blobs an (20-50 MB),
-    # bei ~650 GiB Nutzdaten also nur Zehntausende Objekte.
-    garage_lmdb_map_size: "2GiB"
+    # Deshalb setzt der Task "Allow memory overcommit for LMDB" weiter unten
+    # vm.overcommit_memory=1: die map ist virtueller Adressraum und wird nie real
+    # belegt, der Kernel darf sie also zusagen.
+    #
+    # Die urspruengliche Rechnung mit 2 GiB war fuer Velero korrekt -- Kopia legt
+    # grosse Blobs an (20-50 MB), bei ~420 GiB Nutzdaten also nur ~21.600 Objekte.
+    #
+    # Gesprengt hat sie am 2026-09-17 der InfluxDB-Objektsync: 680.000 winzige
+    # Parquet-/JSON-Dateien fuer nur 33 GiB, also 97 % der Metadaten fuer 7 % der
+    # Daten -> MDB_MAP_FULL. Das legte nicht nur den Sync lahm, sondern auch die
+    # VELERO-BACKUPS und die Kopia-Maintenance-Jobs auf derselben Garage.
+    # Der Sync ist seither pausiert (SmartHomeDeployments: minio/replication.yaml),
+    # die 680.000 Objekte liegen aber weiterhin im Bucket -- mit 2 GiB waere die
+    # LMDB sofort wieder voll. Der Wert bleibt auch dann bei 8 GiB, wenn dieser
+    # Bucket spaeter geleert wird: map_size ist virtueller Adressraum, wird sparse
+    # belegt und kostet real nichts. Die urspruengliche Rechnung war fuer Velero
+    # richtig, hatte aber keinen Puffer -- genau das soll sich nicht wiederholen.
+    garage_lmdb_map_size: "8GiB"
 
     garage_s3_port: 3900
     garage_rpc_port: 3901
@@ -219,6 +234,20 @@
           erzeugt werden, sonst ist der Node nicht mehr ansprechbar.
 
     # === KONFIGURATION ===
+
+    - name: Allow memory overcommit for LMDB
+      # LMDB reserviert lmdb_map_size als virtuellen Adressraum. Mit
+      # vm.overcommit_memory=0 prueft der Kernel heuristisch gegen RAM+Swap
+      # (hier ~2,7 GiB CommitLimit) und lehnt groessere Mappings ab -- Garage
+      # startet dann gar nicht erst. Mit "1" sagt der Kernel jede Reservierung
+      # zu; real belegt wird nur, was tatsaechlich beschrieben wird.
+      # Auf einem Single-Purpose-Backup-Host ist das unkritisch.
+      ansible.posix.sysctl:
+        name: vm.overcommit_memory
+        value: '1'
+        sysctl_file: /etc/sysctl.d/99-garage-lmdb.conf
+        sysctl_set: true
+        reload: true
 
     - name: Write garage.toml
       ansible.builtin.copy:
