@@ -1,0 +1,109 @@
+---
+# etcd-Metriken der Control-Plane fuer Prometheus erreichbar machen.
+#
+# Ausgangslage: k3s startet etcd mit --listen-metrics-urls=http://127.0.0.1:2381.
+# Der Port liefert ausschliesslich /metrics und /health (kein Datenzugriff auf
+# etcd, kein Schreibpfad), ist aber node-lokal - Prometheus laeuft in einem Pod
+# auf einem anderen Node und kommt dort nicht heran. Deshalb ist
+# kubeEtcd.enabled im kube-prometheus-stack bisher abgeschaltet, und die
+# Control-Plane-Gesundheit ist unbeobachtet
+# (SmartHomeDeployments Issue #21, Nebenbefund).
+#
+# Was dieses Play macht: setzt "etcd-expose-metrics: true" in
+# /etc/rancher/k3s/config.yaml. k3s haengt den Metrik-Port dann zusaetzlich an
+# die Node-IP - auf k3snode3 verifiziert lauscht er danach auf
+# 192.168.178.233:2381 UND weiterhin 127.0.0.1:2381, nicht auf 0.0.0.0.
+# Danach kann der ServiceMonitor des Charts die drei Server-Nodes scrapen.
+#
+# Sicherheit: Port 2381 ist danach ungeschuetzt im LAN erreichbar (HTTP, keine
+# Auth) - er gibt aber nur Zaehler und Histogramme her, keine etcd-Keys.
+# Bewusst akzeptiert, wie beim node-exporter auf 9100.
+#
+# Der Merge ist idempotent im Stil von configure-kubevip.yml: bestehende
+# config.yaml wird gelesen, nur der eine Key ergaenzt, der Rest bleibt stehen.
+# Nur wenn die Datei sich wirklich aendert, wird k3s neu gestartet.
+#
+# Restart: serial: 1, also ein Server nach dem anderen. Das etcd-Quorum bleibt
+# bei 2 von 3 erhalten. Kein Drain noetig (wie beim k3s-Upgrade) - Container
+# laufen durch, es gibt pro Node nur einen kurzen API-Blip.
+#
+# Aufruf:
+#   ansible-playbook plays/expose-etcd-metrics.yml -K
+# Kanarienvogel zuerst (empfohlen):
+#   ansible-playbook plays/expose-etcd-metrics.yml -K --limit k3snode3.intern
+
+- name: Expose k3s etcd metrics on the node IP
+  hosts: k3s_servers
+  become: yes
+  serial: 1
+  tasks:
+    - name: Read existing k3s config.yaml
+      ansible.builtin.slurp:
+        path: /etc/rancher/k3s/config.yaml
+      register: k3s_config_yaml
+      failed_when: false
+      changed_when: false
+
+    - name: Extract k3s config.yaml text
+      ansible.builtin.set_fact:
+        k3s_config_text: "{{ (k3s_config_yaml.content | default('') | b64decode) | trim }}"
+
+    - name: Parse k3s config.yaml into a raw object
+      ansible.builtin.set_fact:
+        k3s_config_current_raw: "{{ (k3s_config_text | length > 0) | ternary((k3s_config_text | from_yaml), {}) }}"
+
+    - name: Normalize parsed k3s config to a dict
+      ansible.builtin.set_fact:
+        k3s_config_current: "{{ (k3s_config_current_raw is mapping) | ternary(k3s_config_current_raw, {}) }}"
+
+    - name: Add etcd-expose-metrics to the k3s config
+      ansible.builtin.set_fact:
+        k3s_config_updated: "{{ k3s_config_current | combine({'etcd-expose-metrics': true}, recursive=True) }}"
+
+    - name: Write k3s config.yaml
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        content: "{{ k3s_config_updated | to_nice_yaml(indent=2, width=9999) }}"
+        owner: root
+        group: root
+        mode: '0644'
+      register: k3s_config_write
+
+    # Nicht ueber einen Handler, sondern direkt: bei serial: 1 soll der Node
+    # fertig hochgefahren und verifiziert sein, bevor der naechste drankommt.
+    - name: Restart k3s so etcd picks up the new listen address
+      ansible.builtin.systemd:
+        name: k3s
+        state: restarted
+      when: k3s_config_write.changed
+
+    - name: Wait for k3s service to be active
+      ansible.builtin.command: systemctl is-active k3s
+      register: k3s_active
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: k3s_active.rc == 0 and (k3s_active.stdout | trim) == 'active'
+      when: k3s_config_write.changed
+
+    - name: Wait for node to be Ready again
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get node {{ inventory_hostname.split('.')[0] }} --no-headers
+      register: node_ready
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: node_ready.rc == 0 and ' Ready' in node_ready.stdout
+      when: k3s_config_write.changed
+
+    # Verifikation: der Endpunkt muss auf der LAN-IP antworten, nicht nur auf
+    # localhost - sonst hat der Scrape aus dem Cluster spaeter keine Chance.
+    - name: Verify etcd metrics are reachable on the node IP
+      ansible.builtin.uri:
+        url: "http://{{ static_ip }}:2381/metrics"
+        return_content: yes
+      register: etcd_metrics
+      retries: 20
+      delay: 5
+      until: etcd_metrics.status == 200 and 'etcd_server_has_leader' in etcd_metrics.content
+      changed_when: false

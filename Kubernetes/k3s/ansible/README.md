@@ -139,6 +139,25 @@ Diagnostics:
   -- works, but needs a running kubelet, which is exactly what is gone when a node goes
   NotReady. Fixing anything still goes through Git -> ArgoCD or the admin account.
 
+- `expose-etcd-metrics.yml` - Sets `etcd-expose-metrics: true` in `/etc/rancher/k3s/config.yaml`
+  on the control-plane nodes, so etcd additionally binds its metrics port to the node IP
+  (verified on k3snode3: `192.168.178.233:2381` plus the existing `127.0.0.1:2381`, not
+  `0.0.0.0`). Without this, Prometheus (a pod on some other node) cannot reach the
+  endpoint at all, which is why `kubeEtcd` is disabled in the kube-prometheus-stack values
+  (SmartHomeDeployments `Monitoring.yaml`). Port 2381 serves only `/metrics` and `/health`
+  -- no etcd keys, no write path -- so exposing it on the LAN is the same trade-off already
+  accepted for node-exporter on 9100. Merges the single key into the existing config and
+  restarts k3s only if the file actually changed; `serial: 1` keeps etcd quorum at 2 of 3.
+  The play verifies `etcd_server_has_leader` is served on the node IP before moving on.
+
+  ```bash
+  ansible-playbook plays/expose-etcd-metrics.yml -K --limit k3snode3.intern   # canary
+  ansible-playbook plays/expose-etcd-metrics.yml -K                           # all servers
+  ```
+
+  After the play, flip `kubeEtcd.enabled` to `true` in SmartHomeDeployments -- in that
+  order, otherwise the ServiceMonitor scrapes a target that does not answer yet.
+
 ## Wrapper Scripts
 
 ```bash
