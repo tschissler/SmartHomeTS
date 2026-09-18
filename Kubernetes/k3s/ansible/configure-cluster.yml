@@ -12,6 +12,12 @@
 # 2. Services that need storage (AdGuard with PVC)
 # 3. Ingress configuration (needs Traefik + services ready)
 
+# Step 0a: Einheitliche Zeitzone (UTC) auf allen Nodes
+# Ohne das laufen die Node-Journale in zwei Zeitzonen auseinander (k3snode1/2 UTC,
+# k3snode3-6 Europe/Berlin) und jede Korrelation ueber Nodes hinweg hat einen
+# stillen Versatz von 1-2 h. Siehe SmartHomeDeployments Issue #36.
+- import_playbook: plays/configure-node-timezone.yml
+
 # Step 0: kube-vip for API and Service VIPs
 # Must run BEFORE any LoadBalancer services (AdGuard, Traefik, etc.)
 - import_playbook: plays/configure-kubevip.yml

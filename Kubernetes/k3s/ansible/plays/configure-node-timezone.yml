@@ -1,0 +1,84 @@
+---
+# Zeitzone aller Cluster-Nodes auf Etc/UTC vereinheitlichen.
+#
+# WARUM DIESES PLAY EXISTIERT
+# Die Nodes liefen in zwei Zeitzonen: k3snode1/2 auf Etc/UTC, k3snode3-6 auf
+# Europe/Berlin (Stand 2026-09-18). Die Uhren gingen richtig -- alle NTP-synchron --,
+# nur die lokale Darstellung unterschied sich um 2 h (Sommer) bzw. 1 h (Winter).
+#
+# `journalctl` gibt Zeitstempel in lokaler Zeit aus. Wer die Journale von k3snode1
+# und k3snode6 nebeneinanderlegt, vergleicht also 21:22 mit 23:22 fuer denselben
+# Moment. Genau diese Korrelation war die Arbeit in SmartHomeDeployments #20
+# (Netzwerk-Aussetzer node5/6) und #21 (Load-Rhythmus k3snode3) -- beide Diagnosen
+# haben mehrere Sessions gekostet, und ein 2-h-Versatz in der falschen Richtung
+# kann dort eine Korrelation vortaeuschen oder eine echte verdecken.
+#
+# WARUM UTC UND NICHT EUROPE/BERLIN
+# - Keine Sommerzeit-Spruenge: keine doppelte Stunde im Oktober, keine fehlende
+#   im Maerz. Beides sind Loecher bzw. Dubletten in jeder Log-Auswertung.
+# - Deckungsgleich mit Kubernetes: Events, Pod-Timestamps, CronJobs und die
+#   Velero-Schedules laufen ohnehin in UTC. Node-Journal und `kubectl` sind
+#   danach direkt vergleichbar, ohne `journalctl --utc`.
+#
+# WAS SICH DABEI AENDERT -- UND WAS NICHT
+# Das Journal speichert Zeitstempel in UTC-Mikrosekunden; die lokale Zeit wird
+# erst beim Lesen berechnet. Die Umstellung verschiebt deshalb auch die Anzeige
+# ALTER Eintraege auf k3snode3-6 um 2 h. Wer Log-Auszuege aus aelteren Issues
+# wiederverwendet, muss das wissen. Die Uhren selbst und die gespeicherten
+# Zeitpunkte bleiben unveraendert.
+#
+# Kein Reboot noetig. Laufende Prozesse behalten die beim Start gelesene Zone bis
+# zu ihrem naechsten Neustart -- unkritisch, weil k3s und die Container intern
+# ohnehin in UTC arbeiten.
+#
+# Idempotent, jederzeit einzeln nachziehbar:
+#   ansible-playbook plays/configure-node-timezone.yml -K
+#   ansible-playbook plays/configure-node-timezone.yml -K --limit k3snode3.intern
+#
+# NICHT ENTHALTEN: der Backup-Pi (Gruppe backup_server). Er liefert mit Garage
+# und Velero ebenfalls Logs, die man gegen den Cluster haelt -- wenn er
+# umgestellt werden soll, hier die Hosts-Zeile um `:backup_server` erweitern.
+
+- name: Ensure all cluster nodes share one timezone (UTC)
+  hosts: prodservers
+  become: yes
+  gather_facts: no
+  vars:
+    node_timezone: Etc/UTC
+
+  tasks:
+    - name: Read timezone before the change
+      ansible.builtin.command:
+        cmd: timedatectl show --property=Timezone --value
+      changed_when: false
+      register: tz_before
+
+    - name: Set timezone to {{ node_timezone }}
+      community.general.timezone:
+        name: "{{ node_timezone }}"
+      register: tz_set
+
+    - name: Verify timezone and NTP synchronisation
+      ansible.builtin.command:
+        cmd: timedatectl show --property=Timezone --property=NTPSynchronized --property=TimeUSec --value
+      changed_when: false
+      register: tz_after
+
+    # Die Uhr darf sich NICHT verstellt haben -- eine Zeitzone aendert nur die
+    # Darstellung. Weicht NTPSynchronized von "yes" ab, stimmt etwas anderes
+    # nicht und die Diagnosegrundlage waere weiterhin unzuverlaessig.
+    - name: Fail if the node is no longer NTP-synchronised
+      ansible.builtin.fail:
+        msg: >-
+          {{ inventory_hostname }}: NTPSynchronized ist
+          '{{ (tz_after.stdout_lines | default(['', '', '']))[1] | default('unbekannt') }}',
+          erwartet 'yes'.
+      when: (tz_after.stdout_lines | default(['', '', '']))[1] | default('') != 'yes'
+
+    - name: Show timezone change
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: {{ tz_before.stdout | trim }}
+          -> {{ (tz_after.stdout_lines | default([''])) [0] | trim }}
+          (NTP: {{ (tz_after.stdout_lines | default(['', '']))[1] | default('?') }},
+          geaendert: {{ tz_set.changed }})
