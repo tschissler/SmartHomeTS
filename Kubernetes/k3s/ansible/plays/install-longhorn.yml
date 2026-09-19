@@ -8,13 +8,17 @@
     longhorn_chart_version: "{{ longhorn_helm_version | default('1.10.1') }}"
     longhorn_data_path: /var/lib/longhorn-data
     longhorn_replica_count: "{{ longhorn_default_replica_count | default(2) }}"
-    longhorn_node_down_pod_deletion_policy: "{{ longhorn_node_down_pod_deletion_policy | default('delete-both-statefulset-and-deployment-pod') }}"
+    # Kein `{{ longhorn_node_down_pod_deletion_policy | default(...) }}`: eine Play-Var,
+    # die sich selbst referenziert, laeuft in "Recursive loop detected in template".
+    # Ueberschreiben geht weiterhin per `-e`, denn extra-vars schlagen Play-Vars.
+    longhorn_node_down_pod_deletion_policy: delete-both-statefulset-and-deployment-pod
     # Optional: Pin Longhorn system-managed components (manager, CSI plugin, engine-image, etc.)
     # to specific nodes using a Kubernetes label selector.
     # Example (matches your existing labels): "node.longhorn.io/create-default-disk=true"
     # WARNING: If you pin these components away from a node, pods on that node may no longer
     # be able to mount Longhorn volumes.
-    longhorn_system_managed_components_node_selector: "{{ longhorn_system_managed_components_node_selector | default('') }}"
+    # Ebenfalls ohne Selbstreferenz (siehe oben); leer = kein Pinning, per `-e` setzbar.
+    longhorn_system_managed_components_node_selector: ""
     # helm wird gepinnt installiert, NICHT per `curl … get-helm-3 | bash`.
     # Das alte Skript holte bei jedem Lauf die neueste helm-Version von GitHub main --
     # eine rollende Referenz, ausgefuehrt auf einem Cluster-Node. Welche Version dabei
