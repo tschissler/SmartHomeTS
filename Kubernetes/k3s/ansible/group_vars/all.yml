@@ -1,9 +1,16 @@
 ---
 # Defaults for network
 gateway: 192.168.178.1
+# Nameserver, die in die netplan-Datei der Nodes gerendert werden
+# (templates/99-ansible-eth.j2 -> Link eth0). Bewusst OHNE externen Resolver:
+# Cloudflare stand hier bis 2026-09-19 als zweiter Eintrag und war damit ein
+# Upstream, der jede nicht lokal beantwortete Anfrage der Nodes mitgelesen
+# haette (SmartHomeDeployments #40). Die Nodes erreichen AdGuard fuer `.intern`
+# ueber das Drop-in aus configure-node-dns.yml; hier steht nur der Weg nach
+# draussen. AdGuard gehoert bewusst NICHT in diese Liste -- ein Node, der zum
+# Booten einen Cluster-Dienst braucht, waere ein Henne-Ei-Problem.
 nameservers:
   - 192.168.178.1
-  - 1.1.1.1
 
 # Some nodes can be slow to present the sudo prompt on first connection.
 # Default Ansible become timeout is ~12s; increase to avoid false failures.

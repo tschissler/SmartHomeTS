@@ -1,0 +1,112 @@
+---
+# Den oeffentlichen Resolver aus der netplan-Konfiguration der Nodes entfernen.
+#
+# WARUM DIESES PLAY EXISTIERT
+# `1.1.1.1` stand als zweiter Link-DNS in /etc/netplan/99-ansible-eth.yaml auf
+# allen sechs Nodes und wurde ueber `nameservers` in group_vars/all.yml bei
+# jedem network-config.yml-Lauf neu ausgerollt (SmartHomeDeployments #40).
+# Eine Aenderung an `nameservers` allein bleibt wirkungslos: Die netplan-Datei
+# liegt fertig auf der Platte, ein Node-Reboot rendert das Template nicht neu.
+#
+# WARUM CHIRURGISCH UND NICHT NEU GERENDERT
+# Der naheliegende Weg -- templates/99-ansible-eth.j2 neu rendern -- ist hier
+# **falsch**. Am 2026-09-19 hat ein `--check --diff`-Lauf gezeigt, dass die
+# Dateien auf den Nodes von Hand nachgepflegt wurden und Dinge enthalten, die
+# das Template nicht kennt:
+#
+#   ethernets:
+#     eno1:
+#       match:
+#         macaddress: "84:47:09:77:d2:aa"
+#       set-name: "eno1"
+#
+# Dieser Block haelt den Interface-Namen stabil. Wuerde man ihn wegrendern,
+# faellt es im laufenden Betrieb nicht auf -- aber beim naechsten Reboot kann
+# das Interface anders heissen, und dann passt die netplan-Konfiguration auf
+# kein Geraet mehr: Node ohne Netz. Deshalb faesst dieses Play ausschliesslich
+# die eine Zeile an, um die es geht.
+#
+# (Dass Template und Realitaet auseinanderlaufen, ist ein eigener Befund und
+# in #40 notiert. Er wird hier bewusst nicht mitbehoben.)
+#
+# ANWENDUNG
+#   ansible-playbook plays/configure-node-nameservers.yml -Kk --check --diff
+#   ansible-playbook plays/configure-node-nameservers.yml -Kk
+#
+# SICHERHEITSNETZ
+# Vor dem Entfernen wird geprueft, dass die Fritz!Box als Nameserver in der
+# Datei steht -- sonst bliebe eine leere `addresses:`-Liste zurueck, mit der
+# netplan nicht startet. Danach validiert `netplan generate` die Datei, bevor
+# `netplan apply` sie anwendet; die alte Fassung wird gesichert (`backup: yes`)
+# und `serial: 1` begrenzt jeden Fehlerfall auf einen Node.
+
+- name: Drop the public resolver from the nodes' netplan configuration
+  hosts: prodservers
+  become: yes
+  gather_facts: no
+  serial: 1
+  vars:
+    netplan_file: /etc/netplan/99-ansible-eth.yaml
+    public_resolver: 1.1.1.1
+    required_resolver: "{{ gateway | default('192.168.178.1') }}"
+
+  tasks:
+    - name: Read the current netplan file
+      ansible.builtin.slurp:
+        path: "{{ netplan_file }}"
+      register: netplan_raw
+
+    - name: Refuse to leave an empty nameserver list
+      ansible.builtin.assert:
+        that:
+          - (netplan_raw.content | b64decode) is search(required_resolver | regex_escape)
+        fail_msg: >-
+          {{ inventory_hostname }}: {{ required_resolver }} steht nicht in
+          {{ netplan_file }} -- das Entfernen von {{ public_resolver }} wuerde
+          eine leere nameservers-Liste hinterlassen. Datei von Hand pruefen.
+        success_msg: "{{ inventory_hostname }}: {{ required_resolver }} vorhanden, Entfernen ist sicher."
+
+    - name: Remove the public resolver line
+      ansible.builtin.lineinfile:
+        path: "{{ netplan_file }}"
+        regexp: '^\s*-\s*"?{{ public_resolver | regex_escape }}"?\s*$'
+        state: absent
+        backup: yes
+      register: netplan_edit
+
+    # netplan apply wuerde eine kaputte Datei ebenfalls ablehnen, aber erst
+    # nachdem es die Konfiguration angefasst hat. generate prueft vorher.
+    - name: Validate the netplan configuration before applying it
+      ansible.builtin.command: netplan generate
+      when: netplan_edit.changed
+      changed_when: false
+
+    - name: Apply netplan
+      ansible.builtin.command: netplan apply
+      when: netplan_edit.changed
+      changed_when: netplan_edit.changed
+
+    - name: Verify the node is still reachable
+      ansible.builtin.wait_for:
+        host: "{{ static_ip }}"
+        port: 22
+        timeout: 60
+        state: started
+      delegate_to: localhost
+      become: false
+      when: netplan_edit.changed
+
+    - name: Read the resolvers now in effect
+      ansible.builtin.command: resolvectl status
+      register: resolv_status
+      changed_when: false
+      failed_when: false
+
+    - name: Show the link resolvers
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          {{ resolv_status.stdout_lines | select('search', 'DNS Servers') | list | join(' | ') }}
+          (Zeile entfernt: {{ netplan_edit.changed }})
+      # rc ist im --check-Lauf nicht gesetzt, weil command-Tasks dort nicht laufen.
+      when: resolv_status.rc | default(1) == 0

@@ -10,7 +10,9 @@ network:
           via: "{{ gateway | default('192.168.178.1') }}"
       nameservers:
         addresses:
-{% for ns in nameservers | default(["1.1.1.1","8.8.8.8"]) %}
+{# Fallback bewusst auf das Gateway und nicht auf oeffentliche Resolver --
+   ein stiller Default darf keinen externen DNS-Anbieter einziehen (#40). #}
+{% for ns in nameservers | default([gateway | default("192.168.178.1")]) %}
           - "{{ ns }}"
 {% endfor %}
       optional: true
