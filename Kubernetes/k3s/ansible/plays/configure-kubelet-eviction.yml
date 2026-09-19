@@ -146,13 +146,25 @@
         - eviction_restart | bool
         - k3s_config_write.changed
 
+    # Der kubelet-Port 10250 antwortet nach einem k3s-Neustart erst mit ein paar
+    # Sekunden Verzug -- der Node meldet vorher schon `Ready`, weil sein Lease noch
+    # gilt. Ohne Retry scheitert die Verifikation dann mit
+    # "502 Bad Gateway ... while dialing <node>:10250", obwohl alles in Ordnung ist
+    # (am 2026-09-19 auf k3snode6 passiert).
+    # Und: Eine misslungene *Prüfung* darf das Play nicht rot abbrechen lassen,
+    # wenn das Schreiben und der Neustart erfolgreich waren -- deshalb
+    # `failed_when: false` und eine eigene Meldung weiter unten.
     - name: Read the effective eviction thresholds from the kubelet
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl get --raw \
           "/api/v1/nodes/{{ inventory_hostname | regex_replace('\.intern$', '') }}/proxy/configz"
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
+      failed_when: false
       register: kubelet_configz
+      retries: 12
+      delay: 5
+      until: kubelet_configz.rc == 0
 
     - name: Show effective thresholds
       ansible.builtin.debug:
@@ -162,6 +174,17 @@
           soft={{ (kubelet_configz.stdout | from_json).kubeletconfig.evictionSoft | default('-') }}
           (Konfiguration geändert: {{ k3s_config_write.changed }},
           Neustart: {{ (eviction_restart | bool) and k3s_config_write.changed }})
+      when: kubelet_configz.rc == 0
+
+    # Typischer Fall: k3s ist absichtlich gestoppt (Node wird gerade gewartet).
+    # Die Konfiguration steht dann in der Datei und greift beim naechsten Start.
+    - name: Report that the kubelet could not be queried
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: Konfiguration geschrieben, aber der kubelet war
+          nicht abfragbar ({{ kubelet_configz.stderr | default('') | trim | truncate(160) }}).
+          Die Werte greifen mit dem naechsten Start von k3s.
+      when: kubelet_configz.rc != 0
 
     # Ohne Neustart steht die Konfiguration zwar in der Datei, wirkt aber nicht.
     # Das soll sichtbar sein und nicht stillschweigend als "erledigt" durchgehen.
