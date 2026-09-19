@@ -93,32 +93,25 @@
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
-    - name: Create Longhorn values ConfigMap
-      ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl apply -f - <<EOF
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: longhorn-values
-          namespace: {{ longhorn_namespace }}
-        data:
-          values.yaml: |
-            defaultSettings:
-              defaultDataPath: {{ longhorn_data_path }}
-              createDefaultDiskLabeledNodes: true
-              defaultReplicaCount: {{ longhorn_replica_count }}
-              replicaSoftAntiAffinity: false
-              nodeDownPodDeletionPolicy: {{ longhorn_node_down_pod_deletion_policy }}
-              taintToleration: "node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
-            persistence:
-              defaultClass: true
-              defaultClassReplicaCount: {{ longhorn_replica_count }}
-            ingress:
-              enabled: false
-        EOF
+    - name: Ensure the Longhorn values directory exists
+      ansible.builtin.file:
+        path: /etc/rancher/longhorn
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
-      changed_when: false
+
+    - name: Render the Longhorn values file
+      ansible.builtin.template:
+        src: ../templates/longhorn-values.yaml.j2
+        dest: /etc/rancher/longhorn/values.yaml
+        owner: root
+        group: root
+        mode: "0644"
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
 
     - name: Install Longhorn via Helm
       ansible.builtin.shell: |
@@ -126,15 +119,9 @@
           --namespace {{ longhorn_namespace }} \
           --create-namespace \
           --version {{ longhorn_chart_version }} \
-          --set defaultSettings.defaultDataPath={{ longhorn_data_path }} \
-          --set defaultSettings.createDefaultDiskLabeledNodes=true \
-          --set defaultSettings.defaultReplicaCount={{ longhorn_replica_count }} \
-          --set defaultSettings.replicaSoftAntiAffinity=false \
-          --set defaultSettings.nodeDownPodDeletionPolicy={{ longhorn_node_down_pod_deletion_policy }} \
-          --set defaultSettings.taintToleration="node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule" \
-          --set persistence.defaultClass=true \
-          --set persistence.defaultClassReplicaCount={{ longhorn_replica_count }} \
-          --set ingress.enabled=false
+          -f /etc/rancher/longhorn/values.yaml
+      args:
+        executable: /bin/bash
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       run_once: true

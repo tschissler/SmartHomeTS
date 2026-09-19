@@ -1,0 +1,32 @@
+# Longhorn Helm values -- verwaltet von plays/install-longhorn.yml.
+#
+# Diese Datei ist die EINZIGE Quelle der Longhorn-Werte. Sie hat die frueheren
+# `--set`-Flags im Play abgeloest (SmartHomeDeployments #6, 2026-09-19); die
+# gleichnamige ConfigMap `longhorn-values` im Cluster war toter Code -- helm bekam
+# immer nur `--set` und nie ein `-f`, die ConfigMap wurde also nie gelesen.
+#
+# Longhorn ist bewusst NICHT in ArgoCD, siehe docs/gitops-grenze.md im Repo
+# SmartHomeDeployments. Aenderungen hier greifen erst mit dem naechsten
+# `ansible-playbook plays/install-longhorn.yml -K`.
+#
+# ACHTUNG Typen: `defaultReplicaCount` und `defaultClassReplicaCount` muessen
+# Zahlen bleiben, nicht Strings in Anfuehrungszeichen -- sonst erzeugt helm einen
+# Diff gegen den laufenden Release, obwohl sich am Wert nichts aendert.
+defaultSettings:
+  defaultDataPath: {{ longhorn_data_path }}
+  createDefaultDiskLabeledNodes: true
+  defaultReplicaCount: {{ longhorn_replica_count | int }}
+  replicaSoftAntiAffinity: false
+  # Loescht Pods auf einem ausgefallenen Node, damit StatefulSet-Pods anderswo
+  # starten koennen -- Kubernetes tut das von sich aus nicht.
+  nodeDownPodDeletionPolicy: {{ longhorn_node_down_pod_deletion_policy }}
+  taintToleration: "node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
+
+persistence:
+  defaultClass: true
+  defaultClassReplicaCount: {{ longhorn_replica_count | int }}
+
+# Der Zugang laeuft ueber den Ingress `longhorn.intern` aus Longhorn.yaml
+# (ArgoCD, cluster-ca-issuer). Das Chart soll keinen eigenen Ingress anlegen.
+ingress:
+  enabled: false
