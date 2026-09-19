@@ -12,6 +12,14 @@ ansible_become_timeout: 60
 # Pin k3s version for consistent installs.
 k3s_version: v1.34.11+k3s1
 
+# Pin the Longhorn chart version, analog zu k3s_version.
+# Wird von plays/install-longhorn.yml gelesen; die Werte selbst stehen in
+# templates/longhorn-values.yaml.j2. Longhorn laeuft bewusst ueber Ansible und
+# nicht ueber ArgoCD -- Begruendung in docs/gitops-grenze.md im Repo
+# SmartHomeDeployments. Upgrades sind dort immer manuell und nie ueberspringend
+# (1.10 -> 1.11 -> 1.12), siehe docs/update-strategie.md.
+longhorn_helm_version: "1.10.1"
+
 # Ingress hostnames
 nextcloud_domain: nextcloud.intern
 nextcloud_namespace: nextcloud
