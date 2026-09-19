@@ -18,6 +18,12 @@
 # stillen Versatz von 1-2 h. Siehe SmartHomeDeployments Issue #36.
 - import_playbook: plays/configure-node-timezone.yml
 
+# Step 0b: Memory-Eviction für den kubelet
+# k3s setzt nur imagefs/nodefs-Schwellen und ersetzt damit den kubelet-Default-Satz;
+# `memory.available` fehlt dadurch ganz. Ohne dieses Play räumt bei RAM-Druck nicht
+# der kubelet geordnet, sondern der Kernel-OOM-Killer. SmartHomeDeployments #34.
+- import_playbook: plays/configure-kubelet-eviction.yml
+
 # Step 0: kube-vip for API and Service VIPs
 # Must run BEFORE any LoadBalancer services (AdGuard, Traefik, etc.)
 - import_playbook: plays/configure-kubevip.yml

@@ -1,0 +1,176 @@
+---
+# Memory-Eviction für den kubelet einschalten.
+#
+# WARUM DIESES PLAY EXISTIERT
+# k3s setzt als Default `eviction-hard=imagefs.available<5%,nodefs.available<5%`
+# und **ersetzt damit den kompletten kubelet-Default-Satz**. Der reguläre Wert
+# `memory.available<100Mi` ist also nicht zusätzlich aktiv, sondern weg -- auf
+# allen sechs Nodes nachgemessen über
+# `/api/v1/nodes/<node>/proxy/configz` (SmartHomeDeployments Issue #34).
+#
+# Folge: Es gibt keinen speicherbasierten Eviction-Pfad. Läuft ein Node in
+# RAM-Druck, räumt nicht der kubelet geordnet nach QoS-Klasse mit Graceful
+# Shutdown, sondern der Kernel-OOM-Killer schlägt zu -- nach `oom_score_adj`,
+# ohne Rücksicht auf Pod-Grenzen und potenziell mitten im Schreibvorgang einer
+# Datenbank. Auf k3snode1 ist das kein theoretisches Risiko: 198 % Limit-
+# Overcommit, und 24 Pods laufen als BestEffort ohne PriorityClass, darunter
+# `paperless-ngx-postgres-0` und der komplette ArgoCD- und cert-manager-Stack.
+#
+# WARUM HARD **UND** SOFT
+# `eviction-hard` allein killt den Pod sofort, ohne Graceful Shutdown -- besser
+# als der OOM-Killer, aber immer noch hart. Der Soft-Threshold greift früher
+# (1 GiB statt 500 MiB) und gibt dem Pod Zeit, sich zu beenden. Dafür braucht es
+# zwingend beides: `eviction-soft-grace-period` (sonst startet der kubelet nicht)
+# und `eviction-max-pod-grace-period` -- dessen Default 0 würde den Pod trotz
+# Soft-Eviction sofort beenden und den Sinn der Sache aufheben.
+#
+# WARUM CONFIG.YAML UND KEIN DROP-IN
+# k3s liest zwar `/etc/rancher/k3s/config.yaml.d/`, aber dieses Repo pflegt die
+# Konfiguration in `config.yaml` (siehe configure-kubevip.yml: lesen, mergen,
+# zurückschreiben) und hat ein früheres Fragment unter `config.d/` bewusst wieder
+# entfernt. Zwei konkurrierende Mechanismen wären schlechter als einer.
+# Bestehende `kubelet-arg`-Einträge bleiben erhalten; nur die `eviction-*`-Zeilen
+# werden ersetzt, damit das Play idempotent ist und Werte nachjustiert werden
+# können.
+#
+# ANWENDUNG
+#   ansible-playbook plays/configure-kubelet-eviction.yml -K
+#   ansible-playbook plays/configure-kubelet-eviction.yml -K --limit k3snode4.intern
+#
+# Die Werte werden erst mit einem k3s-Neustart wirksam. Das Play startet den
+# Dienst **einzeln nacheinander** neu (`serial: 1`). Steht ohnehin ein Reboot an
+# -- etwa beim Ubuntu-Upgrade in #19 -- schreibt man nur die Konfiguration:
+#   ansible-playbook plays/configure-kubelet-eviction.yml -K -e eviction_restart=false
+
+- name: Ensure kubelet evicts on memory pressure instead of relying on the OOM killer
+  hosts: prodservers
+  become: yes
+  gather_facts: no
+  serial: 1
+  vars:
+    # 500Mi/1Gi passen für beide Klassen: auf den Pis (7,6 GiB) sind das 6,4 %
+    # bzw. 13 %, auf den x86-Nodes (12,6 GiB) 4 % bzw. 8 %.
+    eviction_memory_hard: 500Mi
+    eviction_memory_soft: 1Gi
+    eviction_soft_grace: 2m
+    # Sekunden, die ein soft-evicteter Pod zum sauberen Beenden bekommt.
+    eviction_max_pod_grace: 60
+    # nodefs/imagefs unverändert auf dem k3s-Default -- sie müssen hier mit
+    # aufgeführt werden, weil `eviction-hard` den ganzen Satz ersetzt.
+    eviction_fs_thresholds: "nodefs.available<5%,imagefs.available<5%"
+    eviction_restart: true
+
+  tasks:
+    - name: Build the eviction kubelet-args
+      ansible.builtin.set_fact:
+        eviction_args:
+          - "eviction-hard=memory.available<{{ eviction_memory_hard }},{{ eviction_fs_thresholds }}"
+          - "eviction-soft=memory.available<{{ eviction_memory_soft }}"
+          - "eviction-soft-grace-period=memory.available={{ eviction_soft_grace }}"
+          - "eviction-max-pod-grace-period={{ eviction_max_pod_grace }}"
+
+    - name: Ensure k3s config directory exists
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Read existing k3s config.yaml (if present)
+      ansible.builtin.slurp:
+        path: /etc/rancher/k3s/config.yaml
+      register: k3s_config_raw
+      failed_when: false
+      changed_when: false
+
+    - name: Parse k3s config.yaml into a dict
+      ansible.builtin.set_fact:
+        k3s_config_current: >-
+          {{
+            ((k3s_config_raw.content | default('') | b64decode | trim) | length > 0)
+            | ternary((k3s_config_raw.content | default('') | b64decode | from_yaml), {})
+          }}
+
+    - name: Normalize to a mapping
+      ansible.builtin.set_fact:
+        k3s_config_current: "{{ (k3s_config_current is mapping) | ternary(k3s_config_current, {}) }}"
+
+    # Fremde kubelet-args bleiben unangetastet, eigene eviction-Zeilen werden
+    # ersetzt -- sonst sammeln sich bei geänderten Schwellwerten Dubletten an,
+    # und der kubelet nimmt bei doppelten Flags den letzten Wert.
+    - name: Keep unrelated kubelet-args, drop previous eviction settings
+      ansible.builtin.set_fact:
+        kubelet_args_kept: >-
+          {{ (k3s_config_current['kubelet-arg'] | default([]))
+             | reject('match', '^eviction-')
+             | list }}
+
+    - name: Compose updated k3s config
+      ansible.builtin.set_fact:
+        k3s_config_updated: >-
+          {{ k3s_config_current
+             | combine({'kubelet-arg': kubelet_args_kept + eviction_args}, recursive=True) }}
+
+    - name: Write k3s config.yaml
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        content: "{{ k3s_config_updated | to_nice_yaml(indent=2, width=9999) }}"
+        owner: root
+        group: root
+        mode: '0644'
+      register: k3s_config_write
+
+    - name: Determine the k3s unit on this host
+      ansible.builtin.set_fact:
+        k3s_unit: "{{ (inventory_hostname in groups.get('k3s_servers', [])) | ternary('k3s', 'k3s-agent') }}"
+
+    - name: Restart k3s so the kubelet picks up the thresholds
+      ansible.builtin.systemd:
+        name: "{{ k3s_unit }}"
+        state: restarted
+      when:
+        - eviction_restart | bool
+        - k3s_config_write.changed
+
+    # Der Node meldet sich nach dem Restart kurz ab. Erst weitermachen, wenn er
+    # wieder Ready ist -- sonst läuft `serial: 1` in den nächsten Node, während
+    # dieser noch nicht zurück ist.
+    - name: Wait for the node to become Ready again
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl wait --for=condition=Ready \
+          node/{{ inventory_hostname | regex_replace('\.intern$', '') }} --timeout=180s
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      when:
+        - eviction_restart | bool
+        - k3s_config_write.changed
+
+    - name: Read the effective eviction thresholds from the kubelet
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get --raw \
+          "/api/v1/nodes/{{ inventory_hostname | regex_replace('\.intern$', '') }}/proxy/configz"
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      register: kubelet_configz
+
+    - name: Show effective thresholds
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          hard={{ (kubelet_configz.stdout | from_json).kubeletconfig.evictionHard | default('-') }}
+          soft={{ (kubelet_configz.stdout | from_json).kubeletconfig.evictionSoft | default('-') }}
+          (Konfiguration geändert: {{ k3s_config_write.changed }},
+          Neustart: {{ (eviction_restart | bool) and k3s_config_write.changed }})
+
+    # Ohne Neustart steht die Konfiguration zwar in der Datei, wirkt aber nicht.
+    # Das soll sichtbar sein und nicht stillschweigend als "erledigt" durchgehen.
+    - name: Warn when the configuration is written but not yet active
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: Konfiguration geschrieben, aber k3s wurde NICHT
+          neu gestartet -- die Schwellwerte greifen erst nach dem nächsten
+          Neustart des Dienstes oder des Nodes.
+      when:
+        - k3s_config_write.changed
+        - not (eviction_restart | bool)
