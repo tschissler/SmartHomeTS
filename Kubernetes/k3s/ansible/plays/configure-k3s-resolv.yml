@@ -1,0 +1,220 @@
+---
+# Den Upstream-Resolver fuer Pods und CoreDNS vereinheitlichen.
+#
+# WARUM DIESES PLAY EXISTIERT
+# k3s reicht `resolv-conf` an den kubelet durch; die dort genannte Datei
+# landet in jedem Pod mit `dnsPolicy: Default` -- und ist damit auch der
+# Upstream, an den CoreDNS alles weiterleitet, was nicht `cluster.local`
+# oder `.intern` ist.
+#
+# Gemessen am 2026-09-19 (SmartHomeDeployments Issue #40) standen dort zwei
+# verschiedene Welten:
+#
+#   node1-4: `resolv-conf: /etc/resolv.conf.k3s`, darin 192.168.178.1 + 8.8.8.8
+#   node5/6: kein `resolv-conf` -> k3s erkennt den systemd-resolved-Stub
+#            (127.0.0.53) und nimmt /run/systemd/resolve/resolv.conf, darin
+#            192.168.178.223 + 192.168.178.1 + 1.1.1.1
+#
+# Zielzustand: ueberall dieselbe Datei mit AdGuard als einzigem Upstream.
+#
+# Folge: Dieselbe Anfrage nahm je nach Pod-Platzierung einen anderen Weg. Seit
+# CoreDNS zwei Replicas hat, laufen beide Wege gleichzeitig. Auf node1-4 kam
+# AdGuard ueberhaupt nicht vor -- alle Filterlisten und Rewrites waren dort
+# wirkungslos, und jede externe Anfrage ging an Google.
+#
+# Die Datei /etc/resolv.conf.k3s war von Hand angelegt und hatte im ganzen
+# Ansible-Repo keine Fundstelle. Genau deshalb konnte sie auf den beiden
+# juengsten Nodes fehlen, ohne dass es auffiel.
+#
+# WARUM GENAU EIN NAMESERVER
+# Hier steht bewusst nur AdGuard -- kein zweiter Eintrag als "Fallback".
+# Der Grund ist die Semantik des Lesers: CoreDNS' forward-Plugin verteilt
+# mit `forward . /etc/resolv.conf` per Default-Policy `random` ueber ALLE
+# Eintraege. Ein zweiter Nameserver ist dort kein Failover, sondern ein
+# Umgehungspfad fuer rund die Haelfte aller Anfragen -- am 2026-09-19 in den
+# CoreDNS-Metriken nachgemessen (`coredns_proxy_request_duration_seconds_count`
+# zeigte beide Upstreams parallel, und `doubleclick.net` kam ueber CoreDNS mit
+# echten Google-IPs zurueck, waehrend AdGuard direkt 0.0.0.0 lieferte).
+# Damit waere genau der Zustand geblieben, den dieses Play beseitigen soll:
+# eine Antwort, die mal so und mal anders ausfaellt.
+#
+# WARUM DAS KEINE AUSFALLSICHERHEIT KOSTET
+# Die Fritz!Box koennte einen AdGuard-Ausfall ohnehin nicht auffangen: Sie
+# kennt `.intern` nicht (NXDOMAIN, gemessen), und `.intern` laeuft im Cluster
+# ueber einen eigenen Server-Block der ConfigMap `coredns-custom` direkt auf
+# den AdGuard-ClusterIP. Faellt AdGuard aus, ist Cluster-DNS also mit oder
+# ohne zweite Zeile beeintraechtigt.
+#
+# WICHTIG -- DIESE DATEI GILT NUR FUER PODS
+# `resolv-conf` ist ein kubelet-Setting (es erscheint in der
+# KubeletConfiguration, nicht in der containerd-Konfiguration). containerd
+# zieht Images ueber den Host-Resolver, also ueber /etc/resolv.conf und damit
+# systemd-resolved -- dort sorgt das Drop-in aus configure-node-dns.yml fuer
+# AdGuard mit sequenziellem Fritz!Box-Fallback. Beleg: Auf k3snode5 und
+# k3snode6 existierte /etc/resolv.conf.k3s 214 Tage lang gar nicht, und beide
+# haben durchgehend Images gezogen. Ein AdGuard-Ausfall kann deshalb auch
+# keinen Deadlock erzeugen -- containerd kann AdGuards eigenes Image weiter
+# pullen.
+#
+# Externe Resolver kommen bewusst nicht vor. Das `1.1.1.1` auf der Link-Ebene
+# stammt aus `nameservers` in group_vars/all.yml (-> network-config.yml) und
+# wird dort getrennt entfernt; dieses Play macht Pod-DNS davon unabhaengig.
+#
+# WARUM CONFIG.YAML UND KEIN DROP-IN
+# Wie bei configure-kubelet-eviction.yml: Dieses Repo pflegt die k3s-
+# Konfiguration in `config.yaml` (lesen, mergen, zurueckschreiben). Zwei
+# konkurrierende Mechanismen waeren schlechter als einer.
+#
+# ANWENDUNG
+#   ansible-playbook plays/configure-k3s-resolv.yml -K --limit k3snode5.intern
+#   ansible-playbook plays/configure-k3s-resolv.yml -K
+#
+# Die Datei wirkt erst mit einem k3s-Neustart. Das Play startet den Dienst
+# einzeln nacheinander neu (`serial: 1`) -- Container und Longhorn-Replicas
+# laufen dabei weiter, der kube-vip-API-VIP wandert nicht. Steht ohnehin ein
+# Reboot an, schreibt man nur die Konfiguration:
+#   ansible-playbook plays/configure-k3s-resolv.yml -K -e resolv_restart=false
+#
+# ACHTUNG: Bestehende Pods behalten ihre resolv.conf bis zum Neustart. Der
+# Neustart von k3s aendert sie nicht rueckwirkend -- entscheidend ist CoreDNS,
+# und dessen Pods werden am Ende gezielt neu gestartet.
+
+- name: Give pods and CoreDNS one and the same upstream resolver
+  hosts: prodservers
+  become: yes
+  gather_facts: no
+  serial: 1
+  vars:
+    adguard_dns: "{{ adguard_home_lb_ip | default('192.168.178.223') }}"
+    k3s_resolv_path: /etc/resolv.conf.k3s
+    resolv_restart: true
+
+  tasks:
+    - name: Deploy the resolver file k3s hands to the kubelet
+      ansible.builtin.copy:
+        dest: "{{ k3s_resolv_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          # Managed by Ansible -- plays/configure-k3s-resolv.yml
+          #
+          # Upstream fuer Pods mit dnsPolicy: Default und damit fuer CoreDNS.
+          #
+          # GENAU EIN EINTRAG, ABSICHTLICH. CoreDNS verteilt per forward-Policy
+          # `random` ueber alle Nameserver -- ein zweiter waere kein Fallback,
+          # sondern ein Umgehungspfad fuer die halbe Last. Begruendung und
+          # Messung im Kommentarkopf von plays/configure-k3s-resolv.yml.
+          nameserver {{ adguard_dns }}
+          search .
+      register: resolv_file_write
+
+    - name: Ensure k3s config directory exists
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Read existing k3s config.yaml (if present)
+      ansible.builtin.slurp:
+        path: /etc/rancher/k3s/config.yaml
+      register: k3s_config_raw
+      failed_when: false
+      changed_when: false
+
+    - name: Parse k3s config.yaml into a dict
+      ansible.builtin.set_fact:
+        k3s_config_current: >-
+          {{
+            ((k3s_config_raw.content | default('') | b64decode | trim) | length > 0)
+            | ternary((k3s_config_raw.content | default('') | b64decode | from_yaml), {})
+          }}
+
+    - name: Normalize to a mapping
+      ansible.builtin.set_fact:
+        k3s_config_current: "{{ (k3s_config_current is mapping) | ternary(k3s_config_current, {}) }}"
+
+    - name: Compose updated k3s config
+      ansible.builtin.set_fact:
+        k3s_config_updated: >-
+          {{ k3s_config_current | combine({'resolv-conf': k3s_resolv_path}) }}
+
+    - name: Write k3s config.yaml
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        content: "{{ k3s_config_updated | to_nice_yaml(indent=2, width=9999) }}"
+        owner: root
+        group: root
+        mode: '0644'
+      register: k3s_config_write
+
+    - name: Determine the k3s unit on this host
+      ansible.builtin.set_fact:
+        k3s_unit: "{{ (inventory_hostname in groups.get('k3s_servers', [])) | ternary('k3s', 'k3s-agent') }}"
+
+    - name: Restart k3s so the kubelet picks up the resolver file
+      ansible.builtin.systemd:
+        name: "{{ k3s_unit }}"
+        state: restarted
+      when:
+        - resolv_restart | bool
+        - resolv_file_write.changed or k3s_config_write.changed
+
+    # Erst weitermachen, wenn der Node wieder Ready ist -- sonst laeuft
+    # `serial: 1` in den naechsten Node, waehrend dieser noch zurueckkommt.
+    - name: Wait for the node to become Ready again
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl wait --for=condition=Ready \
+          node/{{ inventory_hostname | regex_replace('\.intern$', '') }} --timeout=180s
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      when:
+        - resolv_restart | bool
+        - resolv_file_write.changed or k3s_config_write.changed
+
+    # Der kubelet-Port 10250 antwortet nach einem k3s-Neustart erst mit ein paar
+    # Sekunden Verzug -- der Node meldet vorher schon `Ready`, weil sein Lease
+    # noch gilt. Deshalb Retry, und `failed_when: false`: eine misslungene
+    # *Pruefung* darf das Play nicht rot abbrechen lassen, wenn Schreiben und
+    # Neustart geklappt haben.
+    - name: Read the effective resolvConf from the kubelet
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl get --raw \
+          "/api/v1/nodes/{{ inventory_hostname | regex_replace('\.intern$', '') }}/proxy/configz"
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
+      failed_when: false
+      register: kubelet_configz
+      retries: 12
+      delay: 5
+      until: kubelet_configz.rc == 0
+
+    - name: Show the effective resolver file
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          resolvConf={{ (kubelet_configz.stdout | from_json).kubeletconfig.resolvConf | default('-') }}
+          (Datei geaendert: {{ resolv_file_write.changed }},
+          config.yaml geaendert: {{ k3s_config_write.changed }},
+          Neustart: {{ (resolv_restart | bool) and (resolv_file_write.changed or k3s_config_write.changed) }})
+      when: kubelet_configz.rc == 0
+
+    - name: Report that the kubelet could not be queried
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: Konfiguration geschrieben, aber der kubelet war
+          nicht abfragbar ({{ kubelet_configz.stderr | default('') | trim | truncate(160) }}).
+          Die Werte greifen mit dem naechsten Start von k3s.
+      when: kubelet_configz.rc != 0
+
+    - name: Warn when the configuration is written but not yet active
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: Konfiguration geschrieben, aber k3s wurde NICHT
+          neu gestartet -- der Resolver greift erst nach dem naechsten Neustart
+          des Dienstes oder des Nodes.
+      when:
+        - resolv_file_write.changed or k3s_config_write.changed
+        - not (resolv_restart | bool)

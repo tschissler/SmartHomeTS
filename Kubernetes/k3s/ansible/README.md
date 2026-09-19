@@ -111,6 +111,7 @@ Configuration tasks:
 - `configure-adguard-rewrites.yml` - AdGuard DNS rewrites for `.intern` hostnames
 - `configure-coredns-intern-forward.yml` - Pod DNS zone forwarding
 - `configure-node-dns.yml` - Split-DNS drop-in on each node: routes `*.intern` queries to AdGuard Home, all other traffic stays on Fritz!Box (192.168.178.1). Does not change Netplan/network config.
+- `configure-k3s-resolv.yml` - Upstream resolver for pods and CoreDNS: writes `/etc/resolv.conf.k3s` (AdGuard as the single upstream -- CoreDNS load-balances `random` across every nameserver listed, so a second entry would bypass filtering for half the queries, not act as failover) and sets `resolv-conf` in `config.yaml` on every node. Until 2026-09-19 that file was hand-written, unversioned and missing on k3snode5/6, so pod DNS differed by node (SmartHomeDeployments issue #40). Restarts k3s `serial: 1`; skip with `-e resolv_restart=false`.
 - `trust-cluster-ca.yml` - Installs SmartHome Cluster CA (from `cluster-ca-secret` in `cert-manager`) into the OS trust store on every node and restarts k3s/k3s-agent. Required for image pulls from `forgejo.intern` and TLS connections to internal services. Runs `serial: 1` to avoid simultaneous control-plane restarts.
 - `configure-ingress-hostnames.yml` - Host-based ingress routes
 - `configure-traefik-mqtt.yml` - MQTT service routing
