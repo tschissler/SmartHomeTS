@@ -29,9 +29,21 @@
 - import_playbook: plays/configure-kubevip.yml
 
 # Step 1: Longhorn replicated storage
+#
+# NOTE: install-longhorn.yml ist hier bewusst NICHT mehr eingehaengt
+# (SmartHomeDeployments #6, Entscheidung 2026-09-19).
+# Es fuehrt `helm upgrade --install` auf den Storage-Layer aus. Eingehaengt lief das
+# bei JEDEM Lauf dieses Playbooks mit -- auch wenn man nur die Zeitzone (Step 0a) oder
+# die kubelet-Eviction (Step 0b) setzen wollte. Ein Helm-Upgrade auf Longhorn darf kein
+# Beifang einer Node-Konfiguration sein, deshalb wird es ab jetzt bewusst aufgerufen:
+#
+#   ansible-playbook plays/install-longhorn.yml -K
+#
+# Die beiden prepare-Plays bleiben eingehaengt: sie richten iSCSI, Kernel-Module und
+# die Datenpartition auf den Nodes ein, sind also echte Node-Vorbereitung und aendern
+# nichts an der laufenden Longhorn-Installation.
 - import_playbook: plays/prepare-longhorn-nodes.yml
 - import_playbook: plays/prepare-longhorn-storage.yml
-- import_playbook: plays/install-longhorn.yml
 - import_playbook: plays/expose-longhorn-ui.yml
 
 # Step 1b: Minio object storage service
