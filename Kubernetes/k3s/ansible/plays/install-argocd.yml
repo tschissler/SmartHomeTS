@@ -5,8 +5,11 @@
   gather_facts: no
   vars:
     argocd_namespace: argocd
-    # By default we track the upstream stable branch (latest stable).
-    # For a fully pinned install/upgrade, set argocd_install_version (e.g. 2.12.6).
+    # Gepinnt, analog zu k3s_version und longhorn_helm_version. Vorher stand hier
+    # der Default 'stable' -- ein Lauf dieses Plays haette ArgoCD dann ungeplant auf
+    # die jeweils neueste Version gehoben. ArgoCD ist das Steuerungsinstrument fuer
+    # alles andere; Upgrades gehoeren hier bewusst gesetzt (SmartHomeDeployments #12).
+    argocd_install_version: "3.5.3"
     argocd_manifest_url: >-
       {{ (
         'https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml'
@@ -27,9 +30,16 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
+    # --server-side --force-conflicts ist ab ArgoCD 3.3 PFLICHT, nicht Geschmackssache:
+    # Die ApplicationSet-CRD ueberschreitet dort das 262144-Byte-Limit der
+    # last-applied-Annotation, ein klassisches client-side apply bricht mit
+    # "metadata.annotations: Too long" ab. Siehe Upgrade-Guide 3.2-3.3.
+    # --force-conflicts uebernimmt dabei Felder, die vorher andere Field-Manager
+    # hielten. Eigene Werte in argocd-cmd-params-cm (server.insecure) ueberlebten das
+    # am 2026-09-19 unveraendert, weil sie von einem anderen Manager stammen.
     - name: Install/upgrade Argo CD from upstream manifest
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl apply -n {{ argocd_namespace }} -f {{ argocd_manifest_url }}
+        /usr/local/bin/k3s kubectl apply -n {{ argocd_namespace }} --server-side --force-conflicts -f {{ argocd_manifest_url }}
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
