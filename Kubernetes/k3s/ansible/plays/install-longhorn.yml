@@ -15,26 +15,84 @@
     # WARNING: If you pin these components away from a node, pods on that node may no longer
     # be able to mount Longhorn volumes.
     longhorn_system_managed_components_node_selector: "{{ longhorn_system_managed_components_node_selector | default('') }}"
-  pre_tasks:
-    - name: Check if helm is installed
-      ansible.builtin.command: /usr/local/bin/k3s kubectl version --client
-      register: helm_check
-      changed_when: false
-      failed_when: false
-      run_once: true
-      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+    # helm wird gepinnt installiert, NICHT per `curl … get-helm-3 | bash`.
+    # Das alte Skript holte bei jedem Lauf die neueste helm-Version von GitHub main --
+    # eine rollende Referenz, ausgefuehrt auf einem Cluster-Node. Welche Version dabei
+    # herauskam, entschied GitHub. Siehe SmartHomeDeployments #6 und #14.
+    # Beim Anheben: Version UND beide Checksummen tauschen, Quelle ist
+    # https://get.helm.sh/helm-<version>-linux-<arch>.tar.gz.sha256sum
+    helm_version: "v3.20.0"
+    helm_checksums:
+      amd64: "sha256:dbb4c8fc8e19d159d1a63dda8db655f9ffa4aac1b9a6b188b34a40957119b286"
+      arm64: "sha256:bfb14953295d5324d47ab55f3dfba6da28d46c848978c8fbf412d4271bdc29f1"
 
   tasks:
-    - name: Add Longhorn Helm repository
+    - name: Ensure the Longhorn namespace exists
       ansible.builtin.shell: |
-        /usr/local/bin/k3s kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml create namespace {{ longhorn_namespace }} --dry-run=client -o yaml | /usr/local/bin/k3s kubectl apply -f -
-        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-        helm repo add longhorn https://charts.longhorn.io
-        helm repo update
+        set -o pipefail
+        /usr/local/bin/k3s kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+          create namespace {{ longhorn_namespace }} --dry-run=client -o yaml \
+          | /usr/local/bin/k3s kubectl apply -f -
+      args:
+        executable: /bin/bash
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
+    - name: Ensure the pinned helm version is installed
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      vars:
+        helm_arch: "{{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[helm_uname.stdout | trim] }}"
+      block:
+        - name: Determine the architecture of the helm host
+          ansible.builtin.command: uname -m
+          register: helm_uname
+          changed_when: false
+
+        - name: Read the installed helm version
+          ansible.builtin.command: /usr/local/bin/helm version --short
+          register: helm_installed
+          changed_when: false
+          failed_when: false
+
+        - name: Download the pinned helm archive
+          ansible.builtin.get_url:
+            url: "https://get.helm.sh/helm-{{ helm_version }}-linux-{{ helm_arch }}.tar.gz"
+            dest: "/tmp/helm-{{ helm_version }}-linux-{{ helm_arch }}.tar.gz"
+            checksum: "{{ helm_checksums[helm_arch] }}"
+            mode: "0600"
+          when: helm_version not in (helm_installed.stdout | default(''))
+
+        - name: Install the helm binary to /usr/local/bin
+          ansible.builtin.unarchive:
+            src: "/tmp/helm-{{ helm_version }}-linux-{{ helm_arch }}.tar.gz"
+            dest: /usr/local/bin
+            remote_src: true
+            include:
+              - "linux-{{ helm_arch }}/helm"
+            extra_opts:
+              - --strip-components=1
+            owner: root
+            group: root
+            mode: "0755"
+          when: helm_version not in (helm_installed.stdout | default(''))
+
+        - name: Remove the downloaded helm archive
+          ansible.builtin.file:
+            path: "/tmp/helm-{{ helm_version }}-linux-{{ helm_arch }}.tar.gz"
+            state: absent
+          when: helm_version not in (helm_installed.stdout | default(''))
+
+    - name: Add and refresh the Longhorn Helm repository
+      ansible.builtin.shell: |
+        helm repo add longhorn https://charts.longhorn.io
+        helm repo update longhorn
+      args:
+        executable: /bin/bash
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      changed_when: false
     - name: Create Longhorn values ConfigMap
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl apply -f - <<EOF
