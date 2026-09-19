@@ -24,6 +24,15 @@
 # der kubelet geordnet, sondern der Kernel-OOM-Killer. SmartHomeDeployments #34.
 - import_playbook: plays/configure-kubelet-eviction.yml
 
+# Step 0c: journald begrenzen (Groesse UND Dateianzahl)
+# systemd-journald war der groesste Schreiber auf den Pi-Nodes: 224,6 KB/s = 19,4 GB/Tag
+# auf k3snode6, also 86 % der Schreiblast -- fuer nur 13,2 MB taeglichen Log-Inhalt
+# (Write Amplification ~1470x). Die Rate skaliert mit der ANZAHL der Journal-Dateien,
+# und die waechst mit jedem Boot. Das Upgrade auf 26.04 hat die Journale neu angelegt
+# und die Rate auf 42,8 KB/s gedrueckt -- ohne Grenze waechst sie zurueck.
+# SmartHomeDeployments #39.
+- import_playbook: plays/configure-journald-limits.yml
+
 # Step 0: kube-vip for API and Service VIPs
 # Must run BEFORE any LoadBalancer services (AdGuard, Traefik, etc.)
 - import_playbook: plays/configure-kubevip.yml

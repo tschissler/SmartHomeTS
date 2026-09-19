@@ -1,0 +1,146 @@
+---
+# journald auf den Cluster-Nodes begrenzen (Groesse UND Dateianzahl).
+#
+# WARUM DIESES PLAY EXISTIERT
+# systemd-journald war mit Abstand der groesste Schreiber auf den Pi-Nodes:
+# gemessen am 2026-09-19 auf k3snode6 **224,6 KB/s = 19,4 GB pro Tag** -- das sind
+# 86 % der gesamten Schreiblast des Nodes. Zum Vergleich: alle Kubernetes-Pods
+# zusammen kamen auf 2,0 KB/s (0,8 %). Die Workloads sind also unschuldig.
+#
+# Der eigentliche Punkt: Der Log-INHALT betrug nur 13,2 MB/Tag. journald machte
+# daraus 19,4 GB auf der Platte -- eine Write Amplification von rund 1470x. Die
+# Journal-Datei ist mmap't; fortlaufende Index- und Hash-Updates machen Pages dirty,
+# die immer wieder zurueckgeschrieben werden. Auf SD-Karten multipliziert der grosse
+# Erase-Block das ein weiteres Mal.
+#
+# WAS DEN AUSSCHLAG GIBT: DIE ANZAHL DER JOURNAL-DATEIEN
+# Der Vergleich zweier Nodes zeigte eine klare Korrelation -- nicht mit der
+# Gesamtgroesse, sondern mit der Dateianzahl:
+#
+#   k3snode4:  23 Dateien /  504 MB  ->   58,2 KB/s
+#   k3snode6: 100 Dateien /  4,0 GB  ->  224,6 KB/s
+#              (4,3x Dateien)            (3,9x Schreibrate)
+#
+# journald haelt die Journale gemappt und pflegt beim Schreiben deren Indizes --
+# mehr Dateien bedeuten mehr Verwaltungs-I/O pro Log-Zeile. Jeder Boot legt neue
+# Dateien an, weshalb die Zahl ueber Monate stetig waechst.
+#
+# WARUM JETZT DER RICHTIGE ZEITPUNKT IST
+# Das Ubuntu-Upgrade auf 26.04 (SmartHomeDeployments #19) hat die Journale neu
+# angelegt: k3snode6 steht wieder bei 543 MB / 25 Dateien statt 4,0 GB / 100, und die
+# Schreibrate ist von 22,5 auf 5,0 GB/Tag gefallen. Das Problem ist damit aber nur
+# vertagt -- ohne Grenze waechst es ueber die naechsten Monate exakt so zurueck.
+# Dieses Play zementiert den guten Zustand, statt ihn dem Zufall zu ueberlassen.
+#
+# Weil die Journale aktuell bereits UNTER dem gesetzten Limit liegen, loescht dieses
+# Play heute nichts. Es verhindert nur das Zurueckwachsen.
+#
+# TRADE-OFF: LOG-HISTORIE
+# Default ist SystemMaxUse = min(10 % der Partition, 4 GB). Auf einer 58-GB-SD-Karte
+# waren das 4 GB, also 7 % des Platzes fuer Logs, die niemand liest. Mit 500 MB
+# reicht die lokale Historie kuerzer zurueck. Wer sie laenger braucht, holt sich die
+# Journal-Logs besser zentral nach Loki (Alloy kennt `loki.source.journal`; heute
+# sammelt es nur Pod-Logs) -- das ist der saubere Weg und haette schon bei #20 und
+# #21 Arbeit gespart.
+#
+# NICHT GEWAEHLT: Storage=volatile (Journal nur im RAM). Das wuerde die Schreiblast
+# auf null druecken, aber die Logs bei jedem Reboot verlieren -- ausgerechnet in den
+# Post-Mortem-Faellen, fuer die man sie braucht. Erst wenn die Journale zentral in
+# Loki liegen, waere das eine Option.
+#
+# Idempotent, jederzeit einzeln nachziehbar:
+#   ansible-playbook plays/configure-journald-limits.yml -K
+#   ansible-playbook plays/configure-journald-limits.yml -K --limit k3snode6.intern
+#
+# ENTHALTEN sind alle prodservers, also auch k3snode1/2 (NVMe). Dort ist der
+# Leidensdruck geringer, aber die Amplification wirkt genauso -- und ein einheitlicher
+# Stand ist bei Diagnosen mehr wert als ein optimierter Sonderfall.
+
+- name: Limit journald size and file count on all cluster nodes
+  hosts: prodservers
+  become: yes
+  gather_facts: no
+  vars:
+    journald_max_use: 500M
+    journald_max_files: 20
+
+  tasks:
+    - name: Read journal usage before the change
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          printf '%s|%s' \
+            "$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMG]' | tail -1)" \
+            "$(ls /var/log/journal/*/*.journal* 2>/dev/null | wc -l)"
+        executable: /bin/bash
+      changed_when: false
+      failed_when: false
+      register: journal_before
+
+    - name: Ensure journald drop-in directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/journald.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    # Drop-in statt journald.conf: ueberlebt Distributions-Upgrades, die die
+    # Hauptdatei ersetzen -- beim Sprung auf 26.04 waere eine Aenderung dort
+    # sonst stillschweigend verloren gegangen.
+    - name: Write journald limits drop-in
+      ansible.builtin.copy:
+        dest: /etc/systemd/journald.conf.d/99-cluster-limits.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Verwaltet von Ansible (plays/configure-journald-limits.yml).
+          # Siehe SmartHomeDeployments Issue #39 fuer Messwerte und Begruendung.
+          # Aenderungen hier werden beim naechsten Playbook-Lauf ueberschrieben.
+          [Journal]
+          SystemMaxUse={{ journald_max_use }}
+          SystemMaxFiles={{ journald_max_files }}
+      register: journald_dropin
+
+    # journald neu starten heisst nur: Socket uebernimmt kurz, keine Log-Zeile
+    # geht verloren. Die neuen Grenzen greifen erst danach.
+    - name: Restart systemd-journald so the limits take effect
+      ansible.builtin.systemd:
+        name: systemd-journald
+        state: restarted
+      when: journald_dropin.changed
+
+    - name: Read effective configuration back
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          printf '%s|%s|%s' \
+            "$(systemd-analyze cat-config systemd/journald.conf 2>/dev/null | grep -E '^SystemMaxUse=' | tail -1 | cut -d= -f2)" \
+            "$(systemd-analyze cat-config systemd/journald.conf 2>/dev/null | grep -E '^SystemMaxFiles=' | tail -1 | cut -d= -f2)" \
+            "$(ls /var/log/journal/*/*.journal* 2>/dev/null | wc -l)"
+        executable: /bin/bash
+      changed_when: false
+      failed_when: false
+      register: journal_after
+
+    # Greift die Grenze nicht, war das Play wirkungslos -- und genau das soll
+    # nicht unbemerkt bleiben, weil der Effekt erst ueber Wochen sichtbar wird.
+    - name: Fail if the limit did not take effect
+      ansible.builtin.fail:
+        msg: >-
+          {{ inventory_hostname }}: SystemMaxUse ist
+          '{{ (journal_after.stdout | default('|') ).split('|')[0] | default('') }}',
+          erwartet '{{ journald_max_use }}'. Drop-in nicht wirksam?
+      when: (journal_after.stdout | default('|')).split('|')[0] | default('') != journald_max_use
+
+    - name: Show journald limits
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          vorher {{ (journal_before.stdout | default('?|?')).split('|')[0] | default('?') }}
+          / {{ (journal_before.stdout | default('?|?')).split('|')[1] | default('?') }} Dateien
+          -> Limit {{ (journal_after.stdout | default('|||')).split('|')[0] | default('?') }},
+          max {{ (journal_after.stdout | default('|||')).split('|')[1] | default('?') }} Dateien
+          (aktuell {{ (journal_after.stdout | default('|||')).split('|')[2] | default('?') }},
+          geaendert: {{ journald_dropin.changed }})

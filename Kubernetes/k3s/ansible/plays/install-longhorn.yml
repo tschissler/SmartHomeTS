@@ -156,10 +156,17 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
+    # Die Inventory-Hosts heissen `k3snodeN.intern`, die Kubernetes-Node-Objekte
+    # aber `k3snodeN`. Wer die Inventory-Namen direkt an `kubectl` weiterreicht,
+    # bekommt `Error from server (NotFound): nodes "k3snode1.intern" not found`.
+    # Deshalb hier einmal zentral auf die Kubernetes-Schreibweise abbilden, statt
+    # in jedem der drei folgenden Tasks einzeln.
     - name: Compute Longhorn storage/non-storage node lists from inventory
       ansible.builtin.set_fact:
         longhorn_storage_nodes: "{{ groups.get('longhorn_storage_nodes', []) }}"
         longhorn_all_cluster_nodes: "{{ (groups.get('k3s_servers', []) + groups.get('k3s_agents', [])) | unique }}"
+        longhorn_storage_nodes_k8s: "{{ groups.get('longhorn_storage_nodes', []) | map('regex_replace', '\\.intern$', '') | list }}"
+        longhorn_all_cluster_nodes_k8s: "{{ (groups.get('k3s_servers', []) + groups.get('k3s_agents', [])) | unique | map('regex_replace', '\\.intern$', '') | list }}"
       run_once: true
 
     - name: Annotate Longhorn storage nodes with disk configuration
@@ -167,8 +174,8 @@
         /usr/local/bin/k3s kubectl annotate node {{ item }} \
           node.longhorn.io/default-disks-config='[{"path":"{{ longhorn_data_path }}","allowScheduling":true}]' \
           --overwrite
-      loop: "{{ longhorn_storage_nodes }}"
-      when: longhorn_storage_nodes | length > 0
+      loop: "{{ longhorn_storage_nodes_k8s }}"
+      when: longhorn_storage_nodes_k8s | length > 0
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
@@ -178,8 +185,8 @@
         /usr/local/bin/k3s kubectl label node {{ item }} \
           node.longhorn.io/create-default-disk=true \
           --overwrite
-      loop: "{{ longhorn_storage_nodes }}"
-      when: longhorn_storage_nodes | length > 0
+      loop: "{{ longhorn_storage_nodes_k8s }}"
+      when: longhorn_storage_nodes_k8s | length > 0
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
@@ -189,10 +196,10 @@
         /usr/local/bin/k3s kubectl label node {{ item }} \
           node.longhorn.io/create-default-disk=false \
           --overwrite
-      loop: "{{ longhorn_all_cluster_nodes | difference(longhorn_storage_nodes) }}"
+      loop: "{{ longhorn_all_cluster_nodes_k8s | difference(longhorn_storage_nodes_k8s) }}"
       when:
-        - longhorn_all_cluster_nodes | length > 0
-        - (longhorn_all_cluster_nodes | difference(longhorn_storage_nodes)) | length > 0
+        - longhorn_all_cluster_nodes_k8s | length > 0
+        - (longhorn_all_cluster_nodes_k8s | difference(longhorn_storage_nodes_k8s)) | length > 0
       run_once: true
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
