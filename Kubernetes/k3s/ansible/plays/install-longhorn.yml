@@ -169,10 +169,25 @@
         longhorn_all_cluster_nodes_k8s: "{{ (groups.get('k3s_servers', []) + groups.get('k3s_agents', [])) | unique | map('regex_replace', '\\.intern$', '') | list }}"
       run_once: true
 
+    # `allowScheduling: false` ist Absicht: {{ longhorn_data_path }} liegt auf der
+    # BOOT-SSD von k3snode1/2 (AirDisk 512 GB, traegt auch / und /boot/efi), waehrend
+    # die Lexar NM790 4 TB als Disk `ssd1` danebensteht (prepare-longhorn-extra-ssd.yml).
+    # Replicas hier kosten Lebensdauer auf der schwaechsten Platte im Verbund und
+    # koppeln OS- und Datenverlust an denselben Defekt -- gemessen am 2026-09-19 trug
+    # k3snode2 mit zwei Replicas 61 GB/Tag gegen 27 GB/Tag auf k3snode1 ohne. Redundanz
+    # entsteht ueber Nodes (replica-soft-anti-affinity: false), nicht ueber eine zweite
+    # Disk im selben Node -- die default-disk bringt also keine Ausfallsicherheit.
+    # Die Disk bleibt bewusst angelegt und gemountet: manuelle Reserve, falls ssd1
+    # volllaeuft. Scharf schalten per `allowScheduling: true` auf nodes.longhorn.io.
+    # ACHTUNG: Longhorn wertet diese Annotation nur bei der ERSTANLAGE der Disk aus.
+    # Auf einem laufenden Node aendert ein erneuter Play-Lauf nichts -- dort patchen:
+    #   kubectl patch nodes.longhorn.io <node> -n longhorn-system --type=merge \
+    #     -p '{"spec":{"disks":{"<disk-name>":{"allowScheduling":false}}}}'
+    # Hintergrund: SmartHomeDeployments #44
     - name: Annotate Longhorn storage nodes with disk configuration
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl annotate node {{ item }} \
-          node.longhorn.io/default-disks-config='[{"path":"{{ longhorn_data_path }}","allowScheduling":true}]' \
+          node.longhorn.io/default-disks-config='[{"path":"{{ longhorn_data_path }}","allowScheduling":false}]' \
           --overwrite
       loop: "{{ longhorn_storage_nodes_k8s }}"
       when: longhorn_storage_nodes_k8s | length > 0
