@@ -208,46 +208,51 @@ namespace ChargingController
         /// <b>Read <see cref="WallboxStatus.SitzungsBeginnAusBoxZeit"/> the right way round:</b>
         /// <c>true</c> means the value came from the clock of the box, and that clock reports
         /// "timeQ": 0 — it is the untrustworthy source, not the trustworthy one. The order below
-        /// follows from that:
+        /// follows from that, and each branch records which of the four
+        /// <see cref="Beginnquelle"/> values it used:
         /// <list type="number">
-        /// <item>the plug-in edge the KebaConnector observed itself — measured, so it wins;</item>
-        /// <item>for an inherited session, the box clock if it is at all plausible — wrong by an
-        /// unknown amount, but it is the only thing that knows the session started before this
-        /// process did;</item>
-        /// <item>otherwise this moment — exact when the ledger watched the session appear, and
-        /// merely the earliest defensible guess when it did not.</item>
+        /// <item><see cref="Beginnquelle.Steckflanke"/> — the plug-in edge the KebaConnector
+        /// observed itself. Measured, so it wins;</item>
+        /// <item><see cref="Beginnquelle.Boxuhr"/> — for an inherited session, the box clock if
+        /// it is at all plausible. Wrong by an unknown amount, but it is the only source that
+        /// knows the session started before this process did;</item>
+        /// <item><see cref="Beginnquelle.Regelzyklus"/> — this moment, when the ledger watched
+        /// the session appear. At most one cycle late;</item>
+        /// <item><see cref="Beginnquelle.Dienstanlauf"/> — this moment for an inherited session
+        /// with no usable box clock. Too late by an unknown amount, and that is the one thing
+        /// the record can still say about it.</item>
         /// </list>
         /// </remarks>
         private static Ladesitzung Eroeffnen(
             string wallbox, int id, WallboxStatus status, DateTimeOffset jetzt, bool geerbt)
         {
             DateTimeOffset beginn;
-            bool geschaetzt;
+            Beginnquelle quelle;
 
             if (status.SitzungsBeginn is DateTimeOffset beobachtet && !status.SitzungsBeginnAusBoxZeit)
             {
                 beginn = beobachtet;
-                geschaetzt = false;
+                quelle = Beginnquelle.Steckflanke;
             }
             else if (geerbt && status.SitzungsBeginn is DateTimeOffset boxzeit && Plausibel(boxzeit, jetzt))
             {
                 beginn = boxzeit;
-                geschaetzt = true;
+                quelle = Beginnquelle.Boxuhr;
             }
             else
             {
                 beginn = jetzt;
-                geschaetzt = geerbt;
+                quelle = geerbt ? Beginnquelle.Dienstanlauf : Beginnquelle.Regelzyklus;
             }
 
-            Console.WriteLine($"Ladesitzung {wallbox}: session {id} started at {beginn:u}" +
-                (geschaetzt ? " (estimated, not an observed plug-in)" : ""));
+            Console.WriteLine($"Ladesitzung {wallbox}: session {id} started at {beginn:u} " +
+                $"(from {Beginnquellen.Drahtname(quelle)})");
 
             return new Ladesitzung
             {
                 SitzungsId = id,
                 Beginn = beginn,
-                BeginnGeschaetzt = geschaetzt,
+                Beginnquelle = quelle,
                 Ende = null,
                 Zustand = Ladesitzungszustand.Laufend,
                 EnergieBoxKwh = status.EnergieSitzungWh / 1000m,

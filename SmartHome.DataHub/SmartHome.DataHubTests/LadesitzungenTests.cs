@@ -24,12 +24,14 @@ public class LadesitzungenTests
         decimal batterie = 1m,
         decimal netz = 0.5m,
         decimal box = 3.5m,
-        long ladezeit = 7200)
+        long ladezeit = 7200,
+        Beginnquelle quelle = Beginnquelle.Steckflanke)
         => new()
         {
             Zeitpunkt = ende ?? Ende,
             SitzungsId = id,
             Beginn = beginn ?? Beginn,
+            Beginnquelle = quelle,
             Ende = zustand == Ladesitzungszustand.Beendet ? ende ?? Ende : null,
             Zustand = zustand,
             EnergiePvKwh = pv,
@@ -61,11 +63,46 @@ public class LadesitzungenTests
         satz.SitzungsId.Should().Be(5);
         satz.Fahrzeug.Should().Be("BMW");
         satz.Vertrauen.Should().Be("erkannt");
+        satz.Beginnquelle.Should().Be("steckflanke");
         satz.EnergieKwh.Should().Be(3.5m);
         satz.EnergiePvKwh.Should().Be(2m);
         satz.EnergieBatterieKwh.Should().Be(1m);
         satz.EnergieNetzKwh.Should().Be(0.5m);
         satz.EnergieUnzugeordnetKwh.Should().Be(0m);
+    }
+
+    [Theory]
+    [InlineData(Beginnquelle.Steckflanke, "steckflanke")]
+    [InlineData(Beginnquelle.Regelzyklus, "regelzyklus")]
+    [InlineData(Beginnquelle.Boxuhr, "boxuhr")]
+    [InlineData(Beginnquelle.Dienstanlauf, "dienstanlauf")]
+    [InlineData(Beginnquelle.Unbekannt, "unbekannt")]
+    public void DieHerkunftDesBeginnsStehtInDerZeile(Beginnquelle quelle, string erwartet)
+    {
+        // dauer_s wird aus dem Beginn gerechnet. Ohne diese Spalte kann niemand eine gemessene
+        // Steckdauer von einer geschätzten unterscheiden — und eine geschätzte sieht genauso
+        // solide aus wie eine gemessene.
+        var buch = new Ladesitzungen();
+        buch.MeldeZuordnung(LadeTopics.Garage, Zuordnung());
+
+        var satz = buch.MeldeSitzung(LadeTopics.Garage, Sitzung(quelle: quelle)).Satz!;
+
+        satz.Beginnquelle.Should().Be(erwartet);
+    }
+
+    [Theory]
+    [InlineData(Beginnquelle.Unbekannt)]
+    [InlineData(Beginnquelle.Steckflanke)]
+    [InlineData(Beginnquelle.Regelzyklus)]
+    [InlineData(Beginnquelle.Boxuhr)]
+    [InlineData(Beginnquelle.Dienstanlauf)]
+    public void DerDrahtnameDerBeginnquelleIstDerselbeWieImJsonPayload(Beginnquelle quelle)
+    {
+        // Wie bei vertrauen: die Spalte und der Payload müssen dasselbe Wort tragen, sonst
+        // filtert ein Grafana-Panel still ins Leere.
+        var ausDemPayload = JsonSerializer.Serialize(quelle).Trim('"');
+
+        Beginnquellen.Drahtname(quelle).Should().Be(ausDemPayload);
     }
 
     [Fact]

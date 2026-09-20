@@ -19,6 +19,77 @@ namespace SharedContracts
     }
 
     /// <summary>
+    /// How the start of a charging session was arrived at. Four ways, with four different error
+    /// characteristics — which is the whole reason this is not a boolean.
+    /// </summary>
+    /// <remarks>
+    /// The wire names are lower case and without umlauts, like every other enum on these topics,
+    /// and they are what the <c>beginn_quelle</c> field of the <c>ladesitzungen</c> table carries.
+    /// "Is the plugged-in duration measured?" reads as
+    /// <c>beginn_quelle IN ('steckflanke','regelzyklus')</c> — and the other two values say why
+    /// it is not, which a boolean could not.
+    /// </remarks>
+    [JsonConverter(typeof(JsonStringEnumConverter<Beginnquelle>))]
+    public enum Beginnquelle
+    {
+        /// <summary>
+        /// The payload did not say. Only reachable for a record written before this field
+        /// existed; the default is deliberately not a source that claims to be measured.
+        /// </summary>
+        [JsonStringEnumMemberName("unbekannt")]
+        Unbekannt = 0,
+
+        /// <summary>
+        /// The plug-in edge the KebaConnector observed itself. Measured, and the best of the
+        /// four.
+        /// </summary>
+        [JsonStringEnumMemberName("steckflanke")]
+        Steckflanke = 1,
+
+        /// <summary>
+        /// The control cycle in which the ChargingController saw the session appear. Measured
+        /// too, and at most one cycle (5 s) late.
+        /// </summary>
+        [JsonStringEnumMemberName("regelzyklus")]
+        Regelzyklus = 2,
+
+        /// <summary>
+        /// The clock of the box, for a session that was already running when the controller
+        /// started. That clock reports "timeQ": 0 — the value passed a plausibility check but
+        /// may still be wrong by an unknown amount in either direction.
+        /// </summary>
+        [JsonStringEnumMemberName("boxuhr")]
+        Boxuhr = 3,
+
+        /// <summary>
+        /// The moment the controller first saw an already running session, with no usable box
+        /// clock to date it by. Unlike <see cref="Boxuhr"/> the error has a known sign: the
+        /// session began earlier than this, so the plugged-in duration is too short.
+        /// </summary>
+        [JsonStringEnumMemberName("dienstanlauf")]
+        Dienstanlauf = 4,
+    }
+
+    /// <summary>
+    /// The wire spelling of a <see cref="Beginnquelle"/> — the same string the JSON payload
+    /// carries, and the string the <c>beginn_quelle</c> column is written with. Same arrangement
+    /// and same reason as <see cref="Vertrauensgrade"/>: one place produces the name, and a test
+    /// holds the switch to the attributes above.
+    /// </summary>
+    public static class Beginnquellen
+    {
+        public static string Drahtname(Beginnquelle quelle) => quelle switch
+        {
+            Beginnquelle.Unbekannt => "unbekannt",
+            Beginnquelle.Steckflanke => "steckflanke",
+            Beginnquelle.Regelzyklus => "regelzyklus",
+            Beginnquelle.Boxuhr => "boxuhr",
+            Beginnquelle.Dienstanlauf => "dienstanlauf",
+            _ => throw new ArgumentOutOfRangeException(nameof(quelle), quelle, null),
+        };
+    }
+
+    /// <summary>
     /// One charging session of one wallbox as the ChargingController sees it, published retained
     /// to daten/Laden/&lt;Ort&gt;/&lt;Box&gt;/Ladesitzung. The controller is the only author of
     /// this topic. See Docs/Ladeprotokoll.md, sections "Tabelle ladesitzungen" and
@@ -67,18 +138,27 @@ namespace SharedContracts
         public DateTimeOffset? Beginn { get; set; }
 
         /// <summary>
-        /// True when <see cref="Beginn"/> is an estimate rather than an observed plug-in edge.
+        /// How <see cref="Beginn"/> was arrived at, and with it how much the plugged-in duration
+        /// can be believed.
         /// </summary>
         /// <remarks>
         /// <b>Do not confuse this with <see cref="WallboxStatus.SitzungsBeginnAusBoxZeit"/>,
         /// whose name says where the value came from, not how good it is</b> — there, <c>true</c>
-        /// means the value came from the clock of the box, which reports "timeQ": 0 and may be
-        /// arbitrarily wrong. Here the flag says the one thing a consumer actually needs: that
-        /// the start time, and with it the plugged-in duration, is not measured. It is set when
-        /// the controller had to fall back to the box clock, and when it inherited a session that
-        /// was already running and could only date it to its own first sighting.
+        /// means the value came from the clock of the box, which reports "timeQ": 0 and is the
+        /// untrustworthy source, not the trustworthy one. Here the four values say outright what
+        /// dated the session, so nobody has to know that trap to read the record.
         /// </remarks>
-        public bool BeginnGeschaetzt { get; set; }
+        public Beginnquelle Beginnquelle { get; set; }
+
+        /// <summary>
+        /// Whether <see cref="Beginn"/> is an estimate rather than a measured moment. Derived
+        /// from <see cref="Beginnquelle"/> so the two can never disagree, and not serialised —
+        /// it carries nothing the payload does not already have. Same arrangement as
+        /// <see cref="WallboxStatus.FahrzeugVerbunden"/>.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool BeginnGeschaetzt
+            => Beginnquelle is not (Beginnquelle.Steckflanke or Beginnquelle.Regelzyklus);
 
         /// <summary>
         /// When the box stopped reporting this session, null while it is still running.
@@ -131,7 +211,7 @@ namespace SharedContracts
             => andere is not null
                && andere.SitzungsId == SitzungsId
                && andere.Beginn == Beginn
-               && andere.BeginnGeschaetzt == BeginnGeschaetzt
+               && andere.Beginnquelle == Beginnquelle
                && andere.Ende == Ende
                && andere.Zustand == Zustand
                && andere.EnergiePvKwh == EnergiePvKwh

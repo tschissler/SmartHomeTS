@@ -147,6 +147,7 @@ eigene Tabelle; `WritePointDataToInfluxDb` im `Influx3Connector` ist bereits gen
 | `time` | Zeitstempel | Sitzungsbeginn |
 | `wallbox` | **Tag** | `Garage`, `Stellplatz` |
 | `sitzungs_id` | Feld | ID der Keba-Sitzung |
+| `beginn_quelle` | Feld | woher der Beginn stammt: `steckflanke`, `regelzyklus`, `boxuhr`, `dienstanlauf`. Entscheidet, ob `time` und `dauer_s` gemessen sind |
 | `fahrzeug` | Feld | `BMW`, `Mini`, `VW`, `-` |
 | `vertrauen` | Feld | `bestaetigt`, `erkannt`, `vermutet`, `unbekannt` |
 | `ende` | Feld | Zeitstempel des Aussteckens |
@@ -164,6 +165,23 @@ DataHub-Neustart liest es erneut. Als Feld überschreibt ein wiederholter Schrei
 denselben Punkt; als Tag entstünde bei abweichendem Inhalt eine zweite Zeile. Zusätzlich
 prüft der DataHub, ob die `SitzungsId` bereits geschrieben wurde — analog zu
 `LastChargingSessionPublishedViaMQTT` im KebaConnector.
+
+**`beginn_quelle` sagt, ob die Steckdauer überhaupt gemessen ist.** `time` ist der
+Sitzungsbeginn und `dauer_s` daraus gerechnet — beide sind nur so gut wie die Quelle des
+Beginns, und eine geschätzte Steckdauer sieht in einer Tabelle genauso solide aus wie eine
+gemessene. Vier Werte statt eines Ja/Nein, weil die vier Fälle verschiedene Fehler haben:
+
+| Wert | Woher | Fehler |
+|---|---|---|
+| `steckflanke` | Die vom KebaConnector beobachtete Steckflanke | gemessen |
+| `regelzyklus` | Der ChargingController sah die Sitzung auftauchen | gemessen, höchstens einen Zyklus (5 s) zu spät |
+| `boxuhr` | Die Uhr der Box, bei einer geerbten Sitzung | unbekannt, in beide Richtungen — die Box meldet `"timeQ": 0` |
+| `dienstanlauf` | Der erste Blick des Controllers auf eine schon laufende Sitzung | **zu spät**, um einen unbekannten Betrag: die Steckdauer ist zu kurz |
+
+„Ist die Steckdauer gemessen?" liest sich damit als
+`beginn_quelle IN ('steckflanke','regelzyklus')` — genauso kurz wie ein boolescher Filter,
+sagt aber im Zweifel auch, warum nicht. Ein Feld, kein Tag: `wallbox` bleibt der einzige
+Tag, ein zweiter mit vier Werten vervielfachte die Reihen der Tabelle ohne Gewinn.
 
 **Steckdauer und Ladezeit werden getrennt geführt.** Ein Fahrzeug hängt über Nacht an der
 Box und lädt nur zwei Stunden bei Überschuss; die Keba meldet trotzdem eine einzige
@@ -212,16 +230,21 @@ kein zweites Topic und keine Fensterrechnung.
 
 **Woher der Beginn kommt — in dieser Reihenfolge:**
 
-| Quelle | Bedingung | `BeginnGeschaetzt` |
-|---|---|---|
-| Die vom KebaConnector beobachtete Steckflanke | `SitzungsBeginnAusBoxZeit == false` | `false` |
-| Die Boxuhr | nur bei einer geerbten Sitzung, und nur wenn der Wert plausibel ist (nicht in der Zukunft, nicht älter als 14 Tage) | `true` |
-| Die erste eigene Sichtung des Controllers | sonst | `false`, wenn er den Übergang selbst gesehen hat; `true`, wenn er die Sitzung geerbt hat |
+| Bedingung | `Beginnquelle` |
+|---|---|
+| `SitzungsBeginn` liegt vor und `SitzungsBeginnAusBoxZeit == false` | `steckflanke` |
+| geerbte Sitzung, Boxzeit plausibel (nicht in der Zukunft, nicht älter als 14 Tage) | `boxuhr` |
+| der Controller hat den Übergang selbst gesehen | `regelzyklus` |
+| sonst — geerbte Sitzung ohne brauchbare Boxzeit | `dienstanlauf` |
 
 `WallboxStatus.SitzungsBeginnAusBoxZeit` heißt das Gegenteil dessen, was der Name
 nahelegt: `true` bedeutet, der Wert **stammt** aus der Boxuhr — und die meldet `"timeQ": 0`
-und darf beliebig falsch sein. Das neue Feld `BeginnGeschaetzt` sagt stattdessen das, was
-ein Konsument braucht: ob die Startzeit gemessen ist oder nicht.
+und darf beliebig falsch sein. `Beginnquelle` sagt stattdessen geradeheraus, was die
+Sitzung datiert hat; niemand muss die Falle kennen, um den Datensatz zu lesen.
+`Ladesitzung.BeginnGeschaetzt` gibt es weiterhin, aber als **abgeleitete, nicht
+serialisierte** Eigenschaft (`quelle ∉ {steckflanke, regelzyklus}`) — so können die beiden
+einander nicht widersprechen. Ein Payload ohne das Feld liest sich als `unbekannt` und
+damit als geschätzt, nicht als gemessen.
 
 **Sitzungsende.** Der Controller schließt die Sitzung in dem Zyklus, in dem die Box keine
 oder eine andere `SitzungsId` meldet; das Intervall, das gerade vergangen ist, gehört noch
@@ -245,9 +268,10 @@ Nachricht ein neuer Versuch — von welcher Seite sie auch kommt.
    Zeitspalte, und die trägt den Sitzungsbeginn. Ein zweiter Zeitstempel kann nur Feld
    sein, und ein Feld ist entweder Zahl oder Text; der lesbare Text gewinnt, weil das
    Rechnen ohnehin `dauer_s` daneben erledigt.
-2. **`BeginnGeschaetzt` wird nicht geschrieben.** Es wäre eine ehrliche Spalte, steht aber
-   nicht in der Liste, und die Modellierungsregel sagt: nicht selbst entscheiden.
-   Nachträglich ein Feld zu ergänzen ist billig — **offene Frage an Thomas.**
+2. **`beginn_quelle` ist eine eigene Spalte** — von Thomas am 2026-09-20 entschieden, bevor
+   die Tabelle das erste Mal geschrieben wurde. Der Zeitpunkt war das Argument: Käme die
+   Spalte später dazu, trügen alle bis dahin geschriebenen Sitzungen dort dauerhaft `NULL`.
+   Begründung und Werte stehen oben bei der Spaltentabelle.
 3. **Nur Sitzungen aus `M3` werden geschrieben.** Die Tabelle hat `wallbox` als einzigen
    Tag und keine Ortsspalte; eine gleichnamige Box in einem anderen Gebäude fiele sonst
    still in dieselbe Reihe. Heute hängen beide Boxen in M3, es wird also nichts

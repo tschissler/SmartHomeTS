@@ -39,6 +39,14 @@ namespace SmartHome.DataHub
         /// <summary>The <c>time</c> of the row: when the vehicle was plugged in.</summary>
         public required DateTimeOffset Beginn { get; init; }
 
+        /// <summary>
+        /// The wire name of how <see cref="Beginn"/> was arrived at, e.g. <c>steckflanke</c>.
+        /// Written rather than derived away, because <see cref="Beginn"/> is the time axis of
+        /// the row and <see cref="DauerSekunden"/> is computed from it: a reader has to be able
+        /// to tell a measured duration from an estimated one, and only this column says so.
+        /// </summary>
+        public required string Beginnquelle { get; init; }
+
         public required int SitzungsId { get; init; }
 
         /// <summary>The vehicle, or "-" when none could be named.</summary>
@@ -201,6 +209,7 @@ namespace SmartHome.DataHub
             {
                 Wallbox = wallbox,
                 Beginn = beginn,
+                Beginnquelle = Beginnquellen.Drahtname(sitzung.Beginnquelle),
                 SitzungsId = sitzung.SitzungsId,
                 Fahrzeug = string.IsNullOrWhiteSpace(zuordnung.Fahrzeug) ? OhneFahrzeug : zuordnung.Fahrzeug,
                 Vertrauen = Vertrauensgrade.Drahtname(zuordnung.Vertrauen),
@@ -219,7 +228,8 @@ namespace SmartHome.DataHub
             return new(Zusammenfuehrung.Geschrieben, satz,
                 $"{wallbox}: session {satz.SitzungsId} written — {satz.Fahrzeug} ({satz.Vertrauen}), "
               + $"{satz.EnergieKwh:F3} kWh in {satz.LadezeitSekunden} s of charging over "
-              + $"{satz.DauerSekunden} s plugged in, of which PV {satz.EnergiePvKwh:F3}, battery "
+              + $"{satz.DauerSekunden} s plugged in (from {satz.Beginnquelle}), of which PV "
+              + $"{satz.EnergiePvKwh:F3}, battery "
               + $"{satz.EnergieBatterieKwh:F3}, grid {satz.EnergieNetzKwh:F3}, unattributed "
               + $"{satz.EnergieUnzugeordnetKwh:F3} kWh.");
         }

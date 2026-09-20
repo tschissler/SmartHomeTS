@@ -852,6 +852,10 @@ void VerarbeiteZusammenfuehrung(InfluxDB3Connector influx3Connector, Zusammenfue
                     // the same everywhere; the arithmetic is served by dauer_s next to it.
                     ("ende", satz.Ende.ToUniversalTime().ToString("o")),
                     ("dauer_s", satz.DauerSekunden),
+                    // How the session start was arrived at, and with it whether dauer_s is
+                    // measured at all. A field and not a tag: two or three values over every
+                    // session would multiply the series of the table for nothing.
+                    ("beginn_quelle", satz.Beginnquelle),
                     ("ladezeit_s", satz.LadezeitSekunden),
                     ("energie_kwh", Convert.ToDouble(satz.EnergieKwh)),
                     ("energie_pv_kwh", Convert.ToDouble(satz.EnergiePvKwh)),

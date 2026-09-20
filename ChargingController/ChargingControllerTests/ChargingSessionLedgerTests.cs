@@ -68,6 +68,7 @@ namespace ChargingControllerTests
             veroeffentlicht.Should().ContainSingle();
             veroeffentlicht[0].SitzungsId.Should().Be(5);
             veroeffentlicht[0].Beginn.Should().Be(eingesteckt);
+            veroeffentlicht[0].Beginnquelle.Should().Be(Beginnquelle.Steckflanke);
             veroeffentlicht[0].BeginnGeschaetzt.Should().BeFalse();
             veroeffentlicht[0].Zustand.Should().Be(Ladesitzungszustand.Laufend);
             veroeffentlicht[0].Ende.Should().BeNull();
@@ -88,6 +89,7 @@ namespace ChargingControllerTests
 
             veroeffentlicht.Should().ContainSingle();
             veroeffentlicht[0].Beginn.Should().Be(jetzt);
+            veroeffentlicht[0].Beginnquelle.Should().Be(Beginnquelle.Regelzyklus);
             veroeffentlicht[0].BeginnGeschaetzt.Should().BeFalse("the transition was observed, only a cycle late");
         }
 
@@ -105,6 +107,7 @@ namespace ChargingControllerTests
 
             veroeffentlicht.Should().ContainSingle();
             veroeffentlicht[0].Beginn.Should().Be(boxzeit);
+            veroeffentlicht[0].Beginnquelle.Should().Be(Beginnquelle.Boxuhr);
             veroeffentlicht[0].BeginnGeschaetzt.Should().BeTrue();
         }
 
@@ -123,6 +126,8 @@ namespace ChargingControllerTests
 
             veroeffentlicht.Should().ContainSingle();
             veroeffentlicht[0].Beginn.Should().Be(NachDerFrist);
+            veroeffentlicht[0].Beginnquelle.Should().Be(Beginnquelle.Dienstanlauf,
+                "an implausible box clock says nothing, so all that is left is the moment this process looked");
             veroeffentlicht[0].BeginnGeschaetzt.Should().BeTrue("the session is older than this, we just cannot say how much");
         }
 
@@ -295,6 +300,20 @@ namespace ChargingControllerTests
             veroeffentlicht[1].SitzungsId.Should().Be(6);
             veroeffentlicht[1].Zustand.Should().Be(Ladesitzungszustand.Laufend);
             veroeffentlicht[1].EnergiePvKwh.Should().Be(0m);
+        }
+
+        [Theory]
+        [InlineData(Beginnquelle.Steckflanke, false)]
+        [InlineData(Beginnquelle.Regelzyklus, false)]
+        [InlineData(Beginnquelle.Boxuhr, true)]
+        [InlineData(Beginnquelle.Dienstanlauf, true)]
+        [InlineData(Beginnquelle.Unbekannt, true)]
+        public void DerGeschaetztFlagFolgtDerQuelleUndKannIhrNichtWidersprechen(
+            Beginnquelle quelle, bool geschaetzt)
+        {
+            // A payload that predates the field deserialises to Unbekannt, and that must not
+            // read as "measured" — the default of the enum is chosen for exactly that.
+            new Ladesitzung { Beginnquelle = quelle }.BeginnGeschaetzt.Should().Be(geschaetzt);
         }
 
         [Fact]
