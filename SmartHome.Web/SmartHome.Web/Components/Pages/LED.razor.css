@@ -1,22 +1,251 @@
-﻿/* Die drei Schieberegler. Der Verlauf liegt in der Spur, nicht im Bedienelement: Er sagt,
-   was am linken und was am rechten Ende steht, und das ist genau das, was der Verlauf des
-   frueheren SfLinearGauge gesagt hat.
+﻿/* Die Kachelsprache ist die der Ladeseite (.uebersichtBox in ChargingOverview.razor.css):
+   1px #D6D6D6, 10px Radius, weicher Schatten, 12px/16px Innenabstand. Zwei Seiten derselben
+   Anwendung sollen nach derselben Anwendung aussehen.
 
-   Trefferflaeche: 28px Griff auf 44px Zeilenhoehe. Das ist die Groesse, die iOS und Android
-   fuer einen Finger vorsehen; der abgeloeste Syncfusion-Zeiger war ein 40-px-Kreis, der
-   gezogen werden musste, ohne dass die Spur selbst ansprechbar war. */
-.regler {
-    max-width: 480px;
-    margin-top: 16px;
+   Anders als dort bleibt der Rahmen im Schmalformat stehen. Auf der Ladeseite faellt er weg,
+   weil dort an der Stelle nur eine einzige Karte steht und ein Rahmen dann nichts trennt;
+   hier stehen zwei Kacheln untereinander, und der Rahmen sagt, wo die eine aufhoert. */
+.seite {
+    max-width: 760px;
+    margin-left: var(--seiten-rand);
+    margin-right: var(--seiten-rand);
 }
 
-.regler label {
-    display: block;
-    margin-bottom: 4px;
+.kachel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid #D6D6D6;
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+    margin-top: 20px;
+}
+
+.kachelKopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Die anderen Seiten setzen ihren Namen als Ueberschrift ueber den Inhalt (Climate: h1,
+   ChargingOverview: h3). Hier ist es ein h1, weil die Kacheln darunter h2 sind -- die
+   Gliederung, die eine Vorlesesoftware anspringt, soll der entsprechen, die man sieht. */
+.seitenTitel {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.kachelTitel {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+/* Eine ausgeschaltete Kachel bleibt vollstaendig bedienbar -- ein Reglerzug legt fest, was
+   beim naechsten Einschalten gesetzt wird. Sie tritt nur zurueck. */
+.istAus .abschnitt,
+.istAus .regler,
+.istAus .zielWahl,
+.istAus .szenen {
+    opacity: 0.55;
+}
+
+.abschnitt {
+    margin: 12px 0 0 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6b6b6b;
+}
+
+/* ----------------------------------------------------------------------------------------
+   Die Vorschau. Sie zeigt nicht eine Farbe, sondern den Streifen: Das Raster im Verlauf ist
+   das Streumuster der Firmware, eine 5px-Zelle ist eine LED. Der dunkle Grund ist der
+   unbeleuchtete Streifen, der Schein darum das, was man im Schrank tatsaechlich sieht.
+   ---------------------------------------------------------------------------------------- */
+.streifen {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
+    border-radius: 10px;
+    background: #101014;
+    margin-top: 4px;
+}
+
+.streifenZeile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.streifenName {
+    flex: none;
+    width: 3.5rem;
+    font-size: 0.8rem;
+    color: #9a9aa4;
+}
+
+.streifenBalken {
+    flex: 1;
+    height: 18px;
+    border-radius: 9px;
+    background: #2a2a30;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+
+/* ----------------------------------------------------------------------------------------
+   Szenen. Der Griff, den man im Alltag tut -- deshalb stehen sie ueber den Reglern und sind
+   Knoepfe in Fingergroesse, keine Eintraege einer Liste. Der Punkt zeigt die Farbe, die der
+   Knopf setzt; die Szene als Ganzes hat noch einen Fuellgrad, den er nicht zeigen kann.
+   ---------------------------------------------------------------------------------------- */
+/* 190px und nicht weniger: Bei 150px passen in die Kachel vier Spalten, und in vier Spalten
+   bricht "Sonnenuntergang" ab. Drei Spalten sind breit genug fuer jeden der sechs Namen. */
+.szenen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 8px;
+}
+
+.szene {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 1px solid #D6D6D6;
+    border-radius: 10px;
+    background: #ffffff;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.szene:hover {
+    border-color: #a8a8a8;
+}
+
+.szene:active {
+    background: #f2f2f2;
+}
+
+.szene:focus-visible {
+    outline: 2px solid #006bb7;
+    outline-offset: 2px;
+}
+
+.szenePunkt {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+.szeneName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------------------------------------
+   Beide / Links / Rechts. Optisch ein Segmentschalter, im Baum drei Radioknoepfe -- das
+   Bedienelement bleibt nativ, damit Tastatur und Vorlesesoftware weiter funktionieren, und
+   die ganze Segmentflaeche ist anfassbar, nicht nur der Knopf.
+   ---------------------------------------------------------------------------------------- */
+.zielWahl {
+    display: flex;
+    border: 1px solid #D6D6D6;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.zielKnopf {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.zielKnopf + .zielKnopf {
+    border-left: 1px solid #D6D6D6;
+}
+
+.zielKnopf input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.zielKnopf span {
+    pointer-events: none;
+}
+
+.zielKnopf input:checked + span {
+    font-weight: 600;
+}
+
+.zielKnopf:has(input:checked) {
+    background: #eef4fa;
+    box-shadow: inset 0 -3px 0 #006bb7;
+}
+
+.zielKnopf:has(input:focus-visible) {
+    outline: 2px solid #006bb7;
+    outline-offset: -2px;
+}
+
+/* ----------------------------------------------------------------------------------------
+   Die Schieberegler. Der Verlauf liegt in der Spur, nicht im Griff: Er sagt, was am linken
+   und was am rechten Ende steht. Er kommt als --spur aus dem Markup, weil Saettigung und
+   Helligkeit auf den eingestellten Farbton zulaufen und sich also bei jedem Zug aendern.
+
+   Trefferflaeche: 28px Griff auf 44px Zeilenhoehe. Das ist die Groesse, die iOS und Android
+   fuer einen Finger vorsehen.
+   ---------------------------------------------------------------------------------------- */
+/* Die vier Regler stehen nebeneinander, sobald zwei nebeneinander passen, und untereinander,
+   sobald nicht. Das steht bewusst als auto-fit im Raster und nicht als Medienabfrage: Die
+   Umbruchbreite ergibt sich aus 320px je Regler und faellt damit von selbst ungefaehr auf
+   "schmal" -- eine vierte Zahl in der Breakpoint-Skala waere dafuer zu viel. */
+.reglerFeld {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    column-gap: 20px;
+}
+
+.regler {
+    margin-top: 6px;
+}
+
+.reglerKopf {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.reglerKopf label {
     color: #4a4a4a;
 }
 
-.regler-spur {
+.reglerWert {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85rem;
+    color: #6b6b6b;
+}
+
+.reglerSpur {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
@@ -25,19 +254,21 @@
     cursor: pointer;
 }
 
-.regler-spur::-webkit-slider-runnable-track {
+.reglerSpur::-webkit-slider-runnable-track {
     height: 14px;
     border-radius: 7px;
     border: 1px solid #b9b9b9;
+    background: var(--spur, #e4e4e4);
 }
 
-.regler-spur::-moz-range-track {
+.reglerSpur::-moz-range-track {
     height: 14px;
     border-radius: 7px;
     border: 1px solid #b9b9b9;
+    background: var(--spur, #e4e4e4);
 }
 
-.regler-spur::-webkit-slider-thumb {
+.reglerSpur::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 28px;
@@ -49,7 +280,7 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.regler-spur::-moz-range-thumb {
+.reglerSpur::-moz-range-thumb {
     width: 28px;
     height: 28px;
     border-radius: 50%;
@@ -58,53 +289,34 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.regler-spur:focus-visible {
+.reglerSpur:focus-visible {
     outline: 2px solid #006bb7;
     outline-offset: 2px;
 }
 
-/* 0 bis 360 Grad Farbton bei voller Saettigung und halber Helligkeit - dieselben Werte, die
-   der Verlauf im Gauge aus HslToRgb(i * 3.6, 100, 50) errechnet hat. */
-.regler-farbton::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+/* Der Fuellgrad hat keine Farbachse, die ein Verlauf zeigen koennte -- "wenig" und "viel"
+   traegt hier die Helligkeit der Spur. Das tatsaechliche Muster steht in der Vorschau
+   darueber; ein Punktraster in einer 14px hohen Spur liest sich als Stoerung, nicht als
+   Aussage (im Browser angesehen und wieder verworfen). */
+.reglerFuellgrad::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #e2e2ea, #5c5c74);
 }
 
-.regler-farbton::-moz-range-track {
-    background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+.reglerFuellgrad::-moz-range-track {
+    background: linear-gradient(to right, #e2e2ea, #5c5c74);
 }
 
-.regler-helligkeit::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #000000, #ffffff);
-}
-
-.regler-helligkeit::-moz-range-track {
-    background: linear-gradient(to right, #000000, #ffffff);
-}
-
-/* Der Gauge zeichnete die Dichte als Keil, der nach rechts breiter wurde. Ein Keil geht in
-   einer 14px hohen Spur nicht; dieselbe Aussage traegt hier die Saettigung. */
-.regler-dichte::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #ececff, #9999ff);
-}
-
-.regler-dichte::-moz-range-track {
-    background: linear-gradient(to right, #ececff, #9999ff);
-}
-
-/* Der Schalter. Das Kontrollkaestchen bleibt das Bedienelement und wird nur unsichtbar
-   gemacht - es aus dem Baum zu nehmen wuerde Tastatur und Vorlesesoftware mitnehmen. */
-.schalterZeile {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 16px;
-}
-
+/* ----------------------------------------------------------------------------------------
+   Der Schalter. Das Kontrollkaestchen bleibt das Bedienelement und wird nur unsichtbar
+   gemacht - es aus dem Baum zu nehmen wuerde Tastatur und Vorlesesoftware mitnehmen.
+   ---------------------------------------------------------------------------------------- */
+/* Die Bahn ist 32px hoch, die Trefferflaeche 44px: Der Schalter sieht so aus wie vorher,
+   laesst sich aber treffen wie die Regler daneben. */
 .schalter {
     display: inline-block;
     position: relative;
     width: 52px;
-    height: 32px;
+    height: 44px;
     flex: none;
     cursor: pointer;
 }
@@ -120,7 +332,7 @@
 
 .schalterBahn {
     position: absolute;
-    inset: 0;
+    inset: 6px 0;
     border-radius: 16px;
     background-color: #c4c4c4;
     transition: background-color 0.15s;
@@ -153,22 +365,28 @@
     outline-offset: 2px;
 }
 
-.farbprobeZeile {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 24px;
-}
-
-.farbprobe {
-    width: 64px;
-    height: 64px;
-    border-radius: 10px;
-    border: 1px solid #D6D6D6;
-    flex: none;
-}
-
-.farbprobeSub {
-    color: #6b6b6b;
+.statusZeile {
+    margin-top: 12px;
+    min-height: 1.2em;
     font-size: 0.85rem;
+    color: #6b6b6b;
+}
+
+/* schmal - ein Telefon im Hochformat. Die Szenen stehen dort zu zweit nebeneinander statt
+   einzeln untereinander; drei passen bei 360px nicht, ohne dass "Sonnenuntergang" abbricht. */
+@media (max-width: 700px) {
+    .szenen {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .szene {
+        padding: 8px 10px;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .streifenName {
+        width: 3rem;
+    }
 }

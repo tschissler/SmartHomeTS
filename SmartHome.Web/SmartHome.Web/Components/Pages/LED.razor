@@ -13,193 +13,568 @@
 
 <PageTitle>Beleuchtung</PageTitle>
 
-<h3>Beleuchtung</h3>
+<div class="seite">
 
-@*
-    Drei Schieberegler. Sie waren SfLinearGauge mit einem ziehbaren Zeiger -- also Anzeiger,
-    die als Bedienelement benutzt wurden. <input type="range"> bildet das eins zu eins ab:
-    oninput ist der laufende Zug, onchange das Loslassen. Am Telefon ist der Unterschied
-    spuerbar: Ein nativer Regler hat die Trefferflaeche, die das Betriebssystem fuer einen
-    Finger vorsieht, der Syncfusion-Zeiger war ein 40-px-Kreis zum Ziehen.
+    <h1 class="seitenTitel">Beleuchtung</h1>
 
-    Wichtig ist die Trennung dahinter: Nur das Loslassen veroeffentlicht nach MQTT. Wuerde
-    jeder Zwischenwert gesendet, bekaeme der LED-Streifen bei einem einzigen Zug hunderte
-    Nachrichten.
-*@
-<div class="regler">
-    <label for="regler-farbton">Farbton</label>
-    <input type="range" id="regler-farbton" class="regler-spur regler-farbton"
-           min="0" max="360" step="1" value="@HueValue"
-           @oninput="ZiehtFarbton" @onchange="LaesstFarbtonLos" />
+    @* Die Lampe zuerst: ein Schalter, ein Griff, der haeufigste Handgriff der Seite. Sie
+       steht in einer eigenen Kachel, weil sie mit dem Schrank nichts zu tun hat -- ein
+       anderes Geraet an einem anderen Topic. *@
+    <section class="kachel">
+        <div class="kachelKopf">
+            <h2 class="kachelTitel">Wohnzimmerlampe</h2>
+            @* Ein Kontrollkaestchen mit CSS statt eines Schalter-Bausteins. Das Kaestchen
+               selbst bleibt das Bedienelement -- Tastatur und Vorlesesoftware funktionieren
+               damit weiter, die Optik liegt allein im Stylesheet. *@
+            <label class="schalter">
+                <input type="checkbox" checked="@LampeAn"
+                       aria-label="Wohnzimmerlampe"
+                       @onchange="LampeUmschalten" />
+                <span class="schalterBahn"></span>
+            </label>
+        </div>
+    </section>
+
+    <section class="kachel @(SchrankAn ? "" : "istAus")">
+        <div class="kachelKopf">
+            <h2 class="kachelTitel">Schrank-Beleuchtung</h2>
+            <label class="schalter">
+                <input type="checkbox" checked="@SchrankAn"
+                       aria-label="Schrank-Beleuchtung"
+                       @onchange="SchrankUmschalten" />
+                <span class="schalterBahn"></span>
+            </label>
+        </div>
+
+        @* Die Vorschau ist das Stueck, das die Seite ueberhaupt erst lesbar macht: Sie zeigt
+           nicht eine Farbe, sondern den Streifen -- Farbe UND Streumuster, denn die Firmware
+           laesst nur jede n-te LED leuchten. Ein Rasterpunkt der Vorschau ist eine LED; bei
+           360px sieht man rund 60 der 256. *@
+        <div class="streifen">
+            @foreach (var (name, s) in new[] { ("Links", Links), ("Rechts", Rechts) })
+            {
+                <div class="streifenZeile">
+                    <span class="streifenName">@name</span>
+                    <div class="streifenBalken" style="@BalkenStil(s)"></div>
+                </div>
+            }
+        </div>
+
+        <h3 class="abschnitt">Szenen</h3>
+        <div class="szenen">
+            @foreach (var szene in Szenen)
+            {
+                <button type="button" class="szene" @onclick="() => SzeneAnwendenAsync(szene)">
+                    <span class="szenePunkt" style="background-color:@Css(szene.AlsStreifen())"></span>
+                    <span class="szeneName">@szene.Name</span>
+                </button>
+            }
+        </div>
+
+        <h3 class="abschnitt">Einstellen für</h3>
+        @* Der Normalfall ist "Beide": die Regler darunter aendern dann beide Streifen wie
+           bisher. Links und Rechts sind der Sonderfall und kosten einen Tipp -- die Firmware
+           wertet die beiden Panels ohnehin getrennt aus. *@
+        <div class="zielWahl" role="radiogroup" aria-label="Einstellen für">
+            @foreach (var ziel in new[] { Ziel.Beide, Ziel.Links, Ziel.Rechts })
+            {
+                <label class="zielKnopf">
+                    <input type="radio" name="ziel" value="@ziel"
+                           checked="@(AktuellesZiel == ziel)"
+                           @onchange="() => ZielWaehlen(ziel)" />
+                    <span>@ziel</span>
+                </label>
+            }
+        </div>
+
+        @* Vier Schieberegler. <input type="range"> hat die Trefferflaeche, die das
+           Betriebssystem fuer einen Finger vorsieht; ein gezeichneter Zeiger, der gezogen
+           werden muss, hat sie nicht.
+
+           Wichtig ist die Trennung dahinter: Nur das Loslassen (onchange) veroeffentlicht
+           nach MQTT, der laufende Zug (oninput) faerbt bloss die Vorschau. Wuerde jeder
+           Zwischenwert gesendet, bekaeme der LED-Streifen bei einem einzigen Zug hunderte
+           Nachrichten.
+
+           Die Spuren tragen den Verlauf der jeweils anderen Achse und rechnen live mit:
+           die Saettigungsspur laeuft auf den eingestellten Farbton zu, die Helligkeitsspur
+           von Schwarz auf die eingestellte Farbe. Damit sagen die drei Regler zusammen, was
+           sonst ein Farbfeld sagen wuerde. *@
+        <div class="reglerFeld">
+            <div class="regler">
+                <div class="reglerKopf">
+                    <label for="regler-farbton">Farbton</label>
+                    <span class="reglerWert">@Aktiv.Farbton°</span>
+                </div>
+                <input type="range" id="regler-farbton" class="reglerSpur"
+                       style="@FarbtonSpur()"
+                       min="0" max="360" step="1" value="@Aktiv.Farbton"
+                       @oninput="e => Setzen(e, (s, w) => s.Farbton = w, Aktiv.Farbton)"
+                       @onchange="e => SetzenUndSendenAsync(e, (s, w) => s.Farbton = w, Aktiv.Farbton)" />
+            </div>
+
+            <div class="regler">
+                <div class="reglerKopf">
+                    <label for="regler-saettigung">Sättigung</label>
+                    <span class="reglerWert">@Aktiv.Saettigung %</span>
+                </div>
+                <input type="range" id="regler-saettigung" class="reglerSpur"
+                       style="@SaettigungSpur()"
+                       min="0" max="100" step="1" value="@Aktiv.Saettigung"
+                       @oninput="e => Setzen(e, (s, w) => s.Saettigung = w, Aktiv.Saettigung)"
+                       @onchange="e => SetzenUndSendenAsync(e, (s, w) => s.Saettigung = w, Aktiv.Saettigung)" />
+            </div>
+
+            <div class="regler">
+                <div class="reglerKopf">
+                    <label for="regler-helligkeit">Helligkeit</label>
+                    <span class="reglerWert">@Aktiv.Helligkeit %</span>
+                </div>
+                <input type="range" id="regler-helligkeit" class="reglerSpur"
+                       style="@HelligkeitSpur()"
+                       min="0" max="100" step="1" value="@Aktiv.Helligkeit"
+                       @oninput="e => Setzen(e, (s, w) => s.Helligkeit = w, Aktiv.Helligkeit)"
+                       @onchange="e => SetzenUndSendenAsync(e, (s, w) => s.Helligkeit = w, Aktiv.Helligkeit)" />
+            </div>
+
+            @* "Fuellgrad" statt "Dichte": Der Wert sagt, wie viele der 256 LEDs ueberhaupt
+               leuchten -- von einzelnen Punkten bis zur durchgehenden Linie. Er ist keine
+               Helligkeit, auch wenn er sich aus der Ferne so auswirkt.
+
+               Der Regler laeuft ueber Stufen statt ueber Prozent, siehe Stufen weiter unten. *@
+            <div class="regler">
+                <div class="reglerKopf">
+                    <label for="regler-fuellgrad">Füllgrad</label>
+                    <span class="reglerWert">@AnteilText(Aktiv.Stufe)</span>
+                </div>
+                <input type="range" id="regler-fuellgrad" class="reglerSpur reglerFuellgrad"
+                       min="0" max="@(Stufen.Count - 1)" step="1" value="@Aktiv.Stufe"
+                       aria-valuetext="@AnteilText(Aktiv.Stufe)"
+                       @oninput="e => Setzen(e, (s, w) => s.Stufe = w, Aktiv.Stufe)"
+                       @onchange="e => SetzenUndSendenAsync(e, (s, w) => s.Stufe = w, Aktiv.Stufe)" />
+            </div>
+        </div>
+    </section>
+
+    <p class="statusZeile" role="status">@StatusMessage</p>
 </div>
-
-<div class="regler">
-    <label for="regler-helligkeit">Helligkeit</label>
-    <input type="range" id="regler-helligkeit" class="regler-spur regler-helligkeit"
-           min="0" max="100" step="1" value="@BrightnessValue"
-           @oninput="ZiehtHelligkeit" @onchange="LaesstHelligkeitLos" />
-</div>
-
-<div class="regler">
-    <label for="regler-dichte">Dichte</label>
-    <input type="range" id="regler-dichte" class="regler-spur regler-dichte"
-           min="0" max="101" step="1" value="@DensityValue"
-           @oninput="ZiehtDichte" @onchange="LaesstDichteLos" />
-</div>
-
-@* Ein Kontrollkaestchen mit CSS statt eines SfSwitch. Das Kaestchen selbst bleibt das
-   Bedienelement -- Tastatur und Vorlesesoftware funktionieren damit weiter, die Optik liegt
-   allein im Stylesheet. *@
-<div class="schalterZeile">
-    <label class="schalter">
-        <input type="checkbox" checked="@(SchrankbeleuchtungOnOff == true)"
-               @onchange="SchrankbeleuchtungUmschalten" />
-        <span class="schalterBahn"></span>
-    </label>
-    <span>Schrank-Beleuchtung</span>
-</div>
-
-<div class="schalterZeile">
-    <label class="schalter">
-        <input type="checkbox" checked="@(LampeOnOff == true)"
-               @onchange="LampeUmschalten" />
-        <span class="schalterBahn"></span>
-    </label>
-    <span>Wohnzimmerlampe</span>
-</div>
-
-<div class="farbprobeZeile">
-    <div class="farbprobe" style="background-color:@RGBColor.ToString()"></div>
-    <div>
-        <div>R=@RGBColor.R  G=@RGBColor.G  B=@RGBColor.B</div>
-        <div class="farbprobeSub">Dichte @DensityValue %</div>
-    </div>
-</div>
-
-<div>@StatusMessage</div>
 
 @code {
-    public int HueValue = 30;
     private const string topicName = "commands/illumination/LEDStripe/setColor";
     private const string lampeTopicName = "commands/shelly/Lampe";
-    public int BrightnessValue = 50;
-    public int DensityValue = 10;
-    public RGB RGBColor = new RGB(0, 0, 0);
-    public string StatusMessage = "Ready";
-    public bool? SchrankbeleuchtungOnOff = true;
-    public bool? LampeOnOff = true;
-    public IluminationSituation situation = new IluminationSituation();
+
+    private bool SchrankAn = true;
+    private bool LampeAn = true;
+    private string StatusMessage = "";
+
+    private readonly Streifen Links = new();
+    private readonly Streifen Rechts = new();
+
+    private enum Ziel { Beide, Links, Rechts }
+    private Ziel AktuellesZiel = Ziel.Beide;
+
+    /// <summary>Der Streifen, den die Regler gerade zeigen. "Beide" zeigt den linken.</summary>
+    private Streifen Aktiv => AktuellesZiel == Ziel.Rechts ? Rechts : Links;
+
+    /// <summary>Die Streifen, die eine Reglerbewegung aendert.</summary>
+    private IEnumerable<Streifen> Betroffene =>
+        AktuellesZiel switch
+        {
+            Ziel.Links => new[] { Links },
+            Ziel.Rechts => new[] { Rechts },
+            _ => new[] { Links, Rechts },
+        };
 
     /// <summary>
-    /// Value of a slider. The browser sends it as text; anything unreadable keeps the value
-    /// that is already set rather than silently jumping the strip to zero.
+    /// Ein Streifen in der Darstellung, in der er eingestellt wird: HSV statt RGB.
+    /// </summary>
+    /// <remarks>
+    /// HSV und nicht HSL, weil der Regler "Helligkeit" heissen soll und sich auch so
+    /// verhalten muss. Bei HSL ist 100 immer Weiss und nur 50 zeigt den eingestellten
+    /// Farbton voll -- ein Regler, der in seiner oberen Haelfte die Farbe wegnimmt. Bei
+    /// HSV ist 100 die volle Farbe und 0 Schwarz, und die Saettigung ist eine eigene
+    /// Achse statt fest auf 100 verdrahtet.
+    /// </remarks>
+    private sealed class Streifen
+    {
+        public int Farbton = 30;
+        public int Saettigung = 100;
+        public int Helligkeit = 50;
+        public int Stufe = StufeZuDichte(10);
+
+        /// <summary>
+        /// Was zuletzt aus diesen Werten gesendet wurde. Der Vergleich damit haelt die
+        /// Regler ruhig: Die eigene Nachricht kommt ueber das retained Topic wieder
+        /// herein, und HSV -> RGB -> HSV ist ueber 8 Bit nicht verlustfrei -- ohne den
+        /// Vergleich wanderten die Regler bei jedem Zug um ein, zwei Schritte.
+        /// </summary>
+        public RGB? Gesendet;
+
+        public RGB AlsRgb() =>
+            ColorConverter.HsvToRgb(new HSV(Farbton, (byte)Saettigung, (byte)Helligkeit));
+
+        public void Uebernehmen(Streifen andere)
+        {
+            Farbton = andere.Farbton;
+            Saettigung = andere.Saettigung;
+            Helligkeit = andere.Helligkeit;
+            Stufe = andere.Stufe;
+        }
+
+        public bool GleichtAeusserlich(Streifen andere) =>
+            Farbton == andere.Farbton && Saettigung == andere.Saettigung
+            && Helligkeit == andere.Helligkeit && Stufe == andere.Stufe;
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Fuellgrad
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Der Anteil leuchtender LEDs, den die Firmware aus einem Density-Wert macht.
+    /// Nachgebildet aus <c>setLEDColor</c> in
+    /// <c>ESP32Firmwares/LEDStripe.Firmware/src/main.cpp</c>: Bis 50 leuchtet jede
+    /// n-te LED, darueber bleibt jede n-te dunkel, jeweils mit ganzzahliger Division.
+    /// </summary>
+    /// <remarks>
+    /// Die Rechnung steht hier nur, um den Regler zu beschriften und die Vorschau zu
+    /// zeichnen -- gesendet wird weiterhin der Density-Wert selbst. Laeuft die Firmware
+    /// einmal anders, stimmen Beschriftung und Vorschau nicht mehr, die Steuerung schon.
+    /// </remarks>
+    private static (int Periode, bool JedeNteDunkel) Raster(int dichte) =>
+        dichte <= 50
+            ? (dichte == 0 ? 999 : 100 / dichte, false)
+            : (dichte == 100 ? 999 : 100 / (100 - dichte), true);
+
+    private static double Anteil(int dichte)
+    {
+        var (periode, jedeNteDunkel) = Raster(dichte);
+        return jedeNteDunkel ? 1.0 - 1.0 / periode : 1.0 / periode;
+    }
+
+    /// <summary>
+    /// Die Density-Werte, die sich tatsaechlich voneinander unterscheiden -- einer je
+    /// erreichbarem Anteil, aufsteigend.
+    /// </summary>
+    /// <remarks>
+    /// Die ganzzahlige Division in der Firmware macht aus 0..100 nur 37 verschiedene
+    /// Muster, und sie sind sehr ungleich verteilt: 34 bis 66 ergibt durchgehend jede
+    /// zweite LED, ein Drittel des Reglers ohne jede Wirkung. Der Regler laeuft deshalb
+    /// ueber diese Stufen und nicht ueber Prozent; so aendert jede Raste etwas.
+    ///
+    /// 101 ist bewusst nicht dabei. Der Wert stand frueher als Maximum im Markup, weil
+    /// bei 100 die erste LED dunkel bleibt (Sonderfall <c>trigger2 = 999</c>, und
+    /// <c>0 % 999 == 0</c>). Er behebt das aber nicht: 101 ergibt <c>trigger2 = -100</c>,
+    /// und weil das Vorzeichen in C++ dem Dividenden folgt, bleiben dann die LEDs 0, 100
+    /// und 200 dunkel -- 253 von 256 statt 255. 100 ist das echte Maximum.
+    /// </remarks>
+    private static readonly IReadOnlyList<int> Stufen = BaueStufen();
+
+    private static List<int> BaueStufen()
+    {
+        var stufen = new List<int>();
+        var zuletzt = double.NaN;
+        for (var dichte = 0; dichte <= 100; dichte++)
+        {
+            var anteil = Anteil(dichte);
+            if (anteil != zuletzt)
+            {
+                stufen.Add(dichte);
+                zuletzt = anteil;
+            }
+        }
+        return stufen;
+    }
+
+    /// <summary>
+    /// Die Stufe, in die ein empfangener Density-Wert faellt: die groesste Stufe, die
+    /// nicht groesser ist als er. Ein altes 101 landet damit auf der obersten.
+    /// </summary>
+    private static int StufeZuDichte(int dichte)
+    {
+        var stufe = 0;
+        for (var i = 0; i < Stufen.Count && Stufen[i] <= dichte; i++)
+        {
+            stufe = i;
+        }
+        return stufe;
+    }
+
+    private static int DichteZuStufe(int stufe) =>
+        Stufen[Math.Clamp(stufe, 0, Stufen.Count - 1)];
+
+    private static string AnteilText(int stufe)
+    {
+        var anteil = Anteil(DichteZuStufe(stufe)) * 100;
+        return anteil < 10 ? $"{anteil:0.0} %" : $"{anteil:0} %";
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Szenen
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Fest vorgegebene Voreinstellungen. Im Alltag ist das der Griff, den man tut --
+    /// die Regler darunter sind fuer den Fall, dass keine davon passt.
+    /// </summary>
+    private sealed record Szene(string Name, int Farbton, int Saettigung, int Helligkeit, int Dichte)
+    {
+        public Streifen AlsStreifen() => new()
+        {
+            Farbton = Farbton,
+            Saettigung = Saettigung,
+            Helligkeit = Helligkeit,
+            Stufe = StufeZuDichte(Dichte),
+        };
+    }
+
+    private static readonly Szene[] Szenen =
+    [
+        // Der Alltagsfall: warmes Licht aus allen LEDs. Nicht weiss, sondern leicht
+        // gesaettigtes Orange -- WS2812B ohne Weisskanal wirkt bei S=0 blaeulich.
+        new("Warmweiß",       30,  35, 100, 100),
+        // Hell und moeglichst neutral, zum Suchen im Schrank.
+        new("Arbeitslicht",   45,   8, 100, 100),
+        // Dieselbe durchgehende Linie, nur gedaempft und waermer.
+        new("Abendlicht",     25,  65,  40, 100),
+        // Voll gesaettigt, die Farbe ist hier der Zweck.
+        new("Sonnenuntergang", 8,  95,  75, 100),
+        // Wenige warme Punkte statt einer Linie: dunkel, unruhig, kein Arbeitslicht.
+        new("Kerzenschein",   18,  90,  25,  21),
+        // Einzelne kuehle Punkte -- das Muster, fuer das der Fuellgrad ueberhaupt da ist.
+        new("Sternenhimmel", 205,  45,  65,   6),
+    ];
+
+    private async Task SzeneAnwendenAsync(Szene szene)
+    {
+        var vorlage = szene.AlsStreifen();
+        foreach (var streifen in Betroffene)
+        {
+            streifen.Uebernehmen(vorlage);
+        }
+
+        // Eine Szene, nach der nichts leuchtet, waere ein Tipp ins Leere.
+        SchrankAn = true;
+        StatusMessage = $"Szene „{szene.Name}“ gesetzt";
+        await SendenAsync();
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Bedienung
+    // ---------------------------------------------------------------------------------
+
+    private void ZielWaehlen(Ziel ziel)
+    {
+        AktuellesZiel = ziel;
+        // Von "Links" oder "Rechts" zurueck auf "Beide" heisst: wieder gemeinsam. Damit
+        // das nicht erst beim naechsten Reglerzug passiert, gleicht die Umschaltung die
+        // beiden sofort an -- der linke gibt vor, weil er auch die Regler fuellt.
+        if (ziel == Ziel.Beide && !Rechts.GleichtAeusserlich(Links))
+        {
+            Rechts.Uebernehmen(Links);
+            _ = SendenAsync();
+        }
+    }
+
+    /// <summary>
+    /// Wert eines Reglers. Der Browser schickt ihn als Text; alles Unlesbare behaelt den
+    /// Wert, der schon gesetzt ist, statt den Streifen stillschweigend auf null zu ziehen.
     /// </summary>
     private static int Wert(ChangeEventArgs args, int bisher) =>
         int.TryParse(args.Value?.ToString(), out var wert) ? wert : bisher;
 
-    private void ZiehtFarbton(ChangeEventArgs args) => HueValue = Wert(args, HueValue);
-
-    private Task LaesstFarbtonLos(ChangeEventArgs args)
+    private void Setzen(ChangeEventArgs args, Action<Streifen, int> zuweisen, int bisher)
     {
-        HueValue = Wert(args, HueValue);
-        return UebernehmenAsync();
-    }
-
-    private void ZiehtHelligkeit(ChangeEventArgs args) => BrightnessValue = Wert(args, BrightnessValue);
-
-    private Task LaesstHelligkeitLos(ChangeEventArgs args)
-    {
-        BrightnessValue = Wert(args, BrightnessValue);
-        return UebernehmenAsync();
-    }
-
-    private void ZiehtDichte(ChangeEventArgs args) => DensityValue = Wert(args, DensityValue);
-
-    private Task LaesstDichteLos(ChangeEventArgs args)
-    {
-        DensityValue = Wert(args, DensityValue);
-        return UebernehmenAsync();
-    }
-
-    /// <summary>
-    /// Sends the setting to the strip - but only while the cabinet light is on. Dragging a
-    /// slider on a switched off strip changes what will be set the next time it is switched
-    /// on, and nothing else; that was the behaviour of the three OnDragEnd handlers before.
-    /// </summary>
-    private async Task UebernehmenAsync()
-    {
-        if (SchrankbeleuchtungOnOff == true)
+        var wert = Wert(args, bisher);
+        foreach (var streifen in Betroffene)
         {
-            await CalculateRGBColor();
+            zuweisen(streifen, wert);
         }
     }
 
-    private async Task SchrankbeleuchtungUmschalten(ChangeEventArgs args)
+    private Task SetzenUndSendenAsync(ChangeEventArgs args, Action<Streifen, int> zuweisen, int bisher)
     {
-        SchrankbeleuchtungOnOff = args.Value as bool? ?? false;
-        StatusMessage = SchrankbeleuchtungOnOff == true ? "Eingeschaltet" : "Ausgeschaltet";
-        // Deliberately not through UebernehmenAsync: switching off has to be published as
-        // well, and that is the one case UebernehmenAsync leaves out.
-        await CalculateRGBColor();
+        Setzen(args, zuweisen, bisher);
+        // Ein Regler an einem ausgeschalteten Streifen aendert nur, was beim naechsten
+        // Einschalten gesetzt wird -- das war schon das Verhalten der frueheren Seite.
+        return SchrankAn ? SendenAsync() : Task.CompletedTask;
+    }
+
+    private async Task SchrankUmschalten(ChangeEventArgs args)
+    {
+        SchrankAn = args.Value as bool? ?? false;
+        StatusMessage = SchrankAn ? "Schrank eingeschaltet" : "Schrank ausgeschaltet";
+        // Bewusst nicht ueber SetzenUndSendenAsync: Ausschalten muss veroeffentlicht
+        // werden, und genau das ist der Fall, den die Regel dort auslaesst.
+        await SendenAsync();
     }
 
     private async Task LampeUmschalten(ChangeEventArgs args)
     {
-        LampeOnOff = args.Value as bool? ?? false;
+        LampeAn = args.Value as bool? ?? false;
         await MqttService.PublishAsync(
             lampeTopicName,
-            LampeOnOff == true ? "on" : "off",
+            LampeAn ? "on" : "off",
             MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce,
             true);
     }
 
-    private async Task CalculateRGBColor()
-    {
-        RGBColor = ColorConverter.HslToRgb(new HSL(HueValue, 100, (byte)BrightnessValue));
-        await SendRGBColor(RGBColor, DensityValue);
-    }
+    // ---------------------------------------------------------------------------------
+    // MQTT
+    // ---------------------------------------------------------------------------------
 
-    private async Task SendRGBColor(RGB rGBColor, int densityValue)
+    private async Task SendenAsync()
     {
-        IluminationSituation situation = new IluminationSituation();
-        situation.Right.Red = rGBColor.R;
-        situation.Right.Green = rGBColor.G;
-        situation.Right.Blue = rGBColor.B;
-        situation.Right.Density = densityValue;
-        situation.Right.On = SchrankbeleuchtungOnOff!.Value;
-        situation.Left.Red = rGBColor.R;
-        situation.Left.Green = rGBColor.G;
-        situation.Left.Blue = rGBColor.B;
-        situation.Left.Density = densityValue;
-        situation.Left.On = SchrankbeleuchtungOnOff!.Value;
-        situation.LampOn = LampeOnOff!.Value;
+        var situation = new IluminationSituation { LampOn = LampeAn };
+        Fuellen(situation.Left, Links);
+        Fuellen(situation.Right, Rechts);
 
-        var jsonString = JsonSerializer.Serialize(situation);
-        await MqttService.PublishAsync(topicName, jsonString, MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
+        try
+        {
+            await MqttService.PublishAsync(topicName, JsonSerializer.Serialize(situation),
+                MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Ohne Broker bleibt die Seite bedienbar und sagt, warum nichts leuchtet.
+            StatusMessage = $"Nicht gesendet: {ex.Message}";
+        }
+
+        void Fuellen(IluminationSettings ziel, Streifen quelle)
+        {
+            var rgb = quelle.AlsRgb();
+            quelle.Gesendet = rgb;
+            ziel.Red = rgb.R;
+            ziel.Green = rgb.G;
+            ziel.Blue = rgb.B;
+            ziel.Density = DichteZuStufe(quelle.Stufe);
+            ziel.On = SchrankAn;
+        }
     }
 
     protected override void OnInitialized()
     {
         MqttService.OnMessageReceived += UpdateData;
         UpdateValues();
+        // Stimmen die beiden Streifen nicht ueberein, zeigen die Regler unter "Beide" nur
+        // den linken -- also faengt die Seite dann bei "Links" an und luegt nicht.
+        if (!Rechts.GleichtAeusserlich(Links))
+        {
+            AktuellesZiel = Ziel.Links;
+        }
     }
 
     private void UpdateData(object? sender, MqttMessageReceivedEventArgs args)
     {
         if (args.Topic == topicName || args.Topic == lampeTopicName)
+        {
             UpdateValues();
+        }
     }
 
     private void UpdateValues()
     {
-        situation = MqttService.IluminationSituation;
-        DensityValue = situation.Right.Density;
-        var hsl = ColorConverter.RgbToHsl(new RGB(situation.Right.Red, situation.Right.Green, situation.Right.Blue));
-        HueValue = hsl.H;
-        BrightnessValue = hsl.L;
-        SchrankbeleuchtungOnOff = situation.Right.On;
-        LampeOnOff = situation.LampOn;
-        RGBColor = new RGB(situation.Right.Red, situation.Right.Green, situation.Right.Blue);
+        var situation = MqttService.IluminationSituation;
+        if (situation is null)
+        {
+            return;
+        }
+
+        Lesen(Links, situation.Left);
+        Lesen(Rechts, situation.Right);
+        SchrankAn = situation.Right.On;
+        LampeAn = situation.LampOn;
         InvokeAsync(StateHasChanged);
+
+        static void Lesen(Streifen streifen, IluminationSettings quelle)
+        {
+            var rgb = new RGB(quelle.Red, quelle.Green, quelle.Blue);
+            streifen.Stufe = StufeZuDichte(quelle.Density);
+
+            // Die eigene Nachricht, retained zurueckgespiegelt: die Regler bleiben stehen,
+            // wo sie stehen, statt um den Rundungsfehler von HSV -> RGB -> HSV zu wandern.
+            if (streifen.Gesendet is { } gesendet
+                && gesendet.R == rgb.R && gesendet.G == rgb.G && gesendet.B == rgb.B)
+            {
+                return;
+            }
+
+            var hsv = ColorConverter.RgbToHsv(rgb);
+            // Schwarz hat keinen Farbton und keine Saettigung, ein Grau keinen Farbton.
+            // Beides aus der Farbe zurueckzurechnen wuerde die Regler auf Rot werfen,
+            // sobald jemand die Helligkeit auf null zieht.
+            if (hsv.V > 0)
+            {
+                streifen.Helligkeit = hsv.V;
+                streifen.Saettigung = hsv.S;
+                if (hsv.S > 0)
+                {
+                    streifen.Farbton = hsv.H;
+                }
+            }
+            else
+            {
+                streifen.Helligkeit = 0;
+            }
+
+            streifen.Gesendet = null;
+        }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Darstellung
+    // ---------------------------------------------------------------------------------
+
+    private static string Css(Streifen streifen)
+    {
+        var rgb = streifen.AlsRgb();
+        return $"rgb({rgb.R},{rgb.G},{rgb.B})";
+    }
+
+    /// <summary>
+    /// Zeichnet einen Streifen so, wie er im Schrank aussieht: Farbe und Streumuster.
+    /// Eine Rasterzelle ist eine LED.
+    /// </summary>
+    private string BalkenStil(Streifen streifen)
+    {
+        if (!SchrankAn)
+        {
+            return "background:#2a2a30";
+        }
+
+        var farbe = Css(streifen);
+        var (periode, jedeNteDunkel) = Raster(DichteZuStufe(streifen.Stufe));
+        const int LedBreite = 5;
+        var laenge = periode * LedBreite;
+
+        var muster = jedeNteDunkel
+            ? $"repeating-linear-gradient(to right, #17171c 0 {LedBreite}px, {farbe} {LedBreite}px {laenge}px)"
+            : $"repeating-linear-gradient(to right, {farbe} 0 {LedBreite}px, #17171c {LedBreite}px {laenge}px)";
+
+        var rgb = streifen.AlsRgb();
+        return $"background:{muster};box-shadow:0 0 14px rgba({rgb.R},{rgb.G},{rgb.B},0.55)";
+    }
+
+    private string FarbtonSpur()
+    {
+        var stufen = new List<string>();
+        for (var grad = 0; grad <= 360; grad += 30)
+        {
+            var rgb = ColorConverter.HsvToRgb(new HSV(grad % 360, (byte)Math.Max(Aktiv.Saettigung, 5), 100));
+            stufen.Add($"rgb({rgb.R},{rgb.G},{rgb.B})");
+        }
+        return $"--spur:linear-gradient(to right,{string.Join(',', stufen)})";
+    }
+
+    private string SaettigungSpur()
+    {
+        var voll = ColorConverter.HsvToRgb(new HSV(Aktiv.Farbton, 100, 100));
+        return $"--spur:linear-gradient(to right,#b4b4b4,rgb({voll.R},{voll.G},{voll.B}))";
+    }
+
+    private string HelligkeitSpur()
+    {
+        var voll = ColorConverter.HsvToRgb(new HSV(Aktiv.Farbton, (byte)Aktiv.Saettigung, 100));
+        return $"--spur:linear-gradient(to right,#000000,rgb({voll.R},{voll.G},{voll.B}))";
     }
 }
