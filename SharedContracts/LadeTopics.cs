@@ -69,6 +69,29 @@ namespace SharedContracts
         public const string Einstellungen = $"konfiguration/Laden/{Ort}/Regelung/Einstellungen";
 
         /// <summary>
+        /// One charging session of one box, published retained by the ChargingController. See
+        /// <see cref="SharedContracts.Ladesitzung"/>.
+        /// </summary>
+        /// <remarks>
+        /// The controller is the only author, even though the box is where a session is born:
+        /// a retained topic takes exactly one author, and the box knows neither when it was
+        /// plugged in (its clock reports "timeQ": 0) nor how the energy split. The controller
+        /// watches the session boundaries in the 5 s cycle and holds the meter readings at them.
+        /// <para>
+        /// Like <see cref="Energieaufteilung"/> it subscribes here itself: the retained payload
+        /// is how a running session survives a rollout instead of being cut in two.
+        /// </para>
+        /// </remarks>
+        public static string Ladesitzung(string wallbox) => $"daten/Laden/{Ort}/{wallbox}/Ladesitzung";
+
+        /// <summary>
+        /// The sessions of all boxes, at any location. Subscribed by the DataHub, which joins
+        /// them with <see cref="ZuordnungAlle"/> over the session id, and by the controller
+        /// itself to restore the running session.
+        /// </summary>
+        public const string LadesitzungAlle = "daten/Laden/+/+/Ladesitzung";
+
+        /// <summary>
         /// Which vehicle charges at one box, published retained by the RulesEngine. See
         /// <see cref="SharedContracts.FahrzeugZuordnung"/>.
         /// </summary>
@@ -135,6 +158,13 @@ namespace SharedContracts
         /// </summary>
         public static (string Ort, string Wallbox)? ZerlegeZuordnungTopic(string topic)
             => Zerlege(topic, "daten", "Zuordnung");
+
+        /// <summary>
+        /// Splits a charging session topic into its location and device level, e.g.
+        /// "daten/Laden/M3/Garage/Ladesitzung" into ("M3", "Garage"). Null for every other topic.
+        /// </summary>
+        public static (string Ort, string Wallbox)? ZerlegeLadesitzungTopic(string topic)
+            => Zerlege(topic, "daten", "Ladesitzung");
 
         /// <summary>
         /// Splits a manual correction topic into its location and device level, e.g.

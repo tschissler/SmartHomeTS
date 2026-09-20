@@ -408,6 +408,10 @@ namespace Influx3Connector
             {
                 pointsBatch.Add(point);
             }
+            // Counted like every other table, so the five minute health line shows a table
+            // written through this generic path as well — otherwise ladesitzungen would be the
+            // one table nobody can see flowing.
+            pointsEnqueuedByTable.AddOrUpdate(measurement, 1, (_, c) => c + 1);
         }
 
         private async Task FlushBatchAsync()
