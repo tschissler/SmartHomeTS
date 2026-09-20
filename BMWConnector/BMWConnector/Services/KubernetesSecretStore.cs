@@ -11,16 +11,20 @@ namespace BMWConnector.Services;
 /// Uses the in-cluster ServiceAccount when running in Kubernetes,
 /// or ~/.kube/config when running locally.
 /// </summary>
-public class KubernetesSecretStore
+public class KubernetesSecretStore : ISecretStore
 {
     private const string Namespace = "smarthome";
     private const string CredentialsSecretName = "bmwconnector-credentials";
 
     private readonly IKubernetes _k8s;
 
+    /// <inheritdoc />
+    public bool RunsInCluster { get; }
+
     public KubernetesSecretStore()
     {
-        var config = KubernetesClientConfiguration.IsInCluster()
+        RunsInCluster = KubernetesClientConfiguration.IsInCluster();
+        var config = RunsInCluster
             ? KubernetesClientConfiguration.InClusterConfig()
             : KubernetesClientConfiguration.BuildConfigFromConfigFile();
         _k8s = new Kubernetes(config);
@@ -110,6 +114,12 @@ public class KubernetesSecretStore
     /// <summary>
     /// Creates or replaces the vehicle's token Secret with the given token values.
     /// </summary>
+    /// <remarks>
+    /// This write-back is intentional and must stay: the service refreshes the tokens every
+    /// 50 minutes, and without persisting them no refresh would survive a pod restart.
+    /// The write-back that had to be restricted (see SETUP.md, "Credential precedence") is the
+    /// one for CLIENT_ID and GCID in <see cref="SaveCredentialAsync"/>, not this one.
+    /// </remarks>
     public async Task SaveTokensAsync(
         string vehicleName, string idToken, string accessToken, string refreshToken,
         CancellationToken ct = default)

@@ -1,5 +1,8 @@
+using System.Text.Json;
 using BMWConnector.Models;
 using BMWConnector.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 KubernetesSecretStore store;
 try
@@ -18,10 +21,14 @@ catch (Exception ex)
 }
 
 // Parse flags:
-//   --bootstrap BMW   bootstrap (authenticate) a single vehicle, then start its service
-//   --vehicle BMW     run only a single vehicle's service (skip the other)
+//   --bootstrap BMW      bootstrap (authenticate) a single vehicle, then start its service
+//   --vehicle BMW        run only a single vehicle's service (skip the other)
+//   --save-credentials   allow a well-formed CLIENT_ID/GCID from the environment to be written
+//                        into the credentials Secret. Off by default and ignored in the cluster —
+//                        an unintended write-back is what destroyed the Secret on 2026-09-20.
 string? bootstrapVehicle = null;
 string? vehicleFilter    = null;
+bool saveCredentials     = args.Contains("--save-credentials");
 
 for (int i = 0; i < args.Length - 1; i++)
 {
@@ -43,7 +50,7 @@ try
 {
     foreach (var name in vehicleNames)
     {
-        var config = await VehicleConfig.CreateAsync(name, store);
+        var config = await VehicleConfig.CreateAsync(name, store, saveCredentials, isInteractive);
 
         if (bootstrapVehicle == name)
         {
@@ -82,6 +89,12 @@ try
         configs.Add(config);
     }
 }
+catch (MissingCredentialException ex)
+{
+    Console.Error.WriteLine(ex.Message);
+    Environment.Exit(1);
+    return;
+}
 catch (Exception ex)
 {
     Console.Error.WriteLine($"Startup failed: {ex.Message}");
@@ -93,10 +106,30 @@ catch (Exception ex)
 
 var builder = WebApplication.CreateBuilder(args);
 
-var healthRegistry = new HealthRegistry();
+// The BMW connection is rebuilt on every 50-minute token refresh. Readiness must ride through
+// those seconds, so a vehicle stays "connected" for this long after its last live connection.
+var staleAfter = TimeSpan.FromMinutes(
+    double.TryParse(Environment.GetEnvironmentVariable("BMW_VEHICLE_STALE_MINUTES"), out double m) ? m : 5);
+
+// BMW's refresh token expires two weeks after its last use. Half of that leaves a week to act
+// on a stored token that has stopped being refreshed.
+var tokenStaleAfter = TimeSpan.FromDays(
+    double.TryParse(Environment.GetEnvironmentVariable("BMW_TOKEN_REFRESH_STALE_DAYS"), out double d) ? d : 7);
+
+var healthRegistry = new HealthRegistry(loggerFactory.CreateLogger<HealthRegistry>(), staleAfter);
+var tokenRefreshMonitor = new TokenRefreshMonitor(
+    configs, store, loggerFactory.CreateLogger<TokenRefreshMonitor>(), tokenStaleAfter);
+
 builder.Services.AddSingleton(healthRegistry);
+builder.Services.AddSingleton<IHostedService>(tokenRefreshMonitor);
+
 builder.Services.AddHealthChecks()
-    .AddCheck("bmw-broker", () => healthRegistry.GetResult());
+    // Liveness answers one question only: is this process still serving? A dead BMW connection
+    // must never restart the pod — a restart cannot renew an expired refresh token, it would
+    // only bury a 35-day outage under a CrashLoop.
+    .AddCheck("process-liveness", () => HealthCheckResult.Healthy("Process is serving."), tags: ["live"])
+    .AddCheck("bmw-broker", healthRegistry.GetResult, tags: ["ready"])
+    .AddCheck("stored-token-freshness", tokenRefreshMonitor.GetResult, tags: ["tokens"]);
 
 foreach (var config in configs)
 {
@@ -108,6 +141,45 @@ foreach (var config in configs)
 }
 
 var app = builder.Build();
-app.MapHealthChecks("/healthz/live");
-app.MapHealthChecks("/healthz/ready");
+
+app.MapHealthChecks("/healthz/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live"),
+    ResponseWriter = WriteReportAsync,
+});
+
+app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    // Degraded means one of two vehicles is gone. Left at its default it would answer 200 and
+    // the probe would be satisfied — which is exactly how the Aug 2026 outage stayed invisible.
+    ResultStatusCodes = ProbeStatusCodes.Readiness(),
+    ResponseWriter = WriteReportAsync,
+});
+
+// Informational only — never wired to a Kubernetes probe. A stale stored token still works.
+app.MapHealthChecks("/healthz/tokens", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("tokens"),
+    ResultStatusCodes = ProbeStatusCodes.Informational(),
+    ResponseWriter = WriteReportAsync,
+});
+
 app.Run();
+
+// Names which vehicle is missing instead of just "Degraded" — the status alone sent the
+// last diagnosis down the wrong path.
+static Task WriteReportAsync(HttpContext context, HealthReport report)
+{
+    context.Response.ContentType = "application/json";
+    return context.Response.WriteAsync(JsonSerializer.Serialize(new
+    {
+        status = report.Status.ToString(),
+        checks = report.Entries.Select(e => new
+        {
+            name        = e.Key,
+            status      = e.Value.Status.ToString(),
+            description = e.Value.Description,
+        }),
+    }));
+}
