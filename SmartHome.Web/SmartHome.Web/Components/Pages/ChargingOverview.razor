@@ -33,11 +33,16 @@
         <div class="BatteryLevel" style="width: @_chargingSituation.BatteryLevel%"></div>
     </div>
 
-    <div class="flussTitel">Quellen</div>
-    @Fluss(Quellen)
+    @* Die beiden Balken sind ein Vergleichsinstrument: gleich breit, gleiche Skala,
+       unmittelbar übereinander. Zwischen sie gehört nichts — keine Überschrift, keine
+       Legende —, sonst liest man sie nicht mehr als Paar. Wie die Erzeugung zum Verbrauch
+       steht, liest man aus dem Vergleich ab, nicht aus zwei getrennten Blöcken. *@
+    <div class="flussPaar">
+        @Balken(Quellen)
+        @Balken(Verbraeuche)
+    </div>
 
-    <div class="flussTitel">Verbräuche</div>
-    @Fluss(Verbraeuche)
+    @Legende(AlleAnteile)
 </div>
 
 <h4>Lade-Einstellungen</h4>
@@ -121,11 +126,10 @@
     private record Anteil(string Name, int Watt, decimal Prozent, string Farbe);
 
     /// <summary>
-    /// A bar and the legend belonging to it. Segments without width are left out of the bar —
-    /// with a gap between the segments an invisible one would still take up space — while the
-    /// legend keeps every entry, because "Netzbezug: 0 W" is a statement worth reading.
+    /// One bar. Segments without width are left out — with a gap between the segments an
+    /// invisible one would still take up space.
     /// </summary>
-    private RenderFragment Fluss(IReadOnlyList<Anteil> anteile) => @<text>
+    private RenderFragment Balken(IReadOnlyList<Anteil> anteile) => @<text>
         <div class="AvailabilityComponent">
             @foreach (var anteil in anteile.Where(a => a.Prozent > 0))
             {
@@ -133,6 +137,16 @@
                      style="width: @(anteil.Prozent)%; background-color: @anteil.Farbe"></div>
             }
         </div>
+    </text>;
+
+    /// <summary>
+    /// The one legend for both bars. It keeps every entry, including the ones at zero: the
+    /// grid and the battery cross zero several times a minute, and a legend that loses and
+    /// regains entries in the process changes its width and its line break while one is
+    /// reading it. "Netzeinspeisung: 0 W" is a statement worth reading anyway. The bars filter
+    /// at <c>Prozent &gt; 0</c> for the opposite reason — an invisible segment there costs a gap.
+    /// </summary>
+    private RenderFragment Legende(IReadOnlyList<Anteil> anteile) => @<text>
         <div class="LegendContainer">
             @foreach (var anteil in anteile)
             {
@@ -175,6 +189,13 @@
         .. LadeTopics.Wallboxen.Select(wallbox => new Anteil(
             wallbox, Ladeleistung(wallbox), WallboxAnteil(wallbox), WallboxFarbe(wallbox))),
     ];
+
+    /// <summary>
+    /// Both bars in one legend, sources first, in the order the bars above name them. Two
+    /// legends would have to sit between the bars or below each other, and either way the two
+    /// bars stop being readable as a pair.
+    /// </summary>
+    private IReadOnlyList<Anteil> AlleAnteile => [.. Quellen, .. Verbraeuche];
 
     private static int Positiv(int watt) => Math.Max(0, watt);
 
