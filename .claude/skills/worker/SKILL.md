@@ -96,3 +96,26 @@ Darin:
 
 Melde auch, was du **nicht** prüfen konntest. Eine offen genannte Lücke ist brauchbar, eine
 verschwiegene macht den ganzen Bericht wertlos.
+
+## Die Retro
+
+Zum Schluss, **getrennt vom Bericht**, ein kurzer Blick auf die Zusammenarbeit — nicht auf
+die Aufgabe. Der Widerspruchsteil oben sagt, wo der Auftrag *inhaltlich* danebenlag; die
+Retro sagt, wo das *Verfahren* geklemmt hat.
+
+Drei Fragen, ein paar Sätze:
+
+- **Was hat dich aufgehalten, das mit der Aufgabe nichts zu tun hatte?** Ein Werkzeug, das
+  du erst suchen musstest, eine Verweigerung, ein Umweg, den du bauen musstest, eine
+  Annahme, die sich erst nach einer Stunde als falsch herausstellte.
+- **Was im Auftrag war überflüssig, und was hättest du von Anfang an wissen wollen?** Beides
+  ist wertvoll: ein Auftrag, der zu viel sagt, kostet genauso wie einer, der zu wenig sagt.
+- **Trifft das die nächste Session genauso?** Nur Wiederkehrendes rechtfertigt eine Änderung
+  an `/worker` oder an einem Dokument unter `Docs/`. Einmaliges nennst du trotzdem, aber
+  sag dazu, dass es einmalig war.
+
+**Kurz halten.** Eine Retro, die alles aufzählt, wird nicht gelesen. Zwei Punkte, die
+wirklich wiederkehren, ändern das Verfahren — und genau dafür ist sie da.
+
+Wenn nichts geklemmt hat, ist „nichts geklemmt" eine vollständige Retro. Erfinde nichts,
+um das Feld zu füllen.

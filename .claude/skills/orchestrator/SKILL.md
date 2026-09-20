@@ -43,6 +43,7 @@ Thomas sagt auf Zuruf, was er angepasst haben will. Daraufhin:
    im Code gegenlesen. Übernimm nichts aus einem Bericht ungeprüft.
 6. **Leg den Merge vor**, mit den Rollout-Folgen. **Merge nie ohne ausdrückliches Ja.**
 7. **Nach dem Rollout: prüf am laufenden System**, ob die Änderung tatsächlich wirkt.
+8. **Hol die Retro ab** und zieh die Folgerung — siehe unten.
 
 ## Sessions benennen
 
@@ -70,6 +71,29 @@ statt ihn zu raten: Er ist nicht unbedingt der, den Thomas beim Start getippt ha
   Gedächtnis zu berichten.
 - **Verlang in jedem Auftrag ausdrücklich Widerspruch.** Bitte um eine Liste der Stellen,
   an denen der Auftrag nicht gestimmt hat. Das ist der wertvollste Teil jedes Berichts.
+
+## Die Retro verwerten
+
+`/worker` verlangt von jeder Session zum Schluss eine kurze Retro: was sie aufgehalten hat,
+was im Auftrag überflüssig war, was gefehlt hat. **Frag sie nach, wenn sie fehlt** — sie ist
+leicht zu vergessen und der einzige Rückkanal, den das Verfahren über sich selbst hat.
+
+Was du damit tust, hängt an einer Frage: **Trifft das die nächste Session auch?**
+
+| Art des Befundes | Wohin |
+|---|---|
+| Trifft jede Session, unabhängig vom Vorhaben | `/worker` bzw. `/orchestrator` |
+| Trifft jeden, der dieses Fachgebiet anfasst | das Dokument unter `Docs/` |
+| Ein Fehler oder eine Lücke im Werkzeug selbst | `SendFeedback` |
+| Einmalig, an dieser Aufgabe hängend | nichts tun |
+
+**Das Verfahren ändert sich in kleinen Schritten, nicht in großen.** Zwei Sessions, die
+dasselbe gesagt haben, sind ein besserer Grund für eine Skill-Änderung als eine, die es
+ausführlich gesagt hat. Häng nicht jede Einzelbeobachtung in den Skill — er wird bei jeder
+Session gelesen, und was ihn aufbläht, macht ihn wirkungsloser.
+
+Dieselbe Regel wie bei der Wissens-Organisation: **der Kernsatz in den Skill, das Detail
+nach `Docs/`.**
 
 ## Kein stehendes Register
 
