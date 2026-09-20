@@ -101,7 +101,7 @@ Ein Fahrzeug ist ortslos: es bewegt sich und lädt manchmal auswärts. Kategorie
 - **Auch Befehle tragen einen `Zeitpunkt`, und der Empfänger muss ihn auswerten.** Ein
   retained Kommando wird beim Verbinden sofort zugestellt, unabhängig von seinem Alter.
   Wer stattdessen die Empfangszeit als Alter nimmt, hält ein beliebig altes Kommando für
-  frisch. Im Bestand hebelt genau das eine Sicherheitsfunktion aus — siehe
+  frisch. Im Bestand setzt genau das die Notfallfreigabe der Wallbox außer Kraft — siehe
   `Backlog-Laden.md`, Punkt 16.
 
 ## Migrationsstand

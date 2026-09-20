@@ -211,9 +211,12 @@ Die App wird nicht mehr aktiv entwickelt; gepflegt wird die Web-PWA.
       `SitzungsId`, `SitzungsBeginn`, `EnergieSitzungWh`, `EnergieGesamtWh`,
       `Ladeleistung`, Phasenströme I1/I2/I3, angebotener Strom, `Zeitpunkt`
 - [ ] Laufende Sitzung aus **Report 100** lesen (liefert `SessionID` und Startzeit)
-- [ ] Neue Topics `daten/Laden/M3/{Garage,Stellplatz}/{Status,Ladesitzung}`, retained
-- [ ] Sitzungsende als Feld `Zustand: laufend | beendet` im retained `Ladesitzung`-Payload
-      statt als QoS-0-Ereignis auf `…_ChargingSessionEnded`
+- [ ] Neues Topic `daten/Laden/M3/{Garage,Stellplatz}/Status`, retained — **nur `Status`**,
+      nicht `Ladesitzung` (siehe Entscheidung unten)
+- [ ] `…_ChargingSessionEnded` ersatzlos einstellen. Das Topic hat heute **keinen
+      Konsumenten** — weder ChargingController noch DataHub noch Web lesen es, der
+      Sitzungs-Service der Web-App ist auskommentiert. Zwischen Punkt 7 und 13 entsteht
+      dadurch keine Lücke
 - [ ] Wallboxen heißen `Garage` und `Stellplatz` — der Hersteller verschwindet aus den
       Bezeichnern
 
@@ -222,11 +225,19 @@ Die App wird nicht mehr aktiv entwickelt; gepflegt wird die Web-PWA.
 `SitzungsBeginn` sollte deshalb primär aus der selbst beobachteten Steckerflanke
 stammen und nur ersatzweise aus der Box-Zeit.
 
-**Zu klären vor Umsetzung.** Punkt 7 gibt `…/Ladesitzung` dem KebaConnector, Punkt 13
-lässt den ChargingController dasselbe retained Topic publizieren. Zwei Publisher auf einem
-retained Topic überschreiben sich gegenseitig — es braucht genau einen. Naheliegend ist der
-ChargingController, weil nur er die Zähler aus Punkt 12 führt; der KebaConnector
-publiziert dann hier nur `Status`.
+**Entschieden: `…/Ladesitzung` gehört dem ChargingController** (Punkt 13), der
+KebaConnector publiziert hier ausschließlich `Status`. Der Widerspruch war eine Altlast aus
+einem früheren Entwurf; `Ladeprotokoll.md` und die Topic-Tabelle in
+`Fahrzeug-Wallbox-Zuordnung.md` nennen längst den ChargingController als Autor.
+
+Gründe: Nur er führt die Zähler aus Punkt 12, die in den Payload gehören. Nur er sieht im
+5-Sekunden-Takt gleichzeitig Boxzustand und Leistungsmesswerte. Und weil die Box-Uhr laut
+`TimeQ: 0` nicht verlässlich ist, stammt der `SitzungsBeginn` ohnehin aus der selbst
+beobachteten Steckerflanke — die beobachtet der Controller.
+
+**Folge für diesen Punkt:** `Status` muss `SitzungsId` und `SitzungsBeginn` mitführen,
+damit der Controller die Sitzungsgrenzen erkennen kann. Beides steht bereits oben im
+Umfang.
 
 **Abhängig von** 5.
 
@@ -290,15 +301,19 @@ kommen an, werden aber nirgends angezeigt.
 - [ ] `RulesEngine/Rules/VehicleAssignmentRule.cs` als reine Funktion mit Unit-Tests
 - [ ] Evidenz: manueller Override > positive Fahrzeugmeldung > Historie > unbekannt
 - [ ] Klebend je Sitzung, nur Aufwertung, Override endet mit dem Stecker-Ziehen
-- [ ] Zuordnung in den `Ladesitzung`-Payload, nicht in ein eigenes Topic
+- [ ] Zuordnung auf ein **eigenes** Topic `daten/Laden/M3/<Box>/Zuordnung`, retained, mit
+      `SitzungsId`, `Fahrzeug`, `Vertrauen`, `Zeitpunkt`
 - [ ] Web: Vertrauensgrad sichtbar (grau + Fragezeichen bei Vermutung), Korrektur per Klick
 - [ ] Zustand nach Neustart aus den retained Topics wiederherstellen
 
-**Zu klären vor Umsetzung.** Der vierte Unterpunkt („Zuordnung in den
-`Ladesitzung`-Payload, nicht in ein eigenes Topic") widerspricht Punkt 13, wo die
-RulesEngine `daten/Laden/M3/<Box>/Zuordnung` als eigenes Topic publiziert und der DataHub
-beide über die `SitzungsId` zusammenführt. Für das eigene Topic spricht, dass sonst zwei
-Dienste in denselben Payload schreiben müssten.
+**Entschieden: eigenes Topic.** Auch das war eine Altlast — der Satz stammt aus dem
+Entwurf, bevor feststand, dass der Sitzungsdatensatz drei Beitragende hat (Box, Controller,
+RulesEngine). Ein retained Topic verträgt genau einen Autor, also publiziert jeder Dienst
+nur das Seine, und der DataHub führt über die `SitzungsId` zusammen und **prüft sie**.
+
+Das retained `Zuordnung`-Topic ist zugleich die Quelle der Historie-Vermutung: Es bleibt
+nach dem Sitzungsende stehen, und bei der nächsten Sitzung an derselben Box übernimmt die
+Regel das dort genannte Fahrzeug als `vermutet`. Siehe `Fahrzeug-Wallbox-Zuordnung.md`.
 
 **Abhängig von** 6, 10.
 
@@ -351,7 +366,8 @@ plausibel zur Boxenergie passt.
 
 **Umfang**
 - [ ] ChargingController publiziert `daten/Laden/M3/<Box>/Ladesitzung` mit `SitzungsId`,
-      Beginn, Ende, `Zustand: laufend | beendet`, Zählerständen und Ladezeit
+      Beginn, Ende, `Zustand: laufend | beendet`, Zählerständen und Ladezeit — er ist der
+      **einzige** Autor dieses Topics (der KebaConnector publiziert nur `Status`, Punkt 7)
 - [ ] RulesEngine publiziert `daten/Laden/M3/<Box>/Zuordnung` mit derselben `SitzungsId`
 - [ ] DataHub führt beide zusammen und schreibt die Tabelle `ladesitzungen` — **nur bei
       übereinstimmender `SitzungsId`**, sonst nichts schreiben und protokollieren
@@ -417,7 +433,22 @@ Damit greift die eingebaute Notfallfreigabe **nie**: `StaleReleaseAfter` soll di
 kann. Nach einem Connector-Neustart läuft der Alterszähler wieder bei null los, und die
 Box bleibt dauerhaft auf einem beliebig alten Sollwert stehen.
 
-Das ist sicherheitsrelevant und unabhängig vom restlichen Vorhaben.
+**Wie schwer wiegt das?** Kein Gefahrenrisiko, sondern ein Verfügbarkeitsrisiko: Die
+Notfallfreigabe existiert, damit ohne Regelung weitergeladen werden kann. Fällt sie aus und
+war das letzte Kommando `0 mA`, bleibt die Wallbox **dauerhaft abgeschaltet** — das Auto
+lädt nicht, und niemand sieht warum.
+
+Es braucht allerdings **beides gleichzeitig**: Der ChargingController muss tot sein *und*
+der KebaConnector danach neu starten. Stirbt nur der Controller, greift die Freigabe
+korrekt, weil der Zeitstempel beim letzten echten Empfang stehen bleibt. Der KebaConnector
+startet aber bei jedem Deployment neu, die Kombination ist also durchaus erreichbar.
+
+Dafür ist die Sofortmaßnahme klein und ohne Contract-Änderung — ein gutes
+Aufwand-Nutzen-Verhältnis.
+
+**Welle A.** Unabhängig von allem anderen; kollidiert nur mit Punkt 7 im KebaConnector, und
+der liegt in Welle C. Von den kleinen Punkten der ersten Welle hat dieser den größten
+Nutzen pro Zeile.
 
 **Umfang**
 - [ ] Sofortmaßnahme ohne Contract-Änderung: MQTTnet liefert bei einer Retain-Zustellung
@@ -430,8 +461,7 @@ Das ist sicherheitsrelevant und unabhängig vom restlichen Vorhaben.
 - [ ] Prüfen, ob dieselbe Verwechslung anderswo steckt — die `RulesEngine` wertet
       `MaxStatusAge` ebenfalls gegen die Empfangszeit aus
 
-**Abhängig von** nichts. Gehört fachlich zu 7; läuft 7 bereits, als eigener Schritt
-danach. Kollidiert mit 7 im `KebaConnector`.
+**Abhängig von** nichts.
 
 ---
 
@@ -454,8 +484,12 @@ ohne diesen Punkt gar keinen Ort, an den geschrieben werden könnte.
 - [ ] Position mitschreiben (Grundlage für Punkt 15)
 - [ ] Wiederholte identische Payloads nicht als neue Messung schreiben
 
-**Abhängig von** 8 (damit es nicht zweimal gegen zwei Topic-Schemata gebaut wird).
-Kollidiert mit 8 und 13 im DataHub.
+**Abhängig von** 8 — vorher gäbe es das Topic `daten/Fahrzeug/+/Status` noch nicht, und
+es müsste zweimal gegen zwei Schemata gebaut werden.
+
+**Welle E, seriell nach 13.** Kollidiert mit 8 und 13 im DataHub, deshalb nicht parallel zu
+diesen. Punkt 14 hängt nicht davon ab und kann davor oder danach laufen; Punkt 15 dagegen
+setzt 17 zwingend voraus.
 
 ---
 
