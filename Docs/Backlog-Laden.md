@@ -23,7 +23,8 @@ Präfix setzt.
 |---|---|---|---|
 | 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | **erledigt und gemergt** (`a12202b`), kein Rollout |
 | 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt und gemergt** (`c46f54f`), fünf Rollouts. **Offen: Log-Prüfung nach dem Rollout** — ohne `Received retained message` im Connector-Log ist der Fix wirkungslos |
-| 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | in Arbeit — Health-Semantik des BMWConnectors und Schutz des Produktiv-Secrets vor Umgebungsvariablen. Gebündelt, weil beide denselben Secret-Store anfassen |
+| 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **fertig**, 6 getrennte Commits, 52 Tests, Merge offen. Nur BMWConnector betroffen — ein Rollout |
+| 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | in Arbeit — harter Schnitt, KebaConnector + ChargingController + DataHub. Offene Frage an die Session: Verhalten zwischen den beiden Rollouts |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
