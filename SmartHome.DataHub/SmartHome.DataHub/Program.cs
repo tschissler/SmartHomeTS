@@ -744,7 +744,10 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Location = location,
                     Device = "Waermepumpe",
                     Measurement = meassurement,
-                    Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    // Not Int16.Parse: status_values is Int64, and a narrowing parse throws an
+                    // OverflowException past 32767 that the try/catch around this swallows — the
+                    // value would then simply stop arriving, without a trace.
+                    Value_Status = Decimal.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
                 },
                 DateTimeOffset.UtcNow);
             break;
@@ -791,7 +794,10 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Location = location,
                     Device = "Waermepumpe",
                     Measurement = meassurement,
-                    Value_Counter = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    // Same again for counter_values, and this is the one that will actually get
+                    // there: Betriebsstunden_Waermeerzeuger stood at 2579 on 2026-09-20 and only
+                    // ever grows.
+                    Value_Counter = Int32.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
                 },
                 DateTimeOffset.UtcNow);
             break;
