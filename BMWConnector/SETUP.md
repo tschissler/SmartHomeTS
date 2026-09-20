@@ -71,7 +71,7 @@ kubectl -n smarthome create secret generic bmwconnector-credentials \
 Run the connector from your local machine. If tokens are missing it automatically starts the auth flow:
 
 ```fish
-cd BMWConnector
+cd BMWConnector/BMWConnector
 dotnet run
 ```
 
@@ -139,12 +139,13 @@ Set `BMW_DEBUG_RAW=true` to forward the unprocessed BMW streaming payloads to `d
 ```fish
 # Locally
 BMW_DEBUG_RAW=true dotnet run
-
-# Kubernetes (temporary — remove after debugging)
-kubectl -n smarthome set env deployment/bmwconnector BMW_DEBUG_RAW=true
-# Disable again:
-kubectl -n smarthome set env deployment/bmwconnector BMW_DEBUG_RAW-
 ```
+
+> **Do not set this via `kubectl set env` on the cluster.** Like `rollout restart`, it patches
+> the Deployment template, and the ArgoCD application runs with `selfHeal: true` — ArgoCD
+> reverts the change (and may revert it mid-debugging). To enable raw debugging in the cluster,
+> change the value in the service's `values.yaml` in the deployments repo and let ArgoCD sync it,
+> or just run the connector locally with `BMW_DEBUG_RAW=true` as shown above.
 
 Subscribe while the car is charging:
 
@@ -177,7 +178,7 @@ vehicle.powertrain.electric.battery.stateOfCharge.target
 vehicle.vehicle.travelledDistance
 ```
 
-> **Note:** `header` (Mini) = real-time HV battery SoC (%) — not kWh. `maxEnergy` (BMW) = battery capacity (kWh). They are different metrics, register both.
+> **Note:** `header` (BMW + Mini) = real-time HV battery SoC (%) — not kWh. `maxEnergy` (BMW only) = battery capacity (kWh). They are different metrics, register both.
 > Charging target: `stateOfCharge.target` (BMW) and `stateOfCharge.targetMin` (Mini) — register the one for your vehicle.
 
 To add a new field: register it in the portal, then add a `case` in `VehicleState.Apply()` and a property to `ToJson()`.
@@ -203,14 +204,22 @@ When auth starts failing (refresh_token expired):
 
 1. Run bootstrap again — reads credentials from k8s Secret automatically:
    ```fish
+   cd BMWConnector/BMWConnector
    dotnet run -- --bootstrap BMW
    dotnet run -- --bootstrap Mini
    ```
 2. Bootstrap updates the Kubernetes token Secrets immediately
-3. Restart the pod to reload:
+3. Recreate the pod so it reloads the Secret:
    ```bash
-   kubectl -n smarthome rollout restart deployment/bmwconnector
+   kubectl -n smarthome get pods -l app=bmwconnector
+   kubectl -n smarthome delete pod <pod-name>
    ```
+
+> **Do not use `kubectl rollout restart`.** It patches the Deployment template
+> (`kubectl.kubernetes.io/restartedAt`), and the ArgoCD application runs with
+> `selfHeal: true` — ArgoCD sees the patched template as drift and reverts it.
+> Deleting the pod changes nothing ArgoCD manages: the ReplicaSet simply creates
+> a replacement, which reads the updated Secret on start.
 
 ---
 

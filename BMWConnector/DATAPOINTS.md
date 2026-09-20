@@ -6,7 +6,7 @@ This document maps BMW CarData MQTT fields to the `VehicleState` properties publ
 
 | VehicleState property | BMW field | Description | Type |
 |---|---|---|---|
-| `battery` | `vehicle.drivetrain.batteryManagement.header` | **Mini only** — real-time HV battery SoC (%) | Number |
+| `battery` | `vehicle.drivetrain.batteryManagement.header` | Real-time HV battery SoC (%) — **delivered by both BMW and Mini** | Number |
 | `maxEnergy` | `vehicle.drivetrain.batteryManagement.maxEnergy` | **BMW only** — battery capacity (kWh) | Number |
 | `chargingStatus` | `vehicle.drivetrain.electricEngine.charging.status` | NOCHARGING / CHARGINGACTIVE / CHARGINGPAUSED / CHARGINGENDED / CHARGINGERROR | String |
 | `hvChargingStatus` | `vehicle.drivetrain.electricEngine.charging.hvStatus` | HV charging status | String |
@@ -51,8 +51,8 @@ This document maps BMW CarData MQTT fields to the `VehicleState` properties publ
 
 ## Notes
 
-- **Real-time SoC**: Available for Mini via `vehicle.drivetrain.batteryManagement.header` (SoC %). Not available for BMW via streaming API.
-- **`header` vs `maxEnergy`**: These are different metrics. `header` (Mini) = real-time SoC %. `maxEnergy` (BMW) = battery capacity in kWh. Do not conflate them.
+- **Real-time SoC**: Available for **both BMW and Mini** via `vehicle.drivetrain.batteryManagement.header` (SoC %). Verified on the BMW on 2026-09-20 (83 % measured). An earlier note here claimed this field was Mini-only — that was wrong.
+- **`header` vs `maxEnergy`**: These are different metrics. `header` (BMW + Mini) = real-time SoC %. `maxEnergy` (BMW only) = battery capacity in kWh. Do not conflate them.
 - **Charging target**: Only `stateOfCharge.target` is mapped. Mini doesn't expose this field — defaults to 100%.
 - **Charging power unit**: `vehicle.powertrain.electric.battery.charging.power` is in **Watts**, not kW.
 - **ChargingEndTime**: Computed from `timeRemaining` if sent. BMW streaming API does not send this field — `chargingEndTime` will not appear in the payload. Set to null when not charging.
