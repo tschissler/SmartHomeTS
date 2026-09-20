@@ -25,7 +25,7 @@ Präfix setzt.
 | 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`c46f54f`) |
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`1c8ff95`). Im neuen Pod: `Loaded tokens … (issued …)`, `Stored token refreshed 0.9 h ago, well inside the 7 day limit`, sofortiger Refresh mit erfolgreicher Persistierung, `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True` |
 | 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | **erledigt und gemergt** (`ef244fe`). Ab jetzt läuft `dotnet test` vor jedem ChargingController-Build; ein roter Test erzeugt kein Image und damit kein Deployment |
-| 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **fertig**, Commit `9e224f4`, auf `48bcb11` rebased, Merge offen. 23 Dateien, sechs Dienste bauen grün, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün **ohne einen geänderten Erwartungswert** — der Schnitt ändert Topics und Payloads, nicht die Entscheidungslogik. Offen: Entscheidung zu den Grafana-Dashboards (siehe unten) |
+| 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **erledigt und gemergt** (`04cc432`). 26 Dateien, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün ohne einen geänderten Erwartungswert. Löst **sechs** Rollouts aus, nicht vier: Enphase und Shelly bauen wegen `SharedContracts/**` mit — der transitive Pfadfilter aus Punkt 0 wirkt wie vorgesehen. Rollout-Handgriffe siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
@@ -103,6 +103,25 @@ verschiedene Topics. Reihenfolge und Handgriffe:
    `Zeitpunkt` im Payload gezogen werden. Das löst zugleich das Prüfkriterium aus Punkt 16
    ab — `Received retained message` taugt nicht mehr, weil das Retain-Flag für die
    Altersbestimmung keine Rolle mehr spielt.
+
+**Achtung beim Dashboard-Import: Die JSONs im Repo sind womöglich nicht das, was in
+Grafana läuft.** Grafana speichert Dashboards in seiner PVC; im Repo liegen manuelle
+Exporte, deren letzter Commit und deren Dateidaten von April bis Juli 2026 stammen. Wer
+die korrigierten Dateien importiert, überschreibt damit möglicherweise Monate an
+UI-Änderungen mit einem Aprilstand. **Empfehlung für diesen Rollout: die Filterstellen
+stattdessen im Grafana-UI von Hand nachtragen** — drei Dashboards, `device = 'X'` wird zu
+`device IN ('X','Y')`. Der Commit der Session bleibt trotzdem wertvoll: Er hält fest,
+welche Stellen es sind.
+
+**Generator nachgezogen und verifiziert (2026-09-20).** `grafana-dashboards/gen_sankey.py`
+ist gitignored und lag deshalb nicht im Worktree der Session; der Patch ist in der
+Hauptarbeitskopie angewendet. Neu sind `WALLBOX_ALTNAMEN` und `device_filter()`, die den
+IN-Filter an einer Stelle erzeugen statt an vier Aufrufstellen. Zusätzlich war der
+Ausgabepfad tot: Das Skript schrieb nach `/home/thomas/grafana-dashboards/`, ein Ordner,
+den es nicht mehr gibt — es lief also in einen `FileNotFoundError`, statt die Datei zu
+erzeugen, die es erzeugen soll. Der Pfad zeigt jetzt neben das Skript. Gegenprobe: Der
+gepatchte Generator erzeugt das gemergte `energy-sankey-dashboard.json` byteidentisch
+(`git status` nach dem Lauf sauber).
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
