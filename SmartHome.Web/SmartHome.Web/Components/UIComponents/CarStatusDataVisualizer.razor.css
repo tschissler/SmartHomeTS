@@ -1,32 +1,106 @@
-﻿.carBox {
-    align-content: center;
+/* Same visual language as WallboxStatusVisualizer: the two tile kinds sit one above the
+   other on the charging page and must read as one family. */
+.carBox {
     display: flex;
-}
-
-.carImageContainer {
-    width: 50%;
-}
-
-.carImage {
-    width: 90%;
-    object-fit: contain
-}
-
-.carControls {
-    width: 50%;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid #D6D6D6;
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
     text-align: left;
 }
 
-.carConnectedIcon {
-    height: 60px;
-    width: 60px;
-    margin-bottom: 10px;
+.carHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid #D6D6D6;
+    padding-bottom: 6px;
+}
+
+.carName {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.carAlter {
+    white-space: nowrap;
+    font-size: 0.85rem;
+    cursor: help;
+}
+
+.carAlter-frisch {
+    color: #2f7d32;
+}
+
+/* Not an error colour: an old value is not a fault, it is an old value. */
+.carAlter-veraltet {
+    color: #b06f00;
+    font-weight: 600;
+}
+
+.carAlter-unbekannt {
+    color: #6b6b6b;
+}
+
+/* Greyed out, never hidden: hidden reads as "does not exist", grey reads as "was once so".
+   Applied to the whole block rather than per value, because it is the age of the report that
+   is stale, not one number in it. */
+.carVeraltet {
+    color: #8a8a8a;
+    filter: grayscale(1);
+    opacity: 0.75;
+}
+
+.carKopfzeile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.carImage {
+    width: 55%;
+    object-fit: contain;
+}
+
+.carWerte {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-column-gap: 12px;
+    grid-row-gap: 2px;
+    margin-top: 8px;
+}
+
+.carLabel {
+    color: #6b6b6b;
+}
+
+.carWert {
+    white-space: nowrap;
+}
+
+.carKeineDaten {
+    color: #6b6b6b;
+    font-size: 0.85rem;
+}
+
+.carFusszeile {
+    border-top: 1px solid #D6D6D6;
+    padding-top: 6px;
+    color: #6b6b6b;
+    font-size: 0.8rem;
+    cursor: help;
 }
 
 .batteryInformationContainer {
     display: flex;
-    height: 50%;
-    margin-left: 10px;
+    align-items: stretch;
+    gap: 10px;
+    flex: 1;
+    min-height: 70px;
 }
 
 .batteryBorder {
@@ -36,10 +110,8 @@
     border: 1px solid black;
     border-radius: 10px;
     padding: 2px;
-    margin-left: 10px;
-    margin-right: 20px;
-    height: 100%;
     width: 20px;
+    flex: none;
 }
 
 .batteryLevel {
@@ -49,6 +121,15 @@
 }
 
 .batteryLabel {
-    height: 100%;
     align-content: center;
+}
+
+.batteryValue {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.batterySub {
+    font-size: 0.85rem;
+    color: #6b6b6b;
 }

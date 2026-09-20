@@ -142,6 +142,11 @@ public class VehicleState
     {
         var output = new
         {
+            // Mandatory field of the topic convention, and not the same thing as lastUpdate:
+            // this says when the connector published, lastUpdate when the vehicle measured.
+            // The message is retained, so without a publication time a consumer reconnecting
+            // months later cannot tell a live connector from a dead one.
+            Zeitpunkt = DateTimeOffset.UtcNow.ToString("o"),
             brand = _name,
             name = _name,
             battery = Battery,

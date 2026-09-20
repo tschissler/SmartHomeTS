@@ -123,13 +123,13 @@ Expected log lines:
 - `[BMW] Loaded tokens from Kubernetes Secret.`
 - `[BMW] Connecting to BMW CarData broker...`
 - `[BMW] Connected. Subscribing to {GCID}/+`
-- `[BMW] Published to data/charging/BMW`
+- `[BMW] Output topic: 'daten/Fahrzeug/BMW/Status' (no BMW_OUTPUT_TOPIC set, using the convention).`
+- `[BMW] Published to daten/Fahrzeug/BMW/Status`
 
 Verify data arrives on Mosquitto:
 
 ```fish
-mosquitto_sub -h mosquitto.intern -t "data/charging/BMW" -v
-mosquitto_sub -h mosquitto.intern -t "data/charging/Mini" -v
+mosquitto_sub -h mosquitto.intern -t "daten/Fahrzeug/+/Status" -v
 ```
 
 ### Raw message debugging
@@ -181,7 +181,41 @@ vehicle.vehicle.travelledDistance
 > **Note:** `header` (BMW + Mini) = real-time HV battery SoC (%) — not kWh. `maxEnergy` (BMW only) = battery capacity (kWh). They are different metrics, register both.
 > Charging target: `stateOfCharge.target` (BMW) and `stateOfCharge.targetMin` (Mini) — register the one for your vehicle.
 
-To add a new field: register it in the portal, then add a `case` in `VehicleState.Apply()` and a property to `ToJson()`.
+### Mapped in the code but not registered above
+
+`VehicleState` maps six further fields, and `CarStatusData` carries all of them through to the
+web interface since backlog item 10. They stay empty until they are registered in the portal —
+the connector cannot ask for a field the subscription does not deliver:
+
+```
+vehicle.drivetrain.electricEngine.remainingElectricRange   -> predictedRange
+vehicle.drivetrain.electricEngine.charging.hvStatus        -> hvChargingStatus
+vehicle.drivetrain.electricEngine.charging.chargingMode    -> chargingMode
+vehicle.drivetrain.electricEngine.charging.acVoltage       -> acVoltage
+vehicle.drivetrain.electricEngine.charging.acAmpere        -> acAmpere
+vehicle.body.chargingPort.plugEventId                      -> plugEventId
+vehicle.drivetrain.avgElectricRangeConsumption             -> avgConsumption
+```
+
+Registering one of these needs no code change any more — the field appears on the vehicle card
+by itself. That is the whole difference to before item 10, where the connector published them
+and `System.Text.Json` dropped them without a word on the reading side.
+
+To add a field that is **not** in that list: register it in the portal, then add a `case` in
+`VehicleState.Apply()`, a property to `ToJson()`, and the matching property to
+`SharedContracts/CarStatusData.cs`. `VehicleStatePayloadTests` fails if you forget the last one.
+
+## Output topic
+
+The connector publishes to `daten/Fahrzeug/<Vehicle>/Status`, retained, following
+`Docs/MQTT-Topic-Konvention.md` — the name is spelled once, in
+`SharedContracts/FahrzeugTopics.cs`, and every reader takes it from there.
+
+`<Vehicle>_OUTPUT_TOPIC` still overrides it for local experiments. **Do not set it in the
+cluster.** An override fails silently in the worst possible way: the connector keeps publishing
+happily, the readers keep subscribing to the conventional topic, and nobody gets an error —
+just a dashboard that stops moving. The connector therefore logs its output topic at startup
+whether or not the variable is set, and warns loudly when it is in effect.
 
 ---
 

@@ -2,10 +2,20 @@
 
 This document maps BMW CarData MQTT fields to the `VehicleState` properties published to the local MQTT broker.
 
-## Currently Mapped Fields
+The payload goes to `daten/Fahrzeug/<Vehicle>/Status`, retained, and is read on the other side
+as `SharedContracts.CarStatusData`. **Every property listed below has a counterpart there** —
+before backlog item 10 it did not, and the ones without a counterpart were dropped by
+`System.Text.Json` without a word. `BMWConnectorTests/VehicleStatePayloadTests` pins the two
+ends together, so adding a row here without adding the property to `CarStatusData` is a red
+test rather than a value that quietly disappears.
+
+Which of these the vehicle actually delivers is a separate question: a field has to be
+registered in the CarData portal first. `SETUP.md` lists what is registered today and what is
+only mapped.
 
 | VehicleState property | BMW field | Description | Type |
 |---|---|---|---|
+| `Zeitpunkt` | — | Publication time of this message (UTC, ISO 8601). Mandatory field of the topic convention; not a vehicle value. **Not the same as `lastUpdate`** — that is when the vehicle measured, this is when the connector sent. | String |
 | `battery` | `vehicle.drivetrain.batteryManagement.header` | Real-time HV battery SoC (%) — **delivered by both BMW and Mini** | Number |
 | `maxEnergy` | `vehicle.drivetrain.batteryManagement.maxEnergy` | **BMW only** — battery capacity (kWh) | Number |
 | `chargingStatus` | `vehicle.drivetrain.electricEngine.charging.status` | NOCHARGING / CHARGINGACTIVE / CHARGINGPAUSED / CHARGINGENDED / CHARGINGERROR | String |
@@ -53,7 +63,7 @@ This document maps BMW CarData MQTT fields to the `VehicleState` properties publ
 
 - **Real-time SoC**: Available for **both BMW and Mini** via `vehicle.drivetrain.batteryManagement.header` (SoC %). Verified on the BMW on 2026-09-20 (83 % measured). An earlier note here claimed this field was Mini-only — that was wrong.
 - **`header` vs `maxEnergy`**: These are different metrics. `header` (BMW + Mini) = real-time SoC %. `maxEnergy` (BMW only) = battery capacity in kWh. Do not conflate them.
-- **Charging target**: Only `stateOfCharge.target` is mapped. Mini doesn't expose this field — defaults to 100%.
+- **Charging target**: Only `stateOfCharge.target` is mapped. Mini doesn't expose this field — `ChargingTarget` defaults to 100%. **Open question after backlog item 10:** every other value is now null when the vehicle did not report it, and the interface shows "—" rather than inventing a number. This one still invents 100. Either register `stateOfCharge.targetMin` for the Mini, or make `ChargingTarget` nullable like the rest — not decided, deliberately left as it was.
 - **Charging power unit**: `vehicle.powertrain.electric.battery.charging.power` is in **Watts**, not kW.
 - **ChargingEndTime**: Computed from `timeRemaining` if sent. BMW streaming API does not send this field — `chargingEndTime` will not appear in the payload. Set to null when not charging.
 - **Mileage**: `vehicle.vehicle.travelledDistance` is the current live odometer reading.

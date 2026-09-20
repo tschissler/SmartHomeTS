@@ -19,9 +19,6 @@ namespace SmartHome.Web.Services
         public ChargingSituation ChargingSituation { get; set; }
         public IluminationSituation IluminationSituation { get; set; }
         public ClimateData ClimateData { get; set; }
-        public CarStatusData BmwStatusData { get; set; }
-        public CarStatusData MiniStatusData { get; set; }
-        public CarStatusData VwStatusData { get; set; }
         public HeatingCommandData? HeatingKinderzimmerCommand { get; private set; }
         public HeatingCommandData? HeatingEsszimmerCommand { get; private set; }
         public bool IsConnected => _client?.IsConnected ?? false;
@@ -38,6 +35,15 @@ namespace SmartHome.Web.Services
         /// same name would overwrite this one.
         /// </remarks>
         public ConcurrentDictionary<string, WallboxStatus> Wallboxen { get; } = new();
+
+        /// <summary>
+        /// Latest state per vehicle, keyed by the device level of its status topic ("BMW",
+        /// "Mini", "VW"). Same shape as <see cref="Wallboxen"/> and for the same reason: a
+        /// further vehicle costs its entry in <see cref="FahrzeugTopics.Fahrzeuge"/> and
+        /// nothing else — there is no property per vehicle to add, which is what the three
+        /// hard wired cases used to be.
+        /// </summary>
+        public ConcurrentDictionary<string, CarStatusData> Fahrzeuge { get; } = new();
 
         /// <summary>Heartbeats keyed by status topic. Devices appear here as soon as they report one.</summary>
         public ConcurrentDictionary<string, DeviceStatus> Devices { get; } = new();
@@ -81,9 +87,10 @@ namespace SmartHome.Web.Services
             {
                 Console.WriteLine("Connected to MQTT broker.");
                 await _client.SubscribeAsync("data/#");
-                // Covers LadeTopics.StatusAlle ("daten/Laden/+/+/Status") already. A second,
+                // Covers LadeTopics.StatusAlle ("daten/Laden/+/+/Status") and
+                // FahrzeugTopics.StatusAlle ("daten/Fahrzeug/+/Status") already. A second,
                 // overlapping subscription would buy nothing and risk a second copy of every
-                // wallbox status; the wildcard dispatch happens in UpdateSharedData.
+                // message; the wildcard dispatch happens in UpdateSharedData.
                 await _client.SubscribeAsync("daten/#");
                 await _client.SubscribeAsync(LadeTopics.Einstellungen);
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
@@ -173,23 +180,13 @@ namespace SmartHome.Web.Services
                 return;
             }
 
+            if (TrackFahrzeugStatus(message.Topic, payload))
+            {
+                return;
+            }
+
             switch (message.Topic)
             {
-                case "data/charging/BMW":
-                    {
-                        BmwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
-                        break;
-                    }
-                case "data/charging/Mini":
-                    {
-                        MiniStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
-                        break;
-                    }
-                case "data/charging/VW":
-                    {
-                        VwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
-                        break;
-                    }
                 case LadeTopics.Situation:
                     {
                         ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);
@@ -317,6 +314,35 @@ namespace SmartHome.Web.Services
             {
                 // Keep the state we have: a malformed message must not blank the tile.
                 Console.WriteLine($"Ignoring malformed wallbox status on {topic}: {ex.Message}");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Handles the status of any vehicle: one case for all of them instead of a topic
+        /// literal per car. Returns true when the message was consumed here.
+        /// </summary>
+        private bool TrackFahrzeugStatus(string topic, string payload)
+        {
+            var fahrzeug = FahrzeugTopics.ZerlegeStatusTopic(topic);
+            if (fahrzeug is null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var status = JsonSerializer.Deserialize<CarStatusData>(payload);
+                if (status is not null)
+                {
+                    Fahrzeuge[fahrzeug] = status;
+                }
+            }
+            catch (JsonException ex)
+            {
+                // Keep the state we have: a malformed message must not blank the card.
+                Console.WriteLine($"Ignoring malformed vehicle status on {topic}: {ex.Message}");
             }
 
             return true;

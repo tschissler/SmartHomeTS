@@ -1,61 +1,316 @@
 @using SharedContracts
 
 @*
-    What a vehicle reports about itself: charge level, target, range, mileage. Nothing here
-    says which wallbox the vehicle is at — the box is the truth about a charging process and
-    carries its own tile, see Docs/Fahrzeug-Wallbox-Zuordnung.md. Assigning a vehicle to a box
-    is backlog item 11, the full vehicle card is item 10.
+    What one vehicle reports about itself: charge level, range, mileage, and whatever else its
+    account has registered. Nothing here says which wallbox the vehicle is at — the box is the
+    truth about a charging process and carries its own tile above, see
+    Docs/Fahrzeug-Wallbox-Zuordnung.md. Assigning a vehicle to a box is backlog item 11.
 
     Enable and preference used to be operated from here. They belong to the box and moved to
     WallboxStatusVisualizer: two of these three tiles were bound to the same
-    OutsideChargingEnabled, so the interface could not even show one box released and the
-    other blocked.
+    OutsideChargingEnabled, so the interface could not even show one box released and the other
+    blocked.
+
+    THE AGE IS THE POINT OF THIS TILE. A vehicle pushes only when something happens to it, and a
+    retained MQTT message keeps being delivered long after the vehicle went quiet. The old tile
+    printed "BMW 83 %" with a timestamp in 0.7rem grey underneath, and on 2026-09-20 that 83 %
+    was five weeks old. Every value here is therefore either current or visibly not current —
+    greyed out, never hidden: hidden reads as "there is no such thing", greyed out reads as
+    "that is how it was".
 *@
 
 <div class="carBox">
-    <div class="carImageContainer">
-        <img class="carImage" src="/images/@(GetCarImage(CarStatusData.Brand))" />
-        <br />
-        <span style="font-size: 0.7rem">@(new MarkupString(CarStatusData.LastUpdate?.ToLocalTime().ToString("dd.MM.yy HH:mm:ss")??""))</span>
-        <br />
-        @CarStatusData.Mileage km >>
-        @CarStatusData.RemainingRange km
+    <div class="carHeader">
+        <span class="carName">@Titel</span>
+        <span class="carAlter @AlterKlasse" title="@AlterHinweis">@AlterText</span>
     </div>
-    <div class="carControls">
-        <img class="carConnectedIcon" src="/images/@(CarStatusData.ChargerConnected ? "connected.svg" : "disconnected.svg")"
-             title="So meldet es das Fahrzeug selbst. Ob an einer der Wallboxen geladen wird, sagen die Kacheln oben." />
-        <div class="batteryInformationContainer">
-            <div class="batteryBorder">
-                <div class="batteryLevel" style="height: @CarStatusData.Battery%"></div>
+
+    @if (CarStatusData is null)
+    {
+        <div class="carKeineDaten">
+            Dieses Fahrzeug hat noch nichts gemeldet.
+        </div>
+    }
+    else
+    {
+        <div class="carInhalt @(Veraltet ? "carVeraltet" : "")">
+            <div class="carKopfzeile">
+                <img class="carImage" src="/images/@(GetCarImage(CarStatusData.Brand))" alt="" />
+
+                <div class="batteryInformationContainer">
+                    <div class="batteryBorder">
+                        <div class="batteryLevel" style="height: @((CarStatusData.Battery ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                    </div>
+                    <div class="batteryLabel">
+                        <div class="batteryValue">@Prozent(CarStatusData.Battery)</div>
+                        @if (CarStatusData.ChargingTarget is not null)
+                        {
+                            <div class="batterySub">Ziel @Prozent(CarStatusData.ChargingTarget)</div>
+                        }
+                        @* ToUniversalTime() before comparing: the BMW stamps this UTC, the VW
+                           with a local offset, and comparing the VW value against UtcNow raw
+                           would hide a running charge for the length of the offset. *@
+                        @if (CarStatusData.ChargingEndTime is { } ende && ende.ToUniversalTime() > DateTime.UtcNow)
+                        {
+                            <div class="batterySub">bis @ende.ToLocalTime().ToString("HH:mm")</div>
+                        }
+                    </div>
+                </div>
             </div>
-            <div class="batteryLabel">
-                @CarStatusData.Battery % / @CarStatusData.ChargingTarget %<br />
-                @if (CarStatusData.ChargingEndTime.HasValue && CarStatusData.ChargingEndTime > DateTime.UtcNow)
+
+            <div class="carWerte">
+                @* The three values that are always shown, missing or not: that one of them is
+                   absent is itself worth seeing. The charge level is not repeated here — it is
+                   the big number next to the bar above. Everything below only appears when the
+                   vehicle actually delivers it. *@
+                <div class="carLabel">Reichweite</div>
+                <div class="carWert">@Kilometer(CarStatusData.RemainingRange)</div>
+
+                <div class="carLabel">Kilometerstand</div>
+                <div class="carWert">@Kilometer(CarStatusData.Mileage)</div>
+
+                <div class="carLabel">Ladestatus</div>
+                <div class="carWert">@LadestatusText</div>
+
+                @if (CarStatusData.ChargerConnected is { } verbunden)
                 {
-                    <span>Bis: </span>
-                    @CarStatusData.ChargingEndTime?.ToLocalTime().ToString("HH:mm")
-                    <br/>
+                    <div class="carLabel">Ladekabel</div>
+                    <div class="carWert" title="@SteckerHinweis">
+                        @(verbunden ? "gesteckt" : "nicht gesteckt")
+                    </div>
+                }
+
+                @if (CarStatusData.ChargingPower is { } leistung)
+                {
+                    <div class="carLabel">Ladeleistung</div>
+                    <div class="carWert">@Leistung(leistung)</div>
+                }
+
+                @if (AcText is not null)
+                {
+                    <div class="carLabel">Ladeanschluss</div>
+                    <div class="carWert">@AcText</div>
+                }
+
+                @if (CarStatusData.ChargingMode is { Length: > 0 } modus)
+                {
+                    <div class="carLabel">Lademodus</div>
+                    <div class="carWert">@modus</div>
+                }
+
+                @if (CarStatusData.HvChargingStatus is { Length: > 0 } hvStatus)
+                {
+                    <div class="carLabel">HV-Ladestatus</div>
+                    <div class="carWert">@hvStatus</div>
+                }
+
+                @if (CarStatusData.PredictedRange is { } prognose)
+                {
+                    <div class="carLabel" title="Reichweite, die das Fahrzeug für das Ende des laufenden Ladevorgangs erwartet">
+                        Reichweite danach
+                    </div>
+                    <div class="carWert">@Kilometer(prognose)</div>
+                }
+
+                @if (CarStatusData.MaxEnergy is { } kapazitaet)
+                {
+                    <div class="carLabel">Batteriekapazität</div>
+                    <div class="carWert">@Energie(kapazitaet)</div>
+                }
+
+                @if (CarStatusData.AvgConsumption is { } verbrauch)
+                {
+                    <div class="carLabel">Verbrauch</div>
+                    <div class="carWert">@Verbrauch(verbrauch)</div>
+                }
+
+                @if (CarStatusData.State is { Length: > 0 } zustand)
+                {
+                    <div class="carLabel">Zustand</div>
+                    <div class="carWert">@zustand</div>
+                }
+
+                @if (CarStatusData.Moving is { } faehrt)
+                {
+                    <div class="carLabel">Bewegung</div>
+                    <div class="carWert">@(faehrt ? "fährt" : "steht")</div>
+                }
+
+                @if (CarStatusData.Position is { } position)
+                {
+                    <div class="carLabel">Position</div>
+                    <div class="carWert" title="Zuletzt gemeldete Position. Auswerten tut sie noch niemand.">
+                        @position.Latitude.ToString("0.0000"), @position.Longitude.ToString("0.0000")
+                    </div>
                 }
             </div>
         </div>
-    </div>
+
+        <div class="carFusszeile" title="@FusszeilenHinweis">@FusszeilenText</div>
+    }
 </div>
 
 @code {
-    [Parameter]
-    public CarStatusData CarStatusData { get; set; } = new();
+    /// <summary>
+    /// From this age on, the values are shown as past rather than present. Deliberately
+    /// generous: a vehicle only reports when something happens to it, so a car parked over a
+    /// weekend is silent for two days and perfectly healthy. Below a day, silence says nothing;
+    /// above it, the numbers may simply no longer be true — which is what greying them out
+    /// says, and all it says. It is not a fault report.
+    /// </summary>
+    private static readonly TimeSpan MaxAlter = TimeSpan.FromHours(24);
 
-    public string GetCarImage(string brand)
+    /// <summary>
+    /// Name of the vehicle as it appears in the topic, e.g. "BMW". Comes from the topic rather
+    /// than from the payload, so a card has a heading even before the vehicle has said anything.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// What the vehicle last reported, null while nothing has arrived on its status topic.
+    /// </summary>
+    [Parameter]
+    public CarStatusData? CarStatusData { get; set; }
+
+    /// <summary>The model name where the vehicle delivers one, otherwise the topic name.</summary>
+    private string Titel => CarStatusData?.Name is { Length: > 0 } name && name != Name
+        ? $"{Name} · {name}"
+        : Name;
+
+    /// <summary>
+    /// How old the measurement is. Deliberately taken from LastUpdate, not from Zeitpunkt:
+    /// Zeitpunkt is when the connector published, and a healthy connector republishes values
+    /// that are weeks old. Judging freshness by the publication time is exactly the mistake the
+    /// topic convention calls out — receipt time mistaken for measurement time.
+    /// </summary>
+    private TimeSpan? Alter => CarStatusData?.LastUpdate is { } stand
+        // ToUniversalTime() because the two connectors disagree: the BMW stamps its datapoints
+        // with "Z" (Kind Utc), the VW with a local offset (Kind Local). Subtracting either from
+        // UtcNow without converting would be off by the timezone for one of them.
+        ? DateTime.UtcNow - stand.ToUniversalTime()
+        : null;
+
+    /// <summary>
+    /// A value without a known measurement time counts as stale too. Not knowing how old
+    /// something is, is not the same as it being current.
+    /// </summary>
+    private bool Veraltet => Alter is null || Alter > MaxAlter;
+
+    private string AlterText => CarStatusData is null
+        ? "keine Daten"
+        : Alter is { } alter
+            ? $"Stand {FormatiereDauer(alter)} alt"
+            : "Stand unbekannt";
+
+    private string AlterKlasse => CarStatusData is null
+        ? "carAlter-unbekannt"
+        : Veraltet ? "carAlter-veraltet" : "carAlter-frisch";
+
+    private string AlterHinweis => Veraltet
+        ? "Das Fahrzeug meldet sich nur, wenn sich etwas an ihm ändert. Die Werte unten sind "
+          + "deshalb ausgegraut: Sie waren einmal so, ob sie es noch sind, sagt niemand."
+        : "Das Fahrzeug hat sich zuletzt vor weniger als einem Tag gemeldet.";
+
+    /// <summary>
+    /// The footer separates the two timestamps the convention insists on keeping apart: when
+    /// the vehicle measured, and when the connector last published. They differ by more than
+    /// usual here — a connector that is alive and well still carries weeks old values, and only
+    /// seeing both tells a quiet car from a broken connector.
+    /// </summary>
+    private string FusszeilenText
     {
-        switch (brand.ToLower())
+        get
         {
-            case "bmw":
-                return "BMW.webp";
-            case "mini":
-                return "CarBrands.MINI_VehicleViewDirection.ANGLE_SIDE_VIEW_FORTY.jpg";
-            case "vw":
-                return "ID4.png";
+            var teile = new List<string>();
+            if (CarStatusData?.LastUpdate is { } stand)
+                teile.Add($"gemessen {stand.ToLocalTime():dd.MM.yy HH:mm}");
+            if (CarStatusData?.Zeitpunkt is { } gesendet)
+                teile.Add($"gemeldet {gesendet.ToLocalTime():dd.MM.yy HH:mm}");
+            return teile.Count == 0 ? "ohne Zeitstempel" : string.Join(" · ", teile);
         }
-        return "empty.png";
     }
+
+    private string FusszeilenHinweis =>
+        "\"gemessen\" ist der Zeitpunkt im Fahrzeug, \"gemeldet\" der letzte Versand des "
+      + "Connectors. Liegt \"gemeldet\" weit vorn und \"gemessen\" weit zurück, läuft der "
+      + "Connector, aber das Fahrzeug schweigt.";
+
+    /// <summary>
+    /// The charging states as the two manufacturers word them. Anything unrecognised is shown
+    /// raw rather than swallowed — a state nobody translated is still information.
+    /// </summary>
+    private string LadestatusText => CarStatusData?.ChargingStatus switch
+    {
+        null or "" => "—",
+        "CHARGINGACTIVE" or "charging" => "lädt",
+        "CHARGINGPAUSED" => "pausiert",
+        "CHARGINGENDED" => "beendet",
+        "CHARGINGERROR" => "Fehler",
+        "NOCHARGING" or "off" => "lädt nicht",
+        "ready_for_charging" => "bereit",
+        "conservation" => "Erhaltungsladung",
+        "discharging" => "entlädt",
+        var anderes => anderes,
+    };
+
+    private string SteckerHinweis =>
+        "So meldet es das Fahrzeug selbst. Ob an einer der Wallboxen geladen wird, sagen die "
+      + "Kacheln oben."
+      + (CarStatusData?.PlugEventId is { } id ? $" Steckvorgang Nr. {id}." : "");
+
+    /// <summary>Voltage and current of the AC connection, whichever of the two arrived.</summary>
+    private string? AcText => (CarStatusData?.AcVoltage, CarStatusData?.AcAmpere) switch
+    {
+        (null, null) => null,
+        ({ } volt, null) => Mit(volt, "V"),
+        (null, { } ampere) => $"max. {Mit(ampere, "A")}",
+        ({ } volt, { } ampere) => $"{Mit(volt, "V")} · max. {Mit(ampere, "A")}",
+    };
+
+    /// <summary>
+    /// Number plus unit, with the unit appended instead of written into the format string.
+    /// A custom numeric format reads "%" as "multiply by 100" and every "0" inside a literal as
+    /// a digit placeholder — so "#,##0 %" turns 83 into 8.300 and "kWh/100 km" smuggles in
+    /// three more placeholders. Both would put silently wrong numbers on screen, which is the
+    /// one thing this tile exists to stop.
+    /// </summary>
+    private static string Mit(double wert, string einheit, string format = "#,##0")
+        => $"{wert.ToString(format)} {einheit}";
+
+    private static string Prozent(double? wert) => wert is { } w ? Mit(w, "%") : "—";
+
+    private static string Kilometer(double? wert) => wert is { } w ? Mit(w, "km") : "—";
+
+    private static string Energie(double wert) => Mit(wert, "kWh", "#,##0.0");
+
+    private static string Verbrauch(double wert) => Mit(wert, "kWh/100 km", "#,##0.0");
+
+    private static string Leistung(double watt) => watt < 1000
+        ? Mit(watt, "W")
+        : Mit(watt / 1000.0, "kW", "0.0");
+
+    /// <summary>
+    /// Days are a unit this tile actually needs: the case that prompted it was five weeks old.
+    /// </summary>
+    private static string FormatiereDauer(TimeSpan dauer)
+    {
+        if (dauer < TimeSpan.Zero) return "0 min";
+        if (dauer.TotalDays >= 1)
+        {
+            var tage = (int)dauer.TotalDays;
+            return tage == 1 ? "1 Tag" : $"{tage} Tage";
+        }
+        if (dauer.TotalHours >= 1) return $"{(int)dauer.TotalHours} h";
+        if (dauer.TotalMinutes >= 1) return $"{(int)dauer.TotalMinutes} min";
+        return $"{(int)dauer.TotalSeconds} s";
+    }
+
+    private static string GetCarImage(string brand) => brand.ToLower() switch
+    {
+        "bmw" => "BMW.webp",
+        "mini" => "CarBrands.MINI_VehicleViewDirection.ANGLE_SIDE_VIEW_FORTY.jpg",
+        "vw" => "ID4.png",
+        _ => "empty.png",
+    };
 }

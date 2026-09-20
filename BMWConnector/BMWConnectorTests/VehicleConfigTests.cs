@@ -119,14 +119,39 @@ public class VehicleConfigTests : IDisposable
         store.CredentialWrites.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// The default topic follows Docs/MQTT-Topic-Konvention.md. Asserted as a literal rather
+    /// than against <see cref="SharedContracts.FahrzeugTopics"/>, so that the test fails if the
+    /// spelling of the topic changes anywhere — comparing the code against itself would pass
+    /// whatever either side said.
+    /// </summary>
     [Fact]
-    public async Task The_output_topic_still_falls_back_to_the_default()
+    public async Task The_output_topic_falls_back_to_the_conventional_one()
     {
         const string prefix = "TestTopic";
+        SetEnv($"{prefix}_OUTPUT_TOPIC", null);
         var store = StoreFor(prefix, inCluster: true);
 
         var config = await VehicleConfig.CreateAsync(prefix, store);
 
-        config.OutputTopic.Should().Be($"data/charging/{prefix}");
+        config.OutputTopic.Should().Be($"daten/Fahrzeug/{prefix}/Status");
+    }
+
+    /// <summary>
+    /// The trap this point had to walk around: the topic is overridable, so changing the
+    /// default in code is not enough while the deployment sets the variable. The override still
+    /// works — it is a development aid — but the test pins that it does, so nobody assumes the
+    /// code default is the whole story.
+    /// </summary>
+    [Fact]
+    public async Task An_environment_variable_still_overrides_the_output_topic()
+    {
+        const string prefix = "TestTopicOverride";
+        SetEnv($"{prefix}_OUTPUT_TOPIC", "daten/Fahrzeug/Testwagen/Status");
+        var store = StoreFor(prefix, inCluster: true);
+
+        var config = await VehicleConfig.CreateAsync(prefix, store);
+
+        config.OutputTopic.Should().Be("daten/Fahrzeug/Testwagen/Status");
     }
 }
