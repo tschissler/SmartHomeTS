@@ -17,7 +17,7 @@ Integrator-Session trägt ein und aus.
 
 | Punkt | Branch | seit | Stand |
 |---|---|---|---|
-| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | **blockiert** — Doku fertig; `bmwconnector-credentials` beim Bootstrap mit Platzhaltern überschrieben. Pod `bmwconnector-7bb447bc4b-4mbdt` **nicht** löschen: er hält die einzigen korrekten BMW-Werte im Speicher |
+| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | **blockiert** — Doku fertig und committet; `bmwconnector-credentials` beim Bootstrap aus der Shell-Umgebung mit Platzhaltern überschrieben (`BMW_CLIENT_ID`/`BMW_GCID` je 10 Bytes, `Mini_*` intakt). GCID **nicht** aus dem Pod-Log rekonstruierbar (BMW war seit Pod-Start nie verbunden) — Reparatur braucht die Portal-Werte oder den `sub`-Claim aus `bmwconnector-bmw-tokens`. Bootstrap nur mit `env -u BMW_GCID -u BMW_CLIENT_ID`, sonst werden die Platzhalter erneut zurückgeschrieben |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
