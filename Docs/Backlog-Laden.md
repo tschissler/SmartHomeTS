@@ -815,6 +815,40 @@ plausibel zur Boxenergie passt.
 
 ---
 
+### 20. Wallbox-Verlauf je Box mit Quellen-Mix
+
+**Ziel.** Je Wallbox ein eigenes Verlaufsdiagramm, in dem die Ladeleistung nach ihrer
+Herkunft aufgeteilt sichtbar ist: PV, Batterie, Netz. Damit ist an jeder Box ablesbar,
+woher der Strom dieser Ladung kam — nicht nur, wie viel es war.
+
+**Warum ein eigener Punkt und nicht Teil von 14.** Punkt 14 nennt bereits „Verlauf:
+Ladeleistung gestapelt nach Quelle", aber für das Gesamtdashboard und erst nach der
+Sitzungstabelle — er hängt an 13 und damit an 11 und 12. Dieser Verlauf braucht dagegen
+**nur Punkt 12**: Sobald der ChargingController `LadeleistungPv`, `LadeleistungBatterie`
+und `LadeleistungNetz` je Box nach `power_values` schreibt, ist alles da. Ihn hinter 13 zu
+hängen würde ihn ohne fachlichen Grund um zwei Punkte verzögern.
+
+**Umfang**
+- [ ] Je Wallbox ein Zeitreihendiagramm, gestapelt nach Quelle (PV / Batterie / Netz),
+      Summe der Stapel entspricht der `Ladeleistung` der Box — **diese Gegenprobe
+      ausdrücklich prüfen**, sie ist der beste verfügbare Test der Zurechnung aus Punkt 12
+- [ ] Beide Boxen immer dargestellt, auch eine ohne laufende Ladung (dieselbe Begründung
+      wie bei den Kacheln in Punkt 9: keine Ladung ist ein Betriebszustand)
+- [ ] Farbgebung für die drei Quellen einmal festlegen und im ganzen Grafana durchhalten —
+      dieselben Farben wie im Sankey, damit man zwischen den Dashboards nicht umlernt
+- [ ] Zeitraum über die Dashboard-Variable, keine feste Spanne
+
+**Zu klären bei der Umsetzung.** Ob das in das bestehende Wallbox-Dashboard kommt oder
+gleich in den Verlaufsteil von Punkt 14. Sauberer wäre Letzteres — aber nur, wenn 14 in
+absehbarer Zeit kommt. Sonst hier einbauen und bei 14 übernehmen statt neu bauen.
+
+**Abhängig von** 12. Nicht von 11, 13 oder 14.
+
+**Fertig, wenn** über eine reale Ladesitzung die drei gestapelten Flächen in Summe der
+gemessenen Ladeleistung der Box entsprechen.
+
+---
+
 ### 14. Grafana-Dashboard „Laden"
 
 Löst `wallbox-charging-dashboard.json` ab; dessen Leistungskurven wandern als Verlaufsteil
@@ -825,7 +859,8 @@ hinein.
 - [ ] Protokolltabelle: Beginn, Wallbox, Fahrzeug, Vertrauen, Steckdauer, Ladezeit, kWh,
       davon PV/Batterie/Netz, PV-Anteil
 - [ ] Balken kWh je Fahrzeug und Monat, gestapelt nach Quelle
-- [ ] Verlauf: Ladeleistung gestapelt nach Quelle
+- [ ] Verlauf: Ladeleistung gestapelt nach Quelle — **je Wallbox, siehe Punkt 20.**
+      Wird dort schon gebaut, dann hier übernehmen statt neu bauen
 - [ ] Variablen: Fahrzeug, Wallbox, Schalter „nur sichere Zuordnungen"
 - [ ] Zeitraumsummen **aus den Zählern** (`MAX − MIN`), nicht aus der Sitzungstabelle —
       dann sind Monatsgrenzen kein Thema
