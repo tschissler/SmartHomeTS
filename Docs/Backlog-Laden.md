@@ -23,7 +23,7 @@ Präfix setzt.
 |---|---|---|---|
 | 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | **erledigt und gemergt** (`a12202b`), kein Rollout |
 | 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`c46f54f`) |
-| 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **gemergt** (`1c8ff95`), Rollout läuft. Offen: Prüfung, ob der `iat` im Token-Secret sich alle 50 Minuten bewegt |
+| 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`1c8ff95`). Im neuen Pod: `Loaded tokens … (issued …)`, `Stored token refreshed 0.9 h ago, well inside the 7 day limit`, sofortiger Refresh mit erfolgreicher Persistierung, `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True` |
 | 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | in Arbeit — vorhandene Testprojekte in die CI aufnehmen. Erste Aufgabe: prüfen, ob sie überhaupt grün sind |
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | in Arbeit — harter Schnitt, KebaConnector + ChargingController + DataHub. Offene Frage an die Session: Verhalten zwischen den beiden Rollouts |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
@@ -184,14 +184,14 @@ fielen beide Fahrzeuge aus, würde der Pod neu starten, was einen abgelaufenen T
 nicht repariert.
 
 **Umfang**
-- [ ] Liveness von der Fahrzeugverbindung entkoppeln: sie prüft nur, ob der Prozess
+- [x] Liveness von der Fahrzeugverbindung entkoppeln: sie prüft nur, ob der Prozess
       bedienbar ist. Ein Neustart repariert keinen Token
-- [ ] Readiness so mappen, dass `Degraded` nicht als betriebsbereit durchgeht
-- [ ] Proaktive Warnung, **bevor** der Ausfall eintritt. Maßgeblich ist die Zeit seit dem
+- [x] Readiness so mappen, dass `Degraded` nicht als betriebsbereit durchgeht
+- [x] Proaktive Warnung, **bevor** der Ausfall eintritt. Maßgeblich ist die Zeit seit dem
       letzten **erfolgreichen Refresh**, nicht das Alter des Logins: Quelle ist der
       `iat`-Claim des aktuellen `id_token`, ersatzweise ein eigener Zeitstempel beim
       Schreiben. Schwelle 7 Tage — die Hälfte der Frist. Konfigurierbar
-- [ ] Die Alters-Warnung geht **nicht** in die Readiness ein — ein gewarnter, aber
+- [x] Die Alters-Warnung geht **nicht** in die Readiness ein — ein gewarnter, aber
       funktionierender Connector muss betriebsbereit bleiben
 - [x] ~~Prüfen, ob dieselbe Probe-Verwechslung in den anderen Services steckt~~ —
       **geprüft, kein Befund.** Die Probe-Pfade aller zehn Deployments wurden gegen den
@@ -372,20 +372,20 @@ Entwicklungsvariable trifft auf einen Dienst, der Env-Vars ins Produktiv-Secret
 zurückschreibt.
 
 **Umfang**
-- [ ] Platzhalterwerte (`REPLACE_ME` und Ähnliches) beim Start erkennen und ablehnen
+- [x] Platzhalterwerte (`REPLACE_ME` und Ähnliches) beim Start erkennen und ablehnen
       statt sie zu verwenden — sie sind das eigentliche Einfallstor
-- [ ] Vorrang umkehren oder absichern: im Cluster-Betrieb gewinnt das Secret. Eine
+- [x] Vorrang umkehren oder absichern: im Cluster-Betrieb gewinnt das Secret. Eine
       Env-Var darf lokal überschreiben, aber nicht zurückschreiben
-- [ ] Rückschreiben nur mit Plausibilitätsprüfung (GCID und CLIENT_ID sind UUIDs, also
+- [x] Rückschreiben nur mit Plausibilitätsprüfung (GCID und CLIENT_ID sind UUIDs, also
       Format und Länge prüfbar) und explizitem Opt-in, nicht als Nebenwirkung
-- [ ] Beim Überschreiben den ersetzten Wert maskiert protokollieren — der Vorfall war nur
+- [x] Beim Überschreiben den ersetzten Wert maskiert protokollieren — der Vorfall war nur
       an den Byte-Längen im Secret erkennbar
 - [x] ~~Dieselbe Rückschreib-Logik in den anderen Connectoren prüfen~~ — **geprüft,
       kein Befund.** Der BMWConnector ist der einzige Dienst im Repo mit einem
       Kubernetes-Client; VW, Keba, Shelly und Enphase lesen Zugangsdaten nur aus der
       Umgebung und schreiben nichts zurück. Einzige weitere Fundstelle:
       `Depricated/BMWConnector/k8s_utils.py`
-- [ ] Erwägen, `bmwconnector-credentials` versioniert zu hinterlegen (SealedSecret im
+- [x] Erwägen, `bmwconnector-credentials` versioniert zu hinterlegen (SealedSecret im
       Deployments-Repo), damit es überhaupt eine Wiederherstellungsquelle gibt
 
 **Zuschnitt, entschieden am 2026-09-20.** Der Punkt umfasst **zwei Hälften**: den Schutz
