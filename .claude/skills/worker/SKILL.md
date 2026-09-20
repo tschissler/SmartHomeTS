@@ -15,8 +15,11 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
 
 - **Eigener Worktree.** Leg ihn mit `EnterWorktree` unter dem Namen an, den der Auftrag
   nennt. Arbeite ausschließlich darin. **`EnterWorktree` stellt dem Branch `worktree-`
-  voran** — nennt der Auftrag einen Branchnamen, zieh ihn hinterher mit
-  `git branch -m <name>` gerade, sonst heißt der Branch anders als alles andere.
+  voran** — benenn ihn **nicht** um, sondern melde der Orchestrierung den tatsächlichen
+  Namen. Ein `git branch -m` kostet zweimal: `ExitWorktree` kennt am Ende nur den alten
+  Namen, sieht dort einen Commit, der scheinbar nirgends hinführt, und verweigert das
+  Entfernen, bis der **Nutzer** es freigibt — eine Zusage der Orchestrierung reicht dafür
+  nicht und darf es auch nicht.
 - **Halt deine Shell-Befehle einfach.** Die Worktree-Isolation lehnt jeden Befehl ab, der
   ihr zu komplex wird, um zu belegen, dass er im Worktree bleibt — und sie schlägt schon
   auf die Zeichenfolge `git` an, die in diesem Repo in **jedem** absoluten Pfad steckt

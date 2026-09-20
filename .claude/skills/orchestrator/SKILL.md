@@ -58,6 +58,11 @@ Ohne `-n` vergibt der CLI eine Nummer, die niemandem sagt, woran die Session arb
 und du brauchst den Namen, um ihr über `SendMessage` zu schreiben. Ein Vorhaben mit
 mehreren Punkten nummeriert mit: `<vorhaben>-<NN>-<kurz>`.
 
+**Der Branch heißt trotzdem anders.** `EnterWorktree` stellt ihm `worktree-` voran, und
+die Session soll das nicht geradebiegen — eine Umbenennung bringt ihr am Ende eine
+Rückfrage ein, die nur Thomas beantworten kann. Frag den tatsächlichen Branchnamen im
+Bericht ab und merge den, statt den Namen aus deinem Auftrag zu nehmen.
+
 Du erreichst die Session danach über `SendMessage` unter genau diesem Namen. Umgekehrt
 braucht sie **deinen** — nenn ihn im Auftrag und frag ihn vorher mit `ListAgents` ab,
 statt ihn zu raten: Er ist nicht unbedingt der, den Thomas beim Start getippt hat.
