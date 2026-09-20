@@ -30,7 +30,7 @@ jobs:
         dotnet-version: '10.0.x'
 
     - name: Build and test
-      run: dotnet build ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.slnx
+      run: dotnet test ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.slnx
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
