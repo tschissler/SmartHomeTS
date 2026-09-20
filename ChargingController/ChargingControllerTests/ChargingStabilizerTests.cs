@@ -110,7 +110,10 @@ namespace ChargingControllerTests
             Run(T0, 12000).Should().Be(0);
             Run(T0.AddSeconds(30), 12000).Should().Be(12000, "charging starts at full surplus");
 
-            var overload = Situation(gridPower: 9000);
+            // Derived from the option instead of written out: the limit was 8.000 W and a
+            // test that spells the number out simply stops testing the thing it is named after
+            // when the limit moves.
+            var overload = Situation(gridPower: options.GridProtectionLimitWatts + 1000);
             Stabilize(T0.AddSeconds(40), 12000, overload).Should().Be(MinimumCurrentmA,
                 "grid consumption above the limit throttles immediately, bypassing the rate limit");
             Stabilize(T0.AddSeconds(50), 12000, overload).Should().Be(MinimumCurrentmA,

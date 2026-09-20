@@ -53,6 +53,7 @@ namespace ChargingControllerTests
             {
                 PowerFromGrid = -4000,
                 PowerFromBattery = -1000,
+                PowerFromPV = 5000,
                 InsideCurrentChargingPower = 4140,
             };
             smoother.Smooth(situation, T0);
@@ -60,6 +61,9 @@ namespace ChargingControllerTests
 
             situation.PowerFromGrid.Should().Be(-4000);
             situation.PowerFromBattery.Should().Be(-1000);
+            // The UI and the energy attribution read the raw PV value; only the level 5
+            // decision sees the filtered one.
+            situation.PowerFromPV.Should().Be(5000);
             situation.InsideCurrentChargingPower.Should().Be(4140);
         }
 
