@@ -176,7 +176,11 @@ public class BmwCarDataService : BackgroundService
             }
             catch (Exception ex)
             {
-                _log.LogWarning("[{Vehicle}] Post-session token refresh failed, will retry with existing token: {Message}",
+                // BMW did not hand out a new set, so nothing rotated and the current token is
+                // still the valid one. A failure to *save* a rotated set does not land here —
+                // TokenService reports that one itself, as an error.
+                _log.LogWarning("[{Vehicle}] Post-session token refresh failed, BMW issued no new token set. "
+                              + "Continuing with the current one: {Message}",
                     _config.Name, ex.Message);
             }
         }

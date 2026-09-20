@@ -19,6 +19,9 @@ public sealed class FakeSecretStore : ISecretStore
     /// <summary>Every token write attempted, in order.</summary>
     public List<string> TokenWrites { get; } = [];
 
+    /// <summary>Invoked at the moment of a token write, to observe the caller's state.</summary>
+    public Action? OnSaveTokens { get; set; }
+
     public FakeSecretStore WithCredential(string key, string value)
     {
         _credentials[key] = value;
@@ -54,6 +57,7 @@ public sealed class FakeSecretStore : ISecretStore
         string vehicleName, string idToken, string accessToken, string refreshToken,
         CancellationToken ct = default)
     {
+        OnSaveTokens?.Invoke();
         TokenWrites.Add(vehicleName);
         _tokens[vehicleName] = (idToken, refreshToken);
         return Task.CompletedTask;
