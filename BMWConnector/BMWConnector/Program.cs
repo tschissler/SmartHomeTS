@@ -1,5 +1,8 @@
+using System.Text.Json;
 using BMWConnector.Models;
 using BMWConnector.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 KubernetesSecretStore store;
 try
@@ -93,10 +96,20 @@ catch (Exception ex)
 
 var builder = WebApplication.CreateBuilder(args);
 
-var healthRegistry = new HealthRegistry();
+// The BMW connection is rebuilt on every 50-minute token refresh. Readiness must ride through
+// those seconds, so a vehicle stays "connected" for this long after its last live connection.
+var staleAfter = TimeSpan.FromMinutes(
+    double.TryParse(Environment.GetEnvironmentVariable("BMW_VEHICLE_STALE_MINUTES"), out double m) ? m : 5);
+
+var healthRegistry = new HealthRegistry(loggerFactory.CreateLogger<HealthRegistry>(), staleAfter);
 builder.Services.AddSingleton(healthRegistry);
+
 builder.Services.AddHealthChecks()
-    .AddCheck("bmw-broker", () => healthRegistry.GetResult());
+    // Liveness answers one question only: is this process still serving? A dead BMW connection
+    // must never restart the pod — a restart cannot renew an expired refresh token, it would
+    // only bury a 35-day outage under a CrashLoop.
+    .AddCheck("process-liveness", () => HealthCheckResult.Healthy("Process is serving."), tags: ["live"])
+    .AddCheck("bmw-broker", healthRegistry.GetResult, tags: ["ready"]);
 
 foreach (var config in configs)
 {
@@ -108,6 +121,37 @@ foreach (var config in configs)
 }
 
 var app = builder.Build();
-app.MapHealthChecks("/healthz/live");
-app.MapHealthChecks("/healthz/ready");
+
+app.MapHealthChecks("/healthz/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live"),
+    ResponseWriter = WriteReportAsync,
+});
+
+app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    // Degraded means one of two vehicles is gone. Left at its default it would answer 200 and
+    // the probe would be satisfied — which is exactly how the Aug 2026 outage stayed invisible.
+    ResultStatusCodes = ProbeStatusCodes.Readiness(),
+    ResponseWriter = WriteReportAsync,
+});
+
 app.Run();
+
+// Names which vehicle is missing instead of just "Degraded" — the status alone sent the
+// last diagnosis down the wrong path.
+static Task WriteReportAsync(HttpContext context, HealthReport report)
+{
+    context.Response.ContentType = "application/json";
+    return context.Response.WriteAsync(JsonSerializer.Serialize(new
+    {
+        status = report.Status.ToString(),
+        checks = report.Entries.Select(e => new
+        {
+            name        = e.Key,
+            status      = e.Value.Status.ToString(),
+            description = e.Value.Description,
+        }),
+    }));
+}
