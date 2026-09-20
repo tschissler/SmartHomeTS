@@ -31,7 +31,7 @@ Präfix setzt.
 | 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | **erledigt und gemergt** (`b560217`). Der gemeldete Fehler war der Text; die Ursache lag tiefer — `disconnected.svg` ist fest `#d4aa00`, die freie Box trug also dauerhaft eine Aufmerksamkeitsfarbe, und `connected.svg`/`connectednotready.svg` sind geometrisch identisch und unterscheiden sich nur im Strich. Symbol jetzt inline in `currentColor`: Geometrie sagt Fahrzeug ja/nein, Farbe kommt aus dem Zustand |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
-| 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
+| 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt, gemergt und ausgerollt** (`d5b829b`). **Verbindung bewiesen, Datenfluss noch nicht:** Im Log steht `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True`. Der **Mini** hat seitdem frisch publiziert (`lastUpdate` 2026-09-20 07:58). Der **BMW** trägt weiterhin `lastUpdate` 2026-08-16 — kein Fehler: CarData schiebt nur bei Fahrzeugereignissen, und der BMW hat seinen Zustand seit der Reparatur nicht geändert. Beim nächsten Ereignis prüfen |
 
 **Reihenfolge entschieden und umgesetzt: 19 lag vor 7/8.** Der Schnitt aus Punkt 7/8
 muss damit durch die 46 Szenariotests des ChargingControllers, bevor er ein Image
