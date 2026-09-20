@@ -511,6 +511,21 @@ kommen an, werden aber nirgends angezeigt.
       `SETUP.md` listet zwölf, `DATAPOINTS.md` dokumentiert mehr
 - [ ] Fahrzeugbereich unter den Wallboxen: eine Karte je Fahrzeug mit allen verfügbaren
       Werten und **Altersanzeige**; veraltete Werte ausgegraut statt versteckt
+- [ ] **Die Fahrzeug-Topics auf die Konvention umstellen:** `data/charging/<Auto>` wird zu
+      `daten/Fahrzeug/<Auto>/Status`, retained, mit `Zeitpunkt` im Payload
+
+**Warum hier und nicht als eigener Punkt** *(entschieden am 2026-09-20)*. Die Konvention
+sagt: migriert wird, wenn ein Bereich ohnehin angefasst wird, nicht auf Vorrat. Genau das
+passiert hier — Punkt 9 ersetzt die drei fest verdrahteten Cases im `MQTTService` durch
+ein Wildcard-Abonnement, Punkt 10 fasst ohnehin jedes Feld von `CarStatusData` an. Ein
+eigener Punkt wäre ein **zweiter harter Schnitt** mit demselben Rollout-Fenster-Problem
+wie 7/8, für einen Umbau, der hier ohnehin anfällt.
+
+**Beteiligte.** Schreiber: `BMWConnector` (BMW und Mini, `VehicleConfig.cs:27`) und
+`VWConnector` (`vw_mqtt.py:22`). Leser: `ChargingController` (`Program.cs:281-282` — der
+Mini fehlt dort heute), `SmartHome.Web/MQTTService.cs:157-172` und der DataHub über sein
+`data/charging/#`-Abonnement. Beim VW vorher prüfen, ob er überhaupt noch Teilnehmer ist:
+Die WeConnect-API ist abgeschaltet, seine Daten gehen in keine Regelung mehr ein.
 
 **Abhängig von** 9.
 
@@ -643,17 +658,10 @@ ohne diesen Punkt gar keinen Ort, an den geschrieben werden könnte.
 - [ ] Position mitschreiben (Grundlage für Punkt 15)
 - [ ] Wiederholte identische Payloads nicht als neue Messung schreiben
 
-**Zu klären vor Umsetzung.** Dieser Punkt abonniert `daten/Fahrzeug/+/Status`, aber **kein
-Punkt stellt die Fahrzeug-Topics dorthin um.** Der BMWConnector publiziert nach
-`data/charging/<Auto>`, und Punkt 8 migriert ausschließlich Laden- und
-Konfigurations-Topics. `MQTT-Topic-Konvention.md` behandelt die Migration des ganzen
-Namensraums ausdrücklich als eigenen, späteren Schritt für alle Teilnehmer gemeinsam.
-Entweder wird dieser Punkt um die Umstellung von BMW- und VWConnector erweitert — dann
-entfällt die Abhängigkeit von 8 — oder die Umstellung wird ein eigener Punkt, von dem 17
-abhängt. Bis dahin hat auch Punkt 15 kein Fundament.
-
-**Abhängig von** 8 — vorher gäbe es das Topic `daten/Fahrzeug/+/Status` noch nicht, und
-es müsste zweimal gegen zwei Schemata gebaut werden.
+**Abhängig von** 10 *(entschieden am 2026-09-20, vorher stand hier 8)*. Die Umstellung
+der Fahrzeug-Topics auf `daten/Fahrzeug/<Auto>/Status` liefert Punkt 10 — Punkt 8 migriert
+nur Laden- und Konfigurations-Topics und hätte dieses Fundament nie gelegt. Vorher gäbe es
+das Topic nicht, und es müsste zweimal gegen zwei Schemata gebaut werden.
 
 **Welle E, seriell nach 13.** Kollidiert mit 8 und 13 im DataHub, deshalb nicht parallel zu
 diesen. Punkt 14 hängt nicht davon ab und kann davor oder danach laufen; Punkt 15 dagegen
