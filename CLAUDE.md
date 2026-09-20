@@ -142,6 +142,11 @@ Docker image versions use format `1.0.{github.run_number}`.
 
 Use these skills at the appropriate moments:
 
+- **`/orchestrator`** — Start a session as the coordinator for work split across several
+  parallel sessions: it writes the prompts, verifies results independently and proposes
+  merges, but writes no production code itself. Type it as the first message of a fresh
+  session. The method it follows is `Docs/Parallel-Arbeiten.md`
+
 - **`/simplify`** — Run after writing new code (connector changes, converters, etc.) to review for quality and efficiency before committing.
 - **`/review`** — Run when a PR is open to review the diff in full context before merging.
 - **`/security-review`** — Run before merging any changes that touch secrets handling (InfluxDB tokens, connector credentials, `Secrets.cs`).
