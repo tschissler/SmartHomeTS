@@ -26,6 +26,19 @@ namespace SmartHome.Web.Services
         public HeatingCommandData? HeatingEsszimmerCommand { get; private set; }
         public bool IsConnected => _client?.IsConnected ?? false;
 
+        /// <summary>
+        /// Latest state per wallbox, keyed by the device level of the status topic
+        /// ("Garage", "Stellplatz"). A box appears here as soon as it reports, so a further
+        /// box costs nothing but its entry in <see cref="LadeTopics.Wallboxen"/> — there is no
+        /// property per box to add.
+        /// </summary>
+        /// <remarks>
+        /// The location level of the topic is not part of the key: both boxes are in M3, and a
+        /// second location would need its own view anyway. Should one ever appear, a box of the
+        /// same name would overwrite this one.
+        /// </remarks>
+        public ConcurrentDictionary<string, WallboxStatus> Wallboxen { get; } = new();
+
         /// <summary>Heartbeats keyed by status topic. Devices appear here as soon as they report one.</summary>
         public ConcurrentDictionary<string, DeviceStatus> Devices { get; } = new();
 
@@ -68,6 +81,9 @@ namespace SmartHome.Web.Services
             {
                 Console.WriteLine("Connected to MQTT broker.");
                 await _client.SubscribeAsync("data/#");
+                // Covers LadeTopics.StatusAlle ("daten/Laden/+/+/Status") already. A second,
+                // overlapping subscription would buy nothing and risk a second copy of every
+                // wallbox status; the wildcard dispatch happens in UpdateSharedData.
                 await _client.SubscribeAsync("daten/#");
                 await _client.SubscribeAsync(LadeTopics.Einstellungen);
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
@@ -148,6 +164,11 @@ namespace SmartHome.Web.Services
             var payload = Encoding.UTF8.GetString(message.Payload);
 
             if (TrackDeviceTopics(message.Topic, payload))
+            {
+                return;
+            }
+
+            if (TrackWallboxStatus(message.Topic, payload))
             {
                 return;
             }
@@ -270,6 +291,35 @@ namespace SmartHome.Web.Services
                         break;
                     }
             }
+        }
+
+        /// <summary>
+        /// Handles the status of any wallbox, at any location: one case for all of them instead
+        /// of a topic literal per box. Returns true when the message was consumed here.
+        /// </summary>
+        private bool TrackWallboxStatus(string topic, string payload)
+        {
+            var box = LadeTopics.ZerlegeStatusTopic(topic);
+            if (box is null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var status = JsonSerializer.Deserialize<WallboxStatus>(payload);
+                if (status is not null)
+                {
+                    Wallboxen[box.Value.Wallbox] = status;
+                }
+            }
+            catch (JsonException ex)
+            {
+                // Keep the state we have: a malformed message must not blank the tile.
+                Console.WriteLine($"Ignoring malformed wallbox status on {topic}: {ex.Message}");
+            }
+
+            return true;
         }
 
         /// <summary>

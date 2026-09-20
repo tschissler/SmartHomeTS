@@ -105,29 +105,28 @@
     <div>Schnell-Laden</div>
 </div>
 
+<h4>Wallboxen</h4>
+
+<div class="wallboxGrid">
+    @foreach (var wallbox in LadeTopics.Wallboxen)
+    {
+        <WallboxStatusVisualizer
+            Name="@wallbox"
+            Status="@MqttService.Wallboxen.GetValueOrDefault(wallbox)"
+            Freigegeben="@IstFreigegeben(wallbox)"
+            Priorisiert="@(chargingSettings.PreferedChargingStation == Station(wallbox))"
+            FreigabeUmschalten="@(() => FreigabeUmschalten(wallbox))"
+            VorrangUmschalten="@(() => VorrangUmschalten(wallbox))" />
+    }
+</div>
+
+<h4>Fahrzeuge</h4>
+
 <div>
     <div class="carsGrid">
-        <CarStatusDataVisualizer 
-        CarStatusData="@bwmStatusData"  
-        @bind-IsChargingEnabled="chargingSettings.InsideChargingEnabled"  
-        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
-        CurrentChargingSessionEnergy="_chargingSituation.InsideChargingCurrentSessionWh/1000"
-        SetChargingStation="@ChargingStation.Inside"
-        CommunicateSettings="CommunicateSettings"/>
-        <CarStatusDataVisualizer 
-        CarStatusData="@miniStatusData" 
-        @bind-IsChargingEnabled="chargingSettings.OutsideChargingEnabled" 
-        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation" 
-        CurrentChargingSessionEnergy="_chargingSituation.OutsideChargingCurrentSessionWh/1000"
-        SetChargingStation="@ChargingStation.Outside"
-        CommunicateSettings="CommunicateSettings"/>
-        <CarStatusDataVisualizer 
-        CarStatusData="@vwStatusData" 
-        @bind-IsChargingEnabled="chargingSettings.OutsideChargingEnabled" 
-        @bind-PreferedChargingStation="chargingSettings.PreferedChargingStation"
-        CurrentChargingSessionEnergy="_chargingSituation.OutsideChargingCurrentSessionWh/1000"
-        SetChargingStation="@ChargingStation.Outside"
-        CommunicateSettings="CommunicateSettings"/>
+        <CarStatusDataVisualizer CarStatusData="@bwmStatusData" />
+        <CarStatusDataVisualizer CarStatusData="@miniStatusData" />
+        <CarStatusDataVisualizer CarStatusData="@vwStatusData" />
     </div>
 </div>
 
@@ -269,6 +268,74 @@
         {
             UpdateChargingSettings();
         }
+        else if (LadeTopics.ZerlegeStatusTopic(args.Topic) is not null)
+        {
+            // The tiles read the states straight out of MqttService.Wallboxen, so a status
+            // message only has to trigger a render. That also keeps the session duration
+            // ticking: the box reports every few seconds.
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>
+    /// Which station of <see cref="SharedContracts.ChargingSettings"/> a box is. The contract
+    /// still calls them Inside and Outside; renaming it would touch the ChargingController and
+    /// is a backlog item of its own, so the mapping lives here — once.
+    /// </summary>
+    private static ChargingStation Station(string wallbox) => wallbox switch
+    {
+        LadeTopics.Garage => ChargingStation.Inside,
+        LadeTopics.Stellplatz => ChargingStation.Outside,
+        // A third box would have no enable of its own in the contract, so it stays unassigned
+        // instead of silently sharing the enable of the outside one.
+        _ => ChargingStation.None,
+    };
+
+    private bool IstFreigegeben(string wallbox) => Station(wallbox) switch
+    {
+        ChargingStation.Inside => chargingSettings.InsideChargingEnabled,
+        ChargingStation.Outside => chargingSettings.OutsideChargingEnabled,
+        _ => false,
+    };
+
+    /// <summary>
+    /// One click, one switch, one publication. The enables are two independent booleans, so
+    /// each box has its own — that is what the three vehicle tiles could not do, where Mini and
+    /// VW both operated OutsideChargingEnabled.
+    /// </summary>
+    private async Task FreigabeUmschalten(string wallbox)
+    {
+        switch (Station(wallbox))
+        {
+            case ChargingStation.Inside:
+                chargingSettings.InsideChargingEnabled = !chargingSettings.InsideChargingEnabled;
+                break;
+            case ChargingStation.Outside:
+                chargingSettings.OutsideChargingEnabled = !chargingSettings.OutsideChargingEnabled;
+                break;
+            default:
+                return;
+        }
+        await CommunicateSettings();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The preference is a single enum for the whole system, so the two switches behave like
+    /// radio buttons: setting one clears the other, and clicking the one that is set gives the
+    /// preference up altogether.
+    /// </summary>
+    private async Task VorrangUmschalten(string wallbox)
+    {
+        var station = Station(wallbox);
+        if (station == ChargingStation.None)
+        {
+            return;
+        }
+        chargingSettings.PreferedChargingStation =
+            chargingSettings.PreferedChargingStation == station ? ChargingStation.None : station;
+        await CommunicateSettings();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void UpdateChargingSituation()

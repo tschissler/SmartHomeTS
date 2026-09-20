@@ -1,0 +1,230 @@
+@using SharedContracts
+
+@*
+    One wallbox, as the box itself reports it. The tile is always rendered: a box without a
+    vehicle is an operating state and belongs on screen, not hidden away.
+
+    Everything shown here comes from WallboxStatus — the box is the truth about a charging
+    process, the vehicle only supplies identity and vehicle data. See
+    Docs/Fahrzeug-Wallbox-Zuordnung.md. The tile deliberately knows nothing about vehicles;
+    assigning one is backlog item 11.
+*@
+
+<div class="wallboxBox">
+    <div class="wallboxHeader">
+        <span class="wallboxName">@Name</span>
+        <span class="wallboxZustand @ZustandKlasse">
+            <img class="wallboxZustandIcon" src="/images/@ZustandIcon" alt="" />
+            @ZustandText
+        </span>
+    </div>
+
+    @if (Status is null)
+    {
+        <div class="wallboxKeineDaten">
+            Keine Daten von der Box
+        </div>
+    }
+    else
+    {
+        <div class="wallboxWerte">
+            <div class="wallboxLabel">Leistung</div>
+            <div class="wallboxWert">@FormatiereLeistung(Status.Ladeleistung) @PhasenText</div>
+
+            <div class="wallboxLabel">Sollstrom</div>
+            <div class="wallboxWert">@FormatiereStrom(Status.SollstromMa)</div>
+
+            <div class="wallboxLabel">Sitzungsenergie</div>
+            <div class="wallboxWert">@FormatiereEnergie(Status.EnergieSitzungWh)</div>
+
+            <div class="wallboxLabel">Sitzungsdauer</div>
+            <div class="wallboxWert @(DauerIstUngenau ? "wallboxUngenau" : "")" title="@DauerHinweis">
+                @DauerText
+            </div>
+        </div>
+
+        @if (Alter is not null)
+        {
+            <div class="wallboxVeraltet" title="Die Box meldet ihren Zustand alle paar Sekunden. Bleibt die Meldung aus, steht hier ein alter Wert.">
+                Stand @FormatiereDauer(Alter.Value) alt
+            </div>
+        }
+    }
+
+    <div class="wallboxBedienung">
+        <span class="wallboxSchalter" @onclick="FreigabeUmschalten"
+              title="Gibt diese Wallbox für die Regelung frei">
+            <img class="wallboxSchalterIcon" src="/images/@(Freigegeben ? "checked.svg" : "unchecked.svg")" alt="" />
+            Freigabe
+        </span>
+        <span class="wallboxSchalter" @onclick="VorrangUmschalten"
+              title="Diese Wallbox wird zuerst bedient, wenn beide freigegeben sind. Der Vorrang gilt immer nur für eine Box.">
+            <span class="wallboxStern">@(Priorisiert ? "★" : "☆")</span>
+            Vorrang
+        </span>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Device states of the box that get a wording of their own, as documented on
+    /// <see cref="WallboxStatus.DeviceState"/>. States 1 (not ready for charging) and 2 (ready,
+    /// waiting for the vehicle) need none: what matters about them is whether something is
+    /// plugged in, and the plug status says that more precisely. Named here rather than in the
+    /// contract so that the merge does not rebuild the five other services using it.
+    /// </summary>
+    private const int ZustandStartet = 0;
+    private const int ZustandLaedt = 3;
+    private const int ZustandFehler = 4;
+    private const int ZustandUnterbrochen = 5;
+
+    /// <summary>
+    /// Plug state 5: cable in the station and in the vehicle, but not locked — the vehicle is
+    /// connected, yet the box cannot charge in this state.
+    /// </summary>
+    private const int PlugStatusNichtVerriegelt = 5;
+
+    /// <summary>
+    /// A phase counts as carrying current above this. Well below the 6 A minimum charging
+    /// current, well above what the measurement shows on an idle phase.
+    /// </summary>
+    private const int StromfuehrendAbMa = 500;
+
+    /// <summary>A status older than this is shown with its age instead of as current.</summary>
+    private static readonly TimeSpan MaxAlter = TimeSpan.FromSeconds(30);
+
+    /// <summary>Name of the box as it appears in the topic, e.g. "Garage".</summary>
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// Latest state of the box, null while nothing has arrived on its status topic — which is
+    /// a different thing from an empty box and is shown as such.
+    /// </summary>
+    [Parameter]
+    public WallboxStatus? Status { get; set; }
+
+    /// <summary>Whether the controller may charge at this box.</summary>
+    [Parameter]
+    public bool Freigegeben { get; set; }
+
+    /// <summary>Whether this box is the preferred one.</summary>
+    [Parameter]
+    public bool Priorisiert { get; set; }
+
+    /// <summary>
+    /// Toggles the enable of this box. The parent owns the settings and publishes them once —
+    /// the tile never publishes, so one click can only ever produce one retained message.
+    /// </summary>
+    [Parameter]
+    public EventCallback FreigabeUmschalten { get; set; }
+
+    /// <summary>Toggles the preference for this box; the parent clears the other one.</summary>
+    [Parameter]
+    public EventCallback VorrangUmschalten { get; set; }
+
+    /// <summary>
+    /// The plug state tells a free box from one that is plugged in and waiting; the device
+    /// state tells everything else. Both come from the box.
+    /// </summary>
+    private string ZustandText => Status switch
+    {
+        null => "unbekannt",
+        { DeviceState: ZustandFehler } => "Fehler",
+        { DeviceState: ZustandLaedt } => "lädt",
+        { DeviceState: ZustandUnterbrochen } => "unterbrochen",
+        { DeviceState: ZustandStartet } => "startet",
+        { FahrzeugVerbunden: true } => "verbunden, wartet",
+        { PlugStatus: PlugStatusNichtVerriegelt } => "verbunden, nicht verriegelt",
+        { PlugStatus: > 0 } => "Kabel eingesteckt",
+        _ => "frei",
+    };
+
+    private string ZustandKlasse => Status switch
+    {
+        null => "wallboxZustand-unbekannt",
+        { DeviceState: ZustandFehler } => "wallboxZustand-fehler",
+        { DeviceState: ZustandLaedt } => "wallboxZustand-laedt",
+        { DeviceState: ZustandUnterbrochen } => "wallboxZustand-unterbrochen",
+        { FahrzeugVerbunden: true } => "wallboxZustand-wartet",
+        { PlugStatus: PlugStatusNichtVerriegelt } => "wallboxZustand-wartet",
+        _ => "wallboxZustand-frei",
+    };
+
+    private string ZustandIcon => Status switch
+    {
+        null => "disconnected.svg",
+        { DeviceState: ZustandLaedt } => "connected.svg",
+        { FahrzeugVerbunden: true } => "connectednotready.svg",
+        { PlugStatus: PlugStatusNichtVerriegelt } => "connectednotready.svg",
+        _ => "disconnected.svg",
+    };
+
+    /// <summary>How many phases carry current, derived from the three measured currents.</summary>
+    private int Phasen => Status is null
+        ? 0
+        : (Status.StromPhase1Ma >= StromfuehrendAbMa ? 1 : 0)
+          + (Status.StromPhase2Ma >= StromfuehrendAbMa ? 1 : 0)
+          + (Status.StromPhase3Ma >= StromfuehrendAbMa ? 1 : 0);
+
+    private string PhasenText => Phasen == 0 ? "" : $"· {Phasen}-phasig";
+
+    /// <summary>
+    /// True when the session start came from the clock of the box instead of an observed
+    /// plug-in edge. That clock is not synchronised, so the duration may be arbitrarily
+    /// wrong and must not be shown as an exact value.
+    /// </summary>
+    private bool DauerIstUngenau => Status?.SitzungsBeginnAusBoxZeit == true;
+
+    private TimeSpan? Dauer
+    {
+        get
+        {
+            if (Status?.SitzungsBeginn is null) return null;
+            var dauer = DateTimeOffset.UtcNow - Status.SitzungsBeginn.Value;
+            // A box clock running ahead yields a negative duration - that is not a duration.
+            return dauer < TimeSpan.Zero ? null : dauer;
+        }
+    }
+
+    private string DauerText
+    {
+        get
+        {
+            if (Status?.SitzungsId is null) return "keine Sitzung";
+            if (Dauer is null) return "unbekannt";
+            if (DauerIstUngenau) return $"ca. {FormatiereDauer(Dauer.Value)}";
+            return $"{FormatiereDauer(Dauer.Value)} · seit {Status.SitzungsBeginn!.Value.ToLocalTime():HH:mm}";
+        }
+    }
+
+    private string DauerHinweis => DauerIstUngenau
+        ? "Die Box lief bereits, als der Connector startete. Der Beginn stammt deshalb aus der "
+          + "unsynchronisierten Uhr der Wallbox und kann beliebig falsch sein."
+        : "";
+
+    /// <summary>Age of the status, but only once it exceeds what the box normally takes.</summary>
+    private TimeSpan? Alter
+    {
+        get
+        {
+            if (Status is null) return null;
+            var alter = DateTimeOffset.UtcNow - Status.Zeitpunkt;
+            return alter > MaxAlter ? alter : null;
+        }
+    }
+
+    private static string FormatiereLeistung(int watt) => watt < 1000
+        ? watt.ToString("#,##0 W")
+        : (watt / 1000.0).ToString("0.0 kW");
+
+    private static string FormatiereStrom(int milliampere) => (milliampere / 1000.0).ToString("0.0 A");
+
+    private static string FormatiereEnergie(int wattstunden) => (wattstunden / 1000.0).ToString("0.00 kWh");
+
+    private static string FormatiereDauer(TimeSpan dauer) => dauer.TotalHours >= 1
+        ? $"{(int)dauer.TotalHours} h {dauer.Minutes} min"
+        : dauer.TotalMinutes >= 1
+            ? $"{(int)dauer.TotalMinutes} min"
+            : $"{(int)dauer.TotalSeconds} s";
+}

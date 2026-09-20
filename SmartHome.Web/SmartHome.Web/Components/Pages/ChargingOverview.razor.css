@@ -102,6 +102,23 @@
     background-color: #D6D6D6;
 }
 
+/* Both boxes, always - a box without a vehicle is an operating state, not a blank */
+.wallboxGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-column-gap: 30px;
+    grid-row-gap: 20px;
+    margin-left: 40px;
+    margin-right: 40px;
+    margin-top: 20px;
+}
+
+@media (max-width: 700px) {
+    .wallboxGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .carsGrid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
