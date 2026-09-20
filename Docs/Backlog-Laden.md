@@ -27,7 +27,7 @@ Präfix setzt.
 | 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | **erledigt und gemergt** (`ef244fe`). Ab jetzt läuft `dotnet test` vor jedem ChargingController-Build; ein roter Test erzeugt kein Image und damit kein Deployment |
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **erledigt und gemergt** (`04cc432`). 26 Dateien, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün ohne einen geänderten Erwartungswert. Löst **sechs** Rollouts aus, nicht vier: Enphase und Shelly bauen wegen `SharedContracts/**` mit — der transitive Pfadfilter aus Punkt 0 wirkt wie vorgesehen. Rollout-Handgriffe siehe unten |
 | 9 Wallbox-Kacheln | `laden-09-kacheln` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`5c23df9`, Image `1.0.172`). Nachkontrolle am Broker: sechs Klicks → sechs retained Nachrichten, eins zu eins. Der Doppelklick erzeugt zwei (zwei Klicks = zweimal umschalten, beide Zustände gewollt); die frühere dritte Phantomnachricht mit `Outside=true` **und** `Prefered=2`, die niemand angeklickt hatte, ist weg. Die Regelung lief während des Tests unbeirrt weiter (Stellplatz 8932 → 10294 → 10907 mA, PV-geführt) |
-| 12 Energieaufteilung | `laden-12-energieaufteilung` | 2026-09-20 | **erledigt, ausgerollt und vollständig verifiziert** (`44c0e80`, ChargingController `1.0.50`). **Gegenprobe bestanden:** 14 Messungen über 90 s bei wechselndem Quellenmix (reines PV, PV+Netz, PV+Batterie) — Summe der drei Quellen trifft die gemessene `Ladeleistung` in **jeder einzelnen Messung exakt**, Abweichung 0,0 W. Auch die Zeitintegration stimmt: Zähler 0,07093 + 0,00294 + 0,00313 = 0,0770 kWh bei 65 s Ladezeit, also 4265 W mittlere Leistung — im beobachteten Band 4103…4300 W. Die leere Garage bleibt dabei rauschfrei auf null, die 100-W-Schwelle wirkt |
+| 12 Energieaufteilung | `laden-12-energieaufteilung` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`44c0e80`, ChargingController `1.0.50`). Die Zurechnung selbst trifft auf 0,1 W, über alle drei Mischungsarten. **Aber: ein Zyklus Versatz**, siehe den Befund unten — meine erste Messung hatte ihn unbemerkt herausgekürzt |
 | 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | **erledigt und gemergt** (`b560217`). Der gemeldete Fehler war der Text; die Ursache lag tiefer — `disconnected.svg` ist fest `#d4aa00`, die freie Box trug also dauerhaft eine Aufmerksamkeitsfarbe, und `connected.svg`/`connectednotready.svg` sind geometrisch identisch und unterscheiden sich nur im Strich. Symbol jetzt inline in `currentColor`: Geometrie sagt Fahrzeug ja/nein, Farbe kommt aus dem Zustand |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
@@ -1028,6 +1028,38 @@ keinen Ort für die Position.
   ersten Lauf über alle Dashboards also exportieren, vergleichen, und erst laufen lassen,
   wenn die Differenz leer oder erklärt ist.
 
+- **Die Energieaufteilung hängt einen Regelzyklus hinterher.** Gefunden am 2026-09-20 von
+  der Session `grafana-wallbox-verlauf`, von mir in den Rohdaten bestätigt. Die
+  Aufteilungszeile zum Zeitpunkt T trägt die Ladeleistung von **T − 5 s**:
+
+      11:44:52,612  Quellensumme   19,0 W  =  AktuelleLadeleistung 11:44:47,888
+      11:44:57,704  Quellensumme 4103,0 W  =  AktuelleLadeleistung 11:44:52,891
+      11:45:02,790  Quellensumme 4161,0 W  =  AktuelleLadeleistung 11:44:57,889
+
+  Die Zurechnung ist davon **unberührt** — die drei Anteile summieren sich auf die
+  Leistung, die sie verwendet hat, auf 0,1 W genau. Falsch ist nur der Zeitbezug.
+  *(Meine eigene erste Nachkontrolle hatte den Versatz unbemerkt herausgekürzt, weil sie
+  beim Eintreffen einer Aufteilung den zuletzt gespeicherten Status verglich — also den
+  vorherigen. Deshalb meldete sie „Abweichung exakt 0,0 W". Wer so misst, misst den
+  Versatz weg.)*
+
+  **Zwei Folgen, die bei Punkt 13 und 14 bekannt sein müssen:**
+  1. Bei feinem Zeitraster schlägt die Gegenprobe **an den Flanken** aus — beim Ladebeginn
+     im 10-s-Raster bis −50 %, im Minutenraster −50 % in der Anfangsminute. Das sieht wie
+     ein Zurechnungsfehler aus, ist aber der Versatz. Ein Ausschlag **mitten** in einer
+     Ladung wäre dagegen ein echter Befund. Steht so in der Panel-Beschreibung des
+     Quellenmix-Dashboards.
+  2. Über die Energie fehlen die **ersten Sekunden** jeder Ladung: im Fenster 11:43–11:50
+     summieren die drei Zähler 0,12391 kWh gegen 0,13200 kWh `EnergieGesamt` der Box,
+     also **−6,1 %** bei 110 s Ladedauer — rund 5 s bei 4,2 kW. Der Fehlbetrag ist
+     **absolut und wächst nicht** mit der Ladedauer; bei einer mehrstündigen Ladung liegt
+     er im Promillebereich. Bei kurzen Sitzungen liegt „davon PV/Batterie/Netz" in einer
+     Protokolltabelle deshalb systematisch unter der Boxenergie.
+
+  **Wenn es nachgezogen wird**, ist der Ort die Stelle, an der der ChargingController den
+  Leistungswert für den Zyklus liest. Ob es das wert ist, ist offen: Der Fehler ist klein,
+  konstant je Sitzung und gut verstanden — und ein Eingriff in den Regelzyklus wiegt
+  schwerer als ein dokumentierter Versatz.
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
