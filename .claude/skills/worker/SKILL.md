@@ -36,6 +36,9 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   `ss -lptn 'sport = :<port>'` und `kill <pid>` — **nicht `pkill -f`**: Das Muster steht
   auch in deiner eigenen Kommandozeile, also greift es die eigene Shell mit und der Befehl
   endet mit Exit 144.
+- **Die Shell hier ist fish.** Ungequotete Glob-Muster als Argument scheitern dort mit
+  `no matches found`, wo bash sie durchreicht — `grep --include=*.razor` geht nicht,
+  `grep --include='*.razor'` geht. Setz alles Glob-Ähnliche in Anführungszeichen.
 - **Ein Punkt, eine Session.** Was der Auftrag nicht nennt, gehört jemand anderem — auch
   wenn es auf dem Weg liegt und klein aussieht. Im Zweifel melden statt anfassen.
 - **Das Arbeitsdokument des Vorhabens fasst du nicht an.** Das führt die
