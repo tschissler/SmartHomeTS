@@ -17,13 +17,27 @@ Thomas sagt auf Zuruf, was er angepasst haben will. Daraufhin:
 
 1. **Klär, was unklar ist** — aber nur, wo verschiedene Lesarten zu verschiedener Arbeit
    führen. Routineentscheidungen triffst du selbst und sagst, wie du entschieden hast.
-2. **Schreib den Auftrag** und gib ihn Thomas zum Kopieren. Nenn den Startbefehl mit dazu.
-   **Beginn den Auftrag mit der Zeile `Ruf zuerst /worker auf.`** — der Skill trägt alles,
-   was für jeden Auftrag gilt: Worktree, Grenzen gegenüber dem Produktivsystem, kein
-   Merge, keine Secrets suchen, Rollouts selbst zählen, und was der Abschlussbericht
-   enthalten muss. **Wiederhol das nicht im Auftrag** — er trägt nur die Aufgabe selbst
-   und die Fallen, die du konkret kennst.
-3. **Thomas startet die Session** und sagt dir, wenn sie läuft.
+2. **Nenn ihm den Startbefehl** — mehr nicht:
+
+   ```
+   claude -n <name>
+   ```
+
+   Thomas startet die Session und ruft darin `/worker` auf. Beides tippt er, kopieren muss
+   er nichts.
+
+3. **Schick den Auftrag per `SendMessage`**, sobald er dir sagt, dass die Session läuft.
+   Der volle Text geht an die Session, **nicht** in den Chat mit Thomas.
+
+   Zeig ihm stattdessen **drei bis fünf Zeilen**: was die Session tun wird, was sie
+   ausdrücklich nicht anfasst, und was du an Rollouts erwartest. Er soll mitlesen können,
+   ohne einen Prompt lesen zu müssen — und widersprechen können, bevor die Arbeit läuft.
+
+   **`/worker` trägt bereits**, was für jeden Auftrag gilt: Worktree, Grenzen gegenüber dem
+   Produktivsystem, kein Merge, keine Secrets suchen, Rollouts selbst zählen, und was der
+   Abschlussbericht enthalten muss. **Wiederhol das nicht.** Dein Auftrag trägt die Aufgabe
+   selbst und die Fallen, die du konkret kennst.
+
 4. **Die Session meldet sich bei dir**, wenn sie fertig ist.
 5. **Prüf unabhängig nach** — Tests selbst laufen lassen, Zahlen selbst zählen, Behauptungen
    im Code gegenlesen. Übernimm nichts aus einem Bericht ungeprüft.
@@ -43,9 +57,9 @@ Ohne `-n` vergibt der CLI eine Nummer, die niemandem sagt, woran die Session arb
 und du brauchst den Namen, um ihr über `SendMessage` zu schreiben. Ein Vorhaben mit
 mehreren Punkten nummeriert mit: `<vorhaben>-<NN>-<kurz>`.
 
-Sag ihnen im Auftrag, an **welchen Namen** sie ihren Abschlussbericht schicken sollen —
-deinen. Frag ihn mit `ListAgents` ab, statt ihn zu raten: Er ist nicht der Name, den
-Thomas beim Start getippt hat.
+Du erreichst die Session danach über `SendMessage` unter genau diesem Namen. Umgekehrt
+braucht sie **deinen** — nenn ihn im Auftrag und frag ihn vorher mit `ListAgents` ab,
+statt ihn zu raten: Er ist nicht unbedingt der, den Thomas beim Start getippt hat.
 
 ## Womit du rechnen musst
 

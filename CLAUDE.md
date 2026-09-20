@@ -149,7 +149,8 @@ Use these skills at the appropriate moments:
 - **`/worker`** — The counterpart: sets up a session that received a task from an
   orchestrator. Holds what applies to *every* such task — own worktree, boundaries against
   the production system, no merges, verify the instruction before building on it, and what
-  the closing report must contain. The orchestrator's prompts can then carry the task alone
+  the closing report must contain. You start the session and type `/worker`; the task
+  itself then arrives as a message from the orchestrator — nothing to copy and paste
 
 - **`/simplify`** — Run after writing new code (connector changes, converters, etc.) to review for quality and efficiency before committing.
 - **`/review`** — Run when a PR is open to review the diff in full context before merging.

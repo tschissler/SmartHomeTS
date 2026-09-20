@@ -3,8 +3,13 @@ name: worker
 description: Set up a session as a worker on one point of an orchestrated initiative - worktree, boundaries against the production system, no merges, and what the closing report must contain. Use at the start of a session that received a task from an orchestrator session.
 ---
 
-Du bearbeitest **einen** Punkt eines orchestrierten Vorhabens. Der eigentliche Auftrag
-steht in der Nachricht, die dir Thomas gibt; hier steht nur, was **immer** gilt.
+Du bearbeitest **einen** Punkt eines orchestrierten Vorhabens. Hier steht nur, was
+**immer** gilt.
+
+**Der eigentliche Auftrag kommt gleich per Nachricht von der Orchestrierungs-Session.**
+Thomas hat dich nur gestartet; er wird dir nichts einfügen. Sag ihm in einem Satz, dass du
+bereit bist und auf den Auftrag wartest, und **fang nichts an**, bis er da ist — auch dann
+nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
 
 ## Arbeitsweise
 
