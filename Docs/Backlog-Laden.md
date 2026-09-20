@@ -184,10 +184,22 @@ nicht repariert.
 - [ ] Liveness von der Fahrzeugverbindung entkoppeln: sie prüft nur, ob der Prozess
       bedienbar ist. Ein Neustart repariert keinen Token
 - [ ] Readiness so mappen, dass `Degraded` nicht als betriebsbereit durchgeht
-- [ ] Proaktive Warnung: Token-Alter aus dem Kubernetes-Secret bewerten und ab
-      > 80 Tagen warnen, bevor der Ausfall eintritt
-- [ ] Prüfen, ob dieselbe Probe-Verwechslung in den anderen Services steckt
-      (KebaConnector, ChargingController, EnphaseConnector, ShellyConnector, DataHub)
+- [ ] Proaktive Warnung: Token-Alter bewerten, bevor der Ausfall eintritt. **Quelle ist
+      der `auth_time`-Claim des `id_token`** — er nennt den Zeitpunkt des interaktiven
+      Logins und überlebt die 50-Minuten-Refreshes; das `creationTimestamp` des Secrets
+      taugt nicht (beide Secrets stehen auf 2026-03-08, obwohl BMW am 2026-09-20 neu
+      gebootstrapt wurde). **Die Schwelle ist nicht 80 Tage:** gemessen lief der Mini bei
+      195 Tagen weiter, der BMW fiel nach 161 Tagen aus. Die „~90 Tage" in `SETUP.md` sind
+      nicht belegt. Default 150 Tage, über `BMW_TOKEN_AGE_WARN_DAYS` konfigurierbar
+- [ ] Die Alters-Warnung geht **nicht** in die Readiness ein — ein gewarnter, aber
+      funktionierender Connector muss betriebsbereit bleiben
+- [x] ~~Prüfen, ob dieselbe Probe-Verwechslung in den anderen Services steckt~~ —
+      **geprüft, kein Befund.** Die Probe-Pfade aller zehn Deployments wurden gegen den
+      Code gehalten: DataHub und Web trennen sauber über Tags (`live`/`ready`);
+      ChargingController, Keba, Shelly, Enphase, RulesEngine und VW liefern auf `/healthz`
+      ein statisches „alive" und auf `/ready` 503, sobald nicht `Healthy` — `Degraded`
+      fällt dort korrekt durch. Der BMWConnector war der einzige mit beiden Proben auf
+      demselben Checksatz
 
 **Fertig, wenn** ein simulierter Ausfall eines von zwei Fahrzeugen nach außen sichtbar ist.
 
@@ -312,8 +324,11 @@ zurückschreibt.
       Format und Länge prüfbar) und explizitem Opt-in, nicht als Nebenwirkung
 - [ ] Beim Überschreiben den ersetzten Wert maskiert protokollieren — der Vorfall war nur
       an den Byte-Längen im Secret erkennbar
-- [ ] Dieselbe Rückschreib-Logik in den anderen Connectoren prüfen (VW, Keba, Shelly,
-      Enphase)
+- [x] ~~Dieselbe Rückschreib-Logik in den anderen Connectoren prüfen~~ — **geprüft,
+      kein Befund.** Der BMWConnector ist der einzige Dienst im Repo mit einem
+      Kubernetes-Client; VW, Keba, Shelly und Enphase lesen Zugangsdaten nur aus der
+      Umgebung und schreiben nichts zurück. Einzige weitere Fundstelle:
+      `Depricated/BMWConnector/k8s_utils.py`
 - [ ] Erwägen, `bmwconnector-credentials` versioniert zu hinterlegen (SealedSecret im
       Deployments-Repo), damit es überhaupt eine Wiederherstellungsquelle gibt
 
