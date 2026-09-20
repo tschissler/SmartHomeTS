@@ -35,7 +35,7 @@ Präfix setzt.
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
 | 13a Ladesitzungen | `laden-13a-ladesitzungen` | 2026-09-20 | **erledigt und gemergt** (`a6d9c30`). ChargingController 115/115, DataHub 65/65 (selbst nachgelaufen), kein bestehender Erwartungswert angefasst. Statt eines booleschen `beginn_geschaetzt` die Spalte **`beginn_quelle`** mit vier Werten: `steckflanke` und `regelzyklus` sind gemessen, `boxuhr` hat einen Fehler ohne Vorzeichen, `dienstanlauf` einen mit — dann ist `dauer_s` zu kurz. Ein Ja/Nein hätte die letzten beiden ununterscheidbar gemacht. **Zwei** Int16-Verengungen entfernt; die zweite (`Int16.Parse` beim Einlesen der CanGateway-Werte) wird tatsächlich erreicht. **Acht** Builds, nicht sechs — meine Zahl war falsch, die Session hat die `paths:`-Blöcke durchgezählt. **Entsperrt 14** |
 | 21 Ladeseite oben | `laden-21-ladeseite-oben` | 2026-09-20 | **erledigt und gemergt** (`22d4240`). Build 0 Fehler, 44 Warnungen alle vorbestehend (selbst geprüft). Der einzige echte Fehler war der Zyklus-Versatz: Die abgelesene Ladeleistung kommt jetzt aus `WallboxStatus`, identisch mit der Kachel. **Den Hausverbrauch hat die Session bewusst nicht umgestellt** und meinen Vorschlag widerlegt — gemischt stünde beim Anfahren auf 7 kW kurzzeitig „Haus: −6.000 W“ da. Ihre Regel: Eine abgelesene Zahl kommt aus der frischesten Quelle, ein Balken, der eine Summe aufteilt, vollständig aus einem Schnappschuss. Farben als CSS-Variablen an einer Stelle, Boxnamen aus `LadeTopics`, Navigation heißt jetzt „Laden“ |
-| 13b Ladeliste entfernen | `laden-13b-ladeliste-entfernen` | 2026-09-20 | **läuft** — reiner Abriss: Sitzungs-Grid, Monatswähler, Fahrzeugfilter und Export aus `ChargingOverview.razor`, `ChargingSessionService.cs` (enthält nur auskommentierten Code) und die DI-Zeile. Der `ChargingSession`-Record wird gelöscht, **wenn** die Session selbst bestätigt, dass er frei ist — das kostet acht Builds. **Kein Link aufs Dashboard**, das gibt es erst mit Punkt 14. Disjunkt zu Punkt 3, der im Web nur `Devices.razor` anfasst |
+| 13b Ladeliste entfernen | `laden-13b-ladeliste-entfernen` | 2026-09-20 | **läuft** — Abriss: Sitzungs-Grid, Monatswähler, Fahrzeugfilter und Export aus `ChargingOverview.razor`, `ChargingSessionService.cs` (enthält nur auskommentierten Code) und die DI-Zeile. Der `ChargingSession`-Record wird gelöscht, **wenn** die Session selbst bestätigt, dass er frei ist — das kostet acht Builds. **Kein Link aufs Dashboard**, das gibt es erst mit Punkt 14. Disjunkt zu Punkt 3, der im Web nur `Devices.razor` anfasst. **Zusatzauftrag am 2026-09-20:** Quellen und Verbräuche zurück zur dichten Anordnung, siehe die Nachbesserung zu Punkt 21 unten |
 | 3 Service-Heartbeat | `laden-03-heartbeat` | 2026-09-20 | **läuft** — fünf Dienste publizieren auf `status/Cluster/<Typ>/<Name>`, `Devices.razor` zeigt sie ohne Sonderbehandlung. Gefahrenstellen im Auftrag genannt: Der Heartbeat ist **retained** und `DeviceStatus.Age` misst die Empfangszeit (bewusst, wegen der NTP-Offsets der Firmwares) — für Dienste mit korrekter Uhr gilt der Grund nicht. Ein Helfer in `Libs/` baut ohne Eintrag in die `paths:`-Blöcke nichts neu. Und der **VWConnector ist Python**, den erreicht kein .NET-Helfer |
 | Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **erledigt und abgenommen** — sieben weitere Commits bis `1cb4386`. Endstand **28 Dashboards** (`energiefluss-copy` gelöscht), Abgleich zweimal hintereinander 0 Unterschiede. Ordnerverteilung von mir unabhängig aus den `folderUid`-Feldern nachgerechnet: Infrastruktur 9, Energie 7, Wärme 5, Klima 2, Laden 2, Wasser 1, Provisioned 2 — deckungsgleich. Der kritische Umbenenn-Push (`6f889aa`) war **vorher gemessen, nicht angenommen**: 29 zu 29, null inhaltliche Abweichung, Trockenlauf 0 Ordnerwechsel. `docs/influxdb-reference.md` kennt jetzt die vier Fahrzeugtabellen — inklusive `sub_category` je Measurement, ein Fund der Session in meinen eigenen Messdaten: `Ladeziel` steht auf `Soll`, `SteckerVerbunden` auf `Verbindungsstatus`, wer das nicht weiß verliert still zwei von sechs Reihen. Endstand `fa682ed`, aus einem eigenen Klon gegen den Server geprüft |
 | Grafana-Action | `grafana-action` | 2026-09-20 | **erledigt** — zwei Forgejo Workflows live. Ein Push auf `dashboards/` schreibt ~20 s später nach Grafana, nur die geänderten Dateien. Abgleich doppelt geprüft (lokal und aus dem Runner): 29 Dashboards, 0 Unterschiede. **Der Editor-Test wurde von Thomas abgelehnt**, siehe unten |
@@ -949,6 +949,35 @@ Angleichung, nicht Neubau: Die Inhalte des oberen Teils sind richtig und nützli
 - [ ] Ladeleistung je Box aus `WallboxStatus` beziehen, nicht aus `ChargingSituation` —
       dann stimmen oben und unten immer überein
 - [ ] Gestalterisch an die Kacheln angleichen (Abstände, Kartenform, Typografie)
+
+#### Nachbesserung am 2026-09-20: die dichte Anordnung war richtig
+
+**Thomas hat die ausgerollte Seite gesehen und sie ist schlechter als vorher.** Der Umbau
+wurde freigegeben, ohne dass ihn jemand angesehen hatte: Die Session bekam keine
+Screenshots hin (Renderer-Timeouts), meldete das als Einschränkung — und die
+Integrator-Session hat trotzdem gemergt. **Geprüft waren Build, Dateiumfang, Farbwerte und
+die Hausverbrauchs-Logik; ungeprüft war das Aussehen, und genau darum ging es bei diesem
+Punkt.** Das ist der Fehler, nicht der Umbau selbst.
+
+**Was verlorenging, in Thomas' Worten:** *„früher waren die beiden Balken untereinander,
+so konnte man Produktion und Verbrauch gut gegenüberstellen.“*
+
+Die beiden Balken sind ein **Vergleichsinstrument**: unmittelbar übereinander, gleich
+breit, gleiche Skala. Der Umbau hat eine Überschrift und eine Legende zwischen sie gesetzt
+und den Vergleich damit aufgelöst. Dazu wiederholte sich die Seite erneut — auf die
+Überschrift „Quellen und Verbräuche“ folgten in der Box noch einmal „QUELLEN“ und
+„VERBRÄUCHE“, eine Ebene tiefer derselbe Fehler, den der Punkt oben beheben sollte.
+
+**Wiederhergestellt wird:** beide Balken unmittelbar übereinander, eine Legende statt
+zwei, keine Zwischentitel, insgesamt flacher. **Die Substanz bleibt** — Ladeleistung aus
+`WallboxStatus`, der Hausverbrauch vollständig aus der `ChargingSituation`, die
+Grafana-Farben, die Boxnamen aus `LadeTopics`, der Null-Schutz. Umgesetzt von
+`laden-13b-ladeliste-entfernen`, weil die Session ohnehin in dieser Datei arbeitet.
+
+**Die Lehre, allgemein:** Bei einer Umgestaltung ist das Aussehen der Gegenstand. Ist es
+nicht geprüft, ist der Punkt nicht geprüft — gleichgültig, wie grün der Build ist. Wenn
+eine Session meldet, dass sie das Ergebnis nicht ansehen konnte, gehört vor den Merge ein
+Blick von Thomas, nicht danach.
 
 **Nicht enthalten.** Die Kacheln selbst (Punkt 9/9b, fertig und verifiziert) und der
 Fahrzeugbereich darunter (Punkt 10). Die Balken und die Batterieanzeige bleiben inhaltlich
