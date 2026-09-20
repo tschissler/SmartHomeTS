@@ -105,8 +105,11 @@ Docker image versions use format `1.0.{github.run_number}`.
 - `Docs/Fahrzeugdaten-in-InfluxDB.md` — which vehicle value goes into which table, the tag
   set, **why the timestamp is `lastUpdate` and not the arrival time**, why that alone makes
   the write idempotent, and what the fields deliberately left out are
-- `Docs/Backlog-Laden.md` — ordered backlog for charging, vehicle assignment, charging log
-  and the topic cleanup; work it top to bottom
+- `Docs/Archiv/Backlog-Laden-2026-09.md` — **archive, not a task list.** The charging
+  initiative was finished on 2026-09-20; nothing in it is still to be done. What it holds
+  and no other document does: how each point was verified against the running system, the
+  numbers that came out, and where the instructions turned out to be wrong. Read it to
+  find out *whether* something works — the documents above say *how*
 - `Docs/ChargingController-Regelkreis.md` — control loop of the EV charging (smoothing,
   contactor protection delays, tuning parameters, diagnostics)
 - `Docs/InfluxDB-Modellierung.md` — **binding rule for every new measurement**: which

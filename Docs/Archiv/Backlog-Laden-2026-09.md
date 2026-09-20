@@ -1,5 +1,31 @@
 # Backlog: Laden, Fahrzeugzuordnung und Topic-Aufräumung
 
+> ## Abgeschlossen und archiviert am 2026-09-20
+>
+> **Dieses Dokument ist Protokoll, kein Auftrag.** Es hat an einem Tag zehn Sessions durch
+> 24 Punkte geführt und seine Aufgabe damit erfüllt. Niemand arbeitet es mehr ab.
+>
+> **Wo das bleibende Wissen steht:**
+>
+> | Thema | Dokument |
+> |---|---|
+> | Topic-Benennung | `MQTT-Topic-Konvention.md` |
+> | Fahrzeug ↔ Wallbox | `Fahrzeug-Wallbox-Zuordnung.md` |
+> | Ladeprotokoll, `ladesitzungen` | `Ladeprotokoll.md` |
+> | Fahrzeugdaten in InfluxDB | `Fahrzeugdaten-in-InfluxDB.md` |
+> | Modellierungsregeln | `InfluxDB-Modellierung.md` |
+> | Dienst-Heartbeat | `Service-Heartbeat.md` |
+> | **Wie mehrere Sessions parallel arbeiten** | **`Parallel-Arbeiten.md`** |
+>
+> **Was hier drinsteht und sonst nirgends:** die Beweisführungen. Wie jeder Punkt am
+> laufenden System nachgeprüft wurde, welche Zahlen dabei herauskamen, und an welchen
+> Stellen die Aufträge falsch waren. Wer wissen will, *ob* etwas funktioniert, findet hier
+> die Messung — wer wissen will, *wie* es funktioniert, liest die Dokumente oben.
+>
+> **Offen geblieben:** Punkt 15 (Position auswerten, braucht Wochen an Daten) und zwei
+> Befunde ohne Punkt — die Enphase-Tests entflechten und `SmartHomeWebManagers` testen.
+
+
 Abzuarbeiten in dieser Reihenfolge. Jeder Punkt ist für sich abgeschlossen und lässt das
 System lauffähig zurück. Erledigte Punkte werden abgehakt, nicht gelöscht — die
 Reihenfolge soll nachvollziehbar bleiben.
@@ -42,7 +68,7 @@ Aufgefallen am 2026-09-20 beim Versuch, den offenen Rest auszuzählen.
 | 13a Ladesitzungen | `laden-13a-ladesitzungen` | 2026-09-20 | **erledigt und gemergt** (`a6d9c30`). ChargingController 115/115, DataHub 65/65 (selbst nachgelaufen), kein bestehender Erwartungswert angefasst. Statt eines booleschen `beginn_geschaetzt` die Spalte **`beginn_quelle`** mit vier Werten: `steckflanke` und `regelzyklus` sind gemessen, `boxuhr` hat einen Fehler ohne Vorzeichen, `dienstanlauf` einen mit — dann ist `dauer_s` zu kurz. Ein Ja/Nein hätte die letzten beiden ununterscheidbar gemacht. **Zwei** Int16-Verengungen entfernt; die zweite (`Int16.Parse` beim Einlesen der CanGateway-Werte) wird tatsächlich erreicht. **Acht** Builds, nicht sechs — meine Zahl war falsch, die Session hat die `paths:`-Blöcke durchgezählt. **Entsperrt 14** |
 | 21 Ladeseite oben | `laden-21-ladeseite-oben` | 2026-09-20 | **erledigt und gemergt** (`22d4240`). Build 0 Fehler, 44 Warnungen alle vorbestehend (selbst geprüft). Der einzige echte Fehler war der Zyklus-Versatz: Die abgelesene Ladeleistung kommt jetzt aus `WallboxStatus`, identisch mit der Kachel. **Den Hausverbrauch hat die Session bewusst nicht umgestellt** und meinen Vorschlag widerlegt — gemischt stünde beim Anfahren auf 7 kW kurzzeitig „Haus: −6.000 W“ da. Ihre Regel: Eine abgelesene Zahl kommt aus der frischesten Quelle, ein Balken, der eine Summe aufteilt, vollständig aus einem Schnappschuss. Farben als CSS-Variablen an einer Stelle, Boxnamen aus `LadeTopics`, Navigation heißt jetzt „Laden“ |
 | 13b Ladeliste entfernen | `laden-13b-ladeliste-entfernen` | 2026-09-20 | **erledigt und gemergt** (`e077f57`). Drei Commits, −288/+48 Zeilen, Warnungen 44 → 42, **genau ein Rollout** (nur Web). Enthält die Nachbesserung zu Punkt 21: Balkenpaar wieder unmittelbar übereinander, eine Legende, Zwischentitel weg. **Diesmal am laufenden Ding geprüft** — lokaler Broker mit 128 eingespielten retained Topics, Seite bei 1400/820/450/414 px angesehen. Der `ChargingSession`-Record bleibt: Die Session hat meine gegenteilige Behauptung nicht geglaubt, sondern nachgestellt |
-| 14 Dashboard „Laden“ | `laden-14-dashboard-laden` | 2026-09-20 | **läuft** — im Repo `forgejo.intern/thomas/Grafana`, berührt SmartHomeTS nicht. Kennzahl ist der **Netzanteil**, nicht der PV-Anteil; kein Vergleichsmaßstab gegen das Wetter (von Thomas abgelehnt). Zwei gestapelte Balken aus derselben Abfrage — absolut und auf 100 % normiert —, Netz unten, weil nur die unterste Reihe eine gemeinsame Grundlinie hat. Woche/Monat/Jahr. **Dünne Datenlage:** `ladesitzungen` beginnt mit der ersten beendeten Sitzung |
+| 14 Dashboard „Laden“ | `laden-14-dashboard-laden` | 2026-09-20 | **erledigt und live** (`3dfca26` im Grafana-Repo) — Dashboard `laden-bilanz`, neun Panels, drei Variablen. Vor dem Push importiert und im Browser geprüft, statt blind zu pushen. **Fand einen Irrtum in meinem Auftrag:** Grafanas 100-%-Stapelung formatiert den Tooltip unabhängig von der Achse und zeigte drei Anteile, die zusammen 141 % ergaben — die Anteile werden jetzt in SQL gerechnet. Handrechnung bestätigt: Netzanteil 0,894 %, von mir unabhängig nachgerechnet |
 | 23 + 24 Telefon & Syncfusion | `laden-2324-telefon-syncfusion` | 2026-09-20 | **erledigt und gemergt** (`a546cc4`). Neun Commits, 18 Dateien, **ein Rollout**. Sechs Breiten × sechs Seiten, hoch und quer, **kein horizontales Scrollen mehr** — `.stepsGrid` bricht jetzt um, bei 414 px Dokumentbreite 525 → 399 px. Die Ladestufen tragen ihre Erklärung im Klartext statt im Hover-Tooltip. **Syncfusion restlos weg**, Veröffentlichung 238 MB → 8,3 MB. Farben zurück auf die alte Web-Palette, Ränder und Rahmen im Schmalformat weg. Die mitgenommene Balkenskala legte eine Falltür frei: unter `de-DE` ist `width: 11,28%` ungültig, **alle Balken waren leer** — verdeckt durch die Ganzzahldivision, die nie ein Komma erzeugt hatte. Warnungen 42 → 22 |
 | 3 Service-Heartbeat | `laden-03-heartbeat` | 2026-09-20 | **erledigt und gemergt** (`8aa36f5`). **Acht** Dienste statt fünf plus der VWConnector — die RulesEngine musste dazu (`meta/RulesEngine/version` geht im Heartbeat auf), Enphase und Shelly kamen als eigener Commit, weil der ChargingController auf Enphase-Daten regelt und dessen Schweigen das Laden anhält. **Sieben Hardwarefelder werden weggelassen statt auf 0 gesetzt**: `RssiIcon` bildet alles ab −60 auf den vollen Empfangsbalken ab, eine Dienst-Karte hätte also „-0 dBm“ bei vollem Balken behauptet. Alter aus `Zeitpunkt ?? ReceivedAt`. `Libs/HeartbeatLib` ohne MQTTnet (zwei Hauptversionen im Bestand), in sieben Pfadfiltern, plus zwei Dockerfile-COPY-Zeilen. Tests selbst nachgelaufen: HeartbeatLib 20, CC 115, RulesEngine 64, DataHub 65, BMW 56, Keba 17. **Neun Rollouts**, alle durch, null Restarts. **Nachkontrolle 16:53 bestanden:** Acht Dienste senden auf `status/Cluster/Dienst/<Name>` (BMW, VW, Keba, ChargingController, DataHub, RulesEngine, Enphase, Shelly — das Web ist Verbraucher, nicht Sender). **Die sieben Hardwarefelder sind abwesend, nicht 0** — einzeln geprüft. `meta/RulesEngine/version` ist weg. Die Python-Umsetzung des VWConnectors liefert denselben Feldsatz inklusive `Zustand` und `lastDataSecondsAgo`. Ein ESP32-Gerät zeigt unverändert `rssi -60`, `freeHeap 228936`, `mqttConnects 10` |
 | Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **erledigt und abgenommen** — sieben weitere Commits bis `1cb4386`. Endstand **28 Dashboards** (`energiefluss-copy` gelöscht), Abgleich zweimal hintereinander 0 Unterschiede. Ordnerverteilung von mir unabhängig aus den `folderUid`-Feldern nachgerechnet: Infrastruktur 9, Energie 7, Wärme 5, Klima 2, Laden 2, Wasser 1, Provisioned 2 — deckungsgleich. Der kritische Umbenenn-Push (`6f889aa`) war **vorher gemessen, nicht angenommen**: 29 zu 29, null inhaltliche Abweichung, Trockenlauf 0 Ordnerwechsel. `docs/influxdb-reference.md` kennt jetzt die vier Fahrzeugtabellen — inklusive `sub_category` je Measurement, ein Fund der Session in meinen eigenen Messdaten: `Ladeziel` steht auf `Soll`, `SteckerVerbunden` auf `Verbindungsstatus`, wer das nicht weiß verliert still zwei von sechs Reihen. Endstand `fa682ed`, aus einem eigenen Klon gegen den Server geprüft |
