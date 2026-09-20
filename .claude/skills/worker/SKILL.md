@@ -26,7 +26,10 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   (`/home/thomas/Repos/GitHub/…`) und auch in `.github/workflows`. Einzelne, gerade Befehle
   laufen durch; `for`-Schleifen über Globs und lange `&&`-Ketten werden abgelehnt, auch
   wenn gar kein git darin vorkommt. Brauchst du eine Schleife, schreib sie in eine
-  Skriptdatei und ruf die auf. **Dasselbe eine Ebene höher:** Wird eine lange
+  Skriptdatei und ruf die auf. **Und setz kein `cd` davor** — du stehst schon im Worktree,
+  und der Reflex, den Pfad noch einmal abzusichern, macht aus einem geraden Befehl einen
+  verschachtelten. Derselbe Befehl läuft ohne `cd` durch, der mit `cd` abgelehnt wird.
+  **Dasselbe eine Ebene höher:** Wird eine lange
   `curl`-Abfrage abgelehnt, obwohl dieselbe Form vorher durchlief, leg den Rumpf als Datei
   im Scratchpad ab und ruf `curl --data-binary @datei` auf. Es ist die Verschachtelung, die
   anstößt, nicht der Inhalt. **Ein Token gehört trotzdem nie in eine Datei** — den holst du
@@ -51,6 +54,12 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   produktiver.
 - **Kein Merge nach `main`.** Das macht die Orchestrierungs-Session nach Thomas'
   ausdrücklicher Freigabe — jeder Merge ist binnen ~2 min ein Deployment.
+  **Eine Ausnahme, und sie ist an einen Nachweis gebunden:** Änderungen, die *nachweislich*
+  keinen Workflow auslösen — Dokumentation, Skills —, darfst du selbst pushen. Der Nachweis
+  ist, dass du die `paths:`-Blöcke aller Workflows durchgesehen und keinen Treffer gefunden
+  hast, und er gehört in den Bericht. Nicht „ich glaube, das löst nichts aus", sondern
+  „ich habe nachgezählt, hier ist die Zählung". Bei allem anderen bleibt es beim Merge
+  durch die Orchestrierung.
 - **Secrets suchst du nicht.** Weder in Dateien noch in der Shell-Historie noch im Cluster.
   Brauchst du eines, sag es und warte. Ein Geheimnis, das eine Session sich zusammensucht,
   landet in einem Transkript.

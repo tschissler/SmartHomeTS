@@ -57,6 +57,20 @@ pio run -t upload          # Build and upload
 pio device monitor         # Serial monitor
 ```
 
+**Two things that make a firmware build look green when it is not:**
+- **A green `pio run` does not mean the image fits.** The CI runs `check_firmware_size.py`
+  as a separate step afterwards — that is the one that fails on an oversized `.bin`. Both
+  together are the release criterion, never `pio run` alone.
+- **Measure flash figures with a fresh `PLATFORMIO_CORE_DIR`.** `platform = espressif32`
+  resolves to whatever is installed globally — on this machine a sibling firmware has put
+  the pioarduino fork (Arduino core 3.x) under that name, while a fresh CI runner pulls the
+  registry version 7.1.3 (Arduino core 2.x). Measured against the local install you get
+  your own workbench, not the CI.
+- **Open version ranges can silently break the build.** `LEDStripe.Firmware` pins
+  `fastled/FastLED@3.10.3` for exactly that reason: 3.10.5 alone costs ~394 KB more and
+  pushes the image to 108 % of the partition. A failing build uploads no `.bin` and
+  publishes no MQTT message — the device simply stays on its old firmware, silently.
+
 ### Python services
 ```bash
 pip install -r VWConnector/requirements.txt
