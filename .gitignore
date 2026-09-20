@@ -1,6 +1,9 @@
 **/.DS_Store
 **/Secrets.cs
 
+# git worktrees created by Claude Code sessions live inside the repo
+/.claude/worktrees/
+
 
 
 ## Ignore Visual Studio temporary files, build results, and

@@ -7,6 +7,10 @@ on:
       - .github/workflows/Smarthome.Web.yml
       - SmartHome.Web/**
       - '!SmartHome.Web/SmartHomeBlazorApp/**'
+      # Shared code this service references (transitively resolved) - without
+      # these the image is not rebuilt and the change deploys silently nowhere.
+      - SharedContracts/**
+      - SmartHomeHelpers/**
   workflow_dispatch:
 
 # A newer push supersedes a running build of the same branch - without this,
