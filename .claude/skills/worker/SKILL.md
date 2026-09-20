@@ -103,13 +103,27 @@ Drei Auflagen:
 - **Ein Screenshot ersetzt Thomas' Blick nicht.** Er sieht das Ergebnis auf dem echten
   Gerät; dein Bild sagt nur, dass es dort überhaupt ankommen kann.
 
-**Rechne damit, dass der Screenshot scheitert.** Steht der Tab nicht im Vordergrund seines
-Fensters, meldet er `document.visibilityState: "hidden"`, und die Aufnahme läuft nach 30 s
-in einen Timeout. Den Fokus dafür zu übernehmen ist nichts, was du ungefragt tust — Thomas
-arbeitet dort. **Miss stattdessen in der Seite**: Das Layout hängt nicht an der
-Sichtbarkeit, `getBoundingClientRect` und `getComputedStyle` liefern auch im verborgenen
-Tab. Aus demselben Grund ist ein Behälter fester Breite die verlässlichere Messgröße als
-die Fenstergröße — `resize_window` greift nicht immer.
+**Ein Tab im Hintergrund sieht aus wie ein kaputtes Werkzeug.** Steht Chromes Fenster nicht
+im Vordergrund, meldet der Tab `document.visibilityState: "hidden"`. Dann läuft jeder
+Screenshot nach 30 s in einen Timeout — mit der Meldung „renderer may be frozen", die in
+die falsche Richtung zeigt —, **und Anwendungen, die beim Rendern auf Sichtbarkeit achten,
+zeigen gar nichts mehr**: Grafana liefert dort null Panels, auch bei einem fehlerfreien
+Dashboard.
+
+**Frag deshalb `document.visibilityState` ab, bevor du ein Rendering-Problem debuggst**, und
+lade zur Gegenprobe etwas Bekanntes. Zwei Sessions haben je eine halbe Stunde die eigene
+Datei verdächtigt. Den Fokus selbst zu übernehmen ist nichts, was du ungefragt tust —
+Thomas arbeitet dort; sag ihm stattdessen, dass er das Fenster sichtbar lassen muss.
+
+**Was auch im verborgenen Tab geht: messen und rechnen.** `getBoundingClientRect` und
+`getComputedStyle` liefern für gewöhnliches Markup weiter, und die Funktionen der Anwendung
+selbst lassen sich direkt aufrufen, statt über die Oberfläche zu gehen — bei Grafana etwa
+`window.System.import('@grafana/data')`, um Wertformatierer, Sanitizing oder
+Variablen-Interpolation zu prüfen. Das ist der billigste Weg, aus einer Annahme eine
+Messung zu machen, und er braucht kein Bild.
+
+Ein Behälter fester Breite ist dabei die verlässlichere Messgröße als die Fenstergröße —
+`resize_window` greift nicht immer.
 
 ## Der Abschlussbericht
 
