@@ -94,6 +94,11 @@ Docker image versions use format `1.0.{github.run_number}`.
 - `Docs/ChargingController-Regelkreis.md` — control loop of the EV charging (smoothing,
   contactor protection delays, tuning parameters, diagnostics)
 - `Docs/microK8s/Setup MicroK8s.md` — cluster setup
+- **Grafana dashboards no longer live here** — they moved to `forgejo.intern/thomas/Grafana`
+  (dashboards, the API export script, the Sankey generator, the InfluxDB field reference).
+  The unit is the Grafana instance, not a domain: it also serves climate, heat pump and
+  cistern. The move made the knowledge-bearing files versionable — in this public repo
+  they had to stay gitignored
 
 ## Key Patterns
 

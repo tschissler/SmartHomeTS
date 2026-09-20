@@ -43,7 +43,8 @@ liefen dauerhaft zu hoch. Mit `S` als Nenner ist `p + n + b = 1` konstruktiv gar
 `data/electricity/envoym3` (`Program.cs:283`), und dort hängen auch beide Wallboxen.
 M1-Werte gehen in die Zurechnung nicht ein.
 
-Vorzeichen laut `grafana-dashboards/influxdb-reference.md`: `PowerFromGrid` positiv =
+Vorzeichen laut `docs/influxdb-reference.md` im Repo `forgejo.intern/thomas/Grafana`:
+`PowerFromGrid` positiv =
 Bezug, `PowerFromBattery` positiv = Entladen. Alle vier Größen liegen im
 `ChargingSituation`-Objekt nebeneinander.
 

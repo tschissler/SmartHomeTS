@@ -213,7 +213,9 @@ Setup and build: [`ESP32Firmwares/TemperatureDisplay.Firmware/README.md`](ESP32F
 - **Purpose**: Provides visualization and monitoring dashboards for the smart home system, creating interactive charts and graphs from InfluxDB time-series data.
 - **Inspiration**: Learn how to deploy Grafana in Kubernetes and create compelling data visualizations for real-time monitoring.
 
-  Deployment/config: [`Grafana/README.md`](Grafana/README.md)
+  Dashboards, export script and the Sankey generator live in a separate internal repository
+  (`forgejo.intern/thomas/Grafana`); the deployment is managed by ArgoCD from
+  `SmartHomeDeployments`.
 
 ### Smarthome.App.MAUI
 
