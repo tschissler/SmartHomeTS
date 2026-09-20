@@ -46,6 +46,25 @@ namespace SharedContracts
         /// <summary>The picture the control loop acted on, published retained for diagnostics and the UI.</summary>
         public const string Situation = $"daten/Laden/{Ort}/Regelung/Situation";
 
+        /// <summary>
+        /// The three virtual meters of one box and the momentary split of its charging power,
+        /// published retained by the ChargingController. See <see cref="SharedContracts.Energieaufteilung"/>.
+        /// </summary>
+        /// <remarks>
+        /// The controller both publishes and subscribes here: the retained payload is how the
+        /// meter readings survive a restart. Aspect level "Energieaufteilung" rather than one
+        /// topic per source — the three numbers belong to the same moment, and the convention
+        /// asks for state that belongs together to travel in one payload.
+        /// </remarks>
+        public static string Energieaufteilung(string wallbox) => $"daten/Laden/{Ort}/{wallbox}/Energieaufteilung";
+
+        /// <summary>
+        /// The splits of all boxes, at any location. Subscribed by the DataHub, and by the
+        /// controller itself to restore its meters — same wildcard shape as
+        /// <see cref="StatusAlle"/>, for the same reason.
+        /// </summary>
+        public const string EnergieaufteilungAlle = "daten/Laden/+/+/Energieaufteilung";
+
         /// <summary>Charging level and per-box enables, published retained by the web UI.</summary>
         public const string Einstellungen = $"konfiguration/Laden/{Ort}/Regelung/Einstellungen";
 
@@ -67,6 +86,14 @@ namespace SharedContracts
         /// </summary>
         public static (string Ort, string Wallbox)? ZerlegeLadestromTopic(string topic)
             => Zerlege(topic, "befehle", "Ladestrom");
+
+        /// <summary>
+        /// Splits an energy split topic into its location and device level, e.g.
+        /// "daten/Laden/M3/Garage/Energieaufteilung" into ("M3", "Garage"). Null for every
+        /// other topic.
+        /// </summary>
+        public static (string Ort, string Wallbox)? ZerlegeEnergieaufteilungTopic(string topic)
+            => Zerlege(topic, "daten", "Energieaufteilung");
 
         private static (string Ort, string Wallbox)? Zerlege(string topic, string art, string aspekt)
         {
