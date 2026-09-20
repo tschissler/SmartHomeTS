@@ -72,10 +72,15 @@
 
 /* As many columns as fit, for all eight entries of both bars in one block. A grid rather
    than a wrapping row: the values change every few seconds, and fixed columns keep the
-   entries from shifting sideways whenever a number gains or loses a digit. */
+   entries from shifting sideways whenever a number gains or loses a digit.
+
+   205px is the width of the longest entry, "Netzeinspeisung: 1.800 W" — below that the
+   value wrapped under its own label and the legend got a second line per entry. The
+   min() keeps the track from outgrowing a container narrower than one column, which is
+   what a phone in portrait gives it. */
 .LegendContainer {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(205px, 100%), 1fr));
     grid-column-gap: 12px;
     grid-row-gap: 4px;
 }
