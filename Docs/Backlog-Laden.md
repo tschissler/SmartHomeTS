@@ -250,6 +250,11 @@ transitiv.
 `MQTTClient` referenziert selbst `SmartHomeHelpers` — wer `MQTTClient` nutzt, hängt
 deshalb auch daran. Die Spalte nennt den **transitiv aufgelösten** Stand:
 
+> **Diese Tabelle war der Stand vom 2026-09-20 *vor* Punkt 0 und ist inzwischen an zwei
+> Stellen überholt.** Sie steht hier als Protokoll, **nicht als Nachschlagewerk** — wer
+> wissen will, was ein Dienst heute referenziert, liest die `.csproj`, nicht diesen
+> Abschnitt. Der aktuelle Stand steht darunter.
+
 | Service | referenziert | Filter vor Punkt 0 |
 |---|---|---|
 | ChargingController | SharedContracts | keiner |
@@ -260,8 +265,31 @@ deshalb auch daran. Die Spalte nennt den **transitiv aufgelösten** Stand:
 | SmartHome.Web | SharedContracts, SmartHomeHelpers | keiner |
 | RulesEngine | MQTTClient, SmartHomeHelpers¹ | MQTTClient, SmartHomeHelpers |
 
-¹ transitiv über `MQTTClient`. `BMWConnector` hat gar keine `ProjectReference`,
-`VWConnector` ist Python — beide brauchen keinen Filter.
+¹ transitiv über `MQTTClient`. `VWConnector` ist Python und braucht keinen Filter.
+
+**Stand am 2026-09-20, 17:40 — aus allen `.csproj` ausgelesen, nicht fortgeschrieben:**
+
+| Service | referenziert |
+|---|---|
+| ChargingController | SharedContracts, HeartbeatLib |
+| KebaConnector | SharedContracts, MQTTClient, HelpersLib, HeartbeatLib |
+| ShellyConnector | SharedContracts, MQTTClient, SmartHomeHelpers, HeartbeatLib |
+| EnphaseConnector | SharedContracts, MQTTClient, SmartHomeHelpers, HeartbeatLib |
+| SmartHome.DataHub | SharedContracts, MQTTClient, Influx3Connector, HeartbeatLib |
+| SmartHome.Web | SharedContracts, SmartHomeHelpers, SmartHomeWebManagers, UIComponentsLib |
+| RulesEngine | SharedContracts, MQTTClient, HeartbeatLib |
+| **BMWConnector** | **SharedContracts, HeartbeatLib** |
+
+**Zwei Aussagen der oberen Tabelle stimmen nicht mehr:**
+
+1. **„`BMWConnector` hat gar keine `ProjectReference`."** Seit `2e83815` (Punkt 10)
+   referenziert er `SharedContracts`, seit Punkt 3 zusätzlich `HeartbeatLib`. Der
+   Pfadfilter war glücklicherweise schon vorhanden, es ist also kein Schaden entstanden.
+2. **RulesEngine referenziert `SharedContracts`** — seit Punkt 11, für die
+   Fahrzeugzuordnung.
+
+Dazu ist mit Punkt 3 `Libs/HeartbeatLib` bei sieben Diensten hinzugekommen. **`SharedContracts/**`
+steht heute in acht `paths:`-Blöcken**, nicht in sechs.
 
 **Warum zuerst.** Punkt 7/8 legt die neuen Payload-Typen nach `SharedContracts`, Punkt 3
 den Heartbeat-Helfer nach `Libs/`, Punkt 12 ändert die Einheitenkommentare in
@@ -1483,10 +1511,6 @@ keinen Ort für die Position.
   Für `SmartHome.Web` selbst gilt weiter: Ein Testprojekt in der Solution bricht den
   Image-Build, weil das Dockerfile die `.csproj` einzeln kopiert. Für die Manager-Bibliothek
   ist das zu prüfen, aber kein offensichtliches Hindernis.
-- **Die Tabelle in Punkt 0 ist veraltet.** Dort steht, der BMWConnector habe gar keine
-  `ProjectReference`. Seit `2e83815` (Punkt 10) referenziert er `SharedContracts` —
-  nachgeprüft. Der Pfadfilter war glücklicherweise schon vorhanden, es ist also kein
-  Schaden entstanden, aber die Tabelle sollte niemand mehr als Beleg benutzen.
 - **`meta/RulesEngine/version` war nie sichtbar.** `Devices.razor` überspringt in
   `ParseLegacy` alle Einträge, deren Typ kein bekannter OTA-Gerätetyp ist — das Topic war
   seit jeher tot und geht mit Punkt 3 im Heartbeat auf.
