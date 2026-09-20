@@ -9,6 +9,8 @@ on:
       # Shared code this service references (transitively resolved) - without
       # these the image is not rebuilt and the change deploys silently nowhere.
       - SharedContracts/**
+      # Added with the service heartbeat (backlog item 3).
+      - Libs/HeartbeatLib/**
   workflow_dispatch:
 
 # A newer push supersedes a running build of the same branch.
@@ -59,6 +61,10 @@ jobs:
         file: ./${{ env.PROJECT_NAME }}/dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
+        # Stamps the image tag into the assembly, which is where the service heartbeat reads
+        # the running version from.
+        build-args: |
+          VERSION=${{ steps.version.outputs.VERSION }}
         tags: |
           tschissler/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
           tschissler/${{ env.IMAGE_NAME }}:latest

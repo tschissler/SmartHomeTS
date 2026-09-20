@@ -7,6 +7,15 @@ namespace ChargingController
         private static DateTime _lastSuccessfulRead = DateTime.MinValue;
         private static bool _isMqttConnected = false;
 
+        /// <summary>
+        /// When the service last processed a message successfully; null before the first one.
+        /// Exposed so the service heartbeat on status/ reports the same moment this check judges
+        /// by - two counters would let readiness and the device page disagree.
+        /// </summary>
+        public static DateTimeOffset? LastSuccessfulRead => _lastSuccessfulRead == DateTime.MinValue
+            ? null
+            : new DateTimeOffset(_lastSuccessfulRead, TimeSpan.Zero);
+
         public static void UpdateLastSuccessfulRead()
         {
             _lastSuccessfulRead = DateTime.UtcNow;

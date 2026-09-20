@@ -9,6 +9,8 @@ on:
       # Shared code this service references (transitively resolved) - without
       # these the image is not rebuilt and the change deploys silently nowhere.
       - SharedContracts/**
+      # Added with the service heartbeat (backlog item 3).
+      - Libs/HeartbeatLib/**
   workflow_dispatch:
 
 # A newer push supersedes a running build of the same branch.

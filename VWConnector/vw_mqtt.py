@@ -4,6 +4,7 @@ import os
 import asyncio
 import json
 import threading
+import time
 from typing import Optional
 from carconnectivity import carconnectivity
 import paho.mqtt.client as mqtt
@@ -30,6 +31,17 @@ MQTT_PORT = int(os.getenv('VW_MQTT_PORT', '32004'))
 MQTT_TOPIC = 'daten/Fahrzeug/VW/Status'
 HEALTH_CHECK_PORT = int(os.getenv('VW_HEALTH_CHECK_PORT', '8080'))
 
+# Service heartbeat. Follows the existing ESP32 device format, not the topic convention -
+# see the "Ausnahme status/" section of Docs/MQTT-Topic-Konvention.md and, field by field,
+# Docs/Service-Heartbeat.md. The .NET services build the identical payload from
+# Libs/HeartbeatLib; this connector is Python and cannot, so the format is written out once,
+# here. Keep the two in step - a mismatch does not fail, the card just shows less.
+HEARTBEAT_TOPIC = 'status/Cluster/Dienst/VWConnector'
+# Same cadence as the ESP32 firmwares and the .NET services. The device page calls a sender
+# stale after 3 minutes, so this has to stay well below that - it is deliberately independent
+# of VW_POLL_INTERVAL (900 s), which is about the portal, not about being alive.
+HEARTBEAT_INTERVAL_SECONDS = int(os.getenv('VW_HEARTBEAT_INTERVAL', '60'))
+
 # The EU Data Act portal produces a new dataset roughly every 15 minutes.
 # Polling faster than that only burns API calls, it does not yield fresher data.
 POLL_INTERVAL_SECONDS = int(os.getenv('VW_POLL_INTERVAL', '900'))
@@ -51,6 +63,7 @@ HEALTH_STALE_SECONDS = int(os.getenv('VW_HEALTH_STALE_SECONDS', '3600'))
 _last_poll_attempt = None       # last completed poll cycle (drives readiness)
 _last_successful_fetch = None   # last time a valid payload was published
 _is_mqtt_connected = False
+_started_at = None              # set in main(), the uptime the heartbeat reports
 
 # Last payload that was actually published. Used to fill in individual values
 # the portal did not deliver in the current dataset, so a partial dataset never
@@ -84,6 +97,75 @@ def get_version_info():
         "buildNumber": "dev"
     }
 
+def is_healthy():
+    """The single verdict of this service. Both the probes and the heartbeat read it, so
+    readiness and the device page can never tell different stories."""
+    poll_age = _age_seconds(_last_poll_attempt)
+    return _is_mqtt_connected and (poll_age is None or poll_age < HEALTH_STALE_SECONDS)
+
+
+def health_description():
+    """The same sentence /health returns, reused verbatim in the heartbeat."""
+    poll_age = _age_seconds(_last_poll_attempt)
+    data_age = _age_seconds(_last_successful_fetch)
+    last_poll_ago = f"{poll_age:.0f} seconds ago" if poll_age is not None else None
+    last_data_ago = f"{data_age:.0f} seconds ago" if data_age is not None else None
+    if _last_poll_attempt is None:
+        return "Service is starting up"
+    if is_healthy():
+        return f"Last poll: {last_poll_ago}, last valid data: {last_data_ago or 'never'}"
+    return (f"MQTT: {_is_mqtt_connected}, Last poll: {last_poll_ago}, "
+            f"last valid data: {last_data_ago or 'never'}")
+
+
+def build_heartbeat_payload():
+    """The service heartbeat, in the field layout Libs/HeartbeatLib produces.
+
+    What an ESP32 reports about its hardware - mac, chipModel, ip, rssi, freeHeap,
+    resetReason, mqttConnects - is left out rather than sent as 0: a pod has no honest value
+    for it, and the consumer hides a field that is absent.
+    """
+    now = _now()
+    payload = {
+        "location": "Cluster",
+        "deviceType": "Dienst",
+        "deviceName": "VWConnector",
+        "version": get_version_info().get("version", "0.0.0"),
+        "uptimeSeconds": int(max(0, (now - _started_at).total_seconds())) if _started_at else 0,
+        # Mandatory field of the topic convention. The message is retained, so without it a
+        # consumer cannot tell a live heartbeat from one the broker replayed on subscribe.
+        "Zeitpunkt": now.isoformat(),
+        "Zustand": "Healthy" if is_healthy() else "Unhealthy",
+        "ZustandText": health_description(),
+    }
+    data_age = _age_seconds(_last_successful_fetch)
+    if data_age is not None:
+        payload["lastDataSecondsAgo"] = int(max(0, data_age))
+    return payload
+
+
+def start_heartbeat(client):
+    """Publish the heartbeat on its own thread.
+
+    Not part of the poll loop: that one sleeps for 15 minutes at a time and would leave the
+    service looking dead in between - and when a poll hangs, being silent is exactly the
+    thing the heartbeat is supposed to report rather than share.
+    """
+    def loop():
+        while True:
+            try:
+                client.publish(HEARTBEAT_TOPIC, json.dumps(build_heartbeat_payload()),
+                               qos=1, retain=True)
+            except Exception as e:
+                # A heartbeat that cannot be sent must never take the connector with it.
+                print("Error publishing service heartbeat:", e)
+            time.sleep(HEARTBEAT_INTERVAL_SECONDS)
+
+    thread = threading.Thread(target=loop, daemon=True)
+    thread.start()
+    return thread
+
+
 def start_health_server(port):
     """Start Flask health check server in a background thread."""
     # Kubernetes probes /ready every 5s and /healthz every 10s. Werkzeug logs
@@ -94,41 +176,27 @@ def start_health_server(port):
 
     app = Flask(__name__)
 
-    def _is_healthy():
-        poll_age = _age_seconds(_last_poll_attempt)
-        return _is_mqtt_connected and (poll_age is None or poll_age < HEALTH_STALE_SECONDS)
-
     @app.route('/healthz')
     def liveness():
         return jsonify({"status": "alive"}), 200
 
     @app.route('/ready')
     def readiness():
-        if _is_healthy():
+        if is_healthy():
             return jsonify({"status": "ready"}), 200
         return jsonify({"status": "not ready"}), 503
 
     @app.route('/health')
     def health():
-        is_healthy = _is_healthy()
-        poll_age = _age_seconds(_last_poll_attempt)
-        data_age = _age_seconds(_last_successful_fetch)
-        last_poll_ago = f"{poll_age:.0f} seconds ago" if poll_age is not None else None
-        last_data_ago = f"{data_age:.0f} seconds ago" if data_age is not None else None
-        if _last_poll_attempt is None:
-            description = "Service is starting up"
-        elif is_healthy:
-            description = f"Last poll: {last_poll_ago}, last valid data: {last_data_ago or 'never'}"
-        else:
-            description = f"MQTT: {_is_mqtt_connected}, Last poll: {last_poll_ago}, last valid data: {last_data_ago or 'never'}"
+        healthy = is_healthy()
         return jsonify({
-            "status": "Healthy" if is_healthy else "Unhealthy",
+            "status": "Healthy" if healthy else "Unhealthy",
             "checks": [{
                 "name": "vw_connector",
-                "status": "Healthy" if is_healthy else "Unhealthy",
-                "description": description
+                "status": "Healthy" if healthy else "Unhealthy",
+                "description": health_description()
             }]
-        }), 200 if is_healthy else 503
+        }), 200 if healthy else 503
 
     app.run(host='0.0.0.0', port=port, threaded=True)
 
@@ -349,8 +417,10 @@ def validate_env_vars():
 
 async def main():
     global _last_poll_attempt, _last_successful_fetch, _last_published_payload, _is_mqtt_connected
+    global _started_at
 
     validate_env_vars()
+    _started_at = _now()
 
     # Display version information on startup
     version_info = get_version_info()
@@ -375,6 +445,11 @@ async def main():
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
     print("successfully connected")
+
+    # Started before the portal connection: the retry loop below can run for a long time, and
+    # a connector stuck there is exactly what the device page should show.
+    start_heartbeat(client)
+    print(f" ### Service heartbeat on {HEARTBEAT_TOPIC} every {HEARTBEAT_INTERVAL_SECONDS}s")
 
     print("-----------------------------------")
     print("Connecting to VW EU Data Act portal ...")

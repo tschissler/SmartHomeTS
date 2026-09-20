@@ -1,4 +1,5 @@
-﻿using Influx3Connector;
+﻿using HeartbeatLib;
+using Influx3Connector;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Newtonsoft.Json.Linq;
@@ -120,6 +121,28 @@ builder.Services.AddLogging();
 builder.Services.AddHealthChecks()
     .AddCheck<LivenessHealthCheck>("process-liveness", tags: new[] { "live" })
     .AddCheck<DataPipelineHealthCheck>("data-pipeline", tags: new[] { "ready" });
+
+// Makes the service visible on status/# next to the 17 ESP32 devices - a stopped service is
+// invisible on MQTT otherwise. Retained, so the last heartbeat outlives the pod and its
+// Zeitpunkt turns the card on the device page silent. See Docs/Service-Heartbeat.md.
+var serviceHeartbeat = new ServiceHeartbeat("DataHub", versionInfo.Version);
+logger.LogInformation($"Service heartbeat topic: {serviceHeartbeat.Topic}");
+builder.Services.AddSingleton<IHostedService>(sp =>
+{
+    var mqtt = sp.GetRequiredService<MQTTClient.MQTTClient>();
+    var influx = sp.GetRequiredService<InfluxDB3Connector>();
+    var checks = sp.GetRequiredService<HealthCheckService>();
+    return new ServiceHeartbeatWorker(
+        serviceHeartbeat,
+        // The readiness checks, not all of them: liveness deliberately ignores downstream
+        // outages, so on its own it would call the service healthy while nothing is written.
+        ct => checks.CheckHealthAsync(check => check.Tags.Contains("ready"), ct),
+        (topic, payload, _) => mqtt.PublishAsync(topic, payload,
+            MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, retain: true),
+        // Same moment the pipeline check judges by: the last successful InfluxDB write.
+        () => DateTimeOffset.UtcNow - influx.TimeSinceLastWrite,
+        log: sp.GetRequiredService<ILoggerFactory>().CreateLogger("ServiceHeartbeat"));
+});
 
 var app = builder.Build();
 
