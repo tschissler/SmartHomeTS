@@ -64,25 +64,3 @@ jobs:
         cache-to: type=gha,mode=max
         provenance: false
         sbom: false
-
-  # Separate job for deployment to local cluster (requires self-hosted runner)
-  # deploy:
-  #   needs: build
-  #   runs-on: [self-hosted, linux]  # Use self-hosted runner for deployment
-  #   if: github.event_name == 'push'  # Only deploy on push, not PRs
-
-  #   steps:
-  #   - name: Deploy to old cluster with kubectl (if deployment exists)
-  #     run: |
-  #       if ! microk8s kubectl get deployment ${{ env.IMAGE_NAME }}; then
-  #         microk8s kubectl apply -f ./${{ env.PROJECT_NAME }}/kube.yaml
-  #       fi
-  #   - name: Update Kubernetes deployment
-  #     run: |        
-  #         microk8s kubectl set image deployments/${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}=tschissler/${{ env.IMAGE_NAME }}:${{ github.run_id }}
-  #         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnvoyM1Serial="${{ secrets.EnvoyM1Serial }}"
-  #         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnvoyM3Serial="${{ secrets.EnvoyM3Serial }}"
-  #         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnphaseUserName="${{ secrets.EnphaseUserName }}"
-  #         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__EnphasePassword="${{ secrets.EnphasePassword }}"
-  #         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__MqttBroker="smarthomepi2"
-  #         microk8s kubectl set env deployment/${{ env.IMAGE_NAME }} EnphaseSettings__MqttPort="32004"

@@ -70,9 +70,17 @@ flutter run
 
 ## CI/CD
 
-Every push to `main` triggers deployment. Workflows follow a two-stage pattern:
-1. **Build** (GitHub-hosted runner): Multi-arch Docker build (amd64+arm64), push to Docker Hub (`tschissler/*`)
-2. **Deploy** (self-hosted runner): Apply K8s manifests, update deployment image
+Every push to `main` triggers a build. **The workflows only build — they do not deploy.**
+1. **Build** (GitHub-hosted runner): Multi-arch Docker build (amd64+arm64), push to Docker Hub
+   as `tschissler/<image>:1.0.{github.run_number}` plus `latest`
+2. **Rollout** (no CI involvement): the ArgoCD Image Updater picks up the new tag within ~2 min,
+   commits it into the deployments repo (`forgejo.intern/thomas/SmartHomeDeployments`, the
+   service's `values.yaml`), and ArgoCD syncs it. A deploy is therefore visible as a
+   `build: automatic update of <service>` commit in that repo, not as a CI step.
+
+Never `kubectl set image` or `kubectl apply` against the cluster: every ArgoCD app runs with
+`selfHeal: true` and reverts manual changes. The strategy and its pitfalls are documented in
+`docs/update-strategie.md` of the deployments repo.
 
 ESP32 firmware CI uploads `.bin` to Azure Blob Storage, then publishes an MQTT message so devices auto-update via OTA.
 
