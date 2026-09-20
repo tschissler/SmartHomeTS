@@ -22,7 +22,7 @@ Präfix setzt.
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **fertig**, 1 Commit, Merge offen. Pfadfilter in sechs Service-Workflows, `.gitignore` für `.claude/worktrees/`. **Achtung beim Merge:** jeder Workflow triggert auch auf sich selbst — der Merge löst sechs Builds und sechs Rollouts aus, ohne jede Code-Änderung |
-| 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | Doku, Log-Hinweise und Code fertig (2 Commits). Secret repariert, Bootstrap sauber gelaufen, Pod erneuert — Verifikation läuft. **Enthält Code**, der Merge löst einen Rollout aus; Freigabe offen. Ursache des Vorfalls als Punkt 18 erfasst |
+| 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
@@ -140,16 +140,25 @@ beweisbar ist das erst nach dem Merge; vorher zählt das Matching der `paths:`-E
 vorgegebener ~90-Tage-Zyklus, der ein interaktives Re-Bootstrap erfordert.
 
 **Umfang**
-- [ ] `dotnet run -- --bootstrap BMW` lokal ausführen (interaktiver BMW-Login, nur Thomas)
-- [ ] Pod erneuern mit `kubectl -n smarthome delete pod <bmwconnector-pod>` —
+- [x] `dotnet run -- --bootstrap BMW` lokal ausführen (interaktiver BMW-Login, nur Thomas)
+- [x] Pod erneuern mit `kubectl -n smarthome delete pod <bmwconnector-pod>` —
       **nicht** `rollout restart`, das patcht das Deployment-Template und gilt ArgoCD
       mit `selfHeal: true` als Drift
-- [ ] `DATAPOINTS.md`: Die Aussage „`header` — **Mini only**" und „Not available for BMW
+- [x] `DATAPOINTS.md`: Die Aussage „`header` — **Mini only**" und „Not available for BMW
       via streaming API" ist falsch. Der BMW liefert `battery` (gemessen: 83 %)
-- [ ] `SETUP.md`: `rollout restart` durch `delete pod` ersetzen, mit Begründung ArgoCD
+- [x] `SETUP.md`: `rollout restart` durch `delete pod` ersetzen, mit Begründung ArgoCD
 
-**Fertig, wenn** `data/charging/BMW` einen Zeitstempel von heute trägt und das Pod-Log
-`connected=Mini BMW` statt `Partial: connected=Mini disconnected=BMW` zeigt.
+**Erledigt am 2026-09-20**, gemergt als `d5b829b`. Belegt: Subscribing-Zeile für BMW im
+neuen Pod, keine Auth-Fehler, keine `using environment variable`-Zeile, Secret durchgehend
+bei 36 Bytes, `battery: 83` im Payload. **Offen geblieben:** der Nachweis frischer
+Publikation — der retained Payload trägt weiterhin `lastUpdate: 2026-08-16`. Der Mini mit
+nie defektem Token schweigt identisch, es ist also der ereignisbasierte Stream bei zwei
+geparkten Fahrzeugen und kein Token-Symptom.
+
+**Prüfhinweis für künftige Ausfälle.** Ein positives `connected=Mini BMW` gibt es nicht:
+der HealthCheck loggt nur auf warn-Level, also ausschließlich bei `Degraded`/`Unhealthy`.
+Der Beweis ist das **Ausbleiben** der Degraded-Zeile zusammen mit einer
+`Subscribing`-Zeile je Fahrzeug.
 
 **Nicht das Zielbild.** Der Connector publiziert heute `data/charging/<Auto>`
 (`VehicleConfig.cs:27`, Default `data/charging/{prefix}`; im Pod ist kein
