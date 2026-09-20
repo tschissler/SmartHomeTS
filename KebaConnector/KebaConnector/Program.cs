@@ -9,7 +9,7 @@ using MQTTClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 MQTTClient.MQTTClient mqttClient;
-KebaDeviceConnector kebaOutside;
+KebaDeviceConnector kebaStellplatz;
 KebaDeviceConnector kebaGarage;
 
 // Display version information on startup
@@ -30,27 +30,29 @@ var configuration = new ConfigurationBuilder()
 var mqttBroker = configuration["MqttBroker"] ?? "smarthomepi2";
 var mqttPort = int.Parse(configuration["MqttPort"] ?? "32004");
 var healthCheckPort = int.Parse(configuration["HealthCheckPort"] ?? "8080");
-var kebaOutsideHost = configuration["KebaOutsideHost"] ?? "keba-stellplatz";
+// The environment variable names stay as they are: renaming them means touching the
+// Kubernetes secret of a running service, which is not part of this change.
+var kebaStellplatzHost = configuration["KebaOutsideHost"] ?? "keba-stellplatz";
 var kebaGarageHost = configuration["KebaGarageHost"] ?? "keba-garage";
 var kebaPort = int.Parse(configuration["KebaPort"] ?? "7090");
 
 Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
-Console.WriteLine($" ### Keba devices: Outside={kebaOutsideHost}:{kebaPort}, Garage={kebaGarageHost}:{kebaPort}");
+Console.WriteLine($" ### Wallboxes: {LadeTopics.Stellplatz}={kebaStellplatzHost}:{kebaPort}, {LadeTopics.Garage}={kebaGarageHost}:{kebaPort}");
 
 // Start health check HTTP server in background
 var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
 
-Console.WriteLine("  - Connecting to Keba Outside...");
-var ipsOutside = await Dns.GetHostAddressesAsync(kebaOutsideHost);
-if (ipsOutside is null || ipsOutside.Length == 0)
+Console.WriteLine($"  - Connecting to wallbox {LadeTopics.Stellplatz}...");
+var ipsStellplatz = await Dns.GetHostAddressesAsync(kebaStellplatzHost);
+if (ipsStellplatz is null || ipsStellplatz.Length == 0)
 {
-    Console.WriteLine($"    Could not resolve {kebaOutsideHost}");
+    Console.WriteLine($"    Could not resolve {kebaStellplatzHost}");
     return;
 }
-kebaOutside = new KebaDeviceConnector(ipsOutside[0], kebaPort);
+kebaStellplatz = new KebaDeviceConnector(ipsStellplatz[0], kebaPort);
 Console.WriteLine("    ...Done");
 
-Console.WriteLine("  - Connecting to Keba Garage...");
+Console.WriteLine($"  - Connecting to wallbox {LadeTopics.Garage}...");
 var ipsGarage = await Dns.GetHostAddressesAsync(kebaGarageHost);
 if (ipsGarage is null || ipsGarage.Length == 0)
 {
@@ -69,7 +71,7 @@ mqttClient.OnConnectionStateChanged += (_, connected) => KebaConnectorHealthChec
 
 mqttClient.OnMessageReceived += MqttMessageReceived;
 
-await mqttClient.SubscribeToTopic("commands/charging/#");
+await mqttClient.SubscribeToTopic(LadeTopics.LadestromAlle);
 
 Console.WriteLine("    ...Done");
 
@@ -82,42 +84,29 @@ async void Update(object? state)
 {
     try
     {
-        var dataOutside = await kebaOutside.ReadDeviceData();
-        if (dataOutside is not null)
-        {
-            Console.WriteLine($"Keba Outside: {dataOutside.PlugStatus,-50} {dataOutside.CurrentChargingPower,10} W {dataOutside.EnergyCurrentChargingSession,15:#,##0} Wh {dataOutside.EnergyTotal,15:#,##0} Wh");
-            await SendDataAsMQTTMessage(mqttClient, dataOutside, "KebaOutside");
-            KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
-            await kebaOutside.EnforceDesiredState(dataOutside, "Outside");
-        }
-
-        var dataGarage = await kebaGarage.ReadDeviceData();
-        if (dataGarage is not null)
-        {
-            Console.WriteLine($"Keba Garage : {dataGarage.PlugStatus,-50} {dataGarage.CurrentChargingPower,10} W {dataGarage.EnergyCurrentChargingSession,15:#,##0} Wh {dataGarage.EnergyTotal,15:#,##0} Wh");
-            await SendDataAsMQTTMessage(mqttClient, dataGarage, "KebaGarage");
-            KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
-            await kebaGarage.EnforceDesiredState(dataGarage, "Garage");
-        }
-
-        var sessionGarage = await kebaGarage.CheckIfChargingSessionEnded("Garage");
-        if (sessionGarage is not null)
-        {
-            Console.WriteLine($"--- Keba Garage Charging Session ended ---\n  SessionID {sessionGarage.SessionId,-5} {sessionGarage.StartTime,-30} {sessionGarage.EndTime,-30} {sessionGarage.EnergyOfChargingSession,15:#,##0} Wh {sessionGarage.TatalEnergyAtStart,15:#,##0} Wh");
-            await SendChargingSessionAsMQTTMessage(mqttClient, sessionGarage, "KebaGarage");
-        }
-
-        var sessionOutside = await kebaOutside.CheckIfChargingSessionEnded("Stellplatz");
-        if (sessionOutside is not null)
-        {
-            Console.WriteLine($"--- Keba Outside Charging Session ended ---\n  SessionID {sessionOutside.SessionId,-5} {sessionOutside.StartTime,-30} {sessionOutside.EndTime,-30} {sessionOutside.EnergyOfChargingSession,15:#,##0} Wh {sessionOutside.TatalEnergyAtStart,15:#,##0} Wh");
-            await SendChargingSessionAsMQTTMessage(mqttClient, sessionOutside, "KebaOutside");
-        }
+        await UpdateWallbox(kebaStellplatz, LadeTopics.Stellplatz);
+        await UpdateWallbox(kebaGarage, LadeTopics.Garage);
     }
     catch (Exception ex)
     {
         Console.WriteLine("Error reading device data -" + ex.ToDetailedString());
     }
+}
+
+// One read cycle of a single wallbox: read it, follow its charging session, publish what it
+// knows, and reconcile it with the setpoint of the controller.
+async Task UpdateWallbox(KebaDeviceConnector wallbox, string name)
+{
+    var data = await wallbox.ReadDeviceData();
+    if (data is null)
+        return;
+
+    Console.WriteLine($"Keba {name,-10}: {data.PlugStatus,-50} {data.CurrentChargingPower,10} W " +
+        $"{data.EnergyCurrentChargingSession,15:#,##0} Wh {data.EnergyTotal,15:#,##0} Wh");
+    wallbox.TrackSession(data, name);
+    await PublishWallboxStatus(mqttClient, data, wallbox, name);
+    KebaConnectorHealthCheck.UpdateLastSuccessfulRead();
+    await wallbox.EnforceDesiredState(data, name);
 }
 
 async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
@@ -128,11 +117,11 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
 
     Console.WriteLine($"Received {(e.Retained ? "retained " : "")}message from {topic} at {time}: {payload}");
 
-    ChargingSetData? chargingSetData = null;
+    LadestromKommando? kommando = null;
     try
     {
-        chargingSetData = JsonSerializer.Deserialize<ChargingSetData>(payload);
-        if (chargingSetData is null)
+        kommando = JsonSerializer.Deserialize<LadestromKommando>(payload);
+        if (kommando is null)
         {
             Console.WriteLine($"Failed to deserialize payload: {payload}");
             return;
@@ -144,55 +133,70 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
         return;
     }
 
-    var topicParts = topic.Split("/");
-    if (topicParts.Length < 3)
+    if (LadeTopics.ZerlegeLadestromTopic(topic) is not (_, string wallboxName))
     {
-        Console.WriteLine($"Invalid topic {topic}, topic needs to follow pattern [commands/Charging/<Device>]");
+        Console.WriteLine($"Invalid topic {topic}, expected [befehle/Laden/<Ort>/<Wallbox>/Ladestrom]");
         return;
     }
-    var kebaDevice = topic.Split("/")[2];
+
+    if (kommando.Zeitpunkt == default)
+    {
+        // Without a Zeitpunkt the age of the setpoint is unknowable, and a retained replay is
+        // indistinguishable from a live command. Refusing it is the safe direction: the
+        // setpoint is ignored, the box keeps charging, and StaleReleaseAfter releases it.
+        Console.WriteLine($"Charging command for {wallboxName} has no Zeitpunkt, ignoring it: {payload}");
+        return;
+    }
+
     try
     {
-        if (kebaDevice.ToLower() == "kebagarage")
+        if (wallboxName == LadeTopics.Garage)
         {
-            await kebaGarage.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent, e.Retained);
+            await kebaGarage.UpdateDeviceDesiredCurrent(kommando.LadestromMa, kommando.Zeitpunkt);
         }
-        else if (kebaDevice.ToLower() == "kebaoutside")
+        else if (wallboxName == LadeTopics.Stellplatz)
         {
-            await kebaOutside.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent, e.Retained);
+            await kebaStellplatz.UpdateDeviceDesiredCurrent(kommando.LadestromMa, kommando.Zeitpunkt);
         }
         else
         {
-            Console.WriteLine($"Unknown device {kebaDevice}");
+            Console.WriteLine($"Unknown wallbox {wallboxName}");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error updating charging current for {kebaDevice}: {ex.Message}");
+        Console.WriteLine($"Error updating charging current for {wallboxName}: {ex.Message}");
     }
 
     return;
 }
 
-static async Task SendDataAsMQTTMessage(MQTTClient.MQTTClient mqttClient, KebaData? data, string device)
+// Everything the box knows, published retained: a subscriber that connects between two read
+// cycles gets the current state at once instead of waiting up to five seconds for it. The
+// ChargingController relies on that — it must not command a box it has never heard from.
+static async Task PublishWallboxStatus(MQTTClient.MQTTClient mqttClient, KebaData data,
+    KebaDeviceConnector wallbox, string name)
 {
-    if (data is null)
-        return;
-    var messageData = new ChargingGetData()
+    var status = new WallboxStatus()
     {
-        CarIsPlugedIn = data.PlugStatus == PlugStatus.CablePluggedInChargingStationAndVehicleAndLocked,
-        CurrentChargingPower = data.CurrentChargingPower,
-        EnergyCurrentChargingSession = data.EnergyCurrentChargingSession,
-        EnergyTotal = data.EnergyTotal
+        Zeitpunkt = DateTimeOffset.UtcNow,
+        PlugStatus = (int)data.PlugStatus,
+        DeviceState = data.DeviceState,
+        Freigegeben = data.ChargingEnabled,
+        SitzungsId = wallbox.RunningSessionId,
+        SitzungsBeginn = wallbox.SessionStart,
+        SitzungsBeginnAusBoxZeit = wallbox.SessionStartFromBoxClock,
+        EnergieSitzungWh = data.EnergyCurrentChargingSession,
+        EnergieGesamtWh = data.EnergyTotal,
+        Ladeleistung = data.CurrentChargingPower,
+        StromPhase1Ma = data.CurrencyPhase1,
+        StromPhase2Ma = data.CurrencyPhase2,
+        StromPhase3Ma = data.CurrencyPhase3,
+        AngebotenerStromMa = data.MaxCurrencyOfferedByChargingStation,
+        SollstromMa = data.TargetCurrency,
     };
-    await mqttClient.PublishAsync($"data/charging/{device}", JsonSerializer.Serialize(messageData), MqttQualityOfServiceLevel.AtMostOnce, false);
-}
-
-static async Task SendChargingSessionAsMQTTMessage(MQTTClient.MQTTClient mqttClient, ChargingSession? data, string device)
-{
-    if (data is null)
-        return;
-    await mqttClient.PublishAsync($"data/charging/{device}_ChargingSessionEnded", JsonSerializer.Serialize(data), MqttQualityOfServiceLevel.AtMostOnce, false);
+    await mqttClient.PublishAsync(LadeTopics.Status(name), JsonSerializer.Serialize(status),
+        MqttQualityOfServiceLevel.AtLeastOnce, true);
 }
 
 static void StartHealthCheckServer(int port)

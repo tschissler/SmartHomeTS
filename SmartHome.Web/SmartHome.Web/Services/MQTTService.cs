@@ -69,7 +69,7 @@ namespace SmartHome.Web.Services
                 Console.WriteLine("Connected to MQTT broker.");
                 await _client.SubscribeAsync("data/#");
                 await _client.SubscribeAsync("daten/#");
-                await _client.SubscribeAsync("config/charging/settings");
+                await _client.SubscribeAsync(LadeTopics.Einstellungen);
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
                 await _client.SubscribeAsync("commands/shelly/Lampe");
                 await _client.SubscribeAsync("commands/Heating/#");
@@ -169,12 +169,12 @@ namespace SmartHome.Web.Services
                         VwStatusData = JsonSerializer.Deserialize<CarStatusData>(payload);
                         break;
                     }
-                case "data/charging/situation":
+                case LadeTopics.Situation:
                     {
                         ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);
                         break;
                     }
-                case "config/charging/settings":
+                case LadeTopics.Einstellungen:
                     {
                         ChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
                         break;

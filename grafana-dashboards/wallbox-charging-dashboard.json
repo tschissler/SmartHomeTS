@@ -32,7 +32,7 @@
       "id": 101,
       "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "pluginVersion": "12.4.2",
-      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"CurrentChargingPower\" FROM \"power_values\" WHERE device = 'KebaOutside' AND measurement = 'AktuelleLadeleistung' ORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"CurrentChargingPower\" FROM \"power_values\" WHERE device IN ('KebaOutside', 'Stellplatz') AND measurement = 'AktuelleLadeleistung' ORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
       "title": "Wallbox Outside - Current Power",
       "type": "stat"
     },
@@ -53,7 +53,7 @@
       "id": 102,
       "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "pluginVersion": "12.4.2",
-      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"CurrentChargingPower\" FROM \"power_values\" WHERE device = 'KebaGarage' AND measurement = 'AktuelleLadeleistung' ORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
+      "targets": [{"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT time, \"value_watt\" AS \"CurrentChargingPower\" FROM \"power_values\" WHERE device IN ('KebaGarage', 'Garage') AND measurement = 'AktuelleLadeleistung' ORDER BY time DESC LIMIT 1", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}],
       "title": "Wallbox Garage - Current Power",
       "type": "stat"
     },
@@ -78,8 +78,8 @@
       "options": {"legend": {"calcs": ["lastNotNull", "max", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
       "pluginVersion": "12.4.2",
       "targets": [
-        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Outside\" FROM \"power_values\" WHERE $__timeFilter(time) AND device = 'KebaOutside' AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
-        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Garage\" FROM \"power_values\" WHERE $__timeFilter(time) AND device = 'KebaGarage' AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "B", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Outside\" FROM \"power_values\" WHERE $__timeFilter(time) AND device IN ('KebaOutside', 'Stellplatz') AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}},
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, AVG(\"value_watt\") AS \"Wallbox Garage\" FROM \"power_values\" WHERE $__timeFilter(time) AND device IN ('KebaGarage', 'Garage') AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "B", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
       ],
       "title": "Wallbox Charging Power Over Time",
       "type": "timeseries"
@@ -104,7 +104,7 @@
       "options": {"legend": {"calcs": ["lastNotNull", "max", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single", "sort": "desc"}},
       "pluginVersion": "12.4.2",
       "targets": [
-        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, (AVG(CASE WHEN device = 'KebaOutside' THEN \"value_watt\" ELSE 0 END) + AVG(CASE WHEN device = 'KebaGarage' THEN \"value_watt\" ELSE 0 END)) AS \"Total Charging Power\" FROM \"power_values\" WHERE $__timeFilter(time) AND (device = 'KebaOutside' OR device = 'KebaGarage') AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
+        {"dataset": "iox", "datasource": {"type": "influxdb", "uid": "cf9jc6mgbsao0c"}, "editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_bin(INTERVAL '5 min', time) AS time, (AVG(CASE WHEN device IN ('KebaOutside', 'Stellplatz') THEN \"value_watt\" ELSE 0 END) + AVG(CASE WHEN device IN ('KebaGarage', 'Garage') THEN \"value_watt\" ELSE 0 END)) AS \"Total Charging Power\" FROM \"power_values\" WHERE $__timeFilter(time) AND (device IN ('KebaOutside', 'Stellplatz') OR device IN ('KebaGarage', 'Garage')) AND measurement = 'AktuelleLadeleistung' GROUP BY 1 ORDER BY time", "refId": "A", "sql": {"columns": [{"parameters": [], "type": "function"}], "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}]}}
       ],
       "title": "Total Charging Power (Both Wallboxes Combined)",
       "type": "timeseries"

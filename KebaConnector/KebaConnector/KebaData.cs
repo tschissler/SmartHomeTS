@@ -8,6 +8,12 @@ namespace KebaConnector
 {
     public record KebaData (
         PlugStatus PlugStatus,
+        /// <summary>
+        /// Device state of the box, 0-5 (see KebaDeviceStatusData.State). Distinguishes
+        /// "waiting for the vehicle" from "charging" and from "error", which the plug status
+        /// alone cannot.
+        /// </summary>
+        int DeviceState,
         bool ChargingEnabled,
         bool DeviceEnabled,
         int MaxCurrencyOfferedByChargingStation,

@@ -9,6 +9,12 @@ namespace SharedContracts
     public class ChargingSettings
     {
         /// <summary>
+        /// When these settings were last changed (UTC). Mandatory field of every payload, see
+        /// MQTT-Topic-Konvention.md: without it the age of a retained value cannot be told.
+        /// </summary>
+        public DateTimeOffset Zeitpunkt { get; set; }
+
+        /// <summary>
         /// The configured charging profile
         /// 0 = off
         /// 1 = Access charging with battery priority

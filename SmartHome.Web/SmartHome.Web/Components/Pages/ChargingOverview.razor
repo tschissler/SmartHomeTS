@@ -261,11 +261,11 @@
 
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
     {
-        if (args.Topic.StartsWith("data/charging/"))
+        if (args.Topic.StartsWith("data/charging/") || args.Topic == LadeTopics.Situation)
         {
             UpdateChargingSituation();
         }
-        else if (args.Topic == "config/charging/settings")
+        else if (args.Topic == LadeTopics.Einstellungen)
         {
             UpdateChargingSettings();
         }
@@ -341,8 +341,9 @@
 
     private async Task CommunicateSettings()
     {
+        chargingSettings.Zeitpunkt = DateTimeOffset.UtcNow;
         await MqttService.PublishAsync(
-            "config/charging/settings",
+            LadeTopics.Einstellungen,
             JsonSerializer.Serialize(chargingSettings),
             MqttQualityOfServiceLevel.AtLeastOnce,
             true);

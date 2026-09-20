@@ -10,6 +10,13 @@
     public class ChargingSituation
     {
         /// <summary>
+        /// When the control cycle that produced this picture ran (UTC). Mandatory field of
+        /// every payload, see MQTT-Topic-Konvention.md — the topic is retained, so without it
+        /// a consumer cannot tell a live value from one the broker replayed.
+        /// </summary>
+        public DateTimeOffset Zeitpunkt { get; set; }
+
+        /// <summary>
         /// Is a car connected to the inside charging station and ready for charging
         /// </summary>
         public bool InsideConnected { get; set; }
