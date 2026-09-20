@@ -8,18 +8,18 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 
 ## Architecture
 
-**Data flow**: Physical devices → ESP32 firmware → MQTT (Mosquitto) → Connector services → InfluxDB 3 → Grafana/Blazor Web/Flutter App
+**Data flow**: Physical devices → ESP32 firmware → MQTT (Mosquitto) → Connector services → InfluxDB 3 → Grafana/Blazor Web
 
 **Key layers**:
 - **ESP32 firmware** (C++/Arduino via PlatformIO): 18 sensor/controller projects in `ESP32Firmwares/`, sharing libraries from `ESP32Firmwares/SharedLibs/`
 - **Connector services** (.NET/Python): Bridge external APIs to MQTT — `BMWConnector`, `VWConnector`, `EnphaseConnector`, `ShellyConnector`, `KebaConnector`
 - **Business logic services** (.NET): `ChargingController` (EV charging optimization), `Thermostat` (climate control), `SmartHome.DataHub` (central data processing)
-- **Presentation**: `SmartHome.Web` (Blazor Server with Syncfusion), `smarthome_app` (Flutter), Grafana dashboards
+- **Presentation**: `SmartHome.Web` (Blazor Server with Syncfusion), Grafana dashboards
 - **AI tooling**: `MCPServer` exposes InfluxDB schema/data via Model Context Protocol
 
 **Data storage**: InfluxDB 3 with primary table `energy_values` using tags (category, sub_category, device, location, measurement, sensor_type) and fields (value_kwh, value_cumulated_kwh).
 
-**Infrastructure**: Kubernetes manifests in `Kubernetes/`, Ansible playbooks in `ansible/`, 21 GitHub Actions workflows in `.github/workflows/`.
+**Infrastructure**: Kubernetes manifests in `Kubernetes/`, Ansible playbooks in `ansible/`, 19 GitHub Actions workflows in `.github/workflows/`.
 
 ## Build Commands
 
@@ -59,13 +59,6 @@ pio device monitor         # Serial monitor
 ```bash
 pip install -r BMWConnector/requirements.txt
 pip install -r VWConnector/requirements.txt
-```
-
-### Flutter app
-```bash
-cd smarthome_app
-flutter pub get
-flutter run
 ```
 
 ## CI/CD
