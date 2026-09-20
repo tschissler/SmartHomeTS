@@ -300,7 +300,12 @@ Nutzen pro Zeile.
       diesem Repo nicht feststellen. Als offener Befund unten erfasst, hier nicht mit
       umgesetzt
 
-**Nach dem Rollout zu verifizieren.** Der Testsatz prüft die Alterslogik gegen einen
+**Nach dem Rollout zu verifizieren — nicht optional.** Die MQTT-Spezifikation fordert das
+Verhalten ausdrücklich (MQTT-3.3.1-8: der Server *muss* das RETAIN-Flag auf 1 setzen, wenn
+eine Nachricht wegen eines neuen Abonnements zugestellt wird, damit der Client retained von
+live unterscheiden kann). In MQTTnet gab es dazu allerdings einen Fehlerbericht
+(dotnet/MQTTnet#482, 2018), dessen Auflösung nicht dokumentiert ist; `MQTTClient` nutzt
+heute 5.0.1.1416, also sieben Jahre jünger. Der Testsatz prüft die Alterslogik gegen einen
 Fake, nicht den MQTT-Pfad: Dass MQTTnet bei einer Wiedergabe aus dem Retained-Store das
 Retain-Flag setzt, ist eine Annahme über die Bibliothek. Beleg im Betrieb: Direkt nach
 einem Connector-Neustart muss im Log `Received retained message from
@@ -653,6 +658,9 @@ keinen Ort für die Position.
   real ist: `mosquitto_sub -v -t 'cangateway/M1/WEZ/Status/FA_Status'` mit einem frischen
   Client — kommt sofort ein Wert, ist das Topic retained. Der CAN-Gateway liegt nicht in
   diesem Repo.
+- **Vier MQTTnet-Versionen im Repo.** `MQTTClient` nutzt 5.0.1.1416, andere Projekte
+  4.3.1.873, 4.3.3.952 und 4.3.6.1152. Unterschiedliche Bibliotheksversionen können sich
+  bei Randverhalten wie dem Retain-Flag unterschiedlich verhalten.
 - **Testprojekte laufen nicht in der CI.** `ChargingControllerTests`, `EnphaseLib.Tests`
   und `ShellyLibTests` existieren, werden aber von keinem Workflow ausgeführt — einzig
   `RulesEngine.yml` ruft `dotnet test` auf. Tests, die nie laufen, sind Selbstbetrug.
