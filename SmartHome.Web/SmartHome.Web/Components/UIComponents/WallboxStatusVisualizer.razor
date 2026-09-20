@@ -13,8 +13,33 @@
 <div class="wallboxBox">
     <div class="wallboxHeader">
         <span class="wallboxName">@Name</span>
-        <span class="wallboxZustand @ZustandKlasse">
-            <img class="wallboxZustandIcon" src="/images/@ZustandIcon" alt="" />
+        <span class="wallboxZustand @ZustandKlasse" title="@SteckerHinweis">
+            @*
+                The symbol answers exactly one question: does a vehicle hang on the cable? Drawn
+                in currentColor, so it always carries the colour of the state written next to it
+                and cannot contradict it. Inline instead of /images/*.svg because those carry
+                their colour hard-coded - disconnected.svg is amber throughout, which put an
+                attention colour on the most ordinary state a box has.
+            *@
+            <svg class="wallboxZustandIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                @if (FahrzeugAmKabel)
+                {
+                    <path d="m 8.4644661,11.96603 h 7.0710679 v 2.12132 a 3.536,3.536 0 1 1 -7.0710679,0 z" stroke-width="0.8" />
+                    <path d="M 15.535534,12.03397 H 8.4644661 V 9.9126506 a 3.536,3.536 0 1 1 7.0710679,0 z" stroke-width="0.8" />
+                    <path d="M 12,24.54471 V 18.200712" stroke-width="1.07163" />
+                    <path d="M 12,5.9834864 V -0.50983784" stroke-width="1.08417" />
+                }
+                else
+                {
+                    <path d="m 8.4644661,15.535534 h 7.0710679 l 0,2.12132 a 3.536,3.536 0 1 1 -7.0710679,0 z" stroke-width="0.8" />
+                    <path d="M 15.535534,8.4644661 H 8.4644661 V 6.3431458 a 3.536,3.536 0 1 1 7.0710679,0 z" stroke-width="0.8" />
+                    <path d="M 12,24.862451 V 21.326917" stroke-width="0.8" />
+                    <path d="M 12,2.6999885 V -0.83554538" stroke-width="0.8" />
+                    <path d="m 9.8786797,12.707107 v 2.828427" stroke-width="0.8" />
+                    <path d="m 14.12132,12.707107 v 2.828427" stroke-width="0.8" />
+                }
+            </svg>
             @ZustandText
         </span>
     </div>
@@ -84,6 +109,16 @@
     /// </summary>
     private const int PlugStatusNichtVerriegelt = 5;
 
+    /// <summary>Plug state 1: cable lying in the station, nothing on the other end.</summary>
+    private const int PlugStatusKabelInBox = 1;
+
+    /// <summary>
+    /// Plug state 3: cable in the station and locked there, still nothing on the other end. A box
+    /// with a fixed cable reports this permanently while idle — the Garage does — so it says
+    /// nothing at all about whether a vehicle is present.
+    /// </summary>
+    private const int PlugStatusKabelInBoxVerriegelt = 3;
+
     /// <summary>
     /// A phase counts as carrying current above this. Well below the 6 A minimum charging
     /// current, well above what the measurement shows on an idle phase.
@@ -124,8 +159,10 @@
     public EventCallback VorrangUmschalten { get; set; }
 
     /// <summary>
-    /// The plug state tells a free box from one that is plugged in and waiting; the device
-    /// state tells everything else. Both come from the box.
+    /// The question this tile answers is "is a vehicle hanging there?", not "is a cable stuck in
+    /// the box?". Plug states 0, 1 and 3 all mean the same for it: no vehicle, box free. Only
+    /// the device state may override that wording, because charging, error and interruption are
+    /// statements the plug state cannot make.
     /// </summary>
     private string ZustandText => Status switch
     {
@@ -136,28 +173,47 @@
         { DeviceState: ZustandStartet } => "startet",
         { FahrzeugVerbunden: true } => "verbunden, wartet",
         { PlugStatus: PlugStatusNichtVerriegelt } => "verbunden, nicht verriegelt",
-        { PlugStatus: > 0 } => "Kabel eingesteckt",
         _ => "frei",
     };
 
+    /// <summary>
+    /// Colour follows the same reading as the text. An attention colour only where a vehicle is
+    /// waiting or something is wrong — never on a free box, whatever its cable is doing.
+    /// </summary>
     private string ZustandKlasse => Status switch
     {
         null => "wallboxZustand-unbekannt",
         { DeviceState: ZustandFehler } => "wallboxZustand-fehler",
         { DeviceState: ZustandLaedt } => "wallboxZustand-laedt",
         { DeviceState: ZustandUnterbrochen } => "wallboxZustand-unterbrochen",
-        { FahrzeugVerbunden: true } => "wallboxZustand-wartet",
-        { PlugStatus: PlugStatusNichtVerriegelt } => "wallboxZustand-wartet",
+        _ when FahrzeugAmKabel => "wallboxZustand-wartet",
         _ => "wallboxZustand-frei",
     };
 
-    private string ZustandIcon => Status switch
+    /// <summary>
+    /// Whether a vehicle hangs on the cable. Plug states 5 and 7 are the two that reach the
+    /// vehicle; 0, 1 and 3 are the box alone with its cable, locked or not.
+    /// </summary>
+    private bool FahrzeugAmKabel => Status is
+        { PlugStatus: PlugStatusNichtVerriegelt or WallboxStatus.PlugStatusFahrzeugVerbunden };
+
+    /// <summary>
+    /// Where the cable is, in words. Kept as a tooltip rather than as the state: for a box with a
+    /// fixed cable it never changes, so as a state it would stand there permanently and say
+    /// nothing — while on a box with a socket it is worth being able to look up.
+    /// </summary>
+    private string SteckerHinweis => Status switch
     {
-        null => "disconnected.svg",
-        { DeviceState: ZustandLaedt } => "connected.svg",
-        { FahrzeugVerbunden: true } => "connectednotready.svg",
-        { PlugStatus: PlugStatusNichtVerriegelt } => "connectednotready.svg",
-        _ => "disconnected.svg",
+        null => "",
+        { PlugStatus: WallboxStatus.PlugStatusFahrzeugVerbunden }
+            => "Kabel steckt in der Box und im Fahrzeug, verriegelt.",
+        { PlugStatus: PlugStatusNichtVerriegelt }
+            => "Kabel steckt in der Box und im Fahrzeug, aber nicht verriegelt — so kann die Box nicht laden.",
+        { PlugStatus: PlugStatusKabelInBoxVerriegelt }
+            => "Kabel steckt in der Box und ist dort verriegelt. Kein Fahrzeug daran.",
+        { PlugStatus: PlugStatusKabelInBox }
+            => "Kabel liegt in der Box. Kein Fahrzeug daran.",
+        _ => "Kein Kabel in der Box.",
     };
 
     /// <summary>How many phases carry current, derived from the three measured currents.</summary>

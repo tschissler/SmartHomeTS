@@ -165,7 +165,13 @@ Die beiden Wallboxen sind die Hauptobjekte und immer sichtbar, auch wenn frei:
 └───────────────────────────┘  └──────────────────────────┘
 ```
 
-- Boxstatus aus `DeviceState` der Keba: frei / Stecker drin, wartet / lädt / Fehler.
+- Boxstatus aus `DeviceState` der Keba: frei / verbunden, wartet / lädt / unterbrochen /
+  Fehler. **Der `PlugStatus` allein sagt nicht, ob die Box frei ist:** 0, 1 und 3 heißen
+  alle „kein Fahrzeug" — 1 und 3 nur „Kabel steckt in der Box". Die Garage hat ein fest
+  angeschlagenes Kabel und meldet deshalb im Leerlauf dauerhaft `PlugStatus` 3. Ein
+  Fahrzeug hängt erst ab 5 dran (5 = nicht verriegelt, 7 = verriegelt, nur 7 lädt).
+  Text, Farbe und Symbol der Kachel folgen alle dieser einen Lesart; eine
+  Aufmerksamkeitsfarbe trägt nur eine Box, an der etwas hängt oder etwas klemmt.
 - Fahrzeugname mit Vertrauensgrad, klickbar zur Korrektur.
 - **Freigabe und Priorität gehören zur Box**, nicht zum Fahrzeug. Achtung bei der
   Umsetzung: `InsideChargingEnabled` und `OutsideChargingEnabled` sind zwei unabhängige
