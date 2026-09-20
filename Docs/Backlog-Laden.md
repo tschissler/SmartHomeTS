@@ -1138,7 +1138,37 @@ Das heißt: Am Telefon ist die zentrale Bedienung der Ladesteuerung unbeschrifte
 Stufen nicht auswendig kennt, rät. Das ist der einzige Punkt hier, der nicht Optik ist,
 sondern Funktion — und er gehört zuerst behoben.
 
+#### Die Ursache ist gefunden, gemessen am 2026-09-20
+
+`laden-13b-ladeliste-entfernen` hat die Seite in einer laufenden Instanz bei 1400, 820,
+450 und 414 px angesehen. Ergebnis: **Bei 414 px scrollt die Ladeseite seitlich**, die
+`.uebersichtBox` wird auf etwa 150 px zusammengequetscht, ihr Inhalt läuft rechts hinaus,
+die Balken schrumpfen auf Briefmarkengröße. Bei 820 px ist alles heil; die Grenze liegt
+bei etwa 800 px.
+
+**Schuld ist `.stepsGrid`** (`ChargingOverview.razor.css:99`), die sechs Ladestufen:
+
+```css
+grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+grid-column-gap: 30px;
+margin-left: 40px; margin-right: 40px;
+```
+
+Sechs Spalten schrumpfen nur bis zur Breite ihres längsten Wortes („Batterie-Prio"), dazu
+5 × 30 px Abstand und 80 px Ränder — rechnerisch rund 800 px Mindestbreite, was die
+Messung bestätigt. Die **Seite** ist dann überall so breit, und jeder andere Block bekommt
+nur den Rest. Der Balkenbereich ist unschuldig.
+
+**Der Beleg, dass es genau dieser Block ist:** `.wallboxGrid` hat
+`@media (max-width: 700px) { 1fr }`, `.carsGrid` hat `@media (max-width: 1000px) { 1fr }` —
+**`.stepsGrid` ist der einzige der drei ohne Medienabfrage.** Die Kacheln aus 9/9b und der
+Fahrzeugbereich aus 10 wurden fürs Telefon vorbereitet, die Lade-Einstellungen nie.
+
+Ein Umbruch auf zwei Reihen zu drei unterhalb von ~700 px räumt vermutlich die ganze Seite
+auf, nicht nur diesen Block. **Das ist der erste Handgriff dieses Punktes.**
+
 **Umfang**
+- [ ] `.stepsGrid` umbrechen lassen — siehe oben, vermutlich die Hauptursache
 - [ ] Alle sechs Seiten am Telefon durchgehen, **hoch und quer**: `ChargingOverview`,
       `Devices`, `Climate`, `Heating`, `LED`, `Error`
 - [ ] Die Ladestufen am Touchgerät erklärbar machen — der Tooltip allein genügt nicht
@@ -1326,6 +1356,26 @@ keinen Ort für die Position.
 - **Velero ist in Grafana doppelt vorhanden.** `ozk-vlr-mon` und
   `velero-backup-overview`, beide aus grafana.com 23838, eines davon provisioniert.
   Entscheidung liegt bei Thomas: welches bleibt.
+- **Die Balken der Ladeseite sind auf 150-W-Stufen gerastert.**
+  `ChargingSituationManager.CalculatePowerPercent` rechnet
+  `return (power * 100) / PowerMaximum;` — `power` ist `int`, `PowerMaximum` ist
+  `const int 15000`, also **Ganzzahldivision**, deren Ergebnis erst danach nach `decimal`
+  fließt. Die Nachkommastellen entstehen nie.
+
+  Die Folge ist größer als der zuerst gemeldete Fall: Nicht nur verschwindet alles unter
+  150 W aus dem Balken (gesehen: „Batterie laden: 6 W" in der Legende, kein Segment im
+  Balken) — **die gesamte Skala kennt nur Vielfache von 150 W.** 1.350 W und 1.499 W
+  zeichnen dasselbe Segment. Ein `100m` oder ein `decimal`-Cast behebt es.
+
+  Vorbestehend, weder von Punkt 21 noch von 13b verursacht. Gefunden von
+  `laden-13b-ladeliste-entfernen` beim Blick auf die laufende Seite.
+- **`MQTTService` ignoriert die konfigurierte Broker-Adresse.**
+  `MQTTService.cs:92` verdrahtet `.WithTcpServer("mosquitto.intern", 1883)` fest, während
+  `Program.cs:27` `SMARTHOME__MQTT_BROKER` liest und beim Start
+  „Using MQTT broker at …" protokolliert. **Das Protokoll behauptet also etwas, das die
+  Verbindung nicht tut.** Heute steht in beiden derselbe Host, der Fehler ist deshalb
+  unsichtbar — wer die Konfiguration ändert, bekommt eine Startmeldung, die die Änderung
+  bestätigt, ohne dass sie wirkt.
 - **Eine dritte Wallbox scheitert nicht am Web, sondern an `ChargingSettings`.** Dort gibt
   es nur zwei Freigabe-Booleans (`InsideChargingEnabled`, `OutsideChargingEnabled`). Im
   `MQTTService` und in der Seite kostet eine dritte Box nach Punkt 9 nur ihren Eintrag in
