@@ -361,6 +361,32 @@ zurückschreibt.
 - [ ] Erwägen, `bmwconnector-credentials` versioniert zu hinterlegen (SealedSecret im
       Deployments-Repo), damit es überhaupt eine Wiederherstellungsquelle gibt
 
+**Zuschnitt, entschieden am 2026-09-20.** Der Punkt umfasst **zwei Hälften**: den Schutz
+vor Umgebungsvariablen (falsche Werte) und die Reparatur der Token-Persistenz (verlorene
+Werte). Sie bleiben zusammen — beide beheben dasselbe Grundproblem, und eine Trennung
+hätte zwei Rollouts desselben Dienstes bedeutet. Die Commits sind thematisch getrennt, ein
+einzelner lässt sich zurücknehmen.
+
+**Die Persistenz-Reparatur.** `TokenService.RefreshAsync` ersetzt die Tokens erst im
+Speicher, stellt die 50-Minuten-Uhr und persistiert zuletzt — ungeschützt. Ab der Rotation
+ist der alte `refresh_token` tot und der neue existiert nur im Prozessspeicher; schlägt
+das Schreiben fehl, fängt der häufigste Aufrufer das als
+`LogWarning("will retry with existing token")` ab, ein Satz, der zusätzlich sachlich
+falsch ist. Zu ändern: erst persistieren, dann übernehmen; Schreibfehler mit Backoff
+wiederholen; nach erschöpften Versuchen laut melden, was auf dem Spiel steht; der falsche
+Satz entfällt. **Nicht** in die Readiness — ein Connector, der Daten liefert, ist
+betriebsbereit.
+
+**Bedingung:** Der **Fehlerpfad** muss getestet sein, nicht nur der Erfolgsfall — was
+passiert, wenn `SaveTokensAsync` wirft. Das Risiko ist asymmetrisch: Ein Fehler trifft
+genau den Mechanismus, dessen Versagen unsichtbar ist. Ohne diese Tests wird die
+Persistenz-Reparatur abgetrennt.
+
+**Nach dem Rollout messbar**, ohne auf einen Ausfall zu warten: Der `iat` im Token-Secret
+muss sich alle 50 Minuten bewegen. Bleibt er stehen, während der Dienst weiterläuft, ist
+der Defekt da — und der Stale-Monitor aus Punkt 2 schlägt nach sieben Tagen an. Die beiden
+Punkte sichern sich gegenseitig ab.
+
 **Fertig, wenn** ein Bootstrap mit gesetzten, falsch formatierten Env-Vars das Secret
 nicht mehr verändert.
 
