@@ -27,10 +27,21 @@ B = max(0, PowerFromBattery)     Batterieentladung
 V = PowerToHouse                 Gesamtverbrauch inkl. Wallboxen
 P = max(0, V − N − B)            PV-Anteil am Verbrauch
 
-p = P/V     n = N/V     b = B/V          (p + n + b = 1)
+S = P + N + B                    Summe der drei Toepfe
+p = P/S     n = N/S     b = B/S          (p + n + b = 1)
 
 je Wallbox:  PV = p · P_Box    Netz = n · P_Box    Batterie = b · P_Box
 ```
+
+**Normiert wird über `S`, nicht über `V`.** Ohne Messwert-Schieflage ist `S = V`, das
+Ergebnis also identisch. Weichen die Envoy-Kanäle aber kurzzeitig voneinander ab — etwa
+`V = 3000`, `N = 2000`, `B = 2000` — dann wird `P = 0`, und mit `V` als Nenner ergäbe
+`n + b = 1,33`: dem Auto würden 133 % seiner Ladeleistung zugerechnet und die Zähler
+liefen dauerhaft zu hoch. Mit `S` als Nenner ist `p + n + b = 1` konstruktiv garantiert.
+
+**Der Mix ist der von M3.** Der ChargingController abonniert ausschließlich
+`data/electricity/envoym3` (`Program.cs:283`), und dort hängen auch beide Wallboxen.
+M1-Werte gehen in die Zurechnung nicht ein.
 
 Vorzeichen laut `grafana-dashboards/influxdb-reference.md`: `PowerFromGrid` positiv =
 Bezug, `PowerFromBattery` positiv = Entladen. Alle vier Größen liegen im
@@ -93,8 +104,10 @@ Das hat vier Vorteile:
 
 **Umsetzungshinweise**
 - Δt ist die tatsächlich vergangene Zeit seit dem letzten Zyklus, nicht pauschal 5 s.
-- Ist `V ≤ 0` oder fehlt ein Eingangswert, wird das Intervall übersprungen. Es erscheint
+- Ist `S ≤ 0` oder fehlt ein Eingangswert, wird das Intervall übersprungen. Es erscheint
   dann als nicht zugeordnete Energie — das ist gewollt.
+- `ladezeit_s` zählt Intervalle mit einer Ladeleistung **über 100 W**, nicht „> 0" — die
+  Wallbox meldet im Leerlauf kleine Messrauschwerte, die sonst als Ladezeit gälten.
 - Auch die momentanen Aufteilungsleistungen gehören nach `power_values`
   (`LadeleistungPv`/`-Batterie`/`-Netz` je Gerät), damit das Verlaufsdiagramm ohne
   Ableitung auskommt.
@@ -118,7 +131,7 @@ eigene Tabelle; `WritePointDataToInfluxDb` im `Influx3Connector` ist bereits gen
 | `energie_pv_kwh` | Feld | aus Zählerdifferenz |
 | `energie_batterie_kwh` | Feld | aus Zählerdifferenz |
 | `energie_netz_kwh` | Feld | aus Zählerdifferenz |
-| `energie_unzugeordnet_kwh` | Feld | Boxenergie minus Summe der drei |
+| `energie_unzugeordnet_kwh` | Feld | Boxenergie minus Summe der drei; **darf leicht negativ werden** (Rundung, Zählerskew) und wird nicht geklemmt — ein kleiner negativer Wert ist ehrlicher als eine stille Korrektur |
 
 **Nur `wallbox` ist Tag.** `fahrzeug` und `vertrauen` sind Felder — nicht um Korrekturen zu
 ermöglichen, sondern wegen **Idempotenz**: Das `Ladesitzung`-Topic ist retained, jeder

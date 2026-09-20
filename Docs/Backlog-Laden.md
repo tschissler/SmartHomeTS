@@ -43,6 +43,33 @@ Innerhalb einer Welle gilt: kein Punkt wird von zwei Sessions angefasst, und
 
 ---
 
+## Parallel arbeiten — Kollisionen
+
+Die Abhängigkeiten unten sagen, was fachlich aufeinander aufbaut. Wer mehrere Punkte
+gleichzeitig bearbeitet, braucht zusätzlich die **Datei-Kollisionen**:
+
+| Bereich | angefasst von Punkt |
+|---|---|
+| `SharedContracts` | 7, 10, 12, 13 |
+| `ChargingController` | 8, 12 |
+| `KebaConnector` | 7, 16 |
+| `SmartHome.DataHub` | 8, 13, 17 |
+| `SmartHome.Web` | 9, 10, 11, 13 |
+| alle fünf Dienste + `Devices.razor` | 3 |
+
+Daraus folgt:
+
+- **Gefahrlos gleichzeitig:** 1, 2, 4 — und 14 lässt sich jederzeit vorbereiten.
+- **Punkt 3 kollidiert mit fast allem.** Entweder vorziehen und zügig abschließen, oder
+  bis nach 13 zurückstellen. Nicht mittendrin einschieben.
+- **7 → 8 → 9 ist eine echte Kette**, nicht parallelisierbar: 7 definiert den Contract,
+  den 8 konsumiert und auf dem 9 aufsetzt.
+- **12 erst nach 8**, sonst treffen sich zwei Sessions im `ChargingController`.
+- **Nummern bleiben stabil.** Neue Erkenntnisse werden hinten angehängt (16, 17), nie
+  eingeschoben — laufende Sessions verweisen auf diese Nummern.
+
+---
+
 ## Unabhängige Vorarbeiten
 
 ### 0. CI-Trigger für geteilten Code
@@ -132,8 +159,11 @@ Geräteüberwachung sieht ihn nicht.
 
 **Umfang**
 - [ ] BMWConnector, VWConnector, KebaConnector, ChargingController, DataHub publizieren
-      einen Heartbeat im Format der ESP32-Geräte (Version, Uptime, letzte erfolgreiche
-      Aktion, fachlicher Zustand) — sinnvollerweise als gemeinsamer Helfer in `Libs/`
+      einen Heartbeat im **Bestandsformat der ESP32-Geräte**:
+      `status/<Ort>/<Geraetetyp>/<Name>` mit `Ort = Cluster`, weil die Dienste ortslos
+      sind (Version, Uptime, letzte erfolgreiche Aktion, fachlicher Zustand) —
+      sinnvollerweise als gemeinsamer Helfer in `Libs/`. Begründung der Ausnahme in
+      `MQTT-Topic-Konvention.md`
 - [ ] `Devices.razor` zeigt sie ohne Sonderbehandlung mit an
 - [ ] `meta/<Service>/version` geht darin auf (heute nur `meta/RulesEngine/version`)
 
@@ -282,9 +312,13 @@ Konzept und Begründungen: `Ladeprotokoll.md`.
 
 ```
 N = max(0, PowerFromGrid)   B = max(0, PowerFromBattery)   V = PowerToHouse
-P = max(0, V − N − B)       p = P/V   n = N/V   b = B/V
+P = max(0, V − N − B)       S = P + N + B
+p = P/S   n = N/S   b = B/S
 je Box: PV = p·P_Box,  Netz = n·P_Box,  Batterie = b·P_Box
 ```
+
+Normiert wird über `S`, **nicht** über `V` — sonst können die Anteile bei
+Messwert-Schieflage in Summe über 100 % liegen. Quelle des Mix ist `envoym3`.
 
 **Modell.** Drei virtuelle, nie zurückgesetzte Zähler je Wallbox, vom ChargingController
 im Regelzyklus fortgeschrieben — behandelt wie ein Shelly oder der Envoy.
@@ -302,7 +336,8 @@ im Regelzyklus fortgeschrieben — behandelt wie ein Shelly oder der Envoy.
       eigenen retained Topic
 - [ ] Zusätzlich die momentanen Aufteilungsleistungen nach `power_values`
       (`LadeleistungPv`/`-Batterie`/`-Netz`) für das Verlaufsdiagramm
-- [ ] Ladezeit (Leistung > 0) getrennt von der Steckdauer mitzählen
+- [ ] Ladezeit getrennt von der Steckdauer mitzählen, Schwelle **> 100 W** (nicht „> 0",
+      sonst zählt Messrauschen im Leerlauf als Ladezeit)
 - [ ] DataHub schreibt die Zähler wie jeden anderen Energiewert nach `energy_values`
 
 **Fertig, wenn** `MAX(value_cumulated_kwh) − MIN(...)` über einen Tag für die drei Zähler
@@ -361,7 +396,66 @@ hinein.
       trennen lassen. Erwartung: nein (GPS-Streuung größer als der Abstand, in der Garage
       kein Fix). Dann ist die Frage empirisch beantwortet statt vermutet
 
-**Abhängig von** 10.
+**Abhängig von** 17 — solange Fahrzeugdaten überhaupt nicht persistiert werden, gibt es
+keinen Ort für die Position.
+
+---
+
+## Nachträglich ergänzt
+
+### 16. Retained Ladestrom-Kommando hebelt die Notfallfreigabe aus
+
+**Problem.** `PublishChargingCommand` publiziert `befehle/…/Ladestrom` mit
+`WithRetainFlag()` (`ChargingController/Program.cs:180`), und der KebaConnector setzt bei
+jedem Empfang `desiredCurrentReceivedAt = DateTimeOffset.UtcNow`
+(`KebaDeviceConnector.cs:57`). Startet der KebaConnector neu, während der
+ChargingController tot ist, stellt der Broker sofort das alte retained Kommando zu — und
+der Connector hält es für taufrisch.
+
+Damit greift die eingebaute Notfallfreigabe **nie**: `StaleReleaseAfter` soll die Box nach
+10 Minuten Funkstille auf vollen Strom freigeben, damit ohne Regelung weitergeladen werden
+kann. Nach einem Connector-Neustart läuft der Alterszähler wieder bei null los, und die
+Box bleibt dauerhaft auf einem beliebig alten Sollwert stehen.
+
+Das ist sicherheitsrelevant und unabhängig vom restlichen Vorhaben.
+
+**Umfang**
+- [ ] Sofortmaßnahme ohne Contract-Änderung: MQTTnet liefert bei einer Retain-Zustellung
+      das Retain-Flag mit. Eine so gekennzeichnete Nachricht darf den Sollwert zwar
+      **setzen**, aber den Frischezähler **nicht zurücksetzen**
+- [ ] Dauerhaft: `Zeitpunkt` im Kommando-Payload, Alter daraus statt aus der Empfangszeit
+      — fällt mit Punkt 7/8 ohnehin an
+- [ ] Testfall: Controller schweigt, Connector startet neu → Freigabe muss nach
+      `StaleReleaseAfter` erfolgen
+- [ ] Prüfen, ob dieselbe Verwechslung anderswo steckt — die `RulesEngine` wertet
+      `MaxStatusAge` ebenfalls gegen die Empfangszeit aus
+
+**Abhängig von** nichts. Gehört fachlich zu 7; läuft 7 bereits, als eigener Schritt
+danach. Kollidiert mit 7 im `KebaConnector`.
+
+---
+
+### 17. Fahrzeugdaten persistieren
+
+**Problem.** Seit der Telegraf-Abschaltung schreibt **niemand mehr Fahrzeugdaten nach
+InfluxDB**. Der DataHub verarbeitet nur `KebaGarage` und `KebaOutside`; für
+`data/charging/{BMW,Mini,VW}` gibt es keinen Handler. Es existiert also keine Historie von
+Ladestand, Reichweite oder Kilometerstand mehr — und Punkt 15 (Position auswerten) hat
+ohne diesen Punkt gar keinen Ort, an den geschrieben werden könnte.
+
+**Umfang**
+- [ ] DataHub abonniert `daten/Fahrzeug/+/Status` und schreibt nach InfluxDB 3:
+      Ladestand und Ziel als `percent_values`, Reichweite und Kilometerstand als eigene
+      Messwerte, Verbindungs- und Ladestatus als `status_values`
+- [ ] `location` ist `-` (ortsloses Gerät), `device` der Fahrzeugname
+- [ ] **Zeitstempel aus dem `lastUpdate` bzw. `Zeitpunkt` des Payloads**, nicht
+      `DateTimeOffset.UtcNow` — sonst wird ein 35 Tage alter retained Wert als aktuelle
+      Messung eingetragen
+- [ ] Position mitschreiben (Grundlage für Punkt 15)
+- [ ] Wiederholte identische Payloads nicht als neue Messung schreiben
+
+**Abhängig von** 8 (damit es nicht zweimal gegen zwei Topic-Schemata gebaut wird).
+Kollidiert mit 8 und 13 im DataHub.
 
 ---
 

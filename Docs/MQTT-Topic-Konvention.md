@@ -25,8 +25,16 @@ daten/Temperatur/M1/Keller/Wert
 daten/Fahrzeug/BMW/Status
 befehle/Laden/M3/Garage/Ladestrom
 konfiguration/Laden/M3/Regelung/Einstellungen
-status/M1/TemperaturSensor/Wohnzimmer
 ```
+
+**Ausnahme `status/`.** Der bestehende Geräte-Heartbeat lautet
+`status/<Ort>/<Geraetetyp>/<Name>` (z. B. `status/M1/TemperaturSensor/Wohnzimmer`) und
+folgt der Regel **nicht** — ihm fehlen Kategorie- und Aspekt-Ebene. Er bleibt vorerst so,
+weil er von 17 ESP32-Geräten bedient wird und eine Umstellung einen OTA-Rollout auf die
+gesamte Flotte bedeutet. **Neue Teilnehmer übernehmen dieses Bestandsformat**, damit im
+`status`-Namensraum nicht zwei Formate nebeneinanderstehen; ortslose Teilnehmer wie die
+.NET-Dienste verwenden `Cluster` als Ort. Die Migration des ganzen Namensraums ist ein
+eigener, späterer Schritt für alle Teilnehmer gemeinsam.
 
 ## Warum diese Reihenfolge
 
@@ -87,14 +95,21 @@ Ein Fahrzeug ist ortslos: es bewegt sich und lädt manchmal auswärts. Kategorie
   Relativwirkung darf sich beim Reconnect nicht wiederholen (so hält es die
   `RulesEngine` bei den Mischerpulsen bereits).
 - Zustand, der zusammengehört, gehört in **einen** Payload. Zwei Topics, die
-  konsistent sein müssten, laufen irgendwann auseinander.
+  konsistent sein müssten, laufen irgendwann auseinander. Lässt sich das nicht vermeiden,
+  weil mehrere Dienste beitragen, verbindet sie ein gemeinsamer Schlüssel, und der
+  Zusammenführende **prüft ihn** (so beim Ladesitzungs-Datensatz über die `SitzungsId`).
+- **Auch Befehle tragen einen `Zeitpunkt`, und der Empfänger muss ihn auswerten.** Ein
+  retained Kommando wird beim Verbinden sofort zugestellt, unabhängig von seinem Alter.
+  Wer stattdessen die Empfangszeit als Alter nimmt, hält ein beliebig altes Kommando für
+  frisch. Im Bestand hebelt genau das eine Sicherheitsfunktion aus — siehe
+  `Backlog-Laden.md`, Punkt 16.
 
 ## Migrationsstand
 
 | Bereich | Stand |
 |---|---|
 | `daten/Laden/…`, `daten/Fahrzeug/…` | wird mit dem Ladevorhaben umgestellt (siehe `Backlog-Laden.md`) |
-| `status/<Ort>/<Geraetetyp>/<Name>` | konform bis auf die fehlende Aspekt-Ebene; ESP32-Firmware, Migration bei Gelegenheit |
+| `status/<Ort>/<Geraetetyp>/<Name>` | **dokumentierte Ausnahme** (siehe oben): Kategorie- und Aspekt-Ebene fehlen. Neue Teilnehmer folgen dem Bestandsformat; Migration nur gemeinsam mit der ESP32-Flotte |
 | `daten/temperatur/…`, `daten/luftfeuchtigkeit/…` | Kleinschreibung und fehlende Aspekt-Ebene; 18 ESP32-Firmwares, nur bei OTA-Anlass |
 | `cangateway/…` | ohne Art-Ebene; Migration offen |
 | `meta/…`, `OTAUpdate/…` | sollen langfristig in `status/` bzw. `konfiguration/Ota/` aufgehen |

@@ -86,9 +86,14 @@ nach dem Muster der Mischerregeln:
 2. **Positive Fahrzeugmeldung** — ein Fahrzeug meldet `chargerConnected = true`,
    während genau eine Box belegt ist und noch kein Fahrzeug hat.
    Vertrauensgrad `erkannt`.
-3. **Historie** — das Fahrzeug, das zuletzt an dieser Box lud.
+3. **Positive Meldung bei zwei belegten Boxen** — ist der einen Box bereits ein Fahrzeug
+   zugeordnet und die andere ebenfalls belegt, geht das neu meldende Fahrzeug an die
+   andere Box. Das ist **kein Ausschluss über Fahrzeugschweigen**, sondern über die
+   *gemessene* Belegung der Boxen, und damit zulässig. Ist noch keine der beiden Boxen
+   vergeben, bleibt es bei Stufe 4. Vertrauensgrad `erkannt`.
+4. **Historie** — das Fahrzeug, das zuletzt an dieser Box lud.
    Vertrauensgrad `vermutet`.
-4. Nichts davon: `unbekannt`.
+5. Nichts davon: `unbekannt`.
 
 **Eigenschaften:**
 
@@ -100,6 +105,18 @@ nach dem Muster der Mischerregeln:
   überlebt.
 - **Vermutungen sind als solche sichtbar** — grau mit Fragezeichen, ein Klick genügt zur
   Korrektur.
+
+**Woher die Historie kommt:** aus dem eigenen retained `Zuordnung`-Topic. Es bleibt nach
+dem Sitzungsende stehen und trägt die alte `SitzungsId`. Beginnt an derselben Box eine
+neue Sitzung, übernimmt die Regel das dort genannte Fahrzeug als `vermutet` und schreibt
+die neue `SitzungsId` dazu. Kein Datenbankzugriff, und ein Neustart der RulesEngine stellt
+den Zustand allein aus retained Topics wieder her.
+
+**Der manuelle Override** wird von der Web-Oberfläche retained nach
+`konfiguration/Laden/M3/<Box>/Zuordnung` publiziert und trägt `SitzungsId`, `Fahrzeug` und
+`Zeitpunkt`. Die Regel wertet ihn **nur aus, wenn die `SitzungsId` zur laufenden Sitzung
+passt** — dadurch verfällt er beim Stecker-Ziehen von selbst, ohne dass ihn jemand
+zurücknehmen müsste.
 
 ## Topics
 
@@ -150,7 +167,12 @@ Die beiden Wallboxen sind die Hauptobjekte und immer sichtbar, auch wenn frei:
 
 - Boxstatus aus `DeviceState` der Keba: frei / Stecker drin, wartet / lädt / Fehler.
 - Fahrzeugname mit Vertrauensgrad, klickbar zur Korrektur.
-- **Freigabe und Priorität gehören zur Box**, nicht zum Fahrzeug.
+- **Freigabe und Priorität gehören zur Box**, nicht zum Fahrzeug. Achtung bei der
+  Umsetzung: `InsideChargingEnabled` und `OutsideChargingEnabled` sind zwei unabhängige
+  Schalter, `PreferedChargingStation` dagegen **ein einzelnes Enum** — die beiden
+  Prio-Schalter verhalten sich also wie Optionsfelder und schließen einander aus.
+- Die Ladestufen 0–5 bleiben als globale Auswahl oberhalb der Kacheln; sie gelten für die
+  Anlage, nicht für eine Box.
 
 Darunter ein **Fahrzeugbereich** mit einer vollen Karte je Fahrzeug: Ladestand und Ziel,
 Reichweite und Prognose, Kilometerstand, Durchschnittsverbrauch, Ladeleistung, Spannung
