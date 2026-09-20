@@ -26,7 +26,7 @@ Präfix setzt.
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`1c8ff95`). Im neuen Pod: `Loaded tokens … (issued …)`, `Stored token refreshed 0.9 h ago, well inside the 7 day limit`, sofortiger Refresh mit erfolgreicher Persistierung, `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True` |
 | 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | **erledigt und gemergt** (`ef244fe`). Ab jetzt läuft `dotnet test` vor jedem ChargingController-Build; ein roter Test erzeugt kein Image und damit kein Deployment |
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **erledigt und gemergt** (`04cc432`). 26 Dateien, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün ohne einen geänderten Erwartungswert. Löst **sechs** Rollouts aus, nicht vier: Enphase und Shelly bauen wegen `SharedContracts/**` mit — der transitive Pfadfilter aus Punkt 0 wirkt wie vorgesehen. Rollout-Handgriffe siehe unten |
-| 9 Wallbox-Kacheln | `laden-09-kacheln` | 2026-09-20 | läuft — zwei Boxkacheln statt drei Fahrzeugkacheln, Boxstatus aus `DeviceState`, Wildcard im `MQTTService`. Ein Rollout (Web), ungefährlich: die Regelung hängt nicht daran |
+| 9 Wallbox-Kacheln | `laden-09-kacheln` | 2026-09-20 | **fertig**, Commit `cd6f257`, Merge offen. Sechs Dateien, Build grün (Warnungen 53 → 43). Löst genau einen Rollout aus (Web), ungefährlich: die Regelung hängt nicht daran |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | läuft — eigenes Repo im internen Forgejo, Export-Skript, Umzug. Außerhalb des Lade-Vorhabens, siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
@@ -895,6 +895,19 @@ keinen Ort für die Position.
   (`id`, `version`, `iteration`, `updated`) verwirft — ohne das produziert jeder Export
   Rauschdiffs und die Historie wird wieder wertlos. **Geklärt am 2026-09-20: Das Forgejo wird gesichert**, der Umzug streicht
   also kein Backup. Details im Prompt der Session.
+- **Eine dritte Wallbox scheitert nicht am Web, sondern an `ChargingSettings`.** Dort gibt
+  es nur zwei Freigabe-Booleans (`InsideChargingEnabled`, `OutsideChargingEnabled`). Im
+  `MQTTService` und in der Seite kostet eine dritte Box nach Punkt 9 nur ihren Eintrag in
+  `LadeTopics.Wallboxen` — einen Freigabeschalter bekäme sie nicht. Zusammen mit der
+  Umbenennung `Inside`/`Outside` → Boxnamen ein eigener Punkt; im Web liegt die Abbildung
+  danach an genau einer Stelle (`ChargingOverview.Station()`).
+- **`MqttService.Wallboxen` ist nach Gerätename verschlüsselt, nicht nach Ort + Gerät.**
+  Beide Boxen stehen in M3; käme eine gleichnamige Box an einem zweiten Ort, überschriebe
+  sie den Eintrag. Im Code als `remarks` vermerkt, harmlos solange es bei einem Ort bleibt.
+- **Latenter NullReferenceException im Web, vorbestehend.**
+  `ChargingSettings = JsonSerializer.Deserialize<…>(payload)` kann `null` zuweisen (CS8601
+  an vier Stellen im `MQTTService`), und `ChargingOverview` dereferenziert
+  `chargingSettings` ungeprüft. Von Punkt 9 weder verursacht noch behoben.
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
