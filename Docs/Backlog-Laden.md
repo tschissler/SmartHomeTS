@@ -966,6 +966,27 @@ keinen Ort für die Position.
   `ChargingSettings = JsonSerializer.Deserialize<…>(payload)` kann `null` zuweisen (CS8601
   an vier Stellen im `MQTTService`), und `ChargingOverview` dereferenziert
   `chargingSettings` ungeprüft. Von Punkt 9 weder verursacht noch behoben.
+- **Grafana-Abgleich automatisieren — aber als Erkennung, nicht als Überschreiben.**
+  Aufgekommen am 2026-09-20 nach dem Umzug nach `forgejo.intern/thomas/Grafana`.
+  Der Export über die API steht, ein `import_dashboards.py` als Gegenstück entsteht in
+  der Session `grafana-wallbox-verlauf`. Offen ist die Automatisierung — und dabei ist
+  **die naheliegende Lösung die falsche**: Ein Import, der bei jedem Push automatisch
+  läuft, überschreibt stillschweigend jede UI-Änderung, die seit dem letzten Export
+  gemacht wurde. Thomas arbeitet im UI; Export ist die normale Richtung, Import die
+  Ausnahme. Automatisch in beide Richtungen zu synchronisieren heißt, das Problem
+  „letzter Schreiber gewinnt" einzubauen, statt es zu lösen.
+
+  **Was stattdessen automatisiert gehört, ist die Erkennung.** Ein regelmäßiger Lauf
+  (Forgejo Action, CronJob im Cluster oder Timer) exportiert nach `/tmp`, vergleicht mit
+  dem Repo-Stand und meldet, wenn beide auseinanderlaufen — ohne irgendetwas zu ändern.
+  Das löst das ursprüngliche Problem genau: Bis heute war die Abdrift unsichtbar, weil
+  nie verglichen wurde. Eine Meldung reicht dafür; das Schreiben bleibt eine bewusste
+  Handlung.
+
+  Zu entscheiden: wo der Lauf lebt (Forgejo Actions gegen CronJob), wie er meldet
+  (MQTT auf `Nachrichten/#` wäre hausüblich, ist aber an den fehlenden Meldeweg für die
+  Web-PWA gekoppelt — siehe den Punkt darunter), und ob er zusätzlich committet, was er
+  findet (ein automatischer Export-Commit wäre harmlos und gäbe die Historie geschenkt).
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
