@@ -35,7 +35,7 @@ Präfix setzt.
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
 | 13a Ladesitzungen | `laden-13a-ladesitzungen` | 2026-09-20 | **läuft** — ChargingController publiziert `Ladesitzung`, DataHub schreibt `ladesitzungen`. Fasst `SharedContracts`, `ChargingController`, `SmartHome.DataHub` an, **kein Web**. Nebenauftrag mit eigenem Commit: `Convert.ToInt16` aus dem `InfluxDB3Connector` entfernen |
 | 21 Ladeseite oben | `laden-21-ladeseite-oben` | 2026-09-20 | **läuft** — nur `SmartHome.Web`, nur oberhalb von `<h4>Wallboxen</h4>`. Farben kommen aus Grafana (PV `#F4D03F`, Batterie `#2ECC71`, Netz `#E74C3C`), Ladeleistung künftig aus `WallboxStatus` statt aus der einen Zyklus alten `ChargingSituation` |
-| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **erledigt und abgenommen** — sieben weitere Commits bis `1cb4386`. Endstand **28 Dashboards** (`energiefluss-copy` gelöscht), Abgleich zweimal hintereinander 0 Unterschiede. Ordnerverteilung von mir unabhängig aus den `folderUid`-Feldern nachgerechnet: Infrastruktur 9, Energie 7, Wärme 5, Klima 2, Laden 2, Wasser 1, Provisioned 2 — deckungsgleich. Der kritische Umbenenn-Push (`6f889aa`) war **vorher gemessen, nicht angenommen**: 29 zu 29, null inhaltliche Abweichung, Trockenlauf 0 Ordnerwechsel. `docs/influxdb-reference.md` kennt jetzt die vier Fahrzeugtabellen |
+| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **fachlich fertig, letzter Commit noch nicht gepusht** — sieben weitere Commits bis `1cb4386`. Endstand **28 Dashboards** (`energiefluss-copy` gelöscht), Abgleich zweimal hintereinander 0 Unterschiede. Ordnerverteilung von mir unabhängig aus den `folderUid`-Feldern nachgerechnet: Infrastruktur 9, Energie 7, Wärme 5, Klima 2, Laden 2, Wasser 1, Provisioned 2 — deckungsgleich. Der kritische Umbenenn-Push (`6f889aa`) war **vorher gemessen, nicht angenommen**: 29 zu 29, null inhaltliche Abweichung, Trockenlauf 0 Ordnerwechsel. `docs/influxdb-reference.md` kennt jetzt die vier Fahrzeugtabellen — inklusive `sub_category` je Measurement, ein Fund der Session in meinen eigenen Messdaten: `Ladeziel` steht auf `Soll`, `SteckerVerbunden` auf `Verbindungsstatus`, wer das nicht weiß verliert still zwei von sechs Reihen. **`fa682ed` liegt noch lokal**, weil ich ihr beim Nachrechnen den HEAD abgehängt habe (siehe unten) |
 | Grafana-Action | `grafana-action` | 2026-09-20 | **erledigt** — zwei Forgejo Workflows live. Ein Push auf `dashboards/` schreibt ~20 s später nach Grafana, nur die geänderten Dateien. Abgleich doppelt geprüft (lokal und aus dem Runner): 29 Dashboards, 0 Unterschiede. **Der Editor-Test wurde von Thomas abgelehnt**, siehe unten |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
@@ -1083,6 +1083,18 @@ keinen Ort für die Position.
   **Die Messung braucht einen zweiten Token mit Rolle Editor, den nur Thomas anlegen
   kann.** Sie fasst weder das Repo noch die Dashboards an. Danach ist entweder Editor
   belegt oder die Ausnahme begründet — beides besser als ein Admin-Token aus Bequemlichkeit.
+- **Arbeitsfehler der Integrator-Session am 2026-09-20, hier festgehalten, damit er sich
+  nicht wiederholt:** Um die Abnahme von `grafana-konvention` nachzurechnen, habe ich in
+  *ihrem* Arbeitsverzeichnis `~/Repos/Forgejo.intern/Grafana` ein `git checkout origin/main`
+  ausgeführt, statt in einem eigenen Klon. Das hat ihr den HEAD losgelöst; ihr nächster
+  Commit landete auf dem abgehängten HEAD statt auf `main` und war damit unpushbar, ohne
+  dass sie es merken konnte — sie meldete sich als fertig, während die Arbeit lokal
+  festhing. Repariert mit `git checkout -B main <commit>`, eine reine Vorwärtsbewegung bei
+  sauberem Arbeitsverzeichnis, ohne eine Datei anzufassen.
+
+  **Regel daraus: Nachrechnen in einem Repo, in dem eine andere Session arbeitet, nur über
+  einen eigenen Klon.** Lesen ist harmlos, aber `checkout`, `fetch --prune` und alles, was
+  HEAD oder Refs bewegt, ist ein Eingriff in fremde Arbeit.
 - **Fremde Dashboard-Titel tragen den Schrägstrich, den die Konvention als schlimmsten
   benennt** — „Kubernetes / Views / Pods", „Logs / App". Die Session hat sie bewusst
   **nicht** angefasst, und die Begründung trägt: Ein Neuladen von grafana.com holte den
