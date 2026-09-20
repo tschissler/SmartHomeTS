@@ -1181,6 +1181,31 @@ keinen Ort für die Position.
   Ende-zu-Ende-Test der Forgejo Action als Testobjekt bewährt (Tag rein, Import, Tag
   raus) und sollte im Schema als bewusstes Testobjekt gekennzeichnet werden statt als
   Überbleibsel zu gelten. *(Revision meiner eigenen Empfehlung vom selben Tag.)*
+- **`Convert.ToInt16` in `InfluxDB3Connector` entfernen — latenter Überlauf für jeden
+  Aufrufer.** `WriteCounterValue` (Zeile 271) und `WriteStatusValue` (Zeile 250) verengen
+  den Wert in C# auf 16 Bit. **Die Spalten sind längst Int64** — in InfluxDB nachgesehen
+  am 2026-09-20: `counter_values.value_counter` und `status_values.value_status` beide
+  `Int64`. Das Line Protocol verbreitert ohnehin wieder auf i64; `InfluxCounterRecord.
+  Value_Counter` ist schon ein `int`. Die Verengung ist also gegenstandslos und
+  ausschließlich schädlich.
+
+  **Es ist keine Schemaänderung nötig**, die Korrektur ist eine Zeile je Stelle. Heute
+  trifft es niemanden: In `counter_values` stehen nur `Betriebsstunden_Waermeerzeuger`
+  (2579) und `Schaltzyklen_Waermeerzeuger` (1918) der Wärmepumpe. Beide wachsen aber
+  monoton, und bei 32767 endet es nicht mit einer falschen Zahl, sondern mit einer
+  `OverflowException` im Schreibpfad des DataHubs. Zehn bis zwanzig Jahre Zündschnur.
+
+  *Aufgekommen bei Punkt 17: Die Session hat `counter_values` wegen dieser Grenze gemieden
+  und zwei neue Tabellen angelegt. Die Gefahr war real, die Begründung („counter_values
+  speichert Int16") aber falsch — es speichert Int64, nur der Konverter verengt. Den
+  Defekt zu umgehen statt ihn zu beheben lässt ihn für den nächsten Aufrufer stehen.*
+
+  **Offen und zeitkritisch:** Ob der Kilometerstand in `distance_values` bleibt oder nach
+  `counter_values` gehört. Für `distance_values` spricht das Hausmuster „eine Tabelle je
+  Größe mit der Einheit im Feldnamen" — `counter_values` hat gar keine Einheit und trüge
+  sonst Stunden, Schaltzyklen und Kilometer nebeneinander. Thomas neigt zur Erweiterung
+  von `counter_values`. **Solange `distance_values` noch keine Daten hat, ist der Wechsel
+  billig; danach ist er eine Migration mit verwaisten Reihen.**
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
