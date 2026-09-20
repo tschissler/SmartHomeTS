@@ -59,8 +59,8 @@
             @* A button, not a div: it is one on a keyboard and to a screen reader, and it
                gives the browser its own touch target instead of a bare click handler. *@
             <button type="button"
-                    class="stepsBox @(chargingSettings.ChargingLevel >= stufe.Nummer ? "stepsBox-active" : "stepsBox-inactive") @(chargingSettings.ChargingLevel == stufe.Nummer ? "stepsBox-gewaehlt" : "")"
-                    aria-pressed="@(chargingSettings.ChargingLevel == stufe.Nummer)"
+                    class="@StufenKlassen(stufe)"
+                    aria-pressed="@JaNein(chargingSettings.ChargingLevel == stufe.Nummer)"
                     @onclick="() => StufeSetzen(stufe.Nummer)">@stufe.Nummer</button>
             <div class="stepsLabel">@stufe.Kurz</div>
         </div>
@@ -139,6 +139,30 @@
         new(4, "Sofort-Laden", "Lädt das Auto mit mindestens der Mindestladeleistung."),
         new(5, "Schnell-Laden", "Lädt das Auto mit 8 kW."),
     ];
+
+    /// <summary>
+    /// Classes of one circle: filled up to the level that is set, and the one that is set
+    /// marked separately - the filled scale alone leaves that to be inferred from "the last
+    /// blue one".
+    /// </summary>
+    private string StufenKlassen(Ladestufe stufe)
+    {
+        var gefuellt = chargingSettings.ChargingLevel >= stufe.Nummer
+            ? "stepsBox stepsBox-active"
+            : "stepsBox stepsBox-inactive";
+        return chargingSettings.ChargingLevel == stufe.Nummer ? gefuellt + " stepsBox-gewaehlt" : gefuellt;
+    }
+
+    /// <summary>
+    /// "true" or "false" for aria-pressed, as a string on purpose.
+    /// </summary>
+    /// <remarks>
+    /// Blazor treats a bool attribute value like <c>disabled</c>: true renders the attribute
+    /// with an empty value, false leaves it out altogether. For aria-pressed that means the
+    /// chosen level said <c>aria-pressed=""</c> - not a valid value - and the other five said
+    /// nothing at all, so a screen reader could not tell which level is set.
+    /// </remarks>
+    private static string JaNein(bool wert) => wert ? "true" : "false";
 
     /// <summary>
     /// The level that is set. A value outside the scale - an older or a newer contract - must
