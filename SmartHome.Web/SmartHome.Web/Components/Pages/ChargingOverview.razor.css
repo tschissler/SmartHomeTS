@@ -47,8 +47,9 @@
     background-color: #4e8752;
 }
 
-/* The gap keeps two neighbouring warm colours apart — the house and the grid feed-in sit next
-   to each other whenever the battery is full. */
+/* The segments are set apart rather than butted together: the house and the grid feed-in are
+   both warm colours and stand next to each other whenever the battery is full, and the gap is
+   what keeps that boundary readable. */
 .AvailabilityComponent {
     display: flex;
     gap: 2px;

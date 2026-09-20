@@ -1,11 +1,11 @@
-/* Colours of the charging flows. The same values every Grafana dashboard uses for these
-   quantities (sankey/gen_sankey.py and dashboards/laden-quellenmix.json in the Grafana
-   repository), so that switching between this interface and a dashboard costs no relearning
-   - backlog item 21. Defined here once because they appear in a legend and in two bars, and
-   copies spread over the markup are how the two halves of the charging page drifted apart in
-   the first place.
-   Haus and the two wallboxes keep the colours they have here: Grafana paints the house
-   #8E44AD, which is the purple the wallboxes already wear in this interface. */
+/* Colours of the charging flows. Defined here once because they appear in a legend and in
+   two bars, and copies spread over the markup are how the two halves of the charging page
+   drifted apart in the first place - backlog item 21.
+   The five flow colours are the values the Grafana dashboards use for the same quantities
+   (sankey/gen_sankey.py and dashboards/laden-quellenmix.json in the Grafana repository):
+   those are the numbers one reads in both places, so they are worth recognising in both.
+   Haus and the two wallboxes are this interface's own colours and are deliberately not taken
+   from Grafana - matching the two palettes beyond the flows is not a goal. */
 :root {
     --laden-farbe-pv: #F4D03F;
     --laden-farbe-batterie: #2ECC71;
