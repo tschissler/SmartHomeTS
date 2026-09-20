@@ -73,7 +73,6 @@ builder.Services.AddSyncfusionBlazor();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<MqttService>();
-//builder.Services.AddScoped<IChargingSessionService, ChargingSessionService>();
 
 // Add health checks
 builder.Services.AddHealthChecks()
