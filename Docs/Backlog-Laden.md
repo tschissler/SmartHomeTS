@@ -24,18 +24,18 @@ Präfix setzt.
 | 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | **erledigt und gemergt** (`a12202b`), kein Rollout |
 | 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`c46f54f`) |
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`1c8ff95`). Im neuen Pod: `Loaded tokens … (issued …)`, `Stored token refreshed 0.9 h ago, well inside the 7 day limit`, sofortiger Refresh mit erfolgreicher Persistierung, `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True` |
-| 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | **fertig**, Commit `f13ad0c`, Merge offen. Nur `ChargingController.yml` geändert (17 Zeilen), löst genau einen Rollout aus |
+| 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | **erledigt und gemergt** (`ef244fe`). Ab jetzt läuft `dotnet test` vor jedem ChargingController-Build; ein roter Test erzeugt kein Image und damit kein Deployment |
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | in Arbeit — harter Schnitt, KebaConnector + ChargingController + DataHub. Offene Frage an die Session: Verhalten zwischen den beiden Rollouts |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
-**Offene Merge-Entscheidung: Reihenfolge von 19 und 7/8.** Liegt der `test`-Job aus Punkt
-19 vor dem Schnitt auf `main`, muss der Umbau der Ladelogik durch die 46 Szenariotests des
-ChargingControllers. Das ist der Zweck des Punktes — bei einer Suite, die auf 1 Watt
-Abweichung mit 27 roten Tests reagiert, wird der Umbau sie aber mit hoher
-Wahrscheinlichkeit anfassen müssen. **Empfehlung: 19 zuerst**, damit eine Veränderung der
-Erwartungswerte vor dem Rollout auffällt und nicht danach. Punkt 19 ist von beiden der
-leichter verschiebbare.
+**Reihenfolge entschieden und umgesetzt: 19 lag vor 7/8.** Der Schnitt aus Punkt 7/8
+muss damit durch die 46 Szenariotests des ChargingControllers, bevor er ein Image
+erzeugt. Das ist beabsichtigt: Bei einer Suite, die auf 1 Watt Abweichung mit 27 roten
+Tests reagiert, wird der Umbau Erwartungswerte anfassen müssen — jetzt fällt das vor dem
+Rollout auf und nicht danach. **Für `laden-0708-schnitt` heißt das: Die Tests sind ab
+sofort Teil der Abnahme.** Geänderte Erwartungswerte gehören begründet in den Commit,
+nicht stillschweigend angepasst.
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
