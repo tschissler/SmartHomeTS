@@ -96,6 +96,11 @@ Docker image versions use format `1.0.{github.run_number}`.
   and the topic cleanup; work it top to bottom
 - `Docs/ChargingController-Regelkreis.md` — control loop of the EV charging (smoothing,
   contactor protection delays, tuning parameters, diagnostics)
+- `Docs/InfluxDB-Modellierung.md` — **binding rule for every new measurement**: which
+  table, field or tag, missing values, timestamps. Read before adding anything to
+  InfluxDB. If a rule does not fit your case or does not answer it, discuss it with
+  Thomas instead of deciding alone — a table that carries data can only be changed
+  at a loss
 - `Docs/microK8s/Setup MicroK8s.md` — cluster setup
 - **Grafana dashboards no longer live here** — they moved to `forgejo.intern/thomas/Grafana`
   (dashboards, the API export script, the Sankey generator, the InfluxDB field reference).
