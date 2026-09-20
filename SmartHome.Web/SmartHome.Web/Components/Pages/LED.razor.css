@@ -1,11 +1,174 @@
-﻿/* .toggleButtonBig {
-	width: 300px;
-	height: 50px;
-	border-radius: 50%;
-} */
+﻿/* Die drei Schieberegler. Der Verlauf liegt in der Spur, nicht im Bedienelement: Er sagt,
+   was am linken und was am rechten Ende steht, und das ist genau das, was der Verlauf des
+   frueheren SfLinearGauge gesagt hat.
 
-.e-switch-wrapper {
-	width: 300px !important;
-	height: 50px;
-	border-radius: 50%;
+   Trefferflaeche: 28px Griff auf 44px Zeilenhoehe. Das ist die Groesse, die iOS und Android
+   fuer einen Finger vorsehen; der abgeloeste Syncfusion-Zeiger war ein 40-px-Kreis, der
+   gezogen werden musste, ohne dass die Spur selbst ansprechbar war. */
+.regler {
+    max-width: 480px;
+    margin-top: 16px;
+}
+
+.regler label {
+    display: block;
+    margin-bottom: 4px;
+    color: #4a4a4a;
+}
+
+.regler-spur {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 44px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.regler-spur::-webkit-slider-runnable-track {
+    height: 14px;
+    border-radius: 7px;
+    border: 1px solid #b9b9b9;
+}
+
+.regler-spur::-moz-range-track {
+    height: 14px;
+    border-radius: 7px;
+    border: 1px solid #b9b9b9;
+}
+
+.regler-spur::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    margin-top: -8px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #3a3a3a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.regler-spur::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #3a3a3a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.regler-spur:focus-visible {
+    outline: 2px solid #006bb7;
+    outline-offset: 2px;
+}
+
+/* 0 bis 360 Grad Farbton bei voller Saettigung und halber Helligkeit - dieselben Werte, die
+   der Verlauf im Gauge aus HslToRgb(i * 3.6, 100, 50) errechnet hat. */
+.regler-farbton::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+}
+
+.regler-farbton::-moz-range-track {
+    background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+}
+
+.regler-helligkeit::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #000000, #ffffff);
+}
+
+.regler-helligkeit::-moz-range-track {
+    background: linear-gradient(to right, #000000, #ffffff);
+}
+
+/* Der Gauge zeichnete die Dichte als Keil, der nach rechts breiter wurde. Ein Keil geht in
+   einer 14px hohen Spur nicht; dieselbe Aussage traegt hier die Saettigung. */
+.regler-dichte::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #ececff, #9999ff);
+}
+
+.regler-dichte::-moz-range-track {
+    background: linear-gradient(to right, #ececff, #9999ff);
+}
+
+/* Der Schalter. Das Kontrollkaestchen bleibt das Bedienelement und wird nur unsichtbar
+   gemacht - es aus dem Baum zu nehmen wuerde Tastatur und Vorlesesoftware mitnehmen. */
+.schalterZeile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.schalter {
+    display: inline-block;
+    position: relative;
+    width: 52px;
+    height: 32px;
+    flex: none;
+    cursor: pointer;
+}
+
+.schalter input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.schalterBahn {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background-color: #c4c4c4;
+    transition: background-color 0.15s;
+    pointer-events: none;
+}
+
+.schalterBahn::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s;
+}
+
+.schalter input:checked + .schalterBahn {
+    background-color: #2f7d32;
+}
+
+.schalter input:checked + .schalterBahn::before {
+    transform: translateX(20px);
+}
+
+.schalter input:focus-visible + .schalterBahn {
+    outline: 2px solid #006bb7;
+    outline-offset: 2px;
+}
+
+.farbprobeZeile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.farbprobe {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    border: 1px solid #D6D6D6;
+    flex: none;
+}
+
+.farbprobeSub {
+    color: #6b6b6b;
+    font-size: 0.85rem;
 }
