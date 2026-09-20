@@ -48,7 +48,16 @@ namespace ChargingController
         /// bypassing all delays. Protects the house connection when a large load starts while
         /// the car is charging.
         /// </summary>
-        public int GridProtectionLimitWatts { get; set; } = 8000;
+        /// <remarks>
+        /// Raised from 8.000 to 10.000 W (about 14,5 A per phase) together with the 11 kW of
+        /// level 5. At 8.000 the limit stood in the way of the very level it was meant to
+        /// protect: level 5 commands 8.000 W on its own, so together with the house it crossed
+        /// the limit whenever there was no sun - the emergency brake would have fired on the
+        /// normal case, which only goes unnoticed because level 5 is rarely used at night.
+        /// Over 90 days grid consumption exceeded 8.000 W 37 times, at most 10.613 W, so the
+        /// new limit is still above what the house does by itself. Approved by Thomas.
+        /// </remarks>
+        public int GridProtectionLimitWatts { get; set; } = 10000;
 
         /// <summary>
         /// If the grid consumption stays above the limit for this long even at minimum current,

@@ -8,10 +8,15 @@ namespace ChargingController
     /// passing clouds are damped away, so the decision follows real trends only.
     /// </summary>
     /// <remarks>
-    /// All four readings that make up the available power are filtered with the same time
+    /// The four readings that make up the available power are filtered with the same time
     /// constant. Because the available power is a linear combination of them, filtering the
     /// parts is equivalent to filtering the result, and simultaneous steps (e.g. the car
     /// stops charging, so the grid reading changes as well) stay consistent with each other.
+    ///
+    /// The PV reading is filtered as well, although it is not part of that sum: level 5 reads
+    /// it to decide between 8 kW and 11 kW, and an unfiltered PV value would move that decision
+    /// with every passing cloud - two readings apart from each other is exactly the kind of
+    /// inconsistency the shared time constant exists to prevent.
     /// </remarks>
     public class ChargingSmoother
     {
@@ -20,6 +25,7 @@ namespace ChargingController
         private DateTimeOffset lastUpdate = DateTimeOffset.MinValue;
         private double powerFromGrid;
         private double powerFromBattery;
+        private double powerFromPV;
         private double insideChargingPower;
         private double outsideChargingPower;
 
@@ -40,6 +46,7 @@ namespace ChargingController
                 // The first reading initialises the filter, otherwise it would ramp up from zero
                 powerFromGrid = situation.PowerFromGrid;
                 powerFromBattery = situation.PowerFromBattery;
+                powerFromPV = situation.PowerFromPV;
                 insideChargingPower = situation.InsideCurrentChargingPower;
                 outsideChargingPower = situation.OutsideCurrentChargingPower;
             }
@@ -48,6 +55,7 @@ namespace ChargingController
                 var alpha = CalculateAlpha(now - lastUpdate);
                 powerFromGrid += alpha * (situation.PowerFromGrid - powerFromGrid);
                 powerFromBattery += alpha * (situation.PowerFromBattery - powerFromBattery);
+                powerFromPV += alpha * (situation.PowerFromPV - powerFromPV);
                 insideChargingPower += alpha * (situation.InsideCurrentChargingPower - insideChargingPower);
                 outsideChargingPower += alpha * (situation.OutsideCurrentChargingPower - outsideChargingPower);
             }
@@ -56,6 +64,7 @@ namespace ChargingController
             var smoothed = situation.Clone();
             smoothed.PowerFromGrid = (int)Math.Round(powerFromGrid);
             smoothed.PowerFromBattery = (int)Math.Round(powerFromBattery);
+            smoothed.PowerFromPV = (int)Math.Round(powerFromPV);
             smoothed.InsideCurrentChargingPower = (int)Math.Round(insideChargingPower);
             smoothed.OutsideCurrentChargingPower = (int)Math.Round(outsideChargingPower);
             return smoothed;

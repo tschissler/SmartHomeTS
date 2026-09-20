@@ -132,8 +132,9 @@
     /// reference would put a second service into every rollout of this page. Whoever changes
     /// BatteryChargingMaxPower (3.800 W), BatteryDischargingMaxPower (3.500 W) or the level-1
     /// battery limit of 90 % in ChargingDecisionsMaker.cs has to correct these sentences by
-    /// hand — nothing here will notice. The minimum charging power is named instead of given
-    /// as a number for exactly that reason.
+    /// hand — nothing here will notice. The same goes for the three figures of level 5
+    /// (QuickChargingBasePower, QuickChargingBoostPower and the threshold of 3 kW). The
+    /// minimum charging power is named instead of given as a number for exactly that reason.
     /// </remarks>
     private record Ladestufe(int Nummer, string Kurz, string Erklaerung);
 
@@ -156,7 +157,9 @@
             + "hergibt, kommt aus Hausbatterie oder Netz. Sind beide Boxen belegt und freigegeben, "
             + "bekommt jede die Mindestladeleistung."),
         new(5, "Schnell-Laden",
-            "Lädt mit mindestens 8 kW, bei größerem PV-Überschuss entsprechend mehr."),
+            "Lädt mit 11 kW, solange PV und Hausbatterie zusammen mindestens 3 kW beisteuern — "
+            + "sonst mit 8 kW. Anders als die Stufen davor richtet sich die Leistung nicht nach "
+            + "dem Überschuss: Was fehlt, kommt aus dem Netz."),
     ];
 
     /// <summary>

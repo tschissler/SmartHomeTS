@@ -49,7 +49,7 @@ Einstellung, Stand 2026-09-20). Einziger Ort zum Nachjustieren.
 
 | Parameter | Default | Wirkung |
 |---|---|---|
-| `SmoothingTimeConstant` | 30 s | Zeitkonstante des EMA über Netz-, Batterie- und Ladeleistung |
+| `SmoothingTimeConstant` | 30 s | Zeitkonstante des EMA über Netz-, Batterie-, PV- und Ladeleistung |
 | `StartDelay` | 30 s | Überschuss muss so lange reichen, bevor eingeschaltet wird |
 | `StopDelay` | 90 s | Mangel muss so lange anhalten (Level 3 mit Batteriestütze) |
 | `StopDelayWithoutBatterySupport` | 30 s | Verkürzt, wenn die Lücke aus dem Netz käme |
@@ -57,11 +57,50 @@ Einstellung, Stand 2026-09-20). Einziger Ort zum Nachjustieren.
 | `MinimumPauseDuration` | 5 min | Nach dem Stopp nicht neu starten |
 | `CurrentDeadbandmA` | 500 mA | Kleinere Sollwertänderungen werden verworfen |
 | `MinimumCurrentChangeInterval` | 30 s | Mindestabstand zwischen zwei Sollwertänderungen |
-| `GridProtectionLimitWatts` | 8000 W | Darüber sofort auf Minimalstrom drosseln |
+| `GridProtectionLimitWatts` | 10000 W | Darüber sofort auf Minimalstrom drosseln (≈ 14,5 A je Phase) |
 | `GridProtectionStopDelay` | 30 s | Hilft das Drosseln nicht, wird abgeschaltet |
 
 Daraus folgt eine Obergrenze von **maximal 6 Schaltspielen pro Stunde** je Wallbox
 (`MinimumChargingDuration + MinimumPauseDuration` = 10 min pro vollständigem Zyklus).
+
+**Warum die Netzschutzgrenze 10.000 W ist und nicht 8.000 W.** Mit 8.000 W stand sie der
+Stufe im Weg, die sie schützen sollte: Level 5 kommandiert allein 8.000 W, zusammen mit dem
+Haus (Median 384 W, p90 933 W) lag der Bezug bei Dunkelheit über der Grenze — die Notbremse
+hätte den Normalfall getroffen. Dass es nicht auffiel, liegt nur daran, dass Level 5 nachts
+selten benutzt wird. In 90 Tagen überschritt der Netzbezug 8.000 W 37-mal (Maximum
+10.613 W); die neue Grenze liegt also weiterhin über allem, was das Haus von selbst tut.
+
+## Level 5: 8 kW oder 11 kW
+
+Level 5 ist die einzige Stufe, deren Leistung **nicht** dem Überschuss folgt — sie
+kommandiert einen festen Wert, und was fehlt, kommt aus dem Netz. Welcher der beiden Werte
+gilt, entscheidet die Eigenleistung `PowerFromPV + PowerFromBattery` (Entladen positiv,
+Laden negativ) auf den **geglätteten** Messwerten:
+
+| Eigenleistung | Ladeleistung |
+|---|---|
+| ab 3.000 W | 11.000 W (`QuickChargingBoostPower`, = 3 × 16 A der Wallbox) |
+| unter 2.000 W | 8.000 W (`QuickChargingBasePower`) |
+| dazwischen | es bleibt beim zuletzt gewählten Wert |
+
+Die Hysterese hat denselben Grund wie die von Level 3: Zwischen den beiden Werten liegen
+4.348 mA, weit jenseits des Totbands von 500 mA — ohne sie verschöbe ein um die Schwelle
+schwankender PV-Wert die Last alle 30 s um 3 kW. Deshalb wird seit 2026-09-20 auch
+`PowerFromPV` mitgeglättet; die rohen Werte der `ChargingSituation` bleiben unberührt, sie
+sind weiterhin das, was die UI zeigt und die Energieaufteilung verrechnet.
+
+**Die entladende Hausbatterie zählt absichtlich mit**, obwohl sie nichts erzeugt. Die Folge
+ist bekannt und gewollt: Nachts entlädt die Batterie *gerade deshalb*, weil das Auto lädt —
+die Bedingung bleibt also erfüllt, bis die Batterie leer ist, und Level 5 füllt die
+Hausbatterie ins Auto um, statt 8 kW aus dem Netz zu nehmen. Wird die Batterie dann leer,
+springt der Netzbezug auf rund 11,4 kW, die Netzschutzgrenze greift, es wird 30 s auf
+Minimalstrom gedrosselt und danach mit 8 kW weitergeladen. Selbstheilend, kein Schaltspiel.
+
+Der Hysteresezustand liegt als statisches Feld im `ChargingDecisionsMaker`
+(`QuickChargingBoostActive`) statt — wie bei Level 3 — in der `ChargingSituation`: Die liegt
+in `SharedContracts`, und ein Feld dort baut und deployt jeden Dienst neu, der den Kontrakt
+referenziert. Beim Neustart des Dienstes beginnt Level 5 deshalb bei 8 kW, bis die
+Eigenleistung einmal 3 kW überschreitet.
 
 ## Verhalten in Sonderfällen
 
