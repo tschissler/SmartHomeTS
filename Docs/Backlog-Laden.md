@@ -17,56 +17,60 @@ Integrator-Session trägt ein und aus.
 
 | Punkt | Branch | seit | Stand |
 |---|---|---|---|
-| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | **blockiert** — Doku fertig und committet; `bmwconnector-credentials` beim Bootstrap aus der Shell-Umgebung mit Platzhaltern überschrieben (`BMW_CLIENT_ID`/`BMW_GCID` je 10 Bytes, `Mini_*` intakt). GCID **nicht** aus dem Pod-Log rekonstruierbar (BMW war seit Pod-Start nie verbunden) — Reparatur braucht die Portal-Werte oder den `sub`-Claim aus `bmwconnector-bmw-tokens`. Bootstrap nur mit `env -u BMW_GCID -u BMW_CLIENT_ID`, sonst werden die Platzhalter erneut zurückgeschrieben |
+| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | Doku und Log-Hinweise fertig (2 Commits). **Enthält Code** (`Program.cs`, `BmwCarDataService.cs`) — der Merge löst also einen Rollout aus. Wartet auf die Secret-Reparatur: `bmwconnector-credentials` wurde beim Bootstrap aus der Shell-Umgebung mit Platzhaltern überschrieben, die richtigen Werte liegen in KeePass. Bootstrap nur mit `env -u BMW_GCID -u BMW_CLIENT_ID`, sonst wiederholt sich der Vorfall. Ursache als Punkt 18 erfasst |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
 
 ---
 
-## Parallelisierung in Wellen
+## Parallel arbeiten
 
-Die Punkte 7→8→9→10→11→13→14 hängen in einer Kette; echte Parallelität gibt es nur an zwei
+Die Punkte 7→8→9 und 10→11→13 hängen in Ketten; echte Parallelität gibt es nur an wenigen
 Stellen. Sinnvoll sind 2–3 gleichzeitige Sessions, jede in einem eigenen git worktree, mit
 einem Branch pro Punkt.
 
-| Welle | parallel | Anmerkung |
+### Wellen
+
+| Welle | gleichzeitig möglich | Anmerkung |
 |---|---|---|
-| A | 0, 1, 2, 4 | 1 braucht Thomas interaktiv (BMW-Login); 1 und 2 berühren beide den BMWConnector, aber disjunkte Dateien |
-| B | 3 | braucht 2 (Begriff von „gesund") und 0 (sonst baut der Helfer in `Libs/` nichts neu) |
-| C | 7 + 8 zusammen in **einer** Session | harter Schnitt, muss ein Release sein — nicht aufteilen |
-| D | 9 ∥ 12 | Web gegen ChargingController, saubere Trennung — sobald die Payload-Verträge aus C stehen |
-| E | 10 → 11 → 13 → 14 seriell; 15 optional nach 10 | |
+| A | 0 ∥ 4 ∥ 16 ∥ (1 → 2+18) | 1 braucht Thomas interaktiv (BMW-Login). 1, 2 und 18 liegen alle im `BMWConnector` und sind **nicht** parallel: 2 und 18 fassen beide den Secret-Store an und gehören in **eine** Session, nach 1 |
+| B | 3 | braucht 2 (gemeinsamer Begriff von „gesund") und 0 (sonst baut der Helfer in `Libs/` nichts neu). Kollidiert mit fast allem — vorziehen und zügig abschließen oder bis nach 13 zurückstellen, nicht mittendrin einschieben |
+| C | 7 + 8 zusammen in **einer** Session | harter Schnitt, muss ein Release sein: 7 definiert den Contract, den 8 konsumiert |
+| D | 9 ∥ 12 | Web gegen ChargingController, disjunkt — sobald die Payload-Verträge aus C stehen. 12 erst nach 8, sonst treffen sich zwei Sessions im ChargingController |
+| E | 10 → 11 → 13 → 17 seriell | 14 hängt nicht an 17 und kann davor oder danach; 15 setzt 17 zwingend voraus |
 
-Innerhalb einer Welle gilt: kein Punkt wird von zwei Sessions angefasst, und
-`Docs/Backlog-Laden.md` bearbeitet ausschließlich die Integrator-Session.
+### Datei-Kollisionen
 
----
-
-## Parallel arbeiten — Kollisionen
-
-Die Abhängigkeiten unten sagen, was fachlich aufeinander aufbaut. Wer mehrere Punkte
-gleichzeitig bearbeitet, braucht zusätzlich die **Datei-Kollisionen**:
+Die Abhängigkeiten bei den Punkten sagen, was fachlich aufeinander aufbaut. Wer mehrere
+Punkte gleichzeitig bearbeitet, braucht zusätzlich diese Tabelle:
 
 | Bereich | angefasst von Punkt |
 |---|---|
 | `SharedContracts` | 7, 10, 12, 13 |
+| `BMWConnector` | 1, 2, 18 — bei 2 und 18 dieselbe Secret-Store-Klasse |
 | `ChargingController` | 8, 12 |
 | `KebaConnector` | 7, 16 |
 | `SmartHome.DataHub` | 8, 13, 17 |
 | `SmartHome.Web` | 9, 10, 11, 13 |
 | alle fünf Dienste + `Devices.razor` | 3 |
+| `.github/workflows/` | 0, 4 — disjunkte Dateien: 0 ändert die Service-Workflows, 4 löscht die beiden App-Workflows |
 
-Daraus folgt:
+### Regeln
 
-- **Gefahrlos gleichzeitig:** 1, 2, 4 — und 14 lässt sich jederzeit vorbereiten.
-- **Punkt 3 kollidiert mit fast allem.** Entweder vorziehen und zügig abschließen, oder
-  bis nach 13 zurückstellen. Nicht mittendrin einschieben.
-- **7 → 8 → 9 ist eine echte Kette**, nicht parallelisierbar: 7 definiert den Contract,
-  den 8 konsumiert und auf dem 9 aufsetzt.
-- **12 erst nach 8**, sonst treffen sich zwei Sessions im `ChargingController`.
-- **Nummern bleiben stabil.** Neue Erkenntnisse werden hinten angehängt (16, 17), nie
-  eingeschoben — laufende Sessions verweisen auf diese Nummern.
+- **Ein Punkt, eine Session.** Kein Punkt wird von zwei Sessions gleichzeitig angefasst.
+- **Diese Datei** bearbeitet ausschließlich die Integrator-Session.
+- **Kein Merge nach `main` ohne Freigabe von Thomas.** Jeder Merge ist über den ArgoCD
+  Image Updater binnen ~2 min ein Deployment ins laufende System.
+- **Geteilter Code baut nichts neu**, solange Punkt 0 offen ist: Änderungen an
+  `SharedContracts`, `MQTTClient`, `SmartHomeHelpers` oder `Libs/` lösen keinen
+  Service-Build aus — ohne Fehler, nur ohne Deployment.
+- **Nummern bleiben stabil.** Neue Erkenntnisse werden hinten angehängt, nie eingeschoben —
+  laufende Sessions verweisen auf diese Nummern. Die Nummerierung zeigt deshalb die
+  Entstehungsreihenfolge, die Arbeitsreihenfolge steht in der Wellentabelle.
+- **Im Zweifel gewinnen die Konzeptdokumente** (`Ladeprotokoll.md`,
+  `Fahrzeug-Wallbox-Zuordnung.md`, `MQTT-Topic-Konvention.md`) gegenüber diesem Backlog:
+  der Backlog wurde nicht immer nachgezogen, wenn ein Konzept präzisiert wurde.
 
 ---
 
@@ -184,6 +188,101 @@ Die App wird nicht mehr aktiv entwickelt; gepflegt wird die Web-PWA.
 - [ ] Notieren, dass `Nachrichten/#` damit keinen Konsumenten mehr hat
 
 **Fertig, wenn** der Topic-Schnitt in Punkt 7/8 nur noch drei Konsumenten im Repo betrifft.
+
+---
+
+### 16. Retained Ladestrom-Kommando hebelt die Notfallfreigabe aus
+
+**Problem.** `PublishChargingCommand` publiziert `befehle/…/Ladestrom` mit
+`WithRetainFlag()` (`ChargingController/Program.cs:180`), und der KebaConnector setzt bei
+jedem Empfang `desiredCurrentReceivedAt = DateTimeOffset.UtcNow`
+(`KebaDeviceConnector.cs:57`). Startet der KebaConnector neu, während der
+ChargingController tot ist, stellt der Broker sofort das alte retained Kommando zu — und
+der Connector hält es für taufrisch.
+
+Damit greift die eingebaute Notfallfreigabe **nie**: `StaleReleaseAfter` soll die Box nach
+10 Minuten Funkstille auf vollen Strom freigeben, damit ohne Regelung weitergeladen werden
+kann. Nach einem Connector-Neustart läuft der Alterszähler wieder bei null los, und die
+Box bleibt dauerhaft auf einem beliebig alten Sollwert stehen.
+
+**Wie schwer wiegt das?** Kein Gefahrenrisiko, sondern ein Verfügbarkeitsrisiko: Die
+Notfallfreigabe existiert, damit ohne Regelung weitergeladen werden kann. Fällt sie aus und
+war das letzte Kommando `0 mA`, bleibt die Wallbox **dauerhaft abgeschaltet** — das Auto
+lädt nicht, und niemand sieht warum.
+
+Es braucht allerdings **beides gleichzeitig**: Der ChargingController muss tot sein *und*
+der KebaConnector danach neu starten. Stirbt nur der Controller, greift die Freigabe
+korrekt, weil der Zeitstempel beim letzten echten Empfang stehen bleibt. Der KebaConnector
+startet aber bei jedem Deployment neu, die Kombination ist also durchaus erreichbar.
+
+Dafür ist die Sofortmaßnahme klein und ohne Contract-Änderung — ein gutes
+Aufwand-Nutzen-Verhältnis.
+
+**Welle A.** Unabhängig von allem anderen; kollidiert nur mit Punkt 7 im KebaConnector, und
+der liegt in Welle C. Von den kleinen Punkten der ersten Welle hat dieser den größten
+Nutzen pro Zeile.
+
+**Umfang**
+- [ ] Sofortmaßnahme ohne Contract-Änderung: MQTTnet liefert bei einer Retain-Zustellung
+      das Retain-Flag mit. Eine so gekennzeichnete Nachricht darf den Sollwert zwar
+      **setzen**, aber den Frischezähler **nicht zurücksetzen**
+- [ ] Dauerhaft: `Zeitpunkt` im Kommando-Payload, Alter daraus statt aus der Empfangszeit
+      — fällt mit Punkt 7/8 ohnehin an
+- [ ] Testfall: Controller schweigt, Connector startet neu → Freigabe muss nach
+      `StaleReleaseAfter` erfolgen
+- [ ] Prüfen, ob dieselbe Verwechslung anderswo steckt — die `RulesEngine` wertet
+      `MaxStatusAge` ebenfalls gegen die Empfangszeit aus
+
+**Abhängig von** nichts.
+
+---
+
+### 18. Umgebungsvariablen dürfen das Produktiv-Secret nicht überschreiben
+
+**Problem.** Beim Re-Bootstrap am 2026-09-20 hat der Connector `BMW_CLIENT_ID` und
+`BMW_GCID` aus der lokalen Shell-Umgebung gelesen, als vorrangig behandelt und ungefragt
+ins Kubernetes-Secret `bmwconnector-credentials` zurückgeschrieben („using environment
+variable, saving to Kubernetes Secret…"). Die Shell-Werte waren Platzhalter — je 10 Bytes
+statt der 36 einer UUID. Der laufende Pod hielt die korrekten Werte nur noch im Speicher,
+die GCID war nirgends rekonstruierbar (im Pod-Log steht ausschließlich die Mini-GCID, der
+BMW-Client war seit dem Pod-Start nie verbunden) und musste aus KeePass geholt werden.
+`BMWConnector/templates/role.yaml` im Deployments-Repo gibt dem Pod dafür `get`, `update`
+und `replace` auf das Secret; eine versionierte Kopie, die ArgoCD wiederherstellen könnte,
+gibt es nicht.
+
+**Warum eigener Punkt.** Der abgelaufene Token war nur der Anlass. Die Fehlerquelle ist,
+dass eine Entwicklungs-Umgebungsvariable ohne Rückfrage Produktionszustand überschreibt —
+und der Bootstrap-Zyklus wiederholt sich in ~90 Tagen.
+
+**Umfang**
+- [ ] Vorrang umkehren oder absichern: im Cluster-Betrieb gewinnt das Secret. Eine
+      Env-Var darf lokal überschreiben, aber nicht zurückschreiben
+- [ ] Rückschreiben nur mit Plausibilitätsprüfung (GCID und CLIENT_ID sind UUIDs, also
+      Format und Länge prüfbar) und explizitem Opt-in, nicht als Nebenwirkung
+- [ ] Beim Überschreiben den ersetzten Wert maskiert protokollieren — der Vorfall war nur
+      an den Byte-Längen im Secret erkennbar
+- [ ] Dieselbe Rückschreib-Logik in den anderen Connectoren prüfen (VW, Keba, Shelly,
+      Enphase)
+- [ ] Erwägen, `bmwconnector-credentials` versioniert zu hinterlegen (SealedSecret im
+      Deployments-Repo), damit es überhaupt eine Wiederherstellungsquelle gibt
+
+**Fertig, wenn** ein Bootstrap mit gesetzten, falsch formatierten Env-Vars das Secret
+nicht mehr verändert.
+
+**Abhängig von** nichts. Berührt `BMWConnector`, kollidiert mit 1 und 2.
+
+**Welle A, gebündelt mit Punkt 2 in derselben Session** — nicht parallel dazu. Die
+Berührung ist größer, als die Kollisionstabelle vermuten lässt: Die proaktive
+Token-Alters-Warnung aus Punkt 2 liest ebenfalls das Secret, also denselben
+`KubernetesSecretStore`, den dieser Punkt umbaut. Und **nach** Punkt 1, damit das
+Re-Bootstrap nicht auf halb geändertem Verhalten läuft.
+
+**Abgrenzung beim Umsetzen — nicht überdehnen.** „Nicht zurückschreiben" gilt für die
+**Zugangsdaten** (`CLIENT_ID`, `GCID`), nicht für die **Tokens**. Der Dienst schreibt
+`id_token`, `access_token` und `refresh_token` bei jedem 50-Minuten-Refresh planmäßig ins
+Secret zurück (`SETUP.md`). Wird diese Schreiboperation mit abgeklemmt, überlebt keine
+Token-Erneuerung einen Pod-Neustart — und das ist genau der Ausfall, den Punkt 1 gerade
+behoben hat.
 
 ---
 
@@ -403,68 +502,6 @@ hinein.
 
 ---
 
-## Optional
-
-### 15. Position mitschreiben und auswerten
-
-- [ ] `position` von BMW und Mini nach InfluxDB schreiben
-- [ ] Nach einigen Wochen prüfen, ob sich Garage und Stellplatz in den Positionswolken
-      trennen lassen. Erwartung: nein (GPS-Streuung größer als der Abstand, in der Garage
-      kein Fix). Dann ist die Frage empirisch beantwortet statt vermutet
-
-**Abhängig von** 17 — solange Fahrzeugdaten überhaupt nicht persistiert werden, gibt es
-keinen Ort für die Position.
-
----
-
-## Nachträglich ergänzt
-
-### 16. Retained Ladestrom-Kommando hebelt die Notfallfreigabe aus
-
-**Problem.** `PublishChargingCommand` publiziert `befehle/…/Ladestrom` mit
-`WithRetainFlag()` (`ChargingController/Program.cs:180`), und der KebaConnector setzt bei
-jedem Empfang `desiredCurrentReceivedAt = DateTimeOffset.UtcNow`
-(`KebaDeviceConnector.cs:57`). Startet der KebaConnector neu, während der
-ChargingController tot ist, stellt der Broker sofort das alte retained Kommando zu — und
-der Connector hält es für taufrisch.
-
-Damit greift die eingebaute Notfallfreigabe **nie**: `StaleReleaseAfter` soll die Box nach
-10 Minuten Funkstille auf vollen Strom freigeben, damit ohne Regelung weitergeladen werden
-kann. Nach einem Connector-Neustart läuft der Alterszähler wieder bei null los, und die
-Box bleibt dauerhaft auf einem beliebig alten Sollwert stehen.
-
-**Wie schwer wiegt das?** Kein Gefahrenrisiko, sondern ein Verfügbarkeitsrisiko: Die
-Notfallfreigabe existiert, damit ohne Regelung weitergeladen werden kann. Fällt sie aus und
-war das letzte Kommando `0 mA`, bleibt die Wallbox **dauerhaft abgeschaltet** — das Auto
-lädt nicht, und niemand sieht warum.
-
-Es braucht allerdings **beides gleichzeitig**: Der ChargingController muss tot sein *und*
-der KebaConnector danach neu starten. Stirbt nur der Controller, greift die Freigabe
-korrekt, weil der Zeitstempel beim letzten echten Empfang stehen bleibt. Der KebaConnector
-startet aber bei jedem Deployment neu, die Kombination ist also durchaus erreichbar.
-
-Dafür ist die Sofortmaßnahme klein und ohne Contract-Änderung — ein gutes
-Aufwand-Nutzen-Verhältnis.
-
-**Welle A.** Unabhängig von allem anderen; kollidiert nur mit Punkt 7 im KebaConnector, und
-der liegt in Welle C. Von den kleinen Punkten der ersten Welle hat dieser den größten
-Nutzen pro Zeile.
-
-**Umfang**
-- [ ] Sofortmaßnahme ohne Contract-Änderung: MQTTnet liefert bei einer Retain-Zustellung
-      das Retain-Flag mit. Eine so gekennzeichnete Nachricht darf den Sollwert zwar
-      **setzen**, aber den Frischezähler **nicht zurücksetzen**
-- [ ] Dauerhaft: `Zeitpunkt` im Kommando-Payload, Alter daraus statt aus der Empfangszeit
-      — fällt mit Punkt 7/8 ohnehin an
-- [ ] Testfall: Controller schweigt, Connector startet neu → Freigabe muss nach
-      `StaleReleaseAfter` erfolgen
-- [ ] Prüfen, ob dieselbe Verwechslung anderswo steckt — die `RulesEngine` wertet
-      `MaxStatusAge` ebenfalls gegen die Empfangszeit aus
-
-**Abhängig von** nichts.
-
----
-
 ### 17. Fahrzeugdaten persistieren
 
 **Problem.** Seit der Telegraf-Abschaltung schreibt **niemand mehr Fahrzeugdaten nach
@@ -493,52 +530,17 @@ setzt 17 zwingend voraus.
 
 ---
 
-### 18. Umgebungsvariablen dürfen das Produktiv-Secret nicht überschreiben
+## Optional
 
-**Problem.** Beim Re-Bootstrap am 2026-09-20 hat der Connector `BMW_CLIENT_ID` und
-`BMW_GCID` aus der lokalen Shell-Umgebung gelesen, als vorrangig behandelt und ungefragt
-ins Kubernetes-Secret `bmwconnector-credentials` zurückgeschrieben („using environment
-variable, saving to Kubernetes Secret…"). Die Shell-Werte waren Platzhalter — je 10 Bytes
-statt der 36 einer UUID. Der laufende Pod hielt die korrekten Werte nur noch im Speicher,
-die GCID war nirgends rekonstruierbar (im Pod-Log steht ausschließlich die Mini-GCID, der
-BMW-Client war seit dem Pod-Start nie verbunden) und musste aus KeePass geholt werden.
-`BMWConnector/templates/role.yaml` im Deployments-Repo gibt dem Pod dafür `get`, `update`
-und `replace` auf das Secret; eine versionierte Kopie, die ArgoCD wiederherstellen könnte,
-gibt es nicht.
+### 15. Position mitschreiben und auswerten
 
-**Warum eigener Punkt.** Der abgelaufene Token war nur der Anlass. Die Fehlerquelle ist,
-dass eine Entwicklungs-Umgebungsvariable ohne Rückfrage Produktionszustand überschreibt —
-und der Bootstrap-Zyklus wiederholt sich in ~90 Tagen.
+- [ ] `position` von BMW und Mini nach InfluxDB schreiben
+- [ ] Nach einigen Wochen prüfen, ob sich Garage und Stellplatz in den Positionswolken
+      trennen lassen. Erwartung: nein (GPS-Streuung größer als der Abstand, in der Garage
+      kein Fix). Dann ist die Frage empirisch beantwortet statt vermutet
 
-**Umfang**
-- [ ] Vorrang umkehren oder absichern: im Cluster-Betrieb gewinnt das Secret. Eine
-      Env-Var darf lokal überschreiben, aber nicht zurückschreiben
-- [ ] Rückschreiben nur mit Plausibilitätsprüfung (GCID und CLIENT_ID sind UUIDs, also
-      Format und Länge prüfbar) und explizitem Opt-in, nicht als Nebenwirkung
-- [ ] Beim Überschreiben den ersetzten Wert maskiert protokollieren — der Vorfall war nur
-      an den Byte-Längen im Secret erkennbar
-- [ ] Dieselbe Rückschreib-Logik in den anderen Connectoren prüfen (VW, Keba, Shelly,
-      Enphase)
-- [ ] Erwägen, `bmwconnector-credentials` versioniert zu hinterlegen (SealedSecret im
-      Deployments-Repo), damit es überhaupt eine Wiederherstellungsquelle gibt
-
-**Fertig, wenn** ein Bootstrap mit gesetzten, falsch formatierten Env-Vars das Secret
-nicht mehr verändert.
-
-**Abhängig von** nichts. Berührt `BMWConnector`, kollidiert mit 1 und 2.
-
-**Welle A, gebündelt mit Punkt 2 in derselben Session** — nicht parallel dazu. Die
-Berührung ist größer, als die Kollisionstabelle vermuten lässt: Die proaktive
-Token-Alters-Warnung aus Punkt 2 liest ebenfalls das Secret, also denselben
-`KubernetesSecretStore`, den dieser Punkt umbaut. Und **nach** Punkt 1, damit das
-Re-Bootstrap nicht auf halb geändertem Verhalten läuft.
-
-**Abgrenzung beim Umsetzen — nicht überdehnen.** „Nicht zurückschreiben" gilt für die
-**Zugangsdaten** (`CLIENT_ID`, `GCID`), nicht für die **Tokens**. Der Dienst schreibt
-`id_token`, `access_token` und `refresh_token` bei jedem 50-Minuten-Refresh planmäßig ins
-Secret zurück (`SETUP.md`). Wird diese Schreiboperation mit abgeklemmt, überlebt keine
-Token-Erneuerung einen Pod-Neustart — und das ist genau der Ausfall, den Punkt 1 gerade
-behoben hat.
+**Abhängig von** 17 — solange Fahrzeugdaten überhaupt nicht persistiert werden, gibt es
+keinen Ort für die Position.
 
 ---
 
