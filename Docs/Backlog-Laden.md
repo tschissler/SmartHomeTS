@@ -855,6 +855,55 @@ gemessenen Ladeleistung der Box entsprechen.
 
 ---
 
+### 21. Oberer Teil der Ladeseite an die Kacheln angleichen
+
+**Ziel.** Der Bereich über den Wallbox-Kacheln („Quellen und Verbräuche",
+„Lade-Einstellungen") stammt aus der Zeit vor Punkt 9 und passt nicht mehr dazu. Er soll
+dieselbe Sprache sprechen wie die Kacheln darunter — in Benennung, Farbe und Datenquelle.
+
+**Aufgekommen am 2026-09-20**, nachdem die neuen Kacheln live waren. Der Auftrag ist
+Angleichung, nicht Neubau: Die Inhalte des oberen Teils sind richtig und nützlich.
+
+**Vier Brüche, im Code nachgewiesen** (`ChargingOverview.razor`):
+
+1. **Doppelte Überschrift.** Zeile 25 trägt `<h3>Lade-Einstellungen</h3>` als Titel der
+   ganzen Seite, Zeile 77 dann `<h4>Lade-Einstellungen</h4>` für einen Abschnitt darin.
+   Die Seite enthält sich also selbst. Der `h3` müsste heißen, was die Seite ist.
+2. **Zwei Namen für dieselbe Box.** Oben heißt sie „Außen" (Zeile 58), unten in den
+   Kacheln „Stellplatz". Punkt 7/8 hat `Stellplatz` als Namen festgelegt
+   (`LadeTopics.Stellplatz`); „Außen" ist ein Rest der alten `Outside`-Benennung.
+3. **Zwei Farbwelten für dieselben drei Quellen.** Die Legende benutzt `#0dcaf0` für PV,
+   `greenyellow` für Batterie, `#f72585` für Netz. Das Quellenmix-Dashboard in Grafana
+   (Punkt 20) benutzt die Sankey-Farben — PV gelb, Batterie grün, Netz rot. Wer zwischen
+   Weboberfläche und Grafana wechselt, muss umlernen. Genau das wollte Punkt 20 vermeiden,
+   und die Angleichung gehört auf die Web-Seite, nicht ins Dashboard: Dort sind die Farben
+   über alle Dashboards hinweg einheitlich.
+4. **Zwei Quellen für dieselbe Zahl — und sie können auseinanderlaufen.** Der obere Teil
+   liest `ChargingSituation.InsideCurrentChargingPower` / `OutsideCurrentChargingPower`,
+   die Kacheln lesen `WallboxStatus.Ladeleistung` direkt von der Box. Die
+   `ChargingSituation` **hängt einen Regelzyklus hinterher** (siehe den Versatz-Befund zu
+   Punkt 12), also zeigen oberer und unterer Teil bei Laständerungen kurzzeitig
+   verschiedene Werte für dieselbe Wallbox. Das ist der einzige der vier Punkte, der nicht
+   nur Gestaltung ist.
+
+**Umfang**
+- [ ] Überschriften entwirren
+- [ ] „Außen" → „Stellplatz", und generell die Boxnamen aus `LadeTopics` beziehen statt
+      sie zu schreiben
+- [ ] Eine Farbfestlegung für PV / Batterie / Netz, gemeinsam mit Grafana, an einer Stelle
+- [ ] Ladeleistung je Box aus `WallboxStatus` beziehen, nicht aus `ChargingSituation` —
+      dann stimmen oben und unten immer überein
+- [ ] Gestalterisch an die Kacheln angleichen (Abstände, Kartenform, Typografie)
+
+**Nicht enthalten.** Die Kacheln selbst (Punkt 9/9b, fertig und verifiziert) und der
+Fahrzeugbereich darunter (Punkt 10). Die Balken und die Batterieanzeige bleiben inhaltlich
+wie sie sind.
+
+**Abhängig von** 9, 10, 20 — alle erledigt. Kann jederzeit laufen, kollidiert aber mit
+Punkt 11, solange der an der Kachel arbeitet.
+
+---
+
 ### 14. Grafana-Dashboard „Laden"
 
 Löst `wallbox-charging-dashboard.json` ab; dessen Leistungskurven wandern als Verlaufsteil
