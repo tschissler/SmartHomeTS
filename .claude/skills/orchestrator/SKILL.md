@@ -92,6 +92,12 @@ Was du damit tust, hängt an einer Frage: **Trifft das die nächste Session auch
 | Ein Fehler oder eine Lücke im Werkzeug selbst | `SendFeedback` |
 | Einmalig, an dieser Aufgabe hängend | nichts tun |
 
+**Ein Skill-Eintrag erreicht die nächste Session, nicht die laufende.** Die Sessions lesen
+`/worker` beim Start; was du danach dort einträgst, sehen sie nicht mehr. Schickst du einer
+laufenden Session einen Nachtrag zu einem Fallstrick, dann **schreib den Fallstrick in die
+Nachricht** — nicht den Hinweis, dass er jetzt im Skill steht. Sonst läuft sie hinein,
+obwohl es aufgeschrieben ist, und du hältst das hinterher fälschlich für ihren Fehler.
+
 **Das Verfahren ändert sich in kleinen Schritten, nicht in großen.** Zwei Sessions, die
 dasselbe gesagt haben, sind ein besserer Grund für eine Skill-Änderung als eine, die es
 ausführlich gesagt hat. Häng nicht jede Einzelbeobachtung in den Skill — er wird bei jeder
