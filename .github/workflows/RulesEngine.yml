@@ -11,6 +11,9 @@ on:
       # SmartHomeHelpers is referenced via MQTTClient, not directly - do not drop it.
       - MQTTClient/**
       - SmartHomeHelpers/**
+      # Added with the vehicle assignment (backlog item 11): the rule reads WallboxStatus,
+      # CarStatusData, FahrzeugZuordnung and the topic literals from here.
+      - SharedContracts/**
   workflow_dispatch:
 
 # A newer push supersedes a running build of the same branch.

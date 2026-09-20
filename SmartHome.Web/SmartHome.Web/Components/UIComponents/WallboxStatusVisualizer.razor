@@ -4,10 +4,10 @@
     One wallbox, as the box itself reports it. The tile is always rendered: a box without a
     vehicle is an operating state and belongs on screen, not hidden away.
 
-    Everything shown here comes from WallboxStatus — the box is the truth about a charging
-    process, the vehicle only supplies identity and vehicle data. See
-    Docs/Fahrzeug-Wallbox-Zuordnung.md. The tile deliberately knows nothing about vehicles;
-    assigning one is backlog item 11.
+    Everything about the charging process comes from WallboxStatus — the box is the truth, the
+    vehicle only supplies identity and vehicle data. See Docs/Fahrzeug-Wallbox-Zuordnung.md.
+    The assignment is a label on top of that and never a precondition: every value below is
+    shown whether or not a vehicle could be named.
 *@
 
 <div class="wallboxBox">
@@ -43,6 +43,36 @@
             @ZustandText
         </span>
     </div>
+
+    @if (SitzungLaeuft)
+    {
+        @*
+            Text, symbol and colour answer the same question — how sure is this? — the way the
+            plug state above does. A tick in normal type means the assignment can be relied on,
+            a question mark in grey means it is a guess, and the word says which of the two
+            grades it is. A grey question mark next to a name in normal type would be exactly
+            the contradiction that backlog item 9b removed from the state line.
+        *@
+        <div class="wallboxZuordnung @(ZuordnungIstSicher ? "wallboxZuordnung-sicher" : "wallboxZuordnung-unsicher")"
+             @onclick="AuswahlUmschalten" title="@ZuordnungHinweis">
+            <span class="wallboxZuordnungZeichen">@(ZuordnungIstSicher ? "✓" : "?")</span>
+            <span class="wallboxZuordnungFahrzeug">@ZuordnungFahrzeug</span>
+            <span class="wallboxZuordnungGrad">@ZuordnungGrad</span>
+        </div>
+
+        @if (auswahlOffen)
+        {
+            <div class="wallboxZuordnungAuswahl">
+                @foreach (var fahrzeug in Fahrzeuge)
+                {
+                    <span class="wallboxZuordnungWahl @(fahrzeug == ZuordnungsFahrzeugName ? "wallboxZuordnungWahl-aktiv" : "")"
+                          @onclick="@(() => Waehle(fahrzeug))">
+                        @fahrzeug
+                    </span>
+                }
+            </div>
+        }
+    }
 
     @if (Status is null)
     {
@@ -157,6 +187,81 @@
     /// <summary>Toggles the preference for this box; the parent clears the other one.</summary>
     [Parameter]
     public EventCallback VorrangUmschalten { get; set; }
+
+    /// <summary>
+    /// What the RulesEngine says about this box, or null while it has said nothing. It may
+    /// describe an earlier session — see <see cref="ZuordnungDerSitzung"/>.
+    /// </summary>
+    [Parameter]
+    public FahrzeugZuordnung? Zuordnung { get; set; }
+
+    /// <summary>The vehicles that can be picked in a correction.</summary>
+    [Parameter]
+    public IReadOnlyList<string> Fahrzeuge { get; set; } = [];
+
+    /// <summary>
+    /// Corrects the assignment of this box. The parent owns the publication, the same way it
+    /// owns the settings — one click can then only ever produce one retained message.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> ZuordnungSetzen { get; set; }
+
+    private bool auswahlOffen;
+
+    /// <summary>
+    /// Whether a session is running that an assignment could be about. Without one the tile
+    /// says nothing about vehicles: the retained assignment of the last session is still
+    /// standing — it is the history the next guess comes from — and showing it on a free box
+    /// would read as "this car is charging here".
+    /// </summary>
+    private bool SitzungLaeuft => Status?.SitzungsId is not null;
+
+    /// <summary>The assignment, but only when it is about the session running now.</summary>
+    private FahrzeugZuordnung? ZuordnungDerSitzung =>
+        Zuordnung is not null && Status?.SitzungsId is not null && Zuordnung.SitzungsId == Status.SitzungsId
+            ? Zuordnung
+            : null;
+
+    private string? ZuordnungsFahrzeugName => ZuordnungDerSitzung?.Fahrzeug;
+
+    /// <summary>
+    /// Whether the assignment can be relied on. Confirmed and recognised both can; a guess and
+    /// an outright unknown both cannot, and they look alike because for reading a number off
+    /// the tile they mean the same thing.
+    /// </summary>
+    private bool ZuordnungIstSicher =>
+        ZuordnungsFahrzeugName is not null
+        && ZuordnungDerSitzung!.Vertrauen >= Vertrauensgrad.Erkannt;
+
+    private string ZuordnungFahrzeug => ZuordnungsFahrzeugName ?? "kein Fahrzeug erkannt";
+
+    private string ZuordnungGrad => ZuordnungsFahrzeugName is null
+        ? ""
+        : ZuordnungDerSitzung!.Vertrauen switch
+        {
+            Vertrauensgrad.Bestaetigt => "· bestätigt",
+            Vertrauensgrad.Erkannt => "· erkannt",
+            Vertrauensgrad.Vermutet => "· vermutet",
+            _ => "",
+        };
+
+    private string ZuordnungHinweis => ZuordnungDerSitzung?.Vertrauen switch
+    {
+        Vertrauensgrad.Bestaetigt => "Von Hand für diese Ladesitzung bestätigt. Klicken, um es zu ändern.",
+        Vertrauensgrad.Erkannt => "Aus der Meldung des Fahrzeugs und der Belegung der Boxen ermittelt. "
+            + "Klicken, um es zu korrigieren.",
+        Vertrauensgrad.Vermutet => "Nur vermutet — das Fahrzeug, das zuletzt an dieser Box lud. "
+            + "Klicken, um es zu korrigieren.",
+        _ => "Kein Fahrzeug erkannt. Klicken, um es zu benennen.",
+    };
+
+    private void AuswahlUmschalten() => auswahlOffen = !auswahlOffen;
+
+    private async Task Waehle(string fahrzeug)
+    {
+        auswahlOffen = false;
+        await ZuordnungSetzen.InvokeAsync(fahrzeug);
+    }
 
     /// <summary>
     /// The question this tile answers is "is a vehicle hanging there?", not "is a cable stuck in
