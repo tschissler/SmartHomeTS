@@ -2,10 +2,8 @@
 
 @using SharedContracts
 @using SmartHome.Web.Services
-@using Syncfusion.Blazor.Buttons
 
 @using ColorHelper;
-@using Syncfusion.Blazor.LinearGauge
 @using System.Text.Json
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
@@ -13,104 +11,73 @@
 
 @rendermode InteractiveServer
 
-<div class="control-section">
-    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Syncfusion.Blazor.LinearGauge.Orientation.Horizontal">
-        <LinearGaugeEvents OnDrag="OnDragHue" OnDragEnd="OnDragHueEnd" />
-        <LinearGaugeAxes>
-            <LinearGaugeAxis Minimum="0" Maximum="360" OpposedPosition="false">
-                <LinearGaugeLine Width="8" />
-                <LinearGaugeMajorTicks Interval="20" Height="0" Width="1" />
-                <LinearGaugeMinorTicks Interval="10" Height="0" />
-                <LinearGaugeAxisLabelStyle>
-                    <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
-                </LinearGaugeAxisLabelStyle>
-                <LinearGaugePointers>
-                    <LinearGaugePointer EnableDrag="true" PointerValue="@HueValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#000000" Position="Syncfusion.Blazor.LinearGauge.Position.Inside" />
-                </LinearGaugePointers>
-                <LinearGaugeRanges>
-                    <LinearGaugeRange Color="#E63B86" Start="0" End="360" StartWidth="40" EndWidth="40">
-                        <LinearGradient StartValue="0%" EndValue="100%">
-                            <ColorStops>
-                                @for (int i = 0; i <= 100; i += 10)
-                                {
-                                    <ColorStop Opacity="1" Offset="@($"{i}%")" Color="@ColorConverter.HslToRgb(new HSL((int)(i*3.6), 100, 50)).ToString()" />
-                                }
-                            </ColorStops>
-                        </LinearGradient>
-                    </LinearGaugeRange>
-                </LinearGaugeRanges>
-            </LinearGaugeAxis>
-        </LinearGaugeAxes>
-    </SfLinearGauge>
+<PageTitle>Beleuchtung</PageTitle>
 
+<h3>Beleuchtung</h3>
+
+@*
+    Drei Schieberegler. Sie waren SfLinearGauge mit einem ziehbaren Zeiger -- also Anzeiger,
+    die als Bedienelement benutzt wurden. <input type="range"> bildet das eins zu eins ab:
+    oninput ist der laufende Zug, onchange das Loslassen. Am Telefon ist der Unterschied
+    spuerbar: Ein nativer Regler hat die Trefferflaeche, die das Betriebssystem fuer einen
+    Finger vorsieht, der Syncfusion-Zeiger war ein 40-px-Kreis zum Ziehen.
+
+    Wichtig ist die Trennung dahinter: Nur das Loslassen veroeffentlicht nach MQTT. Wuerde
+    jeder Zwischenwert gesendet, bekaeme der LED-Streifen bei einem einzigen Zug hunderte
+    Nachrichten.
+*@
+<div class="regler">
+    <label for="regler-farbton">Farbton</label>
+    <input type="range" id="regler-farbton" class="regler-spur regler-farbton"
+           min="0" max="360" step="1" value="@HueValue"
+           @oninput="ZiehtFarbton" @onchange="LaesstFarbtonLos" />
 </div>
 
-<div class="control-section">
-    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Syncfusion.Blazor.LinearGauge.Orientation.Horizontal">
-        <LinearGaugeEvents OnDrag="OnDragBrightness" OnDragEnd="OnDragBrightnessEnd" />
-        <LinearGaugeAxes>
-            <LinearGaugeAxis Minimum="0" Maximum="100" OpposedPosition="false">
-                <LinearGaugeLine Width="8" />
-                <LinearGaugeMajorTicks Interval="20" Height="0" Width="1" />
-                <LinearGaugeMinorTicks Interval="10" Height="0" />
-                <LinearGaugeAxisLabelStyle>
-                    <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
-                </LinearGaugeAxisLabelStyle>
-                <LinearGaugePointers>
-                    <LinearGaugePointer EnableDrag="true" PointerValue="@BrightnessValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Syncfusion.Blazor.LinearGauge.Position.Inside" />
-                </LinearGaugePointers>
-                <LinearGaugeRanges>
-                    <LinearGaugeRange Color="#E63B86" Start="0" End="100" StartWidth="40" EndWidth="40">
-                        <LinearGradient StartValue="0%" EndValue="100%">
-                            <ColorStops>
-                                <ColorStop Opacity="1" Offset="0%" Color="#000000" />
-                                <ColorStop Opacity="1" Offset="100%" Color="#FFFFFF" />
-                            </ColorStops>
-                        </LinearGradient>
-                    </LinearGaugeRange>
-                </LinearGaugeRanges>
-            </LinearGaugeAxis>
-        </LinearGaugeAxes>
-    </SfLinearGauge>
+<div class="regler">
+    <label for="regler-helligkeit">Helligkeit</label>
+    <input type="range" id="regler-helligkeit" class="regler-spur regler-helligkeit"
+           min="0" max="100" step="1" value="@BrightnessValue"
+           @oninput="ZiehtHelligkeit" @onchange="LaesstHelligkeitLos" />
 </div>
 
-<div class="control-section">
-    <SfLinearGauge Background="transparent" Height="100px" Width="100%" Orientation="Syncfusion.Blazor.LinearGauge.Orientation.Horizontal">
-        <LinearGaugeEvents OnDrag="OnDragDensity" OnDragEnd="OnDragDensityEnd" />
-        <LinearGaugeAxes>
-            <LinearGaugeAxis Minimum="0" Maximum="101" OpposedPosition="false">
-                <LinearGaugeLine Width="8" />
-                <LinearGaugeMajorTicks Interval="20" Height="0" Width="1" />
-                <LinearGaugeMinorTicks Interval="10" Height="0" />
-                <LinearGaugeAxisLabelStyle>
-                    <LinearGaugeAxisLabelFont FontFamily="inherit" Size="0" />
-                </LinearGaugeAxisLabelStyle>
-                <LinearGaugePointers>
-                    <LinearGaugePointer EnableDrag="true" PointerValue="@DensityValue" Height="40" Width="40" MarkerType="MarkerType.Circle" Color="#6666AA" Position="Syncfusion.Blazor.LinearGauge.Position.Inside" />
-                </LinearGaugePointers>
-                <LinearGaugeRanges>
-                    <LinearGaugeRange Color="#9999FF" Start="0" End="100" StartWidth="0" EndWidth="50">
-                    </LinearGaugeRange>
-                </LinearGaugeRanges>
-            </LinearGaugeAxis>
-        </LinearGaugeAxes>
-    </SfLinearGauge>
+<div class="regler">
+    <label for="regler-dichte">Dichte</label>
+    <input type="range" id="regler-dichte" class="regler-spur regler-dichte"
+           min="0" max="101" step="1" value="@DensityValue"
+           @oninput="ZiehtDichte" @onchange="LaesstDichteLos" />
 </div>
 
-<div class="control-section">
-    Schrank-Beleuchtung
-    <SfSwitch @bind-Checked="@SchrankbeleuchtungOnOff" OffLabel="OFF" OnLabel="ON" ValueChange="ChangeSchrankbeleuchtung" TChecked="bool?" ></SfSwitch>
-</div>
-<div class="control-section">
-    Wohnzimmerlampe
-    <SfSwitch @bind-Checked="@LampeOnOff" OffLabel="OFF" OnLabel="ON" ValueChange="ChangeLampe" TChecked="bool?"></SfSwitch>
+@* Ein Kontrollkaestchen mit CSS statt eines SfSwitch. Das Kaestchen selbst bleibt das
+   Bedienelement -- Tastatur und Vorlesesoftware funktionieren damit weiter, die Optik liegt
+   allein im Stylesheet. *@
+<div class="schalterZeile">
+    <label class="schalter">
+        <input type="checkbox" checked="@(SchrankbeleuchtungOnOff == true)"
+               @onchange="SchrankbeleuchtungUmschalten" />
+        <span class="schalterBahn"></span>
+    </label>
+    <span>Schrank-Beleuchtung</span>
 </div>
 
-<div>Selection as RGB: R=@RGBColor.R.ToString()  G=@RGBColor.G.ToString() B=@RGBColor.B.ToString() with Density @DensityValue.ToString() %</div>
-<div style="width:100px; height:100px; background-color:@RGBColor.ToString() ">
-    ColorSample
+<div class="schalterZeile">
+    <label class="schalter">
+        <input type="checkbox" checked="@(LampeOnOff == true)"
+               @onchange="LampeUmschalten" />
+        <span class="schalterBahn"></span>
+    </label>
+    <span>Wohnzimmerlampe</span>
 </div>
+
+<div class="farbprobeZeile">
+    <div class="farbprobe" style="background-color:@RGBColor.ToString()"></div>
+    <div>
+        <div>R=@RGBColor.R  G=@RGBColor.G  B=@RGBColor.B</div>
+        <div class="farbprobeSub">Dichte @DensityValue %</div>
+    </div>
+</div>
+
 <div>@StatusMessage</div>
+
 @code {
     public int HueValue = 30;
     private const string topicName = "commands/illumination/LEDStripe/setColor";
@@ -123,97 +90,77 @@
     public bool? LampeOnOff = true;
     public IluminationSituation situation = new IluminationSituation();
 
-    private void ChangeSchrankbeleuchtung(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool?> args)
+    /// <summary>
+    /// Value of a slider. The browser sends it as text; anything unreadable keeps the value
+    /// that is already set rather than silently jumping the strip to zero.
+    /// </summary>
+    private static int Wert(ChangeEventArgs args, int bisher) =>
+        int.TryParse(args.Value?.ToString(), out var wert) ? wert : bisher;
+
+    private void ZiehtFarbton(ChangeEventArgs args) => HueValue = Wert(args, HueValue);
+
+    private Task LaesstFarbtonLos(ChangeEventArgs args)
     {
-        SchrankbeleuchtungOnOff = args.Checked;
-        if (SchrankbeleuchtungOnOff.Value)
+        HueValue = Wert(args, HueValue);
+        return UebernehmenAsync();
+    }
+
+    private void ZiehtHelligkeit(ChangeEventArgs args) => BrightnessValue = Wert(args, BrightnessValue);
+
+    private Task LaesstHelligkeitLos(ChangeEventArgs args)
+    {
+        BrightnessValue = Wert(args, BrightnessValue);
+        return UebernehmenAsync();
+    }
+
+    private void ZiehtDichte(ChangeEventArgs args) => DensityValue = Wert(args, DensityValue);
+
+    private Task LaesstDichteLos(ChangeEventArgs args)
+    {
+        DensityValue = Wert(args, DensityValue);
+        return UebernehmenAsync();
+    }
+
+    /// <summary>
+    /// Sends the setting to the strip - but only while the cabinet light is on. Dragging a
+    /// slider on a switched off strip changes what will be set the next time it is switched
+    /// on, and nothing else; that was the behaviour of the three OnDragEnd handlers before.
+    /// </summary>
+    private async Task UebernehmenAsync()
+    {
+        if (SchrankbeleuchtungOnOff == true)
         {
-            //CalculateRGBColor();
-            StatusMessage = "Eingeschaltet";
-        }
-        else
-        {
-            //SendRGBColor(new RGB(0, 0, 0), 0);
-            StatusMessage = "Ausgeschaltet";
-        }
-        CalculateRGBColor();
-    }
-
-    private async void ChangeLampe(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool?> args)
-    {
-        LampeOnOff = args.Checked;
-        if (LampeOnOff.Value)
-        {
-            await MqttService.PublishAsync(lampeTopicName, "on", MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
-        }
-        else
-        {
-            await MqttService.PublishAsync(lampeTopicName, "off", MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
+            await CalculateRGBColor();
         }
     }
 
-    private void OnDragHue(PointerDragEventArgs args)
+    private async Task SchrankbeleuchtungUmschalten(ChangeEventArgs args)
     {
-        HueValue = (int)args.CurrentValue;
+        SchrankbeleuchtungOnOff = args.Value as bool? ?? false;
+        StatusMessage = SchrankbeleuchtungOnOff == true ? "Eingeschaltet" : "Ausgeschaltet";
+        // Deliberately not through UebernehmenAsync: switching off has to be published as
+        // well, and that is the one case UebernehmenAsync leaves out.
+        await CalculateRGBColor();
     }
 
-    private void OnDragHueEnd(PointerDragEventArgs args)
+    private async Task LampeUmschalten(ChangeEventArgs args)
     {
-        HueValue = (int)args.CurrentValue;
-        if (SchrankbeleuchtungOnOff.Value)
-            CalculateRGBColor();
-    }
-
-    private void OnDragBrightness(PointerDragEventArgs args)
-    {
-        BrightnessValue = (int)args.CurrentValue;
-    }
-
-    private void OnDragBrightnessEnd(PointerDragEventArgs args)
-    {
-        BrightnessValue = (int)args.CurrentValue;
-        if (SchrankbeleuchtungOnOff.Value)
-            CalculateRGBColor();
-    }
-
-    private void OnDragDensity(PointerDragEventArgs args)
-    {
-        DensityValue = (int)args.CurrentValue;
-    }
-
-    private void OnDragDensityEnd(PointerDragEventArgs args)
-    {
-        DensityValue = (int)args.CurrentValue;
-        if (SchrankbeleuchtungOnOff.Value)
-            CalculateRGBColor();
+        LampeOnOff = args.Value as bool? ?? false;
+        await MqttService.PublishAsync(
+            lampeTopicName,
+            LampeOnOff == true ? "on" : "off",
+            MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce,
+            true);
     }
 
     private async Task CalculateRGBColor()
     {
         RGBColor = ColorConverter.HslToRgb(new HSL(HueValue, 100, (byte)BrightnessValue));
-        SendRGBColor(RGBColor, DensityValue);
+        await SendRGBColor(RGBColor, DensityValue);
     }
 
     private async Task SendRGBColor(RGB rGBColor, int densityValue)
     {
-        // string url = $"http://192.168.178.27/setColor?r={rGBColor.R}&g={rGBColor.G}&b={rGBColor.B}&d={densityValue}";
-        // try
-        // {
-        //     var response = await Http.GetAsync(url);
-        //     if (response.IsSuccessStatusCode)
-        //     {
-        //         StatusMessage = "Color set";
-        //     }
-        //     else
-        //     {
-        //         StatusMessage = "Error setting color";
-        //     }
-        // }
-        // catch (Exception ex)
-        // {
-        //     StatusMessage = $"Error while setting color: {ex.Message}";
-        // }
-
         IluminationSituation situation = new IluminationSituation();
         situation.Right.Red = rGBColor.R;
         situation.Right.Green = rGBColor.G;
@@ -237,7 +184,7 @@
         UpdateValues();
     }
 
-    private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
+    private void UpdateData(object? sender, MqttMessageReceivedEventArgs args)
     {
         if (args.Topic == topicName || args.Topic == lampeTopicName)
             UpdateValues();
@@ -252,6 +199,7 @@
         BrightnessValue = hsl.L;
         SchrankbeleuchtungOnOff = situation.Right.On;
         LampeOnOff = situation.LampOn;
+        RGBColor = new RGB(situation.Right.Red, situation.Right.Green, situation.Right.Blue);
         InvokeAsync(StateHasChanged);
     }
 }

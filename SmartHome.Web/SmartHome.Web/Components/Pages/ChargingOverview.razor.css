@@ -17,8 +17,8 @@
     border: 1px solid #D6D6D6;
     border-radius: 10px;
     box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
-    margin-left: 40px;
-    margin-right: 40px;
+    margin-left: var(--seiten-rand);
+    margin-right: var(--seiten-rand);
     margin-top: 20px;
 }
 
@@ -96,29 +96,71 @@
     flex: none;
 }
 
+/* The scale of six levels. Below the "mittel" breakpoint it breaks into two rows of three:
+   six columns cannot get narrower than their longest word plus the gaps, which is about
+   800px - and because the page is as wide as its widest block, that one grid used to stretch
+   the whole charging page and push everything else off the right edge of a phone.
+   Breakpoint scale: see the header of wwwroot/app.css. */
 .stepsGrid {
+    --steps-abstand: 30px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-    grid-column-gap: 30px;
-    margin-left: 40px;
-    margin-right: 40px;
+    grid-template-columns: repeat(6, 1fr);
+    grid-column-gap: var(--steps-abstand);
+    grid-row-gap: 16px;
+    margin-left: var(--seiten-rand);
+    margin-right: var(--seiten-rand);
     margin-top: 20px;
     text-align: center;
-    background: linear-gradient(to bottom, transparent 15px, /* Transparent for the top 45% */
-    cornflowerblue 15px, cornflowerblue 25px, /* Black line from 45% to 55% */
-    transparent 25px); /* Transparent from 55% onwards */
+}
+
+/* Circle and label are one item, so a line break keeps them together. They used to be twelve
+   independent cells - all circles first, all labels after - which reads correctly in exactly
+   one row and falls apart in two. */
+.stepsItem {
+    position: relative;
+}
+
+/* The connecting line between the circles. It used to be a gradient on the grid itself,
+   painted at a fixed distance from the top, which only ever covered the first row. Drawn per
+   item it survives the break: the line reaches half the column gap to each side and so joins
+   up with its neighbours, and the first and the last item of a row stop at their own centre
+   instead of sticking out. */
+.stepsItem::before {
+    content: "";
+    position: absolute;
+    top: 15px;
+    height: 10px;
+    /* Eine halbe Spaltenluecke plus 1px: Die Spalten sind 1fr breit und damit meist
+       gebrochen, und zwei Stuecke, die sich rechnerisch genau beruehren, zeigen dann eine
+       helle Naht. Die Ueberlappung kostet nichts, beide Stuecke sind dieselbe Farbe. */
+    left: calc(-1 * var(--steps-abstand) / 2 - 1px);
+    right: calc(-1 * var(--steps-abstand) / 2 - 1px);
+    background-color: cornflowerblue;
+}
+
+.stepsItem:first-child::before {
+    left: 50%;
+}
+
+.stepsItem:last-child::before {
+    right: 50%;
 }
 
 .stepsBox {
+    position: relative;
     box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.75);
     cursor: pointer;
     margin: 0 auto;
     display: flex;
     width: 40px;
     height: 40px;
+    padding: 0;
+    border: none;
     border-radius: 50%;
     align-items: center;
     justify-content: center;
+    font: inherit;
+    color: inherit;
 }
 
 .stepsBox-active {
@@ -129,17 +171,80 @@
     background-color: #D6D6D6;
 }
 
+/* Which level is set, not just which ones are reached: the filled scale alone leaves that to
+   be inferred from "the last blue one". */
+.stepsBox-gewaehlt {
+    outline: 2px solid #23395e;
+    outline-offset: 2px;
+}
+
+.stepsLabel {
+    margin-top: 4px;
+}
+
+/* What the level that is set actually does. This sentence has no other home in the interface:
+   it used to be an SfTooltip and therefore existed only under a mouse pointer. */
+.stufeErklaerung {
+    margin: 16px var(--seiten-rand) 0;
+    color: #4a4a4a;
+}
+
+.stufeErklaerungKopf {
+    font-weight: 600;
+    color: #1f1f1f;
+    margin-right: 8px;
+}
+
+/* All six explanations, for the question the line above cannot answer: what a level would do
+   that is not the one set. Reading it must not cost a tap on the charging controller. */
+.stufenHilfe {
+    margin: 8px var(--seiten-rand) 0;
+    font-size: 0.9rem;
+}
+
+.stufenHilfe summary {
+    cursor: pointer;
+    color: #006bb7;
+    /* A finger-sized target rather than a line of text */
+    padding: 6px 0;
+}
+
+.stufenListe {
+    margin: 4px 0 0;
+}
+
+.stufenListe dt {
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.stufenListe dt:first-of-type {
+    margin-top: 0;
+}
+
+.stufenListe dd {
+    margin: 0 0 0 1.5rem;
+    color: #4a4a4a;
+}
+
+.stufenListe-gewaehlt::after {
+    content: " · eingestellt";
+    font-weight: 400;
+    color: #2f7d32;
+}
+
 /* Both boxes, always - a box without a vehicle is an operating state, not a blank */
 .wallboxGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-column-gap: 30px;
     grid-row-gap: 20px;
-    margin-left: 40px;
-    margin-right: 40px;
+    margin-left: var(--seiten-rand);
+    margin-right: var(--seiten-rand);
     margin-top: 20px;
 }
 
+/* schmal */
 @media (max-width: 700px) {
     .wallboxGrid {
         grid-template-columns: 1fr;
@@ -153,14 +258,60 @@
     grid-template-columns: 1fr 1fr 1fr;
     grid-column-gap: 30px;
     grid-row-gap: 20px;
-    margin-left: 40px;
-    margin-right: 40px;
+    margin-left: var(--seiten-rand);
+    margin-right: var(--seiten-rand);
     margin-top: 20px;
     align-items: start;
 }
 
+/* mittel */
 @media (max-width: 1000px) {
     .carsGrid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* mittel - three columns in two rows. Six no longer fit once the page is narrower than a
+   laptop half screen, and that is well above any phone. */
+@media (max-width: 1000px) {
+    .stepsGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .stepsItem:nth-child(3n+1)::before {
+        left: 50%;
+    }
+
+    .stepsItem:nth-child(3n)::before {
+        right: 50%;
+    }
+}
+
+/* schmal - ein Telefon im Hochformat. Der seitliche Rand faellt ueber --seiten-rand fuer die
+   ganze Anwendung weg; hier bleibt nur, was diese Seite allein betrifft.
+
+   Der Rahmen der Uebersichtsbox geht mit: Ein Rahmen trennt, und hier ist nichts zu trennen -
+   es ist die einzige Karte an dieser Stelle. Bei den Wallbox- und Fahrzeugkacheln bleibt er,
+   weil die im Schmalformat untereinander stehen und der Rahmen dort sagt, wo die eine Box
+   aufhoert und die naechste anfaengt. Thomas: "ich lege auch keinen Wert auf den Rahmen".
+
+   Die Beschriftung schrumpft mit, weil drei Spalten "Batterie-Prio" darueber entscheiden, ob
+   die Skala noch passt. */
+@media (max-width: 700px) {
+    .uebersichtBox {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .stepsGrid {
+        --steps-abstand: 8px;
+    }
+
+    .stepsLabel {
+        font-size: 0.85rem;
+        line-height: 1.2;
     }
 }

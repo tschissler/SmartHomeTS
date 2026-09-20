@@ -1,0 +1,20 @@
+﻿/* Die acht Modi. Sie brechen um, statt die Seite breiter zu machen: In einer
+   Bootstrap-btn-group stehen sie in einer inline-flex-Zeile ohne Umbruch und waren auf
+   einem 390-px-Telefon rund 470 px breit -- die ganze Seite liess sich seitlich schieben.
+
+   Der Abstand ist nicht nur Optik: Aneinandergesetzte Knoepfe sagen "eine Gruppe", und
+   diese Aussage bricht, sobald die Gruppe zweizeilig wird. Mit Abstand sind es sichtbar
+   acht einzelne Schaltflaechen, und der Umbruch kostet nichts.
+
+   44 px Mindesthoehe: die Trefferflaeche, die iOS und Android fuer einen Finger vorsehen.
+   Die Knoepfe waren mit dem Bootstrap-Standard knapp darunter. */
+.modusWahl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.modusWahl button {
+    min-height: 44px;
+    border-radius: 0.375rem;
+}

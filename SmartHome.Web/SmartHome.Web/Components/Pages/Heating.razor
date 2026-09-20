@@ -6,9 +6,16 @@
 @using System.Text.Json
 @inject MqttService MqttService
 
+<PageTitle>Heizung</PageTitle>
+
 <h3>Heizung Kinderzimmer M1</h3>
 
-<div class="btn-group" role="group" aria-label="Heating modes">
+@* Umbrechende Knopfreihe statt einer Bootstrap-btn-group: Die btn-group ist ein
+   inline-flex ohne Umbruch, acht Knoepfe darin sind rund 470 px breit und haben auf einem
+   390-px-Telefon die ganze Seite seitlich scrollen lassen. Aneinandergesetzte Knoepfe
+   vertragen keinen Umbruch -- die zusammengewachsenen Ecken stimmen dann nicht mehr --,
+   also stehen sie jetzt einzeln mit Abstand. *@
+<div class="modusWahl" role="group" aria-label="Heating modes">
     @foreach (var mode in HeatingModes)
     {
         var isActive = SelectedModeKinderzimmer == mode;
@@ -25,7 +32,7 @@
 
 <h3 class="mt-4">Heizung Esszimmer M3</h3>
 
-<div class="btn-group" role="group" aria-label="Heating modes Esszimmer">
+<div class="modusWahl" role="group" aria-label="Heating modes Esszimmer">
     @foreach (var mode in HeatingModes)
     {
         var isActive = SelectedModeEsszimmer == mode;

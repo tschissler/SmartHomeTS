@@ -73,8 +73,22 @@ namespace SmartHome.Web.Services
         private static readonly Regex PlainVersion = new(@"^[0-9]+(?:\.[0-9]+)+$", RegexOptions.Compiled);
 
 
-        public MqttService()
+        /// <summary>Broker address when the configuration says nothing - the production broker.</summary>
+        private const string BrokerVorgabe = "mosquitto.intern:1883";
+
+        private readonly string _brokerHost;
+        private readonly int _brokerPort;
+
+        /// <summary>
+        /// The broker address used to stand hard wired in <see cref="ConnectAsync"/> while
+        /// Program.cs read SMARTHOME__MQTT_BROKER and logged it at start up - so the log named a
+        /// broker the connection never used. Both now read the same value.
+        /// </summary>
+        public MqttService(IConfiguration configuration)
         {
+            (_brokerHost, _brokerPort) = ZerlegeBroker(
+                configuration["SMARTHOME__MQTT_BROKER"] ?? configuration["SMARTHOME:MQTT_BROKER"]);
+
             ChargingSettings = new();
             ChargingSituation = new();
             IluminationSituation = new();
@@ -83,20 +97,46 @@ namespace SmartHome.Web.Services
             ConnectAsync();
         }
 
+        /// <summary>
+        /// Splits "host" or "host:port" into its two parts. The cluster's ConfigMap carries
+        /// "mosquitto.intern:1883", port included - handing that string to MQTTnet as a host name
+        /// would produce a name that resolves nowhere, which is why this is parsed rather than
+        /// passed through. Anything unusable falls back to the production broker instead of
+        /// leaving the service without one.
+        /// </summary>
+        internal static (string Host, int Port) ZerlegeBroker(string? adresse)
+        {
+            adresse = string.IsNullOrWhiteSpace(adresse) ? BrokerVorgabe : adresse.Trim();
+
+            var doppelpunkt = adresse.LastIndexOf(':');
+            if (doppelpunkt < 0)
+            {
+                return (adresse, 1883);
+            }
+
+            var host = adresse[..doppelpunkt];
+            return int.TryParse(adresse[(doppelpunkt + 1)..], NumberStyles.Integer,
+                       CultureInfo.InvariantCulture, out var port)
+                   && port is > 0 and <= 65535
+                   && host.Length > 0
+                ? (host, port)
+                : (adresse, 1883);
+        }
+
         public async Task ConnectAsync()
         {
             var factory = new MqttClientFactory();
             _client = factory.CreateMqttClient();
 
             _options = new MqttClientOptionsBuilder()
-            .WithTcpServer("mosquitto.intern", 1883)
+            .WithTcpServer(_brokerHost, _brokerPort)
             .WithClientId("Smarthome.Web")
             .WithKeepAlivePeriod(new TimeSpan(0, 1, 0, 0))
             .Build();
 
             _client.ConnectedAsync += async e =>
             {
-                Console.WriteLine("Connected to MQTT broker.");
+                Console.WriteLine($"Connected to MQTT broker at {_brokerHost}:{_brokerPort}.");
                 await _client.SubscribeAsync("data/#");
                 // Covers LadeTopics.StatusAlle ("daten/Laden/+/+/Status") and
                 // FahrzeugTopics.StatusAlle ("daten/Fahrzeug/+/Status") already. A second,

@@ -2,14 +2,9 @@
 @using SmartHome.Web.Components.UIComponents
 @using SmartHome.Web.Services
 @using SmartHomeWebManagers
-@using Syncfusion.Blazor.Inputs
-@using Syncfusion.Blazor.LinearGauge
 @using System.Text.Json
+@using System.Globalization
 @using SharedContracts
-@using MouseEventArgs = Microsoft.AspNetCore.Components.Web.MouseEventArgs
-@using Placement = Syncfusion.Blazor.Inputs.Placement
-@using Orientation = Syncfusion.Blazor.LinearGauge.Orientation
-@using Syncfusion.Blazor.Popups
 
 @page "/chargingoverview"
 @rendermode InteractiveServer
@@ -48,33 +43,45 @@
 <h4>Lade-Einstellungen</h4>
 
 
+@*
+    The six levels. Every level carries its own explanation in Ladestufen below, and the page
+    shows that explanation in writing - it used to live in an SfTooltip, which hangs off hover
+    and is therefore unreachable on a phone, where this page is mostly used. Two places show
+    it, for two different questions:
+      - the line under the scale answers "what is set right now" without any interaction,
+      - the disclosure answers "what would level 4 do" without having to tap level 4, which
+        would publish a real command to the charging controller.
+*@
 <div class="stepsGrid">
-    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Laden ist deaktiviert">
-        <div class="stepsBox stepsBox-active" @onclick="ChargingOff">0</div>
-    </SfTooltip>
-    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto nur mit PV-Überschuss der 3,8 KW übersteigt">
-        <div class="stepsBox @(chargingSettings.ChargingLevel >= 1 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel1">1</div>
-    </SfTooltip>
-    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto wenn der PV-Überschuss die Mindestladeleistung übersteigt">
-        <div class="stepsBox @(chargingSettings.ChargingLevel >= 2 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel2">2</div>
-    </SfTooltip>
-    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto wenn der PV-Überschuss plus Batteriekapazität die Mindestladeleistung übersteigt und die Batterie zu mehr als 50% geladen ist">
-        <div class="stepsBox @(chargingSettings.ChargingLevel >= 3 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel3">3</div>
-    </SfTooltip>
-    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto mit mindestens der Mindestladeleistung">
-        <div class="stepsBox @(chargingSettings.ChargingLevel >= 4 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel4">4</div>
-    </SfTooltip>
-    <SfTooltip Position="Syncfusion.Blazor.Popups.Position.TopCenter" Content="Lädt das Auto mit 8 Kw">
-        <div class="stepsBox @(chargingSettings.ChargingLevel >= 5 ? "stepsBox-active" : "stepsBox-inactive")" @onclick="ChargingLevel5">5</div>
-    </SfTooltip>
-
-    <div>Aus</div>
-    <div>PV-Laden mit Batterie-Prio</div>
-    <div>PV-Laden mit Auto-Prio</div>
-    <div>PV + Batterie-Laden</div>
-    <div>Sofort-Laden</div>
-    <div>Schnell-Laden</div>
+    @foreach (var stufe in Ladestufen)
+    {
+        <div class="stepsItem">
+            @* A button, not a div: it is one on a keyboard and to a screen reader, and it
+               gives the browser its own touch target instead of a bare click handler. *@
+            <button type="button"
+                    class="@StufenKlassen(stufe)"
+                    aria-pressed="@JaNein(chargingSettings.ChargingLevel == stufe.Nummer)"
+                    @onclick="() => StufeSetzen(stufe.Nummer)">@stufe.Nummer</button>
+            <div class="stepsLabel">@stufe.Kurz</div>
+        </div>
+    }
 </div>
+
+<p class="stufeErklaerung">
+    <span class="stufeErklaerungKopf">Stufe @GewaehlteStufe.Nummer · @GewaehlteStufe.Kurz</span>
+    @GewaehlteStufe.Erklaerung
+</p>
+
+<details class="stufenHilfe">
+    <summary>Was die Stufen bedeuten</summary>
+    <dl class="stufenListe">
+        @foreach (var stufe in Ladestufen)
+        {
+            <dt class="@(chargingSettings.ChargingLevel == stufe.Nummer ? "stufenListe-gewaehlt" : "")">@stufe.Nummer · @stufe.Kurz</dt>
+            <dd>@stufe.Erklaerung</dd>
+        }
+    </dl>
+</details>
 
 <h4>Wallboxen</h4>
 
@@ -108,10 +115,61 @@
 </div>
 
 @code {
-    private int _batteryMinLevel = 30;
-    private int _manualCurrent = 6;
-    private bool _useManualCharging = false;
     ChargingSituation _chargingSituation = new ();
+
+    /// <summary>
+    /// One charging level: its number, the short name under the circle and the sentence that
+    /// says what it actually does. The wording of the explanations is the one the tooltips
+    /// carried - it is the only description of the levels that exists anywhere, so it is
+    /// copied over rather than rewritten; only "KW"/"Kw" became "kW" and a missing comma was
+    /// added.
+    /// </summary>
+    private record Ladestufe(int Nummer, string Kurz, string Erklaerung);
+
+    private static readonly IReadOnlyList<Ladestufe> Ladestufen =
+    [
+        new(0, "Aus", "Laden ist deaktiviert."),
+        new(1, "PV-Laden mit Batterie-Prio",
+            "Lädt das Auto nur mit PV-Überschuss, der 3,8 kW übersteigt."),
+        new(2, "PV-Laden mit Auto-Prio",
+            "Lädt das Auto, wenn der PV-Überschuss die Mindestladeleistung übersteigt."),
+        new(3, "PV + Batterie-Laden",
+            "Lädt das Auto, wenn der PV-Überschuss plus Batteriekapazität die Mindestladeleistung "
+            + "übersteigt und die Batterie zu mehr als 50 % geladen ist."),
+        new(4, "Sofort-Laden", "Lädt das Auto mit mindestens der Mindestladeleistung."),
+        new(5, "Schnell-Laden", "Lädt das Auto mit 8 kW."),
+    ];
+
+    /// <summary>
+    /// Classes of one circle: filled up to the level that is set, and the one that is set
+    /// marked separately - the filled scale alone leaves that to be inferred from "the last
+    /// blue one".
+    /// </summary>
+    private string StufenKlassen(Ladestufe stufe)
+    {
+        var gefuellt = chargingSettings.ChargingLevel >= stufe.Nummer
+            ? "stepsBox stepsBox-active"
+            : "stepsBox stepsBox-inactive";
+        return chargingSettings.ChargingLevel == stufe.Nummer ? gefuellt + " stepsBox-gewaehlt" : gefuellt;
+    }
+
+    /// <summary>
+    /// "true" or "false" for aria-pressed, as a string on purpose.
+    /// </summary>
+    /// <remarks>
+    /// Blazor treats a bool attribute value like <c>disabled</c>: true renders the attribute
+    /// with an empty value, false leaves it out altogether. For aria-pressed that means the
+    /// chosen level said <c>aria-pressed=""</c> - not a valid value - and the other five said
+    /// nothing at all, so a screen reader could not tell which level is set.
+    /// </remarks>
+    private static string JaNein(bool wert) => wert ? "true" : "false";
+
+    /// <summary>
+    /// The level that is set. A value outside the scale - an older or a newer contract - must
+    /// not make the explanation line disappear, so it falls back to "Aus" rather than to null.
+    /// </summary>
+    private Ladestufe GewaehlteStufe =>
+        Ladestufen.FirstOrDefault(s => s.Nummer == chargingSettings.ChargingLevel) ?? Ladestufen[0];
 
     private AvailabilityData availabilityData = new (); 
     private ConsumptionData consumptionData = new ();
@@ -134,7 +192,7 @@
             @foreach (var anteil in anteile.Where(a => a.Prozent > 0))
             {
                 <div class="AvailabilityLevel" title="@anteil.Name"
-                     style="width: @(anteil.Prozent)%; background-color: @anteil.Farbe"></div>
+                     style="width: @Breite(anteil.Prozent); background-color: @anteil.Farbe"></div>
             }
         </div>
     </text>;
@@ -196,6 +254,22 @@
     /// bars stop being readable as a pair.
     /// </summary>
     private IReadOnlyList<Anteil> AlleAnteile => [.. Quellen, .. Verbraeuche];
+
+    /// <summary>
+    /// Width of one segment, as CSS needs it: a dot as the decimal separator.
+    /// </summary>
+    /// <remarks>
+    /// The application runs under de-DE (Program.cs sets it), so a decimal renders as "11,28".
+    /// "width: 11,28%" is not a valid CSS length, the browser drops the whole declaration, and
+    /// the segment ends up 0 px wide - the bar is simply empty. It never showed while the share
+    /// was an integer; it appeared the moment the integer division in
+    /// ChargingSituationManager.CalculatePowerPercent was fixed. CarStatusDataVisualizer does
+    /// the same thing for the battery height, for the same reason.
+    ///
+    /// Two decimals are enough: on a 350 px bar that is a twentieth of a pixel.
+    /// </remarks>
+    private static string Breite(decimal prozent) =>
+        prozent.ToString("0.##", CultureInfo.InvariantCulture) + "%";
 
     private static int Positiv(int watt) => Math.Max(0, watt);
 
@@ -399,41 +473,16 @@
         return value.ToString("#,##0 W");
     }
 
-    private async void ChargingOff(MouseEventArgs e)
+    /// <summary>
+    /// One click, one level, one publication. This used to be six identical methods, each
+    /// <c>async void</c> and each dropping the task of CommunicateSettings on the floor
+    /// (CS4014) - a failed publication could not be noticed anywhere.
+    /// </summary>
+    private async Task StufeSetzen(int stufe)
     {
-        chargingSettings.ChargingLevel = 0;
+        chargingSettings.ChargingLevel = stufe;
         await CommunicateSettings();
-        InvokeAsync(StateHasChanged);
-    }
-    private async void ChargingLevel1(MouseEventArgs e)
-    {
-        chargingSettings.ChargingLevel = 1;
-        await CommunicateSettings();
-        InvokeAsync(StateHasChanged);
-    }
-    private async void ChargingLevel2(MouseEventArgs e)
-    {
-        chargingSettings.ChargingLevel = 2;
-        await CommunicateSettings();
-        InvokeAsync(StateHasChanged);
-    }
-    private async void ChargingLevel3(MouseEventArgs e)
-    {
-        chargingSettings.ChargingLevel = 3;
-        await CommunicateSettings();
-        InvokeAsync(StateHasChanged);
-    }
-    private async void ChargingLevel4(MouseEventArgs e)
-    {
-        chargingSettings.ChargingLevel = 4;
-        await CommunicateSettings();
-        InvokeAsync(StateHasChanged);
-    }
-    private async void ChargingLevel5(MouseEventArgs e)
-    {
-        chargingSettings.ChargingLevel = 5;
-        await CommunicateSettings();
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task CommunicateSettings()

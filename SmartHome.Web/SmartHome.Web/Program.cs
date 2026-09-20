@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using SmartHome.Web;
 using SmartHome.Web.Components;
 using SmartHome.Web.Services;
-using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +22,6 @@ var configuration = new ConfigurationBuilder()
     .Build();
 
 // Get configuration values with environment variable override support
-string? syncfusionKey = configuration["SMARTHOME__SYNCFUSION_LICENSE_KEY"] ?? configuration["SMARTHOME:SYNCFUSION_LICENSE_KEY"];
 string? mqttBroker = configuration["SMARTHOME__MQTT_BROKER"] ?? configuration["SMARTHOME:MQTT_BROKER"];
 string? influxUrl = configuration["SMARTHOME__INFLUXDB_URL"] ?? configuration["SMARTHOME:INFLUXDB_URL"];
 string? influxOrg = configuration["SMARTHOME__INFLUXDB_ORG"] ?? configuration["SMARTHOME:INFLUXDB_ORG"];
@@ -49,27 +47,9 @@ logger.LogInformation($"Starting SmartHome.Web in {environmentName} environment"
 logger.LogInformation($"Using MQTT broker at {mqttBroker}");
 logger.LogInformation($"Using InfluxDB at {influxUrl}");
 
-try
-{
-    if (!string.IsNullOrEmpty(syncfusionKey))
-    {
-        Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(syncfusionKey);
-        logger.LogInformation("Syncfusion license key registered successfully");
-    }
-    else
-    {
-        logger.LogWarning("Syncfusion license key not configured");
-    }
-}
-catch (Exception ex)
-{
-    logger.LogError(ex, "Error setting Syncfusion license key");
-}
-
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddLocalization();
-builder.Services.AddSyncfusionBlazor();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<MqttService>();
