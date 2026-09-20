@@ -200,7 +200,7 @@ Punkte gleichzeitig bearbeitet, braucht zusätzlich diese Tabelle:
 | `ChargingController` | 8, 12 |
 | `KebaConnector` | 7, 16 |
 | `SmartHome.DataHub` | 8, 13a, 17 |
-| `SmartHome.Web` | 9, 10, 11, 13b, 21 |
+| `SmartHome.Web` | 9, 10, 11, 13b, 21, 23 — und 3 (`Devices.razor`) |
 | alle fünf Dienste + `Devices.razor` | 3 |
 | `.github/workflows/` | 0, 4 — disjunkte Dateien: 0 ändert die Service-Workflows, 4 löscht die beiden App-Workflows |
 
@@ -1017,6 +1017,79 @@ den Golf von Guinea gesetzt hätte.
 **Offener Faden außerhalb dieses Repos:** `docs/influxdb-reference.md` im Grafana-Repo kennt
 `distance_values` und `position_values` weiterhin nicht. Wer dort nachschlägt, findet die
 beiden neuen Tabellen nicht — nachzutragen im Repo `forgejo.intern/thomas/Grafana`.
+
+---
+
+### 23. Web-UI auf dem Smartphone prüfen und geradeziehen
+
+**Ziel.** Die Oberfläche wird überwiegend am Telefon benutzt, geprüft wurde sie dort nie
+systematisch. **Hochformat und Querformat**, beide.
+
+**Aufgekommen am 2026-09-20.** Punkt 21 hat den oberen Teil der Ladeseite umgebaut, und
+die Session konnte das Ergebnis **nicht optisch prüfen** — die Screenshots über die
+Chrome-Anbindung liefen dreimal in Renderer-Timeouts. Geprüft war nur der Build, der
+generierte Razor-Code und die CSS-Regeln. Damit steht eine frisch umgebaute Seite im
+Betrieb, die noch niemand auf einem Telefon gesehen hat.
+
+#### Was der Bestand hergibt, nachgesehen am 2026-09-20
+
+Das Fundament stimmt: `App.razor` trägt
+`<meta name="viewport" content="width=device-width, initial-scale=1.0">`.
+
+Darüber wird es uneinheitlich. Vier Breakpoints, keine zwei gleich:
+
+| Datei | Breakpoint |
+|---|---|
+| `MainLayout.razor.css` | `max-width: 1640.98px` / `min-width: 1641px` |
+| `NavMenu.razor.css` | `min-width: 1641px` |
+| `ChargingOverview.razor.css` | `max-width: 700px`, `max-width: 1000px` |
+| `Devices.razor.css` | `max-width: 640px` |
+
+Der Umschaltpunkt des Layouts liegt bei **1641 px**. Alles darunter — Telefon im
+Hochformat, Telefon im Querformat, Tablet, halber Bildschirm am Laptop — bekommt dieselbe
+Darstellung. Das ist nicht falsch, aber es heißt: Es gibt **kein eigenes Telefon-Layout**,
+nur ein Nicht-Breitbild-Layout.
+
+**`Climate.razor` und `Heating.razor` haben überhaupt kein eigenes CSS** — keine
+`.razor.css`, also auch keine einzige Medienabfrage. Sie sind auf dem Telefon vollständig
+ungeprüft.
+
+#### Ein Befund, der keine Gestaltungsfrage ist
+
+**Die fünf Ladestufen erklären sich ausschließlich über `SfTooltip`.** Was Stufe 3
+bedeutet („lädt, wenn PV-Überschuss plus Batteriekapazität die Mindestladeleistung
+übersteigt und die Batterie zu mehr als 50 % geladen ist"), steht nirgends sonst.
+Ein Tooltip hängt am Hover — **auf einem Touchgerät ist er nicht erreichbar.**
+
+Das heißt: Am Telefon ist die zentrale Bedienung der Ladesteuerung unbeschriftet. Wer die
+Stufen nicht auswendig kennt, rät. Das ist der einzige Punkt hier, der nicht Optik ist,
+sondern Funktion — und er gehört zuerst behoben.
+
+**Umfang**
+- [ ] Alle sechs Seiten am Telefon durchgehen, **hoch und quer**: `ChargingOverview`,
+      `Devices`, `Climate`, `Heating`, `LED`, `Error`
+- [ ] Die Ladestufen am Touchgerät erklärbar machen — der Tooltip allein genügt nicht
+- [ ] Querformat gesondert: dort ist die Höhe knapp, nicht die Breite. Alles, was auf
+      vertikalen Platz baut, ist hier zu prüfen
+- [ ] Eine gemeinsame Breakpoint-Skala statt 640 / 700 / 1000 / 1641 — an einer Stelle
+      festgelegt, wie es Punkt 21 mit den Farben gemacht hat
+- [ ] `Climate` und `Heating` bekommen, was sie brauchen — sie haben heute nichts
+- [ ] Syncfusion-Komponenten am schmalen Rand prüfen (`SfGrid`, `SfLinearGauge`,
+      `SfCheckBox`): Sie sind für den Bildschirm gebaut, nicht für die Hand
+- [ ] Kein horizontales Scrollen auf irgendeiner Seite
+
+**Nicht enthalten.** Das Sitzungs-Grid auf der Ladeseite — es verschwindet mit Punkt 13b,
+dort Aufwand hineinzustecken wäre verschwendet.
+
+**Abhängig von** 21 (erledigt). Berührt sich mit **3**, der `Devices.razor` um
+Dienst-Karten erweitert, und mit **13b**. Läuft nicht parallel zu einem Punkt, der
+`SmartHome.Web` anfasst.
+
+**Wie prüfen.** Ein echtes Telefon schlägt jeden Emulator, und Thomas hat eins. Die
+Chrome-Anbindung ist für diesen Punkt unzuverlässig — siehe oben. Realistisch ist eine
+Mischung: die Session baut und begründet, Thomas schaut auf dem Gerät nach und meldet
+zurück. **Der Bericht der Session muss deshalb sagen, worauf zu achten ist**, nicht nur,
+was geändert wurde.
 
 ---
 
