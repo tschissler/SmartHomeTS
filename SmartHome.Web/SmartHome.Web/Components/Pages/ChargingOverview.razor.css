@@ -6,24 +6,38 @@
     white-space: nowrap;
 }
 
-.BatteryComponent {
-    width: auto;
-    height: 50px;
+/* The upper half of the page is one card, cut like the wallbox tiles below it: same border,
+   same radius, same shadow, same padding. Backlog item 21 — both halves describe the same
+   system, so they should not look like two applications. */
+.uebersichtBox {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid #D6D6D6;
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
     margin-left: 40px;
     margin-right: 40px;
-    margin-bottom: 20px;
+    margin-top: 20px;
 }
 
-.BatteryLabel {
-    text-align: center;
-    font-size: 14px;
-    height: 50%;
+/* Same typography as the name of a wallbox tile */
+.flussTitel {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 8px;
+}
+
+.flussTitel:first-child {
+    margin-top: 0;
 }
 
 .BatteryContainer {
     border-radius: 10px;
     width: 100%;
-    height: 50%;
+    height: 20px;
     background-color: #D6D6D6;
 }
 
@@ -33,13 +47,14 @@
     background-color: #4e8752;
 }
 
+/* The segments are set apart rather than butted together: the house and the grid feed-in are
+   both warm colours and stand next to each other whenever the battery is full, and the gap is
+   what keeps that boundary readable. */
 .AvailabilityComponent {
     display: flex;
-    width: auto;
+    gap: 2px;
+    width: 100%;
     height: 20px;
-    margin-left: 40px;
-    margin-right: 40px;
-    margin-top: 15px;
 }
 
 .AvailabilityLevel {
@@ -47,12 +62,13 @@
     height: 100%;
 }
 
+/* As many columns as fit: the two bars have three and five entries, and a fixed six left a
+   hole in the row. */
 .LegendContainer {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-    margin-left: 40px;
-    margin-right: 40px;
-    margin-top: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-column-gap: 12px;
+    grid-row-gap: 4px;
 }
 
 .LegendGroup {
@@ -63,10 +79,7 @@
     margin-right: 10px;
     width: 20px;
     height: 20px;
-}
-
-.LegendText {
-    margin-right: 40px;
+    flex: none;
 }
 
 .stepsGrid {

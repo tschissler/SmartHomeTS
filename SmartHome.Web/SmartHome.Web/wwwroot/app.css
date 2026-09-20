@@ -1,3 +1,25 @@
+/* Colours of the charging flows. Defined here once because they appear in a legend and in
+   two bars, and copies spread over the markup are how the two halves of the charging page
+   drifted apart in the first place - backlog item 21.
+   The five flow colours are the values the Grafana dashboards use for the same quantities
+   (sankey/gen_sankey.py and dashboards/laden-quellenmix.json in the Grafana repository):
+   those are the numbers one reads in both places, so they are worth recognising in both.
+   Haus and the two wallboxes are this interface's own colours and are deliberately not taken
+   from Grafana - matching the two palettes beyond the flows is not a goal. */
+:root {
+    --laden-farbe-pv: #F4D03F;
+    --laden-farbe-batterie: #2ECC71;
+    --laden-farbe-netzbezug: #E74C3C;
+    --laden-farbe-batterie-laden: #27AE60;
+    --laden-farbe-netzeinspeisung: #F39C12;
+    --laden-farbe-haus: goldenrod;
+    --laden-farbe-wallbox-garage: #614680;
+    --laden-farbe-wallbox-stellplatz: #be8ce5;
+    /* A box that is not one of the two named ones: grey rather than a colour of its own, so
+       it cannot be mistaken for one of them. */
+    --laden-farbe-wallbox-sonstige: #9e9e9e;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

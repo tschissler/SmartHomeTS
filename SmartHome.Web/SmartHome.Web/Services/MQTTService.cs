@@ -205,12 +205,15 @@ namespace SmartHome.Web.Services
             {
                 case LadeTopics.Situation:
                     {
-                        ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload);
+                        // A payload that does not parse deserializes to null, and the charging
+                        // page dereferences both of these without checking. Keeping the state
+                        // we have is the same rule the wallbox and vehicle handlers follow.
+                        ChargingSituation = JsonSerializer.Deserialize<ChargingSituation>(payload) ?? ChargingSituation;
                         break;
                     }
                 case LadeTopics.Einstellungen:
                     {
-                        ChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
+                        ChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload) ?? ChargingSettings;
                         break;
                     }
                 case "commands/illumination/LEDStripe/setColor":

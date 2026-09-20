@@ -22,56 +22,27 @@
 @* @inject IChargingSessionService ChargingSessionService *@
 
 
-<h3>Lade-Einstellungen</h3>
+<h3>Laden</h3>
 
 <h4>Quellen und Verbräuche</h4>
 
-<div class="BatteryComponent">
-    <div class="BatteryLabel">Batterie Ladestand: @_chargingSituation.BatteryLevel%</div>
+@*
+    One card, shaped like the wallbox tiles below it: the two halves of this page describe the
+    same system and should not look like two applications. The colours are the ones every
+    Grafana dashboard uses for these flows (palette in app.css), and the charging power of a
+    box is the one the box itself reports — see the remarks in the code below.
+*@
+<div class="uebersichtBox">
+    <div class="flussTitel">Batterie · @_chargingSituation.BatteryLevel %</div>
     <div class="BatteryContainer">
         <div class="BatteryLevel" style="width: @_chargingSituation.BatteryLevel%"></div>
     </div>
-</div>
 
-<div class="LegendContainer">
-    <div class="LegendGroup">
-        <div class="LegendColorIndicator" style="background-color: #0dcaf0"></div>
-        <div class="LegendText">PV: <span class="nowrap">@_chargingSituation.PowerFromPV.ToString("#,##0 W")</span></div>
-    </div>
-    <div class="LegendGroup">
-        <div class="LegendColorIndicator" style="background-color: greenyellow"></div>
-        <div class="LegendText">Batterie: <span class="nowrap">@FormatPower(_chargingSituation.PowerFromBattery)</span></div>
-    </div>
-    <div class="LegendGroup">
-        <div class="LegendColorIndicator" style="background-color: #f72585"></div>
-        <div class="LegendText">Netz: <span class="nowrap">@FormatPower(_chargingSituation.PowerFromGrid)</span></div>
-    </div>
-    <div class="LegendGroup">
-        <div class="LegendColorIndicator" style="background-color: goldenrod"></div>
-        <div class="LegendText">Haus: <span class="nowrap">@FormatPower(_chargingSituation.HouseConsumptionPower-_chargingSituation.OutsideCurrentChargingPower-_chargingSituation.InsideCurrentChargingPower)</span></div>
-    </div>
-    <div class="LegendGroup">
-        <div class="LegendColorIndicator" style="background-color: #614680"></div>
-        <div class="LegendText">Garage: <span class="nowrap">@FormatPower(_chargingSituation.InsideCurrentChargingPower)</span></div>
-    </div>
-    <div class="LegendGroup">
-        <div class="LegendColorIndicator" style="background-color: #be8ce5"></div>
-        <div class="LegendText">Außen: <span class="nowrap">@FormatPower(_chargingSituation.OutsideCurrentChargingPower)</span></div>
-    </div>
-</div>
+    <div class="flussTitel">Quellen</div>
+    @Fluss(Quellen)
 
-<div class="AvailabilityComponent">
-    <div class="AvailabilityLevel" style="width: @(availabilityData.PVPowerPercent)%; background-color: #0dcaf0"></div>
-    <div class="AvailabilityLevel" style="width: @(availabilityData.BatteryPowerPercent)%; background-color: greenyellow"></div>
-    <div class="AvailabilityLevel" style="width: @(availabilityData.GridPowerPercent)%; background-color: #f72585"></div>
-</div>
-
-<div class="AvailabilityComponent">
-    <div class="AvailabilityLevel" style="width: @(consumptionData.HouseConsumption)%; background-color: goldenrod"></div>
-    <div class="AvailabilityLevel" style="width: @(consumptionData.BatteryCharging)%; background-color: greenyellow"></div>
-    <div class="AvailabilityLevel" style="width: @(consumptionData.GridFeed)%; background-color: #f72585"></div>
-    <div class="AvailabilityLevel" style="width: @(consumptionData.GarageCharging)%; background-color: #614680"></div>
-    <div class="AvailabilityLevel" style="width: @(consumptionData.OutsideCharging)%; background-color: #be8ce5"></div>
+    <div class="flussTitel">Verbräuche</div>
+    @Fluss(Verbraeuche)
 </div>
 
 <h4>Lade-Einstellungen</h4>
@@ -203,6 +174,119 @@
     private List<ChargingSession> ChargingSessions = new();
     private string SelectedMonth = DateTime.Now.ToString("MMMM yyyy");
     private List<string> Months = []; 
+
+    /// <summary>
+    /// One coloured share of a bar, together with its entry in the legend underneath. Bar and
+    /// legend are rendered from the same list, so they cannot name different things or paint
+    /// the same thing differently — which is how the legend up here and the tiles below
+    /// drifted apart in the first place (backlog item 21).
+    /// </summary>
+    private record Anteil(string Name, int Watt, decimal Prozent, string Farbe);
+
+    /// <summary>
+    /// A bar and the legend belonging to it. Segments without width are left out of the bar —
+    /// with a gap between the segments an invisible one would still take up space — while the
+    /// legend keeps every entry, because "Netzbezug: 0 W" is a statement worth reading.
+    /// </summary>
+    private RenderFragment Fluss(IReadOnlyList<Anteil> anteile) => @<text>
+        <div class="AvailabilityComponent">
+            @foreach (var anteil in anteile.Where(a => a.Prozent > 0))
+            {
+                <div class="AvailabilityLevel" title="@anteil.Name"
+                     style="width: @(anteil.Prozent)%; background-color: @anteil.Farbe"></div>
+            }
+        </div>
+        <div class="LegendContainer">
+            @foreach (var anteil in anteile)
+            {
+                <div class="LegendGroup">
+                    <div class="LegendColorIndicator" style="background-color: @anteil.Farbe"></div>
+                    <div>@anteil.Name: <span class="nowrap">@FormatPower(anteil.Watt)</span></div>
+                </div>
+            }
+        </div>
+    </text>;
+
+    /// <summary>Where the power comes from, in the order of the bar.</summary>
+    private IReadOnlyList<Anteil> Quellen =>
+    [
+        new("PV", _chargingSituation.PowerFromPV, availabilityData.PVPowerPercent,
+            "var(--laden-farbe-pv)"),
+        // Only the discharging half. The other direction is a consumption, appears below as
+        // "Batterie laden" and has a colour of its own; a single signed entry would have to
+        // stand in both bars for them to add up, and one of the two would show a minus.
+        new("Batterie", Positiv(_chargingSituation.PowerFromBattery), availabilityData.BatteryPowerPercent,
+            "var(--laden-farbe-batterie)"),
+        new("Netzbezug", Positiv(_chargingSituation.PowerFromGrid), availabilityData.GridPowerPercent,
+            "var(--laden-farbe-netzbezug)"),
+    ];
+
+    /// <summary>
+    /// Where the same power goes, in the order of the bar. Both bars split up one and the same
+    /// total, which is why the two directions of battery and grid appear once on each side.
+    /// </summary>
+    private IReadOnlyList<Anteil> Verbraeuche =>
+    [
+        new("Haus", HausOhneWallboxen, consumptionData.HouseConsumption, "var(--laden-farbe-haus)"),
+        new("Batterie laden", Positiv(-_chargingSituation.PowerFromBattery), consumptionData.BatteryCharging,
+            "var(--laden-farbe-batterie-laden)"),
+        new("Netzeinspeisung", Positiv(-_chargingSituation.PowerFromGrid), consumptionData.GridFeed,
+            "var(--laden-farbe-netzeinspeisung)"),
+        // The names come from LadeTopics, like everywhere else on this page: the box on the
+        // parking space is called Stellplatz, and a second spelling for it is how "Außen"
+        // survived up here after points 7 and 8 had renamed it everywhere else.
+        .. LadeTopics.Wallboxen.Select(wallbox => new Anteil(
+            wallbox, Ladeleistung(wallbox), WallboxAnteil(wallbox), WallboxFarbe(wallbox))),
+    ];
+
+    private static int Positiv(int watt) => Math.Max(0, watt);
+
+    /// <summary>
+    /// Charging power of one box, as the box itself reports it — the same number the tile
+    /// below shows, so the two halves of the page can no longer name different powers for the
+    /// same box. The ChargingSituation carries the value as well, but only as of the last
+    /// control cycle (5 s), and that is the lag the tiles made visible.
+    /// </summary>
+    private int Ladeleistung(string wallbox) =>
+        MqttService.Wallboxen.GetValueOrDefault(wallbox)?.Ladeleistung ?? 0;
+
+    /// <summary>
+    /// What the house draws apart from the wallboxes. All three operands deliberately come
+    /// from the same ChargingSituation snapshot: HouseConsumptionPower contains the boxes, so
+    /// subtracting the fresher readings of <see cref="Ladeleistung"/> from a total that is up
+    /// to one control cycle older would count a load change twice and can make the difference
+    /// negative. The number is therefore exactly as old as the PV, battery and grid figures
+    /// next to it — which is what keeps the bar a picture of one single moment.
+    /// </summary>
+    private int HausOhneWallboxen =>
+        _chargingSituation.HouseConsumptionPower
+        - _chargingSituation.InsideCurrentChargingPower
+        - _chargingSituation.OutsideCurrentChargingPower;
+
+    /// <summary>
+    /// Share of the consumption bar that belongs to one box. Taken from the ChargingSituation
+    /// like every other segment of that bar, for the reason given on
+    /// <see cref="HausOhneWallboxen"/>: the bar divides up one total and has to add up, while
+    /// the number read out in the legend comes from the box itself.
+    /// </summary>
+    /// <remarks>
+    /// ConsumptionData still has one property per box — a third box would need a line here and
+    /// one there, which is a question for the contract, not for this page.
+    /// </remarks>
+    private decimal WallboxAnteil(string wallbox) => wallbox switch
+    {
+        LadeTopics.Garage => consumptionData.GarageCharging,
+        LadeTopics.Stellplatz => consumptionData.OutsideCharging,
+        _ => 0,
+    };
+
+    /// <summary>Colour of a box, from the charging palette in app.css.</summary>
+    private static string WallboxFarbe(string wallbox) => wallbox switch
+    {
+        LadeTopics.Garage => "var(--laden-farbe-wallbox-garage)",
+        LadeTopics.Stellplatz => "var(--laden-farbe-wallbox-stellplatz)",
+        _ => "var(--laden-farbe-wallbox-sonstige)",
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -387,7 +471,7 @@
             _chargingSituation.PowerFromBattery,
             _chargingSituation.PowerFromGrid);
         consumptionData = ChargingSituationManager.CalculateConsumptionData(
-            _chargingSituation.HouseConsumptionPower - _chargingSituation.InsideCurrentChargingPower - _chargingSituation.OutsideCurrentChargingPower,
+            HausOhneWallboxen,
             _chargingSituation.PowerFromBattery, 
             _chargingSituation.PowerFromGrid,
             _chargingSituation.InsideCurrentChargingPower,
