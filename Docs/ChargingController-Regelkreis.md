@@ -84,10 +84,10 @@ Daraus folgt eine Obergrenze von **maximal 6 Schaltspielen pro Stunde** je Wallb
   dreiphasige 6-A-Ladung misst real nur rund 4000 W. Die Mindestladedauer wird beim Übernehmen
   nicht neu gestartet, damit ein Neustart keine Ladung künstlich verlängert.
 
-  Jeder Pod-Wechsel ist damit für den Schütz folgenlos. Relevant ist das, weil ArgoCD
-  (`selfHeal: true`, Manifeste im separaten Repo `SmartHomeDeployments`) und der
-  `kubectl set image`-Schritt der GitHub-Action sich beim Deploy kurz gegenseitig überschreiben
-  können — dabei entstehen zwei bis drei Pod-Wechsel hintereinander.
+  Jeder Pod-Wechsel ist damit für den Schütz folgenlos — und Pod-Wechsel gibt es bei jedem
+  Deploy: Die GitHub-Action baut nur das Image, den Rollout macht der ArgoCD Image Updater
+  (schreibt den Tag nach `SmartHomeDeployments`, ArgoCD synct). Die Deploy-Strategie ist dort
+  in `docs/update-strategie.md` beschrieben.
 
 ## Diagnose
 
