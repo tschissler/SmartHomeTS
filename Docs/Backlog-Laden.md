@@ -496,9 +496,37 @@ Umfang.
       `daten/Laden/M3/Regelung/Situation` und `befehle/Laden/M3/<Box>/Ladestrom`
 - [ ] `konfiguration/Laden/M3/Regelung/Einstellungen` statt `config/charging/settings`
 - [ ] DataHub: `location` aus dem Topic-Pfad statt als Literal `"M3"` (`Program.cs:208`)
+- [ ] **SmartHome.Web gehört in denselben Schnitt** *(entschieden am 2026-09-20)*: sechs
+      Topic-Literale in `ChargingOverview.razor` und `MQTTService.cs`, keine Logikänderung.
+      Ohne Web hätte der Schnitt die Ladesteuerung **dauerhaft** abgeschaltet —
+      `config/charging/settings` wird ausschließlich von `ChargingOverview.razor:345`
+      publiziert, der Controller liest es nur. Ohne Publisher bliebe
+      `currentChargingSettings` auf dem Default (`ChargingLevel = 0`, beide Freigaben
+      `false`), und beide Boxen bekämen 0 mA bis Punkt 9. Ebenso liest nur
+      `MQTTService.cs:172` die `…/Situation`. Ein zusätzlicher Rollout entsteht nicht: Web
+      hängt an `SharedContracts` und wird seit Punkt 0 ohnehin mitgebaut
+- [ ] **Der Controller publiziert für eine Box kein Kommando, solange er für sie noch nie
+      einen Status gesehen hat.** Das ist kein Parallelbetrieb, sondern eine Eigenschaft
+      des Zielzustands — die 30-Sekunden-Grace existierte nur, weil der alte Status nicht
+      retained war. Ohne das kostet die ungünstige Rollout-Reihenfolge eine Ladepause von
+      35–40 s plus einen zusätzlichen Schützzyklus je Box
 - [ ] Harter Schnitt, gemeinsam mit 7 ausrollen — kein Parallelbetrieb
 - [ ] Telegraf-Altlast prüfen und entfernen: `Kubernetes/microk8s/InfluxDB/` schreibt noch
       gegen InfluxDB 2 und ist im k3s-Cluster nicht mehr deployt
+
+**Das Rollout-Fenster, gemessen am 2026-09-20.** Vom Merge bis zum neuen Pod vergehen
+4:46 bis 5:53; die Dienste einer Welle spreizen sich um rund 1,5 Minuten. Da 7/8
+`SharedContracts` anfasst, starten alle Workflows mit demselben Push — das Fenster beträgt
+also **etwa eine Minute**, die Reihenfolge ist nicht vorhersagbar. `StaleReleaseAfter` (10
+Minuten) greift darin **nicht**; es ist die Rückfallebene für einen gescheiterten oder
+hängenden Rollout, nicht für diesen Fall.
+
+**Beim Rollout von Hand zu erledigen.** Die Ladeeinstellungen existieren nur als retained
+Nachricht im Broker — es gibt keine persistente Quelle, `CommunicateSettings()` läuft nur
+bei einem Klick. Der Wert muss einmalig von `config/charging/settings` auf
+`konfiguration/Laden/M3/Regelung/Einstellungen` umkopiert werden (`mosquitto_sub -C 1`,
+dann `mosquitto_pub -r`), sonst startet die Regelung ohne Einstellungen. Alternative: die
+Ladestufe nach dem Rollout einmal in der Oberfläche neu klicken.
 
 **Abhängig von** 4, 7.
 
@@ -726,6 +754,9 @@ keinen Ort für die Position.
   real ist: `mosquitto_sub -v -t 'cangateway/M1/WEZ/Status/FA_Status'` mit einem frischen
   Client — kommt sofort ein Wert, ist das Topic retained. Der CAN-Gateway liegt nicht in
   diesem Repo.
+- **`Kubernetes/microk8s/InfluxDB/influxdb3-*.yaml` beschreiben ein Deployment**, während
+  im Cluster ein StatefulSet (`influxdb3-enterprise`) läuft. Veraltet, aber außerhalb von
+  Punkt 8, der nur die Telegraf- und InfluxDB-2-Teile entfernt.
 - **Vier MQTTnet-Versionen im Repo.** `MQTTClient` nutzt 5.0.1.1416, andere Projekte
   4.3.1.873, 4.3.3.952 und 4.3.6.1152. Unterschiedliche Bibliotheksversionen können sich
   bei Randverhalten wie dem Retain-Flag unterschiedlich verhalten.
