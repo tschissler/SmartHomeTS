@@ -125,6 +125,20 @@ Messung zu machen, und er braucht kein Bild.
 Ein Behälter fester Breite ist dabei die verlässlichere Messgröße als die Fenstergröße —
 `resize_window` greift nicht immer.
 
+**Für ein Bild ohne Fenster: das Chromium, das schon da ist.** Playwright hat eines im
+Cache, und es rendert unabhängig von Thomas' Browser — kein `visibilityState`, kein
+Timeout, kein Systempaket nötig. Finden statt Pfad raten, die Versionsnummer wandert:
+
+```bash
+CHR=$(find ~/.cache/ms-playwright -maxdepth 3 -name chrome -type f | head -1)
+"$CHR" --headless --disable-gpu --no-sandbox --screenshot=bild.png --window-size=400,800 "file://$PWD/seite.html"
+"$CHR" --headless --disable-gpu --no-sandbox --print-to-pdf=aus.pdf "file://$PWD/seite.html"
+```
+
+Das ist der Weg für **lokale** Prüfstände und für alles, was als PDF gebraucht wird
+(Firefox kann kein PDF). Für eine angemeldete Seite wie Grafana hilft es nicht — headless
+hat Thomas' Sitzung nicht; dort bleibt es beim Messen im Tab.
+
 ## Der Abschlussbericht
 
 Geht an die Orchestrierungs-Session. **Frag ihren Namen mit `ListAgents` ab** — er ist
