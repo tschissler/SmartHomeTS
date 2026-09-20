@@ -142,9 +142,14 @@ Gemessen am produktiven Broker mit einem frischen Client und in InfluxDB:
   `Stellplatz` steht seitdem konstant bei 16827,895. Die Sankey-Kennzahl mit
   IN-Filter liefert **3,731 kWh**; nur auf den neuen Namen gefiltert wären es
   **0,000 kWh**. Genau die 3,73 kWh wären verloren gewesen.
-- Die vier alten retained Topics stehen noch, wie erwartet. `commands/charging/KebaOutside`
-  trägt weiterhin `{"ChargingCurrent":6000}` — das ist der Rollback-Fall in Reinform:
-  Ein Rückfall auf die alten Images würde sofort 6 A ziehen. Aufräumen bleibt offen.
+- **Die vier alten retained Topics sind geleert** (2026-09-20, auf Freigabe von Thomas):
+  `commands/charging/KebaGarage`, `commands/charging/KebaOutside`,
+  `data/charging/situation`, `config/charging/settings`. Vorher gesichert;
+  `commands/charging/KebaOutside` trug bis zuletzt `{"ChargingCurrent":6000}` — ein
+  Rückfall auf die alten Images hätte die Box sofort auf 6 A gezogen. Gegenprobe: 20 s
+  beobachtet, keines der Topics kehrt zurück, es publiziert dort also niemand mehr.
+  **Damit ist der Rollback auf die Stände vor `04cc432` keine Rückfallebene mehr** — die
+  alten Dienste fänden ihre Konfiguration nicht vor. Vorwärts reparieren, nicht zurück.
 - Der Burst von drei `Einstellungen`-Publikationen innerhalb von 124 ms war **kein
   Fehler**, sondern Thomas beim Klicken. Gegenprobe: 30 s ohne Bedienung, keine
   einzige weitere Publikation.
