@@ -1063,6 +1063,61 @@ keinen Ort für die Position.
   Leistungswert für den Zyklus liest. Ob es das wert ist, ist offen: Der Fehler ist klein,
   konstant je Sitzung und gut verstanden — und ein Eingriff in den Regelzyklus wiegt
   schwerer als ein dokumentierter Versatz.
+- **Namensschema für die Grafana-Dashboards festlegen.** *Aufgenommen am 2026-09-20, als
+  das Deployment über eine Forgejo Action entschieden war.* Solange Dashboards von Hand
+  im UI entstanden, war der Wildwuchs folgenlos. Sobald sie aus dem Repo kommen, wird der
+  Name zur Schnittstelle.
+
+  **Der wichtigste Satz zuerst: Die Identität eines Dashboards ist die `uid`, nicht der
+  Dateiname.** Import und Export ordnen darüber zu, der Dateiname wird aus dem Titel
+  erzeugt und ist Folge, nicht Ursache. Ein Schema, das nur Dateinamen regelt, verfehlt
+  das Problem. **Und eine `uid` umzubenennen ist keine Umbenennung, sondern ein Neuanlegen:**
+  Der Import legt ein zweites Dashboard an, das alte bleibt verwaist stehen, und jeder
+  Link `/d/<alte-uid>` zeigt weiter dorthin. Eine Migration ist also Handarbeit mit
+  Aufräumen — nicht ein Suchen-und-Ersetzen.
+
+  **Befund am Bestand (29 Dashboards, 2026-09-20):**
+  - **Zwei Welten bei den `uid`s.** Sprechend: `energy-overview`, `grundlast-m1`,
+    `laden-quellenmix`, `zisterne-level`. Zufällig: sechs volle UUIDs
+    (`1c0261b1-a2fd-…`), dazu `adsd98g`, `ad2pnr7`, `adbtrcf` und ein 39-Zeichen-Ungetüm
+    `KKRmiuzTb2oneWM9jbwRTONWHyTXMFiQKnjzZI5`. Die zufälligen sind die, die Grafana beim
+    Anlegen im UI vergibt.
+  - **Sprache gemischt, teils innerhalb desselben Dashboards.** „Energieübersicht" trägt
+    die `uid` `energy-overview` — Datei deutsch, Identität englisch. Daneben
+    `wallbox-charging-energy` ganz englisch und `zisterne-fuellstand` mit `uid`
+    `zisterne-level` wieder gemischt.
+  - **Umlaut-Transliteration** in den Dateinamen (`heizkoerperluefter`, `waermepumpe`,
+    `energieuebersicht`), weil der Name aus dem Titel erzeugt wird.
+  - **Arbeitskopien sind bereits im Repo gelandet:** `energiefluss-copy` (Titel
+    „Energiefluss Copy", `uid` `adsd98g`) und `temp-test` (Titel `Temp_Test`). Das ist
+    genau der Kopie-Weg, den Thomas künftig gehen will — er braucht also eine Regel,
+    **wie eine Kopie erkennbar ist und dass sie nicht exportiert wird**, sonst wächst das
+    Repo mit Wegwerf-Ständen zu.
+  - **Fremd-Dashboards liegen wie eigene daneben:** `node-exporter-full` (`rYdddlPWk`),
+    `kubernetes-views-pods` (`k8s_views_pods`), `logs-app`
+    (`sadlil-loki-apps-dashboard`). Die stammen von grafana.com und haben einen anderen
+    Lebenszyklus — sie werden dort aktualisiert, nicht hier gepflegt. Ohne Trennung
+    überschreibt ein Import eine Aktualisierung, oder niemand traut sich zu aktualisieren.
+  - **Sonderzeichen in Titeln:** Em-Dash in drei, En-Dash in einem, `&` in zweien,
+    Schrägstriche in dreien (`Kubernetes / Views / Pods`). Der Schrägstrich sieht aus wie
+    eine Ordnerhierarchie, ist aber keine. Das Em-Dash wird im URL-Slug zu `e28094`
+    hexkodiert.
+  - **Doppelte Themen** ohne erkennbare Abgrenzung: `longhorn-dashboard` gegen
+    `longhorn-monitoring`, zwei PV-Prognosen, zwei Grundlast-Dashboards.
+  - **`-dashboard`-Suffix willkürlich:** bei `klima-dashboard` und `k8s-dashboard`, nicht
+    bei `raumklima`, `heizkreise`, `thermostate`.
+
+  **Zu regeln sind vier Dinge, in dieser Reihenfolge der Wichtigkeit:**
+  1. `uid`-Konvention — sprechend, stabil, kurz. Sie ist die Identität und steht in jedem
+     Link.
+  2. Trennung eigener von fremden Dashboards, weil sie verschiedene Lebenszyklen haben.
+  3. Umgang mit Arbeitskopien, damit der Kopie-Weg das Repo nicht zumüllt.
+  4. Titelkonvention (Sprache, Sonderzeichen) — daraus folgt der Dateiname von selbst.
+
+  **Empfehlung:** Die Konvention gilt ab sofort für Neues; der Bestand wird nur dort
+  migriert, wo eine zufällige `uid` ohnehin stört. Ein Umbenennen aller 29 auf einen
+  Schlag kostet mehr, als es einbringt — siehe oben, warum eine `uid`-Änderung ein
+  Neuanlegen ist. Die beiden Arbeitskopien und `temp-test` können dagegen sofort weg.
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
