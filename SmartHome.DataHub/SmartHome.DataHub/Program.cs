@@ -4,6 +4,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Newtonsoft.Json.Linq;
 using SharedContracts;
 using SmartHome.DataHub;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 
@@ -35,6 +36,11 @@ GeoPosition? miniPosition = null;
 GeoPosition? vwPosition = null;
 string[] cars = new string[] { "BMW", "Mini", "VW" };
 Dictionary<string, decimal> previousValues = new();
+// The last payload seen per vehicle. A retained message is replayed on every subscribe, so
+// without this the same measurement would be enqueued again after each reconnect. It would not
+// create a second point — same series, same measurement time, one row — but it is work nobody
+// needs, and the intent belongs here rather than in the storage engine.
+ConcurrentDictionary<string, string> letzteFahrzeugPayloads = new();
 
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 var configuration = new ConfigurationBuilder()
@@ -148,6 +154,7 @@ using (var scope = app.Services.CreateScope())
     var mqttClient = scope.ServiceProvider.GetRequiredService<MQTTClient.MQTTClient>();
     await mqttClient.SubscribeToTopic(LadeTopics.StatusAlle);
     await mqttClient.SubscribeToTopic(LadeTopics.EnergieaufteilungAlle);
+    await mqttClient.SubscribeToTopic(FahrzeugTopics.StatusAlle);
     await mqttClient.SubscribeToTopic("data/electricity/M1/#");
     await mqttClient.SubscribeToTopic("data/electricity/M3/#");
     await mqttClient.SubscribeToTopic("data/electricity/envoym1");
@@ -297,6 +304,56 @@ using (var scope = app.Services.CreateScope())
                             Value_Delta_KWh = delta,
                         },
                         DateTimeOffset.UtcNow);
+                }
+                return;
+            }
+
+            if (FahrzeugTopics.ZerlegeStatusTopic(topic) is string fahrzeug)
+            {
+                // Identical payload as last time: the broker replayed its retained message.
+                // Noted before it is processed, so that a payload this branch cannot use is
+                // complained about once per message rather than once per reconnect.
+                if (letzteFahrzeugPayloads.TryGetValue(fahrzeug, out var letzterPayload) && letzterPayload == payload)
+                    return;
+                letzteFahrzeugPayloads[fahrzeug] = payload;
+
+                CarStatusData? fahrzeugdaten;
+                try
+                {
+                    fahrzeugdaten = JsonSerializer.Deserialize<CarStatusData>(payload, jsonOptions);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError($"####Error deserializing vehicle data for topic {topic}: {ex.Message}");
+                    logger.LogError($"Payload: {payload}");
+                    fahrzeugdaten = null;
+                }
+
+                if (fahrzeugdaten != null)
+                {
+                    // No measurement time, nothing written. There is no third option: stamping
+                    // the payload with the arrival time would turn a weeks old value into a
+                    // fresh measurement on every restart of this service.
+                    if (Fahrzeugdaten.Messzeit(fahrzeugdaten, DateTimeOffset.UtcNow) is not DateTimeOffset messzeit)
+                    {
+                        logger.LogWarning(
+                            $"Fahrzeug {fahrzeug}: no usable measurement time "
+                          + $"(lastUpdate {fahrzeugdaten.LastUpdate?.ToString("o") ?? "—"}, "
+                          + $"Zeitpunkt {fahrzeugdaten.Zeitpunkt?.ToString("o") ?? "—"}) — nothing written.");
+                        return;
+                    }
+
+                    if (fahrzeugdaten.ChargingStatus is { Length: > 0 } ladestatus
+                        && Fahrzeugdaten.Ladestatuscode(ladestatus) is null)
+                    {
+                        logger.LogWarning(
+                            $"Fahrzeug {fahrzeug}: unknown charging state \"{ladestatus}\" — not written. "
+                          + "Add it to Fahrzeugdaten.Ladestatuscode if it is a real state.");
+                    }
+
+                    influx3Connector.WriteInfluxRecords(
+                        Fahrzeugdaten.NachInfluxRecords(fahrzeug, fahrzeugdaten),
+                        messzeit);
                 }
                 return;
             }
