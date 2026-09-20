@@ -138,8 +138,18 @@ void setColorFromJson(String jsonPayload) {
 }
 
 void setLEDColor(int r, int g, int b, int d, Panel panel) {
+  // Voller Fuellgrad heisst "alle an" und laeuft deshalb nicht ueber die Modulo-Formel.
+  // Ueber sie gerechnet blieb ausgerechnet LED 0 dunkel: Der Sonderfall setzte
+  // trigger2 = 999, und 0 % 999 == 0 macht die Bedingung (i % trigger2 != 0) falsch --
+  // 255 von 256 LEDs. Ein Wert ueber 100, wie ihn die Web-App frueher als Maximum
+  // schickte, war schlimmer statt besser: 101 ergibt trigger2 = 100 / -1 = -100, und
+  // weil das Vorzeichen in C++ dem Dividenden folgt, blieben die LEDs 0, 100 und 200
+  // dunkel -- 253 von 256.
+  const bool alleAn = (d >= 100);
   int trigger = (d == 0 ? 999 : 100 / d);
-  int trigger2 = (d == 100 ? 999 : 100 / (100 - d));
+  // Bei alleAn wird trigger2 nicht mehr gelesen; die 1 steht nur, damit an dieser
+  // Stelle nicht durch 0 geteilt wird.
+  int trigger2 = (alleAn ? 1 : 100 / (100 - d));
 
   // Alle LEDs eines Panels bekommen dieselbe Farbe, also werden Gamma und Weissabgleich
   // einmal je Nachricht gerechnet und nicht 256-mal. Deshalb braucht es auch keine
@@ -173,7 +183,7 @@ void setLEDColor(int r, int g, int b, int d, Panel panel) {
 
   // Set LED color
   for (int i = 0; i < NUM_LEDS; i++) {
-    bool condition = (d <= 50) ? (i % trigger == 0) : (i % trigger2 != 0);
+    bool condition = alleAn || ((d <= 50) ? (i % trigger == 0) : (i % trigger2 != 0));
     setLed(i, condition);
   }
 
