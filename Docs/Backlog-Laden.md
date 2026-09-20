@@ -35,7 +35,7 @@ Präfix setzt.
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
 | 13a Ladesitzungen | `laden-13a-ladesitzungen` | 2026-09-20 | Prompt geschrieben, Session noch nicht gestartet |
 | 21 Ladeseite oben | `laden-21-ladeseite-oben` | 2026-09-20 | Prompt geschrieben, Session noch nicht gestartet |
-| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **blockiert, nicht fertig** — Skripte und `docs/namenskonvention.md` liegen lokal fertig, aber nichts ist committet oder gepusht, und in Grafana ist nichts verändert. **Es fehlt der Service-Account-Token unter `~/.grafana-token`** (bewusst als Datei, damit er in keinem Transkript landet). Ohne ihn wäre der Push ein Blindflug: Der neue Export schreibt `folderUid` in jede Datei, nach dem Umbenennen auf `<uid>.json` sieht die Import-Action **alle 29 Dateien als geändert** — und eine Datei ohne `folderUid` heißt „Wurzel", womit die acht Kubernetes-Dashboards aus ihrem Ordner flögen. Die `folderUid`s gibt es nur aus Grafana |
+| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **arbeitet** — Token kam von Thomas, Blocker weg. Drei Commits durch und in Grafana angekommen: `6f889aa` (Dateiname ist die `uid`, `folderUid` in jeder Datei, 28 Renames — der kritische Push, vorher **gemessen statt angenommen**: 29 zu 29 Dashboards, null inhaltliche Abweichung, Trockenlauf 0 Ordnerwechsel; danach bestätigt: 27 geschrieben, 0 Ordnerwechsel, 2 provisionierte übersprungen), `2ff823b` (`docs/namenskonvention.md`), `63258f2` (erste Ordnerportion; die Action legte `Laden` und `Wasser` selbst an). Arbeitsverzeichnis sauber, Abgleich 29/0. Läuft weiter: restliche Ordner, Aufräumen, Titel, dann `docs/influxdb-reference.md` |
 | Grafana-Action | `grafana-action` | 2026-09-20 | **erledigt** — zwei Forgejo Workflows live. Ein Push auf `dashboards/` schreibt ~20 s später nach Grafana, nur die geänderten Dateien. Abgleich doppelt geprüft (lokal und aus dem Runner): 29 Dashboards, 0 Unterschiede. **Der Editor-Test wurde von Thomas abgelehnt**, siehe unten |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
@@ -1069,6 +1069,23 @@ keinen Ort für die Position.
   `Cluster Errors Overview` und `Backup Overview (Velero + Garage)` sind `provisioned`
   und im UI schreibgeschützt. Für Dashboards im UI-Betrieb bleibt es dabei: kein
   Provisioning.
+- **Grafana-Token steht weiter auf Admin — die Bedingung dafür ist inzwischen erfüllt.**
+  Thomas hatte das Service-Account-Token am 2026-09-20 „erst mal auf Admin hochgestuft …
+  bis der Import-Weg sauber steht". Er steht jetzt: Die Forgejo Action ist live, drei
+  Pushes sind durchgelaufen, der Abgleich meldet 29 Dashboards und 0 Unterschiede. Damit
+  ist die Rückstufung fällig.
+
+  **Offen ist nur, wie weit.** Die Session `grafana-konvention` hält in der README fest,
+  alles Gemessene spreche dafür, dass die Rolle **Editor** für den Import genügt — nennt
+  es aber ausdrücklich keinen Beweis, denn gelaufen ist der Import bislang ausschließlich
+  mit Admin. Der Prüfstein steht bereit: Dashboard `adbtrcf`, Testobjekt der Import-Action.
+
+  **Die Messung braucht einen zweiten Token mit Rolle Editor, den nur Thomas anlegen
+  kann.** Sie fasst weder das Repo noch die Dashboards an. Danach ist entweder Editor
+  belegt oder die Ausnahme begründet — beides besser als ein Admin-Token aus Bequemlichkeit.
+- **Velero ist in Grafana doppelt vorhanden.** `ozk-vlr-mon` und
+  `velero-backup-overview`, beide aus grafana.com 23838, eines davon provisioniert.
+  Entscheidung liegt bei Thomas: welches bleibt.
 - **Eine dritte Wallbox scheitert nicht am Web, sondern an `ChargingSettings`.** Dort gibt
   es nur zwei Freigabe-Booleans (`InsideChargingEnabled`, `OutsideChargingEnabled`). Im
   `MQTTService` und in der Seite kostet eine dritte Box nach Punkt 9 nur ihren Eintrag in
