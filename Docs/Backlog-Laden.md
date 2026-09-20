@@ -983,18 +983,40 @@ keinen Ort für die Position.
   als Gegenstück zum Export, Zuordnung über die `uid`, Trockenlauf und Vorher-Anzeige.
   Braucht keine Änderung am Grafana-Deployment und ist sofort nutzbar.
 
-  **Schritt 2 (offen):** Provisioning. Grafana liest die Dashboards aus einer ConfigMap,
-  ArgoCD synct sie aus dem Repo. Entscheidend ist nicht die Automatik, sondern dass
-  provisionierte Dashboards im UI **schreibgeschützt** sind: Was in Schritt 1 eine
-  Verabredung bleibt („am Original nicht im UI arbeiten"), wird damit erzwungen — Grafana
-  lässt gar nicht erst speichern, statt dass eine Änderung beim nächsten Import
-  verschwindet. Dazu ein nicht-provisionierter Ordner für Thomas' Kopien.
-  Teilweise ist Provisioning bereits in Gebrauch: `Cluster Errors Overview` und
-  `Backup Overview (Velero + Garage)` laufen schon so.
+  **Schritt 2 (geplant am 2026-09-20):** Provisioning. Grafana liest die Dashboards aus
+  dem Cluster statt aus seiner Datenbank; provisionierte Dashboards sind im UI
+  **schreibgeschützt**. Was in Schritt 1 eine Verabredung bleibt („am Original nicht im
+  UI arbeiten"), wird damit erzwungen — Grafana lässt gar nicht erst speichern, statt
+  dass eine Änderung beim nächsten Import verschwindet. Dazu ein nicht-provisionierter
+  Ordner für Thomas' Kopien. Teilweise läuft Provisioning bereits: `Cluster Errors
+  Overview` und `Backup Overview (Velero + Garage)`.
 
-  Der Preis von Schritt 2: Eine Änderung braucht dann Commit und ArgoCD-Sync, also etwa
-  zwei Minuten statt sofort, und das Grafana-Deployment muss angefasst werden — es
-  mountet heute nur Storage, keine Provisioning-Konfiguration.
+  **Geprüfte Rahmenbedingungen:**
+  - Grafana wird von **ArgoCD** verwaltet: App `grafana`, Quelle
+    `forgejo.intern/thomas/SmartHomeDeployments.git`, Pfad `grafana`, Namespace `grafana`.
+    Die Manifeste unter `Depricated/microk8s/Grafana/` sind tot — der Umzug dorthin war
+    richtig. **Die Deployment-Änderung gehört ins Deployments-Repo**, nicht hierher und
+    nicht ins Dashboard-Repo.
+  - **Eine einzige ConfigMap reicht nicht.** Die 28 Dashboards sind zusammen 1,5 MB, die
+    Grenze liegt bei 1 MiB. `node-exporter-full.json` allein ist 464 KB,
+    `k8s-dashboard.json` 196 KB. Es braucht also eine ConfigMap je Dashboard oder einen
+    anderen Weg.
+  - **Zwei Repos.** Die Dashboards liegen in `forgejo.intern/thomas/Grafana`, das
+    Deployment in `SmartHomeDeployments`. Wie die Dashboards von dort in den Cluster
+    kommen, ohne sie zu duplizieren, ist die eigentliche Entwurfsfrage dieses Punktes.
+
+  **Zu entscheiden (nicht vorweggenommen):** ArgoCD-Multi-Source (eine App, zwei Quellen),
+  ein `k8s-sidecar`, der gelabelte ConfigMaps einsammelt (so macht es das offizielle
+  Grafana-Helm-Chart; das hiesige Deployment ist handgeschrieben), ein git-sync-Sidecar,
+  oder ein Lauf im Dashboard-Repo, der die ConfigMaps erzeugt und ins Deployments-Repo
+  schreibt. Letzteres dupliziert und wäre meine letzte Wahl.
+
+  **Vorsicht beim Umschalten:** Die 28 Dashboards liegen heute in Grafanas PVC. Wird
+  dieselbe `uid` provisioniert, gewinnt die Datei — die UI-Fassung ist dann nicht mehr
+  erreichbar. Vor dem Umschalten muss der Repo-Stand also nachweislich dem Live-Stand
+  entsprechen, sonst fällt stillschweigend auf einen älteren Stand zurück. Der
+  Export vom 2026-09-20 ist frisch, aber das gilt nur, solange niemand mehr im UI
+  arbeitet.
 
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
