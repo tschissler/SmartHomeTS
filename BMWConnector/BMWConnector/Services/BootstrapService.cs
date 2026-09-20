@@ -16,7 +16,7 @@ public static class BootstrapService
     private const string TokenUrl      = "https://customer.bmwgroup.com/gcdm/oauth/token";
     private const string Scope         = "authenticate_user openid cardata:streaming:read";
 
-    public static async Task RunAsync(VehicleConfig config, KubernetesSecretStore store)
+    public static async Task RunAsync(VehicleConfig config, ISecretStore store)
     {
         Console.WriteLine($"=== Bootstrap: {config.Name} ===");
         Console.WriteLine();

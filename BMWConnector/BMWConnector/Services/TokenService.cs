@@ -11,7 +11,7 @@ namespace BMWConnector.Services;
 public class TokenService
 {
     private readonly VehicleConfig _config;
-    private readonly KubernetesSecretStore _store;
+    private readonly ISecretStore _store;
     private readonly ILogger<TokenService> _log;
     private readonly HttpClient _http = new();
 
@@ -20,7 +20,7 @@ public class TokenService
     private DateTime _idTokenRefreshedAt = DateTime.MinValue;
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(50);
 
-    public TokenService(VehicleConfig config, KubernetesSecretStore store, ILogger<TokenService> log)
+    public TokenService(VehicleConfig config, ISecretStore store, ILogger<TokenService> log)
     {
         _config = config;
         _store = store;

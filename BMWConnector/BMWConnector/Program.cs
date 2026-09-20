@@ -21,10 +21,14 @@ catch (Exception ex)
 }
 
 // Parse flags:
-//   --bootstrap BMW   bootstrap (authenticate) a single vehicle, then start its service
-//   --vehicle BMW     run only a single vehicle's service (skip the other)
+//   --bootstrap BMW      bootstrap (authenticate) a single vehicle, then start its service
+//   --vehicle BMW        run only a single vehicle's service (skip the other)
+//   --save-credentials   allow a well-formed CLIENT_ID/GCID from the environment to be written
+//                        into the credentials Secret. Off by default and ignored in the cluster —
+//                        an unintended write-back is what destroyed the Secret on 2026-09-20.
 string? bootstrapVehicle = null;
 string? vehicleFilter    = null;
+bool saveCredentials     = args.Contains("--save-credentials");
 
 for (int i = 0; i < args.Length - 1; i++)
 {
@@ -46,7 +50,7 @@ try
 {
     foreach (var name in vehicleNames)
     {
-        var config = await VehicleConfig.CreateAsync(name, store);
+        var config = await VehicleConfig.CreateAsync(name, store, saveCredentials, isInteractive);
 
         if (bootstrapVehicle == name)
         {
@@ -84,6 +88,12 @@ try
 
         configs.Add(config);
     }
+}
+catch (MissingCredentialException ex)
+{
+    Console.Error.WriteLine(ex.Message);
+    Environment.Exit(1);
+    return;
 }
 catch (Exception ex)
 {
