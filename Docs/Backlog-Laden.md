@@ -33,7 +33,7 @@ Präfix setzt.
 | 17 Fahrzeugdaten persistieren | `laden-17-fahrzeugdaten-persistieren` | 2026-09-20 | läuft — DataHub schreibt `daten/Fahrzeug/+/Status` nach InfluxDB. Zeitstempel aus `lastUpdate`, nicht `UtcNow`. **13 kommt danach**, beide arbeiten im DataHub |
 | 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | **erledigt und gemergt** (`b560217`). Der gemeldete Fehler war der Text; die Ursache lag tiefer — `disconnected.svg` ist fest `#d4aa00`, die freie Box trug also dauerhaft eine Aufmerksamkeitsfarbe, und `connected.svg`/`connectednotready.svg` sind geometrisch identisch und unterscheiden sich nur im Strich. Symbol jetzt inline in `currentColor`: Geometrie sagt Fahrzeug ja/nein, Farbe kommt aus dem Zustand |
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
-| Grafana-Action | `grafana-action` | 2026-09-20 | läuft — zwei Forgejo Workflows: Import bei Push (mit `--dry-run` davor ins Log), Abgleich nach Zeitplan (meldet nur, committet nicht). Klärt nebenbei, ob Editor-Rechte genügen — daran hängt die Rücknahme des Admin-Tokens |
+| Grafana-Action | `grafana-action` | 2026-09-20 | **erledigt** — zwei Forgejo Workflows live. Ein Push auf `dashboards/` schreibt ~20 s später nach Grafana, nur die geänderten Dateien. Abgleich doppelt geprüft (lokal und aus dem Runner): 29 Dashboards, 0 Unterschiede. **Der Editor-Test wurde von Thomas abgelehnt**, siehe unten |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt, gemergt und ausgerollt** (`d5b829b`). **Verbindung bewiesen, Datenfluss noch nicht:** Im Log steht `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True`. Der **Mini** hat seitdem frisch publiziert (`lastUpdate` 2026-09-20 07:58). Der **BMW** trägt weiterhin `lastUpdate` 2026-08-16 — kein Fehler: CarData schiebt nur bei Fahrzeugereignissen, und der BMW hat seinen Zustand seit der Reparatur nicht geändert. Beim nächsten Ereignis prüfen |
@@ -988,10 +988,18 @@ keinen Ort für die Position.
   als Gegenstück zum Export, Zuordnung über die `uid`, Trockenlauf und Vorher-Anzeige.
   Braucht keine Änderung am Grafana-Deployment und ist sofort nutzbar.
 
-  **Offen und zeitlich befristet: Der Grafana-Service-Account steht auf Admin.**
-  Thomas hat ihn am 2026-09-20 bewusst wieder hochgestuft, mit der ausdrücklichen
-  Bedingung „bis der Import-Weg sauber steht". Für reines Exportieren genügt Viewer;
-  Admin war nötig, weil Ordner-Rechte sonst 403 statt 404 auf fünf Dashboards liefern.
+  **Offen: Der Grafana-Service-Account steht auf Admin — auf unbestimmte Zeit.**
+  Am 2026-09-20 bewusst hochgestuft, mit der Bedingung „bis der Import-Weg sauber steht".
+  Der Import-Weg steht seitdem. **Zurückgestuft wurde trotzdem nicht:** Thomas hat den
+  Editor-Test abgelehnt, auch die Variante ohne Klickaufwand (Service Account per API
+  anlegen, testen, löschen). Ohne Test lässt sich nicht belegen, dass Editor genügt, und
+  damit ist die Bedingung so, wie sie formuliert war, nicht einlösbar.
+
+  Immerhin ist die **Begründung** für Admin entkräftet: Beide Ordner weisen der Rolle
+  Editor „Edit" zu, es gibt keinen Ordner ohne Zuweisung — die Lücke, aus der der 403
+  stammen sollte, existiert nicht. Ein Beweis ist das nicht: Die Permissions-API gibt
+  geerbte Rechte nicht mit aus, ein leerer Editor-Eintrag am Dashboard sagt nichts.
+
   **Diese Zeile bleibt stehen, bis das Recht zurückgenommen ist** — temporäre
   Berechtigungen werden nicht durch eine Entscheidung dauerhaft, sondern durch Vergessen.
 
@@ -1119,7 +1127,10 @@ keinen Ort für die Position.
   **Empfehlung:** Die Konvention gilt ab sofort für Neues; der Bestand wird nur dort
   migriert, wo eine zufällige `uid` ohnehin stört. Ein Umbenennen aller 29 auf einen
   Schlag kostet mehr, als es einbringt — siehe oben, warum eine `uid`-Änderung ein
-  Neuanlegen ist. Die beiden Arbeitskopien und `temp-test` können dagegen sofort weg.
+  Neuanlegen ist. `energiefluss-copy` kann dagegen sofort weg. **`temp-test` nicht**: Es hat sich beim
+  Ende-zu-Ende-Test der Forgejo Action als Testobjekt bewährt (Tag rein, Import, Tag
+  raus) und sollte im Schema als bewusstes Testobjekt gekennzeichnet werden statt als
+  Überbleibsel zu gelten. *(Revision meiner eigenen Empfehlung vom selben Tag.)*
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
