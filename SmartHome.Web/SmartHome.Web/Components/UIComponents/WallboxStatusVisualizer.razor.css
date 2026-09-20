@@ -114,3 +114,62 @@
     line-height: 24px;
     color: #b06f00;
 }
+
+/* The assignment line. One class carries symbol, wording and colour together, so the three
+   cannot drift apart - the lesson of the state line in backlog item 9b. */
+.wallboxZuordnung {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.wallboxZuordnung-sicher {
+    color: inherit;
+}
+
+/* A guess must not look like a fact */
+.wallboxZuordnung-unsicher {
+    color: #6b6b6b;
+    font-style: italic;
+}
+
+.wallboxZuordnungZeichen {
+    font-size: 1.1rem;
+    line-height: 1;
+    width: 1rem;
+    text-align: center;
+    flex: none;
+}
+
+.wallboxZuordnungFahrzeug {
+    font-weight: 600;
+}
+
+.wallboxZuordnung-unsicher .wallboxZuordnungFahrzeug {
+    font-weight: 400;
+}
+
+.wallboxZuordnungGrad {
+    font-size: 0.85rem;
+}
+
+.wallboxZuordnungAuswahl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.wallboxZuordnungWahl {
+    padding: 2px 10px;
+    border: 1px solid #D6D6D6;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.wallboxZuordnungWahl-aktiv {
+    border-color: #614680;
+    font-weight: 600;
+}

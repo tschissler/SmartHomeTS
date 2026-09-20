@@ -69,6 +69,40 @@ namespace SharedContracts
         public const string Einstellungen = $"konfiguration/Laden/{Ort}/Regelung/Einstellungen";
 
         /// <summary>
+        /// Which vehicle charges at one box, published retained by the RulesEngine. See
+        /// <see cref="SharedContracts.FahrzeugZuordnung"/>.
+        /// </summary>
+        /// <remarks>
+        /// An aspect of its own rather than a field in the status: a retained topic takes
+        /// exactly one author, and the box does not know which vehicle hangs on it. The
+        /// message survives the session it describes — that is what makes it the source of the
+        /// history guess for the next one.
+        /// </remarks>
+        public static string Zuordnung(string wallbox) => $"daten/Laden/{Ort}/{wallbox}/Zuordnung";
+
+        /// <summary>
+        /// The assignments of all boxes, at any location. The RulesEngine subscribes to its own
+        /// topic here: after a restart the retained messages are the only thing that restores
+        /// the running assignments, and the history behind them.
+        /// </summary>
+        public const string ZuordnungAlle = "daten/Laden/+/+/Zuordnung";
+
+        /// <summary>
+        /// Manual correction of the assignment of one box, published retained by the web
+        /// interface. Payload is a <see cref="SharedContracts.FahrzeugZuordnung"/> carrying the
+        /// session it was meant for.
+        /// </summary>
+        /// <remarks>
+        /// Configuration rather than data, because a person set it. The rule evaluates it only
+        /// while its SitzungsId matches the running session, so it expires when the plug is
+        /// pulled without anybody having to withdraw it.
+        /// </remarks>
+        public static string ZuordnungKorrektur(string wallbox) => $"konfiguration/Laden/{Ort}/{wallbox}/Zuordnung";
+
+        /// <summary>The manual corrections of all boxes, at any location.</summary>
+        public const string ZuordnungKorrekturAlle = "konfiguration/Laden/+/+/Zuordnung";
+
+        /// <summary>
         /// Splits a wallbox status topic into its location and device level, e.g.
         /// "daten/Laden/M3/Garage/Status" into ("M3", "Garage"). Null for every other topic.
         /// </summary>
@@ -94,6 +128,22 @@ namespace SharedContracts
         /// </summary>
         public static (string Ort, string Wallbox)? ZerlegeEnergieaufteilungTopic(string topic)
             => Zerlege(topic, "daten", "Energieaufteilung");
+
+        /// <summary>
+        /// Splits a vehicle assignment topic into its location and device level, e.g.
+        /// "daten/Laden/M3/Garage/Zuordnung" into ("M3", "Garage"). Null for every other topic.
+        /// </summary>
+        public static (string Ort, string Wallbox)? ZerlegeZuordnungTopic(string topic)
+            => Zerlege(topic, "daten", "Zuordnung");
+
+        /// <summary>
+        /// Splits a manual correction topic into its location and device level, e.g.
+        /// "konfiguration/Laden/M3/Garage/Zuordnung" into ("M3", "Garage"). Null for every other
+        /// topic — the settings topic has the same depth and the same "konfiguration" level, and
+        /// is told apart by its aspect.
+        /// </summary>
+        public static (string Ort, string Wallbox)? ZerlegeZuordnungKorrekturTopic(string topic)
+            => Zerlege(topic, "konfiguration", "Zuordnung");
 
         private static (string Ort, string Wallbox)? Zerlege(string topic, string art, string aspekt)
         {

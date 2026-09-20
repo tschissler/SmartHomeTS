@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\MQTTClient\MQTTClient.csproj" />
+    <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
   </ItemGroup>
 
 </Project>

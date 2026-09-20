@@ -116,7 +116,10 @@
             Freigegeben="@IstFreigegeben(wallbox)"
             Priorisiert="@(chargingSettings.PreferedChargingStation == Station(wallbox))"
             FreigabeUmschalten="@(() => FreigabeUmschalten(wallbox))"
-            VorrangUmschalten="@(() => VorrangUmschalten(wallbox))" />
+            VorrangUmschalten="@(() => VorrangUmschalten(wallbox))"
+            Zuordnung="@MqttService.Zuordnungen.GetValueOrDefault(wallbox)"
+            Fahrzeuge="@FahrzeugTopics.Fahrzeuge"
+            ZuordnungSetzen="@(fahrzeug => ZuordnungSetzen(wallbox, fahrzeug))" />
     }
 </div>
 
@@ -269,7 +272,8 @@
             UpdateChargingSettings();
         }
         else if (LadeTopics.ZerlegeStatusTopic(args.Topic) is not null
-                 || FahrzeugTopics.ZerlegeStatusTopic(args.Topic) is not null)
+                 || FahrzeugTopics.ZerlegeStatusTopic(args.Topic) is not null
+                 || LadeTopics.ZerlegeZuordnungTopic(args.Topic) is not null)
         {
             // The tiles and cards read their state straight out of MqttService.Wallboxen and
             // MqttService.Fahrzeuge, so a status message only has to trigger a render. That
@@ -336,6 +340,41 @@
         chargingSettings.PreferedChargingStation =
             chargingSettings.PreferedChargingStation == station ? ChargingStation.None : station;
         await CommunicateSettings();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Corrects which vehicle is charging at a box. Published retained to the configuration
+    /// topic; the RulesEngine picks it up and raises the assignment to "bestätigt".
+    /// </summary>
+    /// <remarks>
+    /// The session the box reports right now is written into the payload, and that is what
+    /// makes the correction expire: the rule only evaluates an override whose session matches
+    /// the running one, so pulling the plug retires it without anybody having to withdraw it.
+    /// Without a running session there is nothing to correct, and publishing anyway would leave
+    /// a message behind that never matches anything.
+    /// </remarks>
+    private async Task ZuordnungSetzen(string wallbox, string fahrzeug)
+    {
+        var sitzung = MqttService.Wallboxen.GetValueOrDefault(wallbox)?.SitzungsId;
+        if (sitzung is null)
+        {
+            return;
+        }
+
+        var korrektur = new FahrzeugZuordnung
+        {
+            Zeitpunkt = DateTimeOffset.UtcNow,
+            SitzungsId = sitzung,
+            Fahrzeug = fahrzeug,
+            Vertrauen = Vertrauensgrad.Bestaetigt,
+        };
+
+        await MqttService.PublishAsync(
+            LadeTopics.ZuordnungKorrektur(wallbox),
+            JsonSerializer.Serialize(korrektur),
+            MqttQualityOfServiceLevel.AtLeastOnce,
+            true);
         await InvokeAsync(StateHasChanged);
     }
 

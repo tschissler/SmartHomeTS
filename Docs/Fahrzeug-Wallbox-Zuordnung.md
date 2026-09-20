@@ -106,6 +106,44 @@ nach dem Muster der Mischerregeln:
 - **Vermutungen sind als solche sichtbar** — grau mit Fragezeichen, ein Klick genügt zur
   Korrektur.
 
+### Präzisierungen aus der Umsetzung (2026-09-20)
+
+Sechs Punkte, die das Konzept offen ließ und die die Regel entscheiden musste. Sie schärfen
+das Leitprinzip, sie weichen es nicht auf.
+
+- **Stufe 2 und Stufe 3 sind dieselbe Bedingung.** Genau eine belegte Box ist noch nicht
+  sicher vergeben, und genau ein positiv meldendes Fahrzeug ist noch nicht platziert. Bei
+  einer belegten Box ist das Stufe 2, bei zwei belegten und einer sicher vergebenen Stufe 3.
+  Ein Fall im Code weniger, dieselbe Aussage.
+- **„Sicher vergeben" heißt `erkannt` oder `bestätigt`, nie `vermutet`.** Über eine Vermutung
+  auf die andere Box zu schließen hieße, aus einer Vermutung ein `erkannt` zu machen — genau
+  die stille Falschaussage, gegen die die Stufen gebaut sind.
+- **Eine positive Fahrzeugmeldung muss zur laufenden Sitzung passen können.** Ein
+  `chargerConnected = true` sagt nichts darüber, *wann*. Ist der `SitzungsBeginn` der Box
+  vertrauenswürdig (selbst beobachtete Steckerflanke), muss die Messzeit des Fahrzeugs
+  (`lastUpdate`, nicht `Zeitpunkt`) nach dem Sitzungsbeginn liegen, mit 5 Minuten Toleranz
+  für Uhrenversatz. Stammt der Beginn aus der Box-Uhr (`timeQ: 0`), tritt ein Altersfenster
+  von 6 Stunden an seine Stelle. Beides lässt die späte VW-Meldung durch — 15 Minuten
+  Abrufintervall plus rund 60 Minuten Datenalter — und weist die 35 Tage alte BMW-Meldung
+  vom 2026-09-20 ab. **Das ist keine Frischeprüfung an der Zustellung**, sondern am
+  Messzeitpunkt im Payload; die Zustellzeit ist bei retained Nachrichten bedeutungslos.
+- **Mehrdeutigkeit führt nie zu einer Aussage.** Melden zwei nicht platzierte Fahrzeuge
+  gleichzeitig, fällt die Regel auf die Historie zurück. Eines der beiden lädt auswärts, und
+  welches, ist nicht entscheidbar.
+- **Eine Box, deren Status veraltet ist (> 5 min), fällt ganz heraus.** Ihre Zuordnung wird
+  nicht angefasst — ein fehlender Connector ist kein gezogener Stecker. Und solange
+  *irgendeine* Box stumm ist, unterbleibt der Schluss über die Belegung: ihre Belegung ist
+  unbekannt, und „dann muss es die andere sein" wäre wieder ein Ausschluss, nur über eine
+  schweigende Box statt über ein schweigendes Auto.
+- **Beim Start wird 15 Sekunden lang nichts publiziert.** In dieser Zeit treffen die retained
+  Nachrichten ein. Wer früher publiziert, schreibt ein frisches `unbekannt` über genau das
+  Topic, aus dem die laufende Zuordnung wiederhergestellt werden soll. Dieselbe Begründung
+  wie bei den Zählern der Energieaufteilung.
+
+Der `Zeitpunkt` im Payload steht still, solange die Aussage sich nicht ändert — er liest sich
+als „zugeordnet seit", nicht als „zuletzt ausgewertet". Ob die RulesEngine lebt, beantwortet
+ihr Heartbeat, nicht dieses Feld.
+
 **Woher die Historie kommt:** aus dem eigenen retained `Zuordnung`-Topic. Es bleibt nach
 dem Sitzungsende stehen und trägt die alte `SitzungsId`. Beginnt an derselben Box eine
 neue Sitzung, übernimmt die Regel das dort genannte Fahrzeug als `vermutet` und schreibt
@@ -172,7 +210,15 @@ Die beiden Wallboxen sind die Hauptobjekte und immer sichtbar, auch wenn frei:
   Fahrzeug hängt erst ab 5 dran (5 = nicht verriegelt, 7 = verriegelt, nur 7 lädt).
   Text, Farbe und Symbol der Kachel folgen alle dieser einen Lesart; eine
   Aufmerksamkeitsfarbe trägt nur eine Box, an der etwas hängt oder etwas klemmt.
-- Fahrzeugname mit Vertrauensgrad, klickbar zur Korrektur.
+- Fahrzeugname mit Vertrauensgrad, klickbar zur Korrektur. Die Zeile erscheint **nur, solange
+  eine Sitzung läuft**: das retained `Zuordnung`-Topic steht nach dem Ausstecken weiter — es
+  ist die Historie — und auf einer freien Box läse sich derselbe Name als „dieses Auto lädt
+  hier". Die Kachel vergleicht dafür die `SitzungsId` der Zuordnung mit der der Box, genau wie
+  die Regel es tut.
+- Zeichen, Wortlaut und Farbe der Zeile beantworten **eine** Frage — wie sicher ist das?
+  `bestätigt` und `erkannt` bekommen ein `✓` in normaler Schrift, `vermutet` und „kein
+  Fahrzeug erkannt" ein `?` in Grau und kursiv. Ein graues Fragezeichen neben einem Namen in
+  normaler Schrift wäre der Widerspruch, den Punkt 9b aus der Zustandszeile entfernt hat.
 - **Freigabe und Priorität gehören zur Box**, nicht zum Fahrzeug. Achtung bei der
   Umsetzung: `InsideChargingEnabled` und `OutsideChargingEnabled` sind zwei unabhängige
   Schalter, `PreferedChargingStation` dagegen **ein einzelnes Enum** — die beiden

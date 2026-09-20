@@ -24,6 +24,47 @@ Betriebsmodus der Hoval-Wärmepumpe:
 - alles andere (unbekannte Werte, veralteter Status) → `open`
   (Failsafe: offen kostet nur Effizienz, nie Komfort)
 
+### VehicleAssignmentRule
+
+Ermittelt, **welches Fahrzeug an welcher Wallbox lädt**. Konzept und
+Begründungen: `Docs/Fahrzeug-Wallbox-Zuordnung.md`.
+
+Tragender Satz: **Die Wallbox ist die Wahrheit, und aus dem Schweigen eines
+Fahrzeugs folgt nichts.** Ein Auto, das nichts meldet, ist kein Auto, das
+anderswo steht — es hat womöglich nur nichts zu sagen. Keine Stufe schließt
+aus einer fehlenden oder negativen Fahrzeugmeldung.
+
+Evidenz, absteigend:
+
+1. **Manueller Override** aus der Weboberfläche, gültig nur für die laufende
+   `SitzungsId` → `bestaetigt`
+2. **Positive Fahrzeugmeldung**, während genau eine belegte Box noch nicht
+   sicher vergeben ist → `erkannt`
+3. Dieselbe Bedingung bei zwei belegten Boxen, von denen eine sicher vergeben
+   ist. Das ist ein Ausschluss über die **gemessene Belegung der Boxen**, nicht
+   über Fahrzeugschweigen, und damit zulässig
+4. **Historie** — das Fahrzeug, das zuletzt an dieser Box lud → `vermutet`
+5. nichts davon → `unbekannt`
+
+Eigenschaften:
+
+- **Klebend je Sitzung, nur Aufwertung** (`vermutet` → `erkannt` →
+  `bestaetigt`), nie ein stillschweigendes Umwerfen auf gleicher Stufe.
+- **Der Override verfällt mit dem Stecker**, weil die Regel ihn nur auswertet,
+  wenn seine `SitzungsId` zur laufenden passt. Niemand muss ihn zurücknehmen.
+- **Der Zustand wird allein aus retained Topics wiederhergestellt** — kein
+  Datenbankzugriff, keine eigene Persistenz. Deshalb publiziert der Service
+  in den ersten 15 s nach dem Start nichts: sonst schriebe er ein frisches
+  `unbekannt` über genau das Topic, aus dem er sich erholen soll.
+- **Jedes Alter kommt aus dem `Zeitpunkt` im Payload**, nie aus der
+  Empfangszeit. Beim Start kommen alle Eingänge als retained Schwall herein;
+  keiner davon ist ein frisches Ereignis. Für die Fahrzeugmeldung ist die
+  Messzeit `lastUpdate` maßgeblich, nicht die Veröffentlichungszeit des
+  Connectors.
+- **Mehrdeutigkeit erzeugt nie eine Aussage.** Zwei meldende Fahrzeuge oder
+  zwei unvergebene belegte Boxen führen auf die Historie zurück — sichtbar
+  als Vermutung, statt als selbstbewusster Fehlgriff.
+
 ### CoolingFlowTemperatureRule
 
 Dreipunkt-Schrittregler für den `Mischer_FBHZ`: hält die
@@ -60,6 +101,10 @@ B:65535) und trotzdem Kühlleistung ankommt (zu warm).
 | `config/RulesEngine` | in (retained) | Laufzeit-Konfiguration als JSON, z. B. `{"CoolingFlowTargetTemperature": 18.0}` — überschreibt den Env-Default ohne Redeploy |
 | `commands/MixerController/M1/Mischer_FBHZ` + `Mischer_HK` | out (retained) | Zielposition `open` / `close` |
 | `commands/MixerController/M1/Mischer_FBHZ` | out (nicht retained) | Fahrpulse `open:N` / `close:N` (Sekunden) |
+| `daten/Laden/+/+/Status` | in (retained) | Zustand der Wallboxen (`SitzungsId`, Steckerzustand) |
+| `daten/Fahrzeug/+/Status` | in (retained) | Fahrzeugdaten (`chargerConnected`, `lastUpdate`) |
+| `konfiguration/Laden/+/+/Zuordnung` | in (retained) | manuelle Korrektur aus der Weboberfläche |
+| `daten/Laden/M3/<Box>/Zuordnung` | **in und out** (retained) | eigene Aussage: `SitzungsId`, `Fahrzeug`, `Vertrauen`, `Zeitpunkt`. Wird zurückgelesen, weil sie nach einem Neustart die laufende Zuordnung **und** die Historie ist |
 | `meta/RulesEngine/version` | out (retained) | Service-Version |
 
 Die Zielposition wird retained publiziert — einmal beim Start und danach nur
@@ -93,6 +138,9 @@ Abweichung über Fahrtdauer + Puffer → Alarm.
 | `CoolingFlowDeadbandKelvin` | `0.5` | Totband um den Sollwert (K) |
 | `PulseSecondsPerKelvin` | `5.0` | Pulslänge pro Kelvin Regelabweichung |
 | `MinPulseSeconds` / `MaxPulseSeconds` | `2` / `20` | Begrenzung der Pulslänge |
+| `MaxWallboxStatusAgeMinutes` | `5` | Ältere Box-Zustände gelten als unbekannt — die Zuordnung dieser Box wird dann **nicht angefasst** |
+| `MaxVehicleReportAgeHours` | `6` | Altersfenster für eine positive Fahrzeugmeldung, wenn der Sitzungsbeginn aus der Box-Uhr stammt |
+| `AssignmentRestoreSeconds` | `15` | Wartezeit nach dem Start, bevor eine Zuordnung publiziert wird (retained Wiederherstellung) |
 
 ## Build & Test
 

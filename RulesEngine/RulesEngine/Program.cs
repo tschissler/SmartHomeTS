@@ -3,6 +3,8 @@ using MQTTClient;
 using MQTTnet.Protocol;
 using RulesEngine;
 using RulesEngine.Rules;
+using SharedContracts;
+using System.Text.Json;
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
@@ -41,12 +43,20 @@ var pulseSecondsPerKelvin = double.Parse(configuration["PulseSecondsPerKelvin"] 
 var minPulseSeconds = int.Parse(configuration["MinPulseSeconds"] ?? "2");
 var maxPulseSeconds = int.Parse(configuration["MaxPulseSeconds"] ?? "20");
 
+// Fahrzeug-Wallbox-Zuordnung (Docs/Fahrzeug-Wallbox-Zuordnung.md)
+var maxWallboxStatusAgeMinutes = int.Parse(configuration["MaxWallboxStatusAgeMinutes"] ?? "5");
+var maxVehicleReportAgeHours = int.Parse(configuration["MaxVehicleReportAgeHours"] ?? "6");
+var assignmentRestoreSeconds = int.Parse(configuration["AssignmentRestoreSeconds"] ?? "15");
+
 Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
 Console.WriteLine($" ### FA_Status topic: {faStatusTopic}");
 Console.WriteLine($" ### Mixer command topics: {string.Join(", ", mixerCommandTopics)}");
 Console.WriteLine($" ### Max status age: {maxStatusAgeMinutes} min, evaluation interval: {evaluationIntervalSeconds} s");
 Console.WriteLine($" ### Flow regulation: target {coolingFlowTargetTemperature}°C ±{coolingFlowDeadbandKelvin}K, {pulseSecondsPerKelvin} s/K ({minPulseSeconds}-{maxPulseSeconds} s) -> {fbhzMixerCommandTopic}");
 Console.WriteLine($" ### Config topic: {configTopic} (retained JSON, overrides CoolingFlowTargetTemperature at runtime)");
+Console.WriteLine($" ### Vehicle assignment: {LadeTopics.ZuordnungAlle} / {LadeTopics.ZuordnungKorrekturAlle} at {LadeTopics.Ort}, " +
+    $"box state valid for {maxWallboxStatusAgeMinutes} min, vehicle report for {maxVehicleReportAgeHours} h, " +
+    $"restore window {assignmentRestoreSeconds} s");
 
 // FA_Status 4 = Warmwasserladung der Hoval Belaria — fixed by the heat pump, not configuration
 string[] warmWaterStatusValues = ["4"];
@@ -65,6 +75,22 @@ DateTimeOffset lastFbhzFlowTempTime = DateTimeOffset.MinValue;
 MixerPosition? lastPublishedPosition = null;
 var evaluationLock = new object();
 
+var assignmentRule = new VehicleAssignmentRule(
+    TimeSpan.FromMinutes(maxWallboxStatusAgeMinutes),
+    TimeSpan.FromHours(maxVehicleReportAgeHours));
+var assignmentRestoreWindow = TimeSpan.FromSeconds(assignmentRestoreSeconds);
+var startedAt = DateTimeOffset.UtcNow;
+var restoreWindowReported = false;
+
+// Everything the assignment rule reads, and its own last word per box. All four dictionaries
+// are filled exclusively from retained topics, so after a restart they are complete again
+// within milliseconds of subscribing - which is what the restore window below waits for.
+var wallboxStatus = new Dictionary<string, WallboxStatus>();
+var fahrzeugStatus = new Dictionary<string, CarStatusData>();
+var zuordnungsKorrekturen = new Dictionary<string, FahrzeugZuordnung>();
+var letzteZuordnung = new Dictionary<string, FahrzeugZuordnung>();
+var assignmentLock = new object();
+
 // Start health check HTTP server in background
 var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
 
@@ -79,6 +105,12 @@ await mqttClient.SubscribeToTopic(faStatusTopic);
 await mqttClient.SubscribeToTopic(fbhzFlowTempTopic);
 await mqttClient.SubscribeToTopic(fbhzPumpTopic);
 await mqttClient.SubscribeToTopic(configTopic);
+// Its own assignment topic included: after a restart those retained messages are the only
+// thing that restores the running assignments, and the history behind them.
+await mqttClient.SubscribeToTopic(LadeTopics.StatusAlle);
+await mqttClient.SubscribeToTopic(FahrzeugTopics.StatusAlle);
+await mqttClient.SubscribeToTopic(LadeTopics.ZuordnungAlle);
+await mqttClient.SubscribeToTopic(LadeTopics.ZuordnungKorrekturAlle);
 Console.WriteLine("    ...Done");
 
 await mqttClient.PublishAsync("meta/RulesEngine/version", versionInfo.Version, MqttQualityOfServiceLevel.AtLeastOnce, true);
@@ -94,6 +126,9 @@ var evaluationTimer = new Timer(_ =>
 {
     EvaluateAndPublish("periodic evaluation");
     EvaluateCoolingPulse();
+    // Also on the tick, not only on incoming messages: the ageing of a box state and of a
+    // vehicle report has to take effect even while nothing is arriving any more.
+    EvaluateAssignments();
 }, null, evaluationIntervalSeconds * 1000, evaluationIntervalSeconds * 1000);
 
 Thread.Sleep(Timeout.Infinite);
@@ -103,6 +138,12 @@ void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
     if (e.Topic == configTopic)
     {
         ApplyConfig(e.Payload);
+        return;
+    }
+
+    if (TrackAssignmentInput(e.Topic, e.Payload))
+    {
+        EvaluateAssignments();
         return;
     }
 
@@ -239,6 +280,141 @@ void ApplyConfig(string payload)
     catch (Exception ex)
     {
         Console.WriteLine($"Error parsing config message: {ex.Message}");
+    }
+}
+
+/// <summary>
+/// Files a message the assignment rule reads. Returns true when the topic belonged to it.
+/// </summary>
+/// <remarks>
+/// Nothing here records an arrival time, and that is deliberate: every one of these topics is
+/// retained, so on startup and after every reconnect they all arrive at once as a burst. They
+/// are state, not news, and their age lives inside the payload.
+/// </remarks>
+bool TrackAssignmentInput(string topic, string payload)
+{
+    if (LadeTopics.ZerlegeStatusTopic(topic) is (string statusOrt, string statusBox))
+    {
+        // Other locations are somebody else's installation; merging them under the same box
+        // name would quietly mix two systems.
+        if (statusOrt != LadeTopics.Ort) return true;
+        return Deserialisiere<WallboxStatus>(topic, payload, wert =>
+        {
+            lock (assignmentLock) wallboxStatus[statusBox] = wert;
+        });
+    }
+
+    if (FahrzeugTopics.ZerlegeStatusTopic(topic) is string fahrzeug)
+    {
+        return Deserialisiere<CarStatusData>(topic, payload, wert =>
+        {
+            lock (assignmentLock) fahrzeugStatus[fahrzeug] = wert;
+        });
+    }
+
+    if (LadeTopics.ZerlegeZuordnungKorrekturTopic(topic) is (string korrekturOrt, string korrekturBox))
+    {
+        if (korrekturOrt != LadeTopics.Ort) return true;
+        return Deserialisiere<FahrzeugZuordnung>(topic, payload, wert =>
+        {
+            lock (assignmentLock) zuordnungsKorrekturen[korrekturBox] = wert;
+        });
+    }
+
+    if (LadeTopics.ZerlegeZuordnungTopic(topic) is (string zuordnungOrt, string zuordnungBox))
+    {
+        if (zuordnungOrt != LadeTopics.Ort) return true;
+        // This service's own topic. Reading it back is the entire restart path, and the echo of
+        // a publication of its own simply confirms what is already in the dictionary.
+        return Deserialisiere<FahrzeugZuordnung>(topic, payload, wert =>
+        {
+            lock (assignmentLock) letzteZuordnung[zuordnungBox] = wert;
+        });
+    }
+
+    return false;
+}
+
+bool Deserialisiere<T>(string topic, string payload, Action<T> uebernehmen)
+{
+    try
+    {
+        var wert = JsonSerializer.Deserialize<T>(payload);
+        if (wert is not null)
+        {
+            uebernehmen(wert);
+        }
+    }
+    catch (JsonException ex)
+    {
+        // Keep what we have: a malformed message must not drop an assignment.
+        Console.WriteLine($"Ignoring malformed payload on {topic}: {ex.Message}");
+    }
+    return true;
+}
+
+/// <summary>
+/// Works out which vehicle is at which box and publishes the boxes whose statement changed.
+/// </summary>
+void EvaluateAssignments()
+{
+    try
+    {
+        var jetzt = DateTimeOffset.UtcNow;
+        lock (assignmentLock)
+        {
+            // Nothing is published before the retained messages have had time to arrive.
+            // Publishing earlier would write a fresh "unbekannt" over the very topic the
+            // running assignment has to be restored from - and the RulesEngine is rolled out
+            // as often as any other service here.
+            if (jetzt - startedAt < assignmentRestoreWindow)
+            {
+                return;
+            }
+            if (!restoreWindowReported)
+            {
+                restoreWindowReported = true;
+                Console.WriteLine($"Vehicle assignment: restore window over, {letzteZuordnung.Count} retained " +
+                    $"assignment(s), {wallboxStatus.Count} box state(s), {fahrzeugStatus.Count} vehicle(s), " +
+                    $"{zuordnungsKorrekturen.Count} manual override(s) restored");
+            }
+
+            var ziel = assignmentRule.Evaluate(
+                wallboxStatus, fahrzeugStatus, zuordnungsKorrekturen, letzteZuordnung, jetzt);
+
+            foreach (var (box, neu) in ziel)
+            {
+                if (neu.GleicheAussageWie(letzteZuordnung.GetValueOrDefault(box)))
+                {
+                    continue;
+                }
+
+                var vorher = letzteZuordnung.GetValueOrDefault(box);
+                Console.WriteLine($"Zuordnung {box}: session {neu.SitzungsId} -> " +
+                    $"{neu.Fahrzeug ?? "kein Fahrzeug"} ({neu.Vertrauen}), was " +
+                    $"{vorher?.Fahrzeug ?? "kein Fahrzeug"} ({vorher?.Vertrauen.ToString() ?? "nichts"}, " +
+                    $"session {vorher?.SitzungsId?.ToString() ?? "-"})");
+
+                // Published while holding the lock so the baseline can only move on once the
+                // broker has taken the message: a failed publish must leave the assignment
+                // pending, not silently mark it as done.
+                mqttClient.PublishAsync(
+                        LadeTopics.Zuordnung(box),
+                        JsonSerializer.Serialize(neu),
+                        MqttQualityOfServiceLevel.AtLeastOnce,
+                        true)
+                    .GetAwaiter().GetResult();
+                letzteZuordnung[box] = neu;
+            }
+        }
+        // Deliberately no UpdateLastEvaluation here. The health check watches whether the
+        // periodic timer is still running, and this path also fires on every incoming box
+        // state - a few times a second. Refreshing it from here would keep the service
+        // reporting healthy with a dead timer.
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error publishing vehicle assignment: {ex.Message}");
     }
 }
 

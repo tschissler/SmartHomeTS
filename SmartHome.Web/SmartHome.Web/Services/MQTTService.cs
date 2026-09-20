@@ -45,6 +45,17 @@ namespace SmartHome.Web.Services
         /// </summary>
         public ConcurrentDictionary<string, CarStatusData> Fahrzeuge { get; } = new();
 
+        /// <summary>
+        /// Which vehicle the RulesEngine says is at which box, keyed like <see cref="Wallboxen"/>.
+        /// </summary>
+        /// <remarks>
+        /// The message outlives the session it describes — it is what the history guess of the
+        /// next session is taken from. A reader therefore has to compare its SitzungsId with the
+        /// one the box currently reports before showing the vehicle as the one charging now; the
+        /// tile does exactly that.
+        /// </remarks>
+        public ConcurrentDictionary<string, FahrzeugZuordnung> Zuordnungen { get; } = new();
+
         /// <summary>Heartbeats keyed by status topic. Devices appear here as soon as they report one.</summary>
         public ConcurrentDictionary<string, DeviceStatus> Devices { get; } = new();
 
@@ -181,6 +192,11 @@ namespace SmartHome.Web.Services
             }
 
             if (TrackFahrzeugStatus(message.Topic, payload))
+            {
+                return;
+            }
+
+            if (TrackZuordnung(message.Topic, payload))
             {
                 return;
             }
@@ -343,6 +359,35 @@ namespace SmartHome.Web.Services
             {
                 // Keep the state we have: a malformed message must not blank the card.
                 Console.WriteLine($"Ignoring malformed vehicle status on {topic}: {ex.Message}");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Handles the vehicle assignment of any box. Returns true when the message was
+        /// consumed here.
+        /// </summary>
+        private bool TrackZuordnung(string topic, string payload)
+        {
+            var box = LadeTopics.ZerlegeZuordnungTopic(topic);
+            if (box is null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var zuordnung = JsonSerializer.Deserialize<FahrzeugZuordnung>(payload);
+                if (zuordnung is not null)
+                {
+                    Zuordnungen[box.Value.Wallbox] = zuordnung;
+                }
+            }
+            catch (JsonException ex)
+            {
+                // Keep the state we have: a malformed message must not blank the tile.
+                Console.WriteLine($"Ignoring malformed assignment on {topic}: {ex.Message}");
             }
 
             return true;
