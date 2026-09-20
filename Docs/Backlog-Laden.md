@@ -24,6 +24,7 @@ Präfix setzt.
 | 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | **erledigt und gemergt** (`a12202b`), kein Rollout |
 | 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`c46f54f`) |
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **gemergt** (`1c8ff95`), Rollout läuft. Offen: Prüfung, ob der `iat` im Token-Secret sich alle 50 Minuten bewegt |
+| 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | in Arbeit — vorhandene Testprojekte in die CI aufnehmen. Erste Aufgabe: prüfen, ob sie überhaupt grün sind |
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | in Arbeit — harter Schnitt, KebaConnector + ChargingController + DataHub. Offene Frage an die Session: Verhalten zwischen den beiden Rollouts |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
