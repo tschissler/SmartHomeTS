@@ -129,7 +129,14 @@ vorgegebener ~90-Tage-Zyklus, der ein interaktives Re-Bootstrap erfordert.
       via streaming API" ist falsch. Der BMW liefert `battery` (gemessen: 83 %)
 - [ ] `SETUP.md`: `rollout restart` durch `delete pod` ersetzen, mit Begründung ArgoCD
 
-**Fertig, wenn** `daten/Fahrzeug/BMW/Status` einen `Zeitpunkt` von heute trägt.
+**Fertig, wenn** `data/charging/BMW` einen Zeitstempel von heute trägt und das Pod-Log
+`connected=Mini BMW` statt `Partial: connected=Mini disconnected=BMW` zeigt.
+
+**Nicht das Zielbild.** Der Connector publiziert heute `data/charging/<Auto>`
+(`VehicleConfig.cs:27`, Default `data/charging/{prefix}`; im Pod ist kein
+`BMW_OUTPUT_TOPIC` gesetzt). Das konventionsgerechte `daten/Fahrzeug/BMW/Status`
+existiert noch nicht und ist nicht Teil dieses Punktes — siehe den Klärungsvermerk bei
+Punkt 17.
 
 ---
 
@@ -533,6 +540,15 @@ ohne diesen Punkt gar keinen Ort, an den geschrieben werden könnte.
       Messung eingetragen
 - [ ] Position mitschreiben (Grundlage für Punkt 15)
 - [ ] Wiederholte identische Payloads nicht als neue Messung schreiben
+
+**Zu klären vor Umsetzung.** Dieser Punkt abonniert `daten/Fahrzeug/+/Status`, aber **kein
+Punkt stellt die Fahrzeug-Topics dorthin um.** Der BMWConnector publiziert nach
+`data/charging/<Auto>`, und Punkt 8 migriert ausschließlich Laden- und
+Konfigurations-Topics. `MQTT-Topic-Konvention.md` behandelt die Migration des ganzen
+Namensraums ausdrücklich als eigenen, späteren Schritt für alle Teilnehmer gemeinsam.
+Entweder wird dieser Punkt um die Umstellung von BMW- und VWConnector erweitert — dann
+entfällt die Abhängigkeit von 8 — oder die Umstellung wird ein eigener Punkt, von dem 17
+abhängt. Bis dahin hat auch Punkt 15 kein Fundament.
 
 **Abhängig von** 8 — vorher gäbe es das Topic `daten/Fahrzeug/+/Status` noch nicht, und
 es müsste zweimal gegen zwei Schemata gebaut werden.
