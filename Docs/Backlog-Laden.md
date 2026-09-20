@@ -1166,6 +1166,56 @@ was geändert wurde.
 
 ---
 
+### 24. Syncfusion ablösen
+
+**Frage von Thomas am 2026-09-20:** Brauchen wir Syncfusion überhaupt noch?
+
+**Bestandsaufnahme, nachgezählt am 2026-09-20 auf dem Stand nach Punkt 13b:**
+
+| Komponente | Anzahl | wo |
+|---|---|---|
+| `SfTooltip` | 6 | `ChargingOverview.razor` — die Erklärungen der fünf Ladestufen |
+| `SfLinearGauge` | 3 | `LED.razor` |
+| `SfSwitch` | 2 | `LED.razor` |
+
+**Das ist alles.** Punkt 13b hat `SfGrid`, `SfDropDownList` und `SfCheckBox` entfernt;
+`SfChart` und die Navigations-Komponenten kommen im ganzen Projekt **nicht vor**.
+
+**Vier von sechs Paketverweisen in `SmartHome.Web.csproj` sind danach unbenutzt:**
+`Calendars` und `Grid` (mit 13b frei geworden), `Charts` und `Navigations` (waren es
+schon vorher). **`UIComponentsLib` referenziert `Charts`, `Navigations` und `Themes` und
+benutzt keines davon** — reiner Ballast.
+
+**Warum es sich lohnt.** Syncfusion ist kommerziell lizenziert. Der Schlüssel ist ein
+Secret, das durch CI und Laufzeit getragen werden muss; fehlt er, blendet die Anwendung
+ein Lizenzbanner ein (`Program.cs`: „Syncfusion license key not configured"). Der
+Wegfall spart ein Geheimnis, eine Abhängigkeit und die mitgelieferte JS-/CSS-Fracht.
+
+**Der größte Brocken fällt ohnehin an.** Die sechs Tooltips müssen für **Punkt 23**
+sowieso ersetzt werden: Sie hängen am Hover, und am Telefon ist die Bedienung der
+Ladestufen damit unbeschriftet. Wer sie touchtauglich macht, wird sie kaum als
+`SfTooltip` behalten.
+
+**Umfang**
+- [ ] **Sofort und risikolos:** die vier unbenutzten Paketverweise in
+      `SmartHome.Web.csproj` und die drei in `UIComponentsLib.csproj` entfernen
+- [ ] Die sechs Tooltips ersetzen — zusammen mit Punkt 23, nicht daneben
+- [ ] `LED.razor`: drei `SfLinearGauge` und zwei `SfSwitch` ablösen. Die Ladeseite
+      zeichnet ihre Balken bereits mit reinem CSS; ein Schieberegler-Anzeiger und ein
+      Schalter sind kein Grund für eine kommerzielle Bibliothek
+- [ ] Danach: Paket, `AddSyncfusionBlazor()`, die Lizenzregistrierung in `Program.cs`,
+      das Secret und das Skript in `App.razor` entfernen
+- [ ] Prüfen, ob `Syncfusion.Blazor.Themes` noch etwas beiträgt, das die Seiten benutzen
+
+**Abhängig von** 13b (entfernt die Hälfte der Nutzung) und sinnvoll **mit 23** zusammen
+(die Tooltips). Der erste Haken lässt sich unabhängig davon jederzeit ziehen.
+
+**Vorsicht bei `LED.razor`.** Das ist eine Seite, die niemand von uns je angesehen hat,
+und die Ablösung eines Anzeigers ist eine sichtbare Änderung. Es gilt dasselbe wie bei
+Punkt 21: Ohne einen Blick auf das laufende Ergebnis ist sie nicht abgenommen.
+
+---
+
 ## Optional
 
 ### 15. Position mitschreiben und auswerten
