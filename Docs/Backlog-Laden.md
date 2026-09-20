@@ -78,16 +78,26 @@ verschiedene Topics. Reihenfolge und Handgriffe:
    Rückfallebene: Der KebaConnector gibt die Boxen nach `StaleReleaseAfter` auf vollen
    Strom frei. Gemessen ist dieses Fenster etwa eine Minute — nicht zehn, wie eine frühere
    Annahme in diesem Dokument behauptete.
-3. **Einstellungen einmalig umkopieren**, sonst steht die Regelung ohne Einstellungen da:
-   von `config/charging/settings` nach
-   `konfiguration/Laden/M3/Regelung/Einstellungen`, retained, QoS 1. Der alte Payload ist
-   unverändert gültig; das neue Pflichtfeld `Zeitpunkt` fehlt darin, was der Controller
-   verträgt. **Alternative ohne Broker-Eingriff:** nach dem Rollout die Ladestufe in der
-   Oberfläche einmal neu klicken — Web publiziert sie dann selbst auf das neue Topic,
-   inklusive `Zeitpunkt`.
-4. **Alte retained Topics leeren** (leere retained Nachricht), damit ein späterer Rollback
-   kein uraltes Kommando wiederbelebt: `commands/charging/KebaGarage`,
+3. **Einstellungen anstoßen: Ladestufe in der Oberfläche einmal neu klicken.**
+   So entschieden am 2026-09-20 — kein Broker-Eingriff. Web publiziert die Einstellungen
+   dann selbst retained auf `konfiguration/Laden/M3/Regelung/Einstellungen`, inklusive
+   `Zeitpunkt`; der Controller nimmt sie auf, sobald er sie sieht.
+
+   **Der Klick zählt erst, wenn der Web-Pod das neue Image fährt.** Klickt man früher,
+   publiziert das alte Web auf das alte Topic und es passiert nichts Sichtbares — der
+   Controller regelt weiter nicht, und die Ursache sieht aus wie ein Fehler im Schnitt.
+   Erkennbar am `build: automatic update of smarthomeweb`-Commit im Deployments-Repo
+   oder schlicht daran, dass die Oberfläche einmal neu geladen hat.
+
+   (Die verworfene Alternative wäre gewesen, den retained Payload von
+   `config/charging/settings` direkt auf das neue Topic umzukopieren. Er wäre unverändert
+   gültig — das neue Pflichtfeld `Zeitpunkt` fehlt darin, was der Controller verträgt.)
+4. **Alte retained Topics leeren** (leere retained Nachricht): `commands/charging/KebaGarage`,
    `commands/charging/KebaOutside`, `data/charging/situation`, `config/charging/settings`.
+   Das ist der einzige verbliebene Broker-Eingriff und **nicht eilig** — solange der neue
+   Stand läuft, abonniert diese Topics niemand mehr. Er schützt allein den Rollback-Fall:
+   Fällt man auf die alten Images zurück, würde sonst ein uraltes Kommando wiederbelebt.
+   Wer ihn aufschiebt, sollte das wissen, bevor er zurückrollt.
 5. **Dashboards importieren.** Manuell in Grafana, sie liegen nicht im ArgoCD-Pfad.
 6. **Verifikation im Connector-Log:** Bei jedem Kommando muss das Alter aus dem
    `Zeitpunkt` im Payload gezogen werden. Das löst zugleich das Prüfkriterium aus Punkt 16
