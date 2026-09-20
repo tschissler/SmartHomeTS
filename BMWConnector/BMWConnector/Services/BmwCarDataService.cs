@@ -187,9 +187,10 @@ public class BmwCarDataService : BackgroundService
         _log.LogError("[{Vehicle}] ══════════════════════════════════════════════════", _config.Name);
         _log.LogError("[{Vehicle}] Authentication failed — refresh token may have expired.", _config.Name);
         _log.LogError("[{Vehicle}] Re-authenticate from your local machine:", _config.Name);
-        _log.LogError("[{Vehicle}]   cd BMWConnector && dotnet run -- --bootstrap {Vehicle}", _config.Name, _config.Name);
-        _log.LogError("[{Vehicle}] Then restart the pod:", _config.Name);
-        _log.LogError("[{Vehicle}]   kubectl -n smarthome rollout restart deployment/bmwconnector", _config.Name);
+        _log.LogError("[{Vehicle}]   cd BMWConnector/BMWConnector && dotnet run -- --bootstrap {Vehicle}", _config.Name, _config.Name);
+        _log.LogError("[{Vehicle}] Then recreate the pod — do NOT use 'rollout restart', it patches the", _config.Name);
+        _log.LogError("[{Vehicle}] Deployment template and ArgoCD reverts it (selfHeal: true):", _config.Name);
+        _log.LogError("[{Vehicle}]   kubectl -n smarthome delete pod -l app=bmwconnector", _config.Name);
         _log.LogError("[{Vehicle}] Will retry in 5 minutes.", _config.Name);
         _log.LogError("[{Vehicle}] ══════════════════════════════════════════════════", _config.Name);
     }

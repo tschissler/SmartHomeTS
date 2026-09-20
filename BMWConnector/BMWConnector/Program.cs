@@ -66,11 +66,12 @@ try
                     The tokens are then stored in the Kubernetes Secret and this pod will pick them up automatically.
 
                     On your local machine, run:
-                      cd BMWConnector
+                      cd BMWConnector/BMWConnector
                       dotnet run -- --bootstrap {name}
 
-                    Then restart this pod:
-                      kubectl -n smarthome rollout restart deployment/bmwconnector
+                    Then recreate this pod — do NOT use 'rollout restart', it patches the
+                    Deployment template and ArgoCD reverts it (selfHeal: true):
+                      kubectl -n smarthome delete pod -l app=bmwconnector
 
                     --> See BMWConnector/SETUP.md, Step 3 for the full authentication flow.
                     """);

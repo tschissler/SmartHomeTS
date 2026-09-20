@@ -71,7 +71,7 @@ kubectl -n smarthome create secret generic bmwconnector-credentials \
 Run the connector from your local machine. If tokens are missing it automatically starts the auth flow:
 
 ```fish
-cd BMWConnector
+cd BMWConnector/BMWConnector
 dotnet run
 ```
 
@@ -204,6 +204,7 @@ When auth starts failing (refresh_token expired):
 
 1. Run bootstrap again — reads credentials from k8s Secret automatically:
    ```fish
+   cd BMWConnector/BMWConnector
    dotnet run -- --bootstrap BMW
    dotnet run -- --bootstrap Mini
    ```
