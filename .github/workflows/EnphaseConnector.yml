@@ -8,6 +8,7 @@ on:
       - EnphaseConnector/**
       # Shared code this service references (transitively resolved) - without
       # these the image is not rebuilt and the change deploys silently nowhere.
+      - Libs/HeartbeatLib/**
       - MQTTClient/**
       - SharedContracts/**
       - SmartHomeHelpers/**

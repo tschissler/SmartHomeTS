@@ -1,4 +1,5 @@
 ﻿using EnphaseConnector;
+using HeartbeatLib;
 using MQTTClient;
 using MQTTnet.Protocol;
 using Microsoft.Extensions.Configuration;
@@ -39,6 +40,15 @@ if (string.IsNullOrEmpty(settings.EnphaseUserName) ||
     return;
 }
 
+// Makes the service visible on status/# next to the 17 ESP32 devices - a stopped connector is
+// invisible on MQTT otherwise, and this one feeds the charging loop. See Docs/Service-Heartbeat.md.
+var serviceHeartbeat = new ServiceHeartbeat("EnphaseConnector", versionInfo.Version);
+// Set once the health check web app is up. Until then there is nothing to report and the
+// service heartbeat waits - it must say what the registered checks say, not guess.
+HealthCheckService? healthChecks = null;
+var lastServiceHeartbeat = DateTime.MinValue;
+Console.WriteLine($" ### Service heartbeat topic: {serviceHeartbeat.Topic}");
+
 // Start health check HTTP server in background
 var healthCheckTask = Task.Run(() => StartHealthCheckServer(settings.HealthCheckPort));
 
@@ -68,7 +78,37 @@ using (var mqttClient = new MQTTClient.MQTTClient("EnphaseConnector", settings.M
         await ReadDataAndSendToMQTT(tokenM1, mqttClient, "envoym1", LetzterProduktionsdatenabruf);
         await ReadDataAndSendToMQTT(tokenM3, mqttClient, "envoym3", LetzterProduktionsdatenabruf);
 
+        // Rides on the read loop (1 Hz) but on its own schedule, and only counts as sent when
+        // it actually went out - a failing Envoy read must not silence the heartbeat, because
+        // that failure is exactly what it is there to report.
+        if (DateTime.Now.Subtract(lastServiceHeartbeat) >= ServiceHeartbeat.DefaultIntervall
+            && await PublishServiceHeartbeat(mqttClient))
+        {
+            lastServiceHeartbeat = DateTime.Now;
+        }
+
         Thread.Sleep(settings.ReadIntervalMs - (int)-DateTime.Now.Subtract(startTime).TotalMilliseconds);
+    }
+}
+
+// Retained, because it is state: the last heartbeat stays on the broker after the pod dies,
+// and its Zeitpunkt is what turns the card on the device page silent.
+async Task<bool> PublishServiceHeartbeat(MQTTClient.MQTTClient client)
+{
+    if (healthChecks is null || !client.IsConnected)
+        return false;
+    try
+    {
+        var report = await healthChecks.CheckHealthAsync();
+        await client.PublishAsync(serviceHeartbeat.Topic,
+            serviceHeartbeat.BuildPayload(report, EnphaseConnectorHealthCheck.LastSuccessfulRead),
+            MqttQualityOfServiceLevel.AtLeastOnce, true);
+        return true;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error publishing service heartbeat: {ex.Message}");
+        return false;
     }
 }
 
@@ -116,16 +156,20 @@ static async Task ReadDataAndSendToMQTT(EnphaseLocalToken token, MQTTClient.MQTT
     }
 }
 
-static void StartHealthCheckServer(int port)
+void StartHealthCheckServer(int port)
 {
     var builder = WebApplication.CreateBuilder();
-    
+
     // Add health checks
     builder.Services.AddHealthChecks()
         .AddCheck<EnphaseConnectorHealthCheck>("enphase_connector");
-    
+
     var app = builder.Build();
-    
+
+    // The same HealthCheckService the /ready probe answers from. The service heartbeat reports
+    // what it says rather than re-deciding what "healthy" means.
+    healthChecks = app.Services.GetRequiredService<HealthCheckService>();
+
     // Configure health check endpoints
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
     {

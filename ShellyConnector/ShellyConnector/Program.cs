@@ -1,4 +1,5 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using HeartbeatLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MQTTClient;
@@ -155,6 +156,38 @@ timerPowerDevices.Elapsed += async (sender, e) =>
     await Task.WhenAll(tasks);
 };
 timerPowerDevices.Start();
+
+// Makes the service visible on status/# next to the 17 ESP32 devices - a stopped connector is
+// invisible on MQTT otherwise. Separate from the device timers on purpose: the heartbeat has to
+// keep going when reading a device fails, because that failure is what it should report.
+// See Docs/Service-Heartbeat.md.
+var serviceHeartbeat = new ServiceHeartbeat("ShellyConnector", versionInfo.Version);
+var healthChecks = healthCheckApp.Services.GetRequiredService<HealthCheckService>();
+ConsoleHelpers.PrintInformation($" ### Service heartbeat on {serviceHeartbeat.Topic}");
+async Task PublishServiceHeartbeat()
+{
+    try
+    {
+        if (!mqttClient.IsConnected)
+            return;
+        // Retained, because it is state: the last heartbeat stays on the broker after the pod
+        // dies, and its Zeitpunkt is what turns the card on the device page silent.
+        var report = await healthChecks.CheckHealthAsync();
+        await mqttClient.PublishAsync(serviceHeartbeat.Topic,
+            serviceHeartbeat.BuildPayload(report, ShellyConnectorHealthCheck.LastSuccessfulRead),
+            MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
+    }
+    catch (Exception ex)
+    {
+        ConsoleHelpers.PrintErrorMessage($"Error publishing service heartbeat: {ex.Message}");
+    }
+}
+
+var heartbeatTimer = new System.Timers.Timer(ServiceHeartbeat.DefaultIntervall.TotalMilliseconds);
+heartbeatTimer.Elapsed += async (sender, e) => await PublishServiceHeartbeat();
+heartbeatTimer.Start();
+// Once right away, so the card exists from the start instead of a minute later
+await PublishServiceHeartbeat();
 
 var timerThermostatDevices = new System.Timers.Timer(60000);
 timerThermostatDevices.Elapsed += async (sender, e) =>
