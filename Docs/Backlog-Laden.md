@@ -21,7 +21,7 @@ Präfix setzt.
 
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
-| 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | in Arbeit — Pfadfilter der Service-Workflows auf `SharedContracts`, `MQTTClient`, `SmartHomeHelpers`, `Libs/`; dazu `.gitignore` für `.claude/worktrees/` |
+| 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **fertig**, 1 Commit, Merge offen. Pfadfilter in sechs Service-Workflows, `.gitignore` für `.claude/worktrees/`. **Achtung beim Merge:** jeder Workflow triggert auch auf sich selbst — der Merge löst sechs Builds und sechs Rollouts aus, ohne jede Code-Änderung |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | Doku, Log-Hinweise und Code fertig (2 Commits). Secret repariert, Bootstrap sauber gelaufen, Pod erneuert — Verifikation läuft. **Enthält Code**, der Merge löst einen Rollout aus; Freigabe offen. Ursache des Vorfalls als Punkt 18 erfasst |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
@@ -91,18 +91,25 @@ Punkte gleichzeitig bearbeitet, braucht zusätzlich diese Tabelle:
 **Problem.** Kein Service-Workflow hat einen Pfadfilter auf den geteilten Code, den er
 referenziert. Eine Änderung an `SharedContracts` (von 7 Projekten referenziert),
 `MQTTClient` oder `SmartHomeHelpers` (je 4) baut **kein** Image neu — es gibt keinen
-Fehler, nur ein stilles Nicht-Deployment. Einzige Ausnahme ist `RulesEngine.yml`, und
-selbst dort fehlt `SharedContracts`.
+Fehler, nur ein stilles Nicht-Deployment. Einzige Ausnahme ist `RulesEngine.yml`.
+`SharedContracts` fehlt dort zu Recht: RulesEngine referenziert es weder direkt noch
+transitiv.
 
-| Service | referenziert | Filter heute |
+`MQTTClient` referenziert selbst `SmartHomeHelpers` — wer `MQTTClient` nutzt, hängt
+deshalb auch daran. Die Spalte nennt den **transitiv aufgelösten** Stand:
+
+| Service | referenziert | Filter vor Punkt 0 |
 |---|---|---|
 | ChargingController | SharedContracts | keiner |
-| KebaConnector | SharedContracts, MQTTClient, Libs/HelpersLib | keiner |
+| KebaConnector | SharedContracts, MQTTClient, Libs/HelpersLib, SmartHomeHelpers¹ | keiner |
 | ShellyConnector | SharedContracts, MQTTClient, SmartHomeHelpers | keiner |
 | EnphaseConnector | SharedContracts, MQTTClient, SmartHomeHelpers | keiner |
-| SmartHome.DataHub | SharedContracts, MQTTClient | keiner |
+| SmartHome.DataHub | SharedContracts, MQTTClient, SmartHomeHelpers¹ | keiner |
 | SmartHome.Web | SharedContracts, SmartHomeHelpers | keiner |
-| RulesEngine | MQTTClient | MQTTClient, SmartHomeHelpers |
+| RulesEngine | MQTTClient, SmartHomeHelpers¹ | MQTTClient, SmartHomeHelpers |
+
+¹ transitiv über `MQTTClient`. `BMWConnector` hat gar keine `ProjectReference`,
+`VWConnector` ist Python — beide brauchen keinen Filter.
 
 **Warum zuerst.** Punkt 7/8 legt die neuen Payload-Typen nach `SharedContracts`, Punkt 3
 den Heartbeat-Helfer nach `Libs/`, Punkt 12 ändert die Einheitenkommentare in
@@ -112,12 +119,14 @@ dass es auffällt.
 **Umfang**
 - [ ] Je Service-Workflow die tatsächlich referenzierten Pfade in `paths:` ergänzen
       (Quelle: die `ProjectReference`-Einträge der `.csproj`)
-- [ ] `SmartHomeHelpers` aus `RulesEngine.yml` entfernen, wenn es dort nicht referenziert ist
+- [x] ~~`SmartHomeHelpers` aus `RulesEngine.yml` entfernen~~ — **gegenstandslos, nicht
+      aufräumen:** RulesEngine referenziert es transitiv über `MQTTClient`
 - [ ] `.claude/worktrees/` in `.gitignore` aufnehmen — Worktrees liegen im Repo und
       erscheinen sonst als untracked
 
-**Fertig, wenn** eine Teständerung an `SharedContracts` die Builds aller sieben Services
-auslöst.
+**Fertig, wenn** eine Änderung an `SharedContracts` sechs Builds auslöst — alle außer
+RulesEngine, das es nicht referenziert — und eine an `MQTTClient` alle sieben. Praktisch
+beweisbar ist das erst nach dem Merge; vorher zählt das Matching der `paths:`-Einträge.
 
 **Blockiert** 3, 7, 8, 12.
 
