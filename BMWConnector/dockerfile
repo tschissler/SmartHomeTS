@@ -1,9 +1,17 @@
+# Build context is the repository root, not BMWConnector/: the connector references
+# SharedContracts for its topic names, and a context of BMWConnector/ cannot reach it.
+# The ChargingController image is built the same way, for the same reason.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY BMWConnector/BMWConnector.csproj BMWConnector/
-RUN dotnet restore BMWConnector/BMWConnector.csproj
-COPY . .
-RUN dotnet publish BMWConnector/BMWConnector.csproj -c Release -o /app/publish
+
+# Project files first, so a code change does not invalidate the restore layer.
+COPY BMWConnector/BMWConnector/BMWConnector.csproj BMWConnector/BMWConnector/
+COPY SharedContracts/SharedContracts.csproj SharedContracts/
+RUN dotnet restore BMWConnector/BMWConnector/BMWConnector.csproj
+
+COPY BMWConnector/ BMWConnector/
+COPY SharedContracts/ SharedContracts/
+RUN dotnet publish BMWConnector/BMWConnector/BMWConnector.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app

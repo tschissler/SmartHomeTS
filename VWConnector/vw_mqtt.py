@@ -19,7 +19,15 @@ if TYPE_CHECKING:
 # Configuration from environment variables
 MQTT_BROKER = os.getenv('VW_MQTT_BROKER', 'smarthomepi2')
 MQTT_PORT = int(os.getenv('VW_MQTT_PORT', '32004'))
-MQTT_TOPIC = 'data/charging/VW'
+# Follows Docs/MQTT-Topic-Konvention.md: daten/Fahrzeug/<Auto>/Status, retained, with
+# "Zeitpunkt" in the payload. A vehicle is location-less, so the category has four levels
+# where the charging topics have five.
+#
+# The C# side spells the same topic in SharedContracts/FahrzeugTopics.cs and every reader
+# uses it from there. This connector is Python and cannot, so the topic is written out once,
+# here. Keep the two in step: topics are case sensitive and a mismatch does not fail — the
+# publisher writes to a topic nobody reads, and the subscriber simply receives nothing.
+MQTT_TOPIC = 'daten/Fahrzeug/VW/Status'
 HEALTH_CHECK_PORT = int(os.getenv('VW_HEALTH_CHECK_PORT', '8080'))
 
 # The EU Data Act portal produces a new dataset roughly every 15 minutes.
@@ -216,11 +224,15 @@ def _merge_with_last_known(payload):
     """Replace values the portal did not deliver with the last published ones.
 
     The EU Data Act portal regularly serves partial or "no_content_found"
-    datasets. Publishing a None for e.g. mileage would break the consumers:
-    CarStatusData in SmartHome.Web maps battery/remainingRange/mileage/
-    chargingTarget onto non-nullable doubles, and System.Text.Json throws on a
-    JSON null for those. So every optional value falls back to the last known
-    good one and only then to a type-safe default.
+    datasets. Every optional value therefore falls back to the last published
+    one and only then to a type-safe default.
+
+    This used to be load-bearing for a second reason: CarStatusData mapped
+    battery/remainingRange/mileage/chargingTarget onto non-nullable doubles and
+    System.Text.Json threw on a JSON null. Those fields are nullable now
+    (backlog item 10), so a null no longer breaks a consumer — but carrying the
+    last known value forward is still the better answer than blanking a card
+    because one poll came back empty.
     """
     defaults = {
         "nickname": "",
@@ -425,6 +437,12 @@ async def main():
                 # dashboard with empty values.
                 print("Skipping publish, no usable data from portal")
             else:
+                # Mandatory field of the topic convention, stamped at publication
+                # rather than at fetch: it says when this retained message was put
+                # on the broker, which is what tells a reconnecting consumer whether
+                # the connector is still alive. When the *values* were measured is
+                # "lastUpdate", and the two can be a quarter of an hour apart.
+                result["Zeitpunkt"] = _now().isoformat()
                 payload = json.dumps(result)
                 client.publish(MQTT_TOPIC, payload, qos=1, retain=True)
                 _last_published_payload = result

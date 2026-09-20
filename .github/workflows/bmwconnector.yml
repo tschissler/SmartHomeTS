@@ -6,6 +6,9 @@ on:
     paths:
       - .github/workflows/bmwconnector.yml
       - BMWConnector/**
+      # Shared code this service references (transitively resolved) - without
+      # these the image is not rebuilt and the change deploys silently nowhere.
+      - SharedContracts/**
   workflow_dispatch:
 
 # A newer push supersedes a running build of the same branch.
@@ -51,7 +54,8 @@ jobs:
     - name: Build and publish multi-architecture Docker image
       uses: docker/build-push-action@v6
       with:
-        context: ./${{ env.PROJECT_NAME }}
+        # Repository root: the image needs SharedContracts alongside the connector.
+        context: .
         file: ./${{ env.PROJECT_NAME }}/dockerfile
         platforms: linux/amd64,linux/arm64
         push: true

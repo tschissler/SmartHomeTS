@@ -124,9 +124,12 @@
 
 <div>
     <div class="carsGrid">
-        <CarStatusDataVisualizer CarStatusData="@bwmStatusData" />
-        <CarStatusDataVisualizer CarStatusData="@miniStatusData" />
-        <CarStatusDataVisualizer CarStatusData="@vwStatusData" />
+        @foreach (var fahrzeug in FahrzeugTopics.Fahrzeuge)
+        {
+            <CarStatusDataVisualizer
+                Name="@fahrzeug"
+                CarStatusData="@MqttService.Fahrzeuge.GetValueOrDefault(fahrzeug)" />
+        }
     </div>
 </div>
 
@@ -189,9 +192,6 @@
     private int _manualCurrent = 6;
     private bool _useManualCharging = false;
     ChargingSituation _chargingSituation = new ();
-    private CarStatusData bwmStatusData = new();
-    private CarStatusData miniStatusData = new();
-    private CarStatusData vwStatusData = new();
 
     private AvailabilityData availabilityData = new (); 
     private ConsumptionData consumptionData = new ();
@@ -260,7 +260,7 @@
 
     private void UpdateData(object sender, MqttMessageReceivedEventArgs args)
     {
-        if (args.Topic.StartsWith("data/charging/") || args.Topic == LadeTopics.Situation)
+        if (args.Topic == LadeTopics.Situation)
         {
             UpdateChargingSituation();
         }
@@ -268,11 +268,12 @@
         {
             UpdateChargingSettings();
         }
-        else if (LadeTopics.ZerlegeStatusTopic(args.Topic) is not null)
+        else if (LadeTopics.ZerlegeStatusTopic(args.Topic) is not null
+                 || FahrzeugTopics.ZerlegeStatusTopic(args.Topic) is not null)
         {
-            // The tiles read the states straight out of MqttService.Wallboxen, so a status
-            // message only has to trigger a render. That also keeps the session duration
-            // ticking: the box reports every few seconds.
+            // The tiles and cards read their state straight out of MqttService.Wallboxen and
+            // MqttService.Fahrzeuge, so a status message only has to trigger a render. That
+            // also keeps the session duration ticking: the box reports every few seconds.
             InvokeAsync(StateHasChanged);
         }
     }
@@ -341,9 +342,6 @@
     private void UpdateChargingSituation()
     {
         _chargingSituation = MqttService.ChargingSituation;
-        bwmStatusData = MqttService.BmwStatusData ?? new CarStatusData();
-        miniStatusData = MqttService.MiniStatusData ?? new CarStatusData();
-        vwStatusData = MqttService.VwStatusData ?? new CarStatusData();
 
         availabilityData = ChargingSituationManager.CalculateAvailabilityData(
             _chargingSituation.PowerFromPV,

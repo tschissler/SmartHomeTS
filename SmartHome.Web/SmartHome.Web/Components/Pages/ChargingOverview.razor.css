@@ -119,12 +119,21 @@
     }
 }
 
+/* Every known vehicle, always - a vehicle that reports nothing gets an empty card, because a
+   missing card reads as "there is no such vehicle" */
 .carsGrid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     grid-column-gap: 30px;
+    grid-row-gap: 20px;
     margin-left: 40px;
     margin-right: 40px;
     margin-top: 20px;
-    text-align: center;
+    align-items: start;
+}
+
+@media (max-width: 1000px) {
+    .carsGrid {
+        grid-template-columns: 1fr;
+    }
 }

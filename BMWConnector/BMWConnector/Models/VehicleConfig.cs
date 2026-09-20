@@ -1,4 +1,5 @@
 using BMWConnector.Services;
+using SharedContracts;
 
 namespace BMWConnector.Models;
 
@@ -33,8 +34,47 @@ public class VehicleConfig
             Name        = prefix,
             Gcid        = await RequiredAsync($"{prefix}_GCID",      prefix, store, allowCredentialWriteBack, allowInteractivePrompt, ct),
             ClientId    = await RequiredAsync($"{prefix}_CLIENT_ID", prefix, store, allowCredentialWriteBack, allowInteractivePrompt, ct),
-            OutputTopic = Env($"{prefix}_OUTPUT_TOPIC", $"data/charging/{prefix}"),
+            OutputTopic = ResolveOutputTopic(prefix),
         };
+    }
+
+    /// <summary>
+    /// The topic this vehicle publishes to. Default is the conventional
+    /// <c>daten/Fahrzeug/&lt;Auto&gt;/Status</c>; an environment variable may still override it.
+    /// </summary>
+    /// <remarks>
+    /// The override is reported either way, and loudly when it is in effect. Changing the
+    /// default in the code is not enough on its own: with <c>BMW_OUTPUT_TOPIC</c> set in the
+    /// deployment the connector would keep publishing to the old topic while every reader
+    /// subscribes to the new one, and nothing about that failure is visible — no error, no
+    /// exception, just a dashboard that stops moving. Same class of silent override as backlog
+    /// item 18, where an environment variable quietly outranked the production Secret.
+    /// </remarks>
+    private static string ResolveOutputTopic(string prefix)
+    {
+        var conventional = FahrzeugTopics.Status(prefix);
+        var configured = Env($"{prefix}_OUTPUT_TOPIC");
+
+        if (configured.Length == 0)
+        {
+            Console.WriteLine($"[{prefix}] Output topic: '{conventional}' "
+                            + $"(no {prefix}_OUTPUT_TOPIC set, using the convention).");
+            return conventional;
+        }
+
+        if (configured == conventional)
+        {
+            Console.WriteLine($"[{prefix}] Output topic: '{conventional}' "
+                            + $"({prefix}_OUTPUT_TOPIC is set and matches the convention).");
+            return conventional;
+        }
+
+        Console.Error.WriteLine(
+            $"[{prefix}] WARNING: {prefix}_OUTPUT_TOPIC overrides the conventional output topic. "
+          + $"Publishing to '{configured}' instead of '{conventional}'. Every reader subscribes "
+          + $"to the conventional topic, so they will receive nothing at all. Remove the "
+          + $"variable from the deployment unless this is deliberate.");
+        return configured;
     }
 
     private static async Task<string> RequiredAsync(
