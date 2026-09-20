@@ -14,6 +14,8 @@ on:
       # Added with the vehicle assignment (backlog item 11): the rule reads WallboxStatus,
       # CarStatusData, FahrzeugZuordnung and the topic literals from here.
       - SharedContracts/**
+      # Added with the service heartbeat (backlog item 3).
+      - Libs/HeartbeatLib/**
   workflow_dispatch:
 
 # A newer push supersedes a running build of the same branch.
