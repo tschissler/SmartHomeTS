@@ -145,6 +145,19 @@ namespace ChargingControllerTests
         }
 
         [Fact]
+        public void ASessionAtTheMinimumCurrentIsRecognisedDespiteMeasuringBelowTheNominalMinimum()
+        {
+            // A three phase 6 A session measures around 4000 W, below the nominal 4140 W.
+            // Taking the nominal value as the threshold would interrupt exactly the sessions
+            // the surplus charging produces most of the time.
+            var situation = Situation(insideChargingPower: 4007);
+
+            Stabilize(T0, MinimumCurrentmA, situation).Should().Be(MinimumCurrentmA,
+                "the session continues seamlessly, no start delay and no interruption");
+            situation.InsideSwitchCycles.Should().Be(0, "no contactor cycle happened");
+        }
+
+        [Fact]
         public void SwitchCyclesAreCounted()
         {
             var situation = Situation();

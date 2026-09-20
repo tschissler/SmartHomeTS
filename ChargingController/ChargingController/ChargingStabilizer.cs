@@ -16,6 +16,13 @@ namespace ChargingController
     /// </remarks>
     public class ChargingStabilizer
     {
+        /// <summary>
+        /// A three phase session at the minimum current measures around 4000 W, slightly below
+        /// the nominal minimum charging power of 4140 W. Recognising a running session must not
+        /// depend on that nominal value, everything above this threshold is a real session.
+        /// </summary>
+        private const int RunningSessionThresholdWatts = 1000;
+
         private readonly ChargingStabilizerOptions options;
         private readonly StationState insideState = new();
         private readonly StationState outsideState = new();
@@ -69,14 +76,18 @@ namespace ChargingController
             if (!state.Initialized)
             {
                 state.Initialized = true;
-                if (measuredChargingPower >= ChargingDecisionsMaker.MinimumChargingPower)
+                if (measuredChargingPower > RunningSessionThresholdWatts)
                 {
                     // A session is already running, e.g. after a restart of the service. Adopt it
                     // instead of interrupting it; the delays below then decide how it continues.
                     // LastSwitchAt stays unset on purpose, so a restart cannot extend a charging
                     // session that should be stopped.
                     state.ChargingActive = true;
-                    state.CommandedCurrentmA = CurrentFromPower(measuredChargingPower);
+                    // Never adopt below what the wallbox can do, the measured power of a session
+                    // at the minimum current is slightly below the nominal minimum
+                    state.CommandedCurrentmA = Math.Max(
+                        CurrentFromPower(measuredChargingPower),
+                        ChargingDecisionsMaker.MinimumChargingCurrentmA);
                     Console.WriteLine($"Stabilizer {stationName}: adopting running charging session " +
                         $"at {state.CommandedCurrentmA} mA");
                 }

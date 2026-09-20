@@ -76,9 +76,18 @@ Daraus folgt eine Obergrenze von **maximal 6 Schaltspielen pro Stunde** je Wallb
 - **Netzbezug über dem Limit:** Sofortige Drosselung auf Minimalstrom unter Umgehung aller
   Verzögerungen; hält der hohe Bezug an, wird trotz Mindestladedauer abgeschaltet. Hierfür werden
   bewusst die **ungefilterten** Messwerte verwendet.
-- **Neustart des Dienstes während einer laufenden Ladung:** Die Session wird übernommen
-  (erkannt an der gemessenen Ladeleistung) statt sie zu unterbrechen. Die Mindestladedauer wird
-  dabei nicht neu gestartet, damit ein Neustart keine Ladung künstlich verlängert.
+- **Neustart des Dienstes während einer laufenden Ladung:** Der erste Regelzyklus läuft erst,
+  wenn beide Wallbox-Topics Daten geliefert haben (Timeout 30 s) — sonst würde der Regler 0 mA
+  kommandieren, bevor er den Wallbox-Zustand kennt, und damit den Schütz öffnen. Eine laufende
+  Session wird dann übernommen statt unterbrochen; erkannt wird sie an einer gemessenen
+  Ladeleistung über 1000 W. Diese Schwelle darf **nicht** die nominellen 4140 W sein: eine
+  dreiphasige 6-A-Ladung misst real nur rund 4000 W. Die Mindestladedauer wird beim Übernehmen
+  nicht neu gestartet, damit ein Neustart keine Ladung künstlich verlängert.
+
+  Jeder Pod-Wechsel ist damit für den Schütz folgenlos. Relevant ist das, weil ArgoCD
+  (`selfHeal: true`, Manifeste im separaten Repo `SmartHomeDeployments`) und der
+  `kubectl set image`-Schritt der GitHub-Action sich beim Deploy kurz gegenseitig überschreiben
+  können — dabei entstehen zwei bis drei Pod-Wechsel hintereinander.
 
 ## Diagnose
 

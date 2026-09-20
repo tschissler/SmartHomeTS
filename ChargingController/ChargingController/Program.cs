@@ -11,7 +11,13 @@ ChargingSettings currentChargingSettings = new ChargingSettings();
 DateTime lastHeartbeatTime = DateTime.MinValue;
 DateTime lastControlCycleTime = DateTime.MinValue;
 bool powerDataReceived = false;
+bool insideDataReceived = false;
+bool outsideDataReceived = false;
+DateTime firstPowerDataTime = DateTime.MinValue;
 const int heartbeatIntervalSeconds = 60;
+// Deciding before the wallbox readings have arrived would command 0 mA while a session is
+// running and open the contactor. If a wallbox stays silent, control has to start anyway.
+const int startupGraceSeconds = 30;
 // The decision runs on a fixed cycle instead of on every incoming message: the Enphase
 // connector publishes once per second, which is far faster than the dead time of the
 // wallbox and the car, and reacting that fast is what makes the loop oscillate.
@@ -89,6 +95,11 @@ async Task RunControlCycle()
 {
     if (!powerDataReceived || !mqttClient.IsConnected)
         return;
+    if (!(insideDataReceived && outsideDataReceived)
+        && DateTime.Now.Subtract(firstPowerDataTime).TotalSeconds < startupGraceSeconds)
+    {
+        return;
+    }
 
     try
     {
@@ -198,7 +209,11 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.PowerFromBattery = (int)(pvData.PowerFromBattery / 1000);
             currentChargingSituation.PowerFromPV = (int)(pvData.PowerFromPV / 1000);
             currentChargingSituation.HouseConsumptionPower = (int)(pvData.PowerToHouse / 1000);
-            powerDataReceived = true;
+            if (!powerDataReceived)
+            {
+                powerDataReceived = true;
+                firstPowerDataTime = DateTime.Now;
+            }
         }
 
         else if (topic == "data/charging/KebaGarage")
@@ -207,6 +222,7 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.InsideCurrentChargingPower = kebaGarageData.CurrentChargingPower;
             currentChargingSituation.InsideConnected = kebaGarageData.CarIsPlugedIn;
             currentChargingSituation.InsideChargingCurrentSessionWh = kebaGarageData.EnergyCurrentChargingSession;
+            insideDataReceived = true;
         }
 
         else if (topic == "data/charging/KebaOutside")
@@ -215,6 +231,7 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.OutsideCurrentChargingPower = kebaOutsideData.CurrentChargingPower;
             currentChargingSituation.OutsideConnected = kebaOutsideData.CarIsPlugedIn;
             currentChargingSituation.OutsideChargingCurrentSessionWh = kebaOutsideData.EnergyCurrentChargingSession;
+            outsideDataReceived = true;
         }
         else
         {
