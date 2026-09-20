@@ -1010,11 +1010,42 @@ Punkt 11, solange der an der Kachel arbeitet.
 Löst `wallbox-charging-dashboard.json` ab; dessen Leistungskurven wandern als Verlaufsteil
 hinein.
 
+#### Präzisiert am 2026-09-20 durch Thomas
+
+**Die Frage, die das Dashboard beantworten soll:** „Wie gut haben Wetter und meine
+Ladesteuerung zusammen funktioniert, um möglichst wenig Netzstrom zum Laden zu
+verbrauchen?“ **Die Kennzahl ist der Netzanteil, nicht der PV-Anteil.** Ein sonniger Monat
+mit 90 % PV ist schlicht ein gutes Ergebnis — ein Vergleichsmaßstab gegen das Wetter ist
+ausdrücklich **nicht** gewollt.
+
+**Zwei Zwecke, beide wichtig:**
+1. **Anteile** — „Im September wurde der BMW mit 70 % PV, 25 % Batterie, 5 % Netz geladen“
+2. **Absolute kWh je Fahrzeug** — Grundlage für das Kostenargument gegenüber einem
+   Verbrenner
+
+**Zeitschienen: Woche, Monat und Jahr**, umschaltbar, und Zeiträume untereinander
+vergleichbar.
+
+**Darstellung:** Zwei gestapelte Balkendiagramme aus **derselben** Abfrage — einmal
+absolut (kWh, beantwortet „wie viel“), einmal auf 100 % normiert (beantwortet „welcher
+Anteil“). In Grafana derselbe Panel-Typ mit `Stack series: Normal` bzw. `100%`.
+Nebeneinander zeigen sie, ob ein guter Prozentsatz aus viel oder aus wenig Ladung stammt.
+
+**Netz gehört in der Stapelreihenfolge nach unten.** Nur die unterste Reihe hat über alle
+Balken hinweg dieselbe Grundlinie und lässt sich deshalb zwischen Zeiträumen wirklich
+vergleichen — und Netz ist die Größe, auf die es ankommt.
+
+**Datenlage (Stand 2026-09-20):** `ladesitzungen` beginnt mit der ersten beendeten Sitzung,
+die Quellenzähler je Wallbox seit 11:31 Uhr. Rückwirkend ist nichts zu holen, und das ist
+**akzeptiert** — der Quellenmix wurde am selben Tag eingebaut. Der erste vollständige
+Monat ist Oktober.
+
 **Umfang**
-- [ ] Kennzahlen: kWh gesamt im Zeitraum, PV-Anteil in Prozent, Anzahl Sitzungen
+- [ ] Kennzahlen: kWh gesamt im Zeitraum, **Netzanteil in Prozent**, Anzahl Sitzungen
 - [ ] Protokolltabelle: Beginn, Wallbox, Fahrzeug, Vertrauen, Steckdauer, Ladezeit, kWh,
       davon PV/Batterie/Netz, PV-Anteil
-- [ ] Balken kWh je Fahrzeug und Monat, gestapelt nach Quelle
+- [ ] Balken kWh je Fahrzeug und Zeitraum (Woche/Monat/Jahr), gestapelt nach Quelle —
+      **zweimal: absolut und auf 100 % normiert**
 - [ ] Verlauf: Ladeleistung gestapelt nach Quelle — **je Wallbox, siehe Punkt 20.**
       Wird dort schon gebaut, dann hier übernehmen statt neu bauen
 - [ ] Variablen: Fahrzeug, Wallbox, Schalter „nur sichere Zuordnungen"
