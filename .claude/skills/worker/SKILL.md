@@ -35,7 +35,9 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   anstößt, nicht der Inhalt. **Ein Token gehört trotzdem nie in eine Datei** — den holst du
   jedes Mal frisch in die Variable.
 - **Nimm einen eigenen Port**, wenn du etwas startest (Web-App, Testserver): Zwei Sessions
-  auf demselben Port kollidieren, und deine eigene Vorgängerinstanz auch. Zum Aufräumen
+  auf demselben Port kollidieren, und deine eigene Vorgängerinstanz auch. Bei .NET setzt
+  du ihn mit `--urls` durch — ohne das nimmt `dotnet run` die `launchSettings.json` und
+  ignoriert, was im Auftrag steht. Zum Aufräumen
   `ss -lptn 'sport = :<port>'` und `kill <pid>` — **nicht `pkill -f`**: Das Muster steht
   auch in deiner eigenen Kommandozeile, also greift es die eigene Shell mit und der Befehl
   endet mit Exit 144.
@@ -147,6 +149,14 @@ CHR=$(find ~/.cache/ms-playwright -maxdepth 3 -name chrome -type f | head -1)
 Das ist der Weg für **lokale** Prüfstände und für alles, was als PDF gebraucht wird
 (Firefox kann kein PDF). Für eine angemeldete Seite wie Grafana hilft es nicht — headless
 hat Thomas' Sitzung nicht; dort bleibt es beim Messen im Tab.
+
+**Es liegt nur die Binärdatei dort, keine Playwright-Bibliothek.** Wer eine Seite nicht nur
+ablichten, sondern *bedienen* will, spricht das DevTools-Protokoll selbst (Node bringt
+WebSocket mit). Zwei Fallen dabei, beide teuer gelernt:
+`Emulation.setDeviceMetricsOverride` mit `mobile: true` verschluckt per CDP gesendete
+Mausereignisse, und `Input.dispatchMouseEvent` braucht `buttons`, sonst kommt kein
+`pointerup` an. Der Aufwand lohnt, sobald Ereignisse im Spiel sind: Ein Screenshot zeigt
+nicht, dass ein Element den Klick schluckt.
 
 ## Der Abschlussbericht
 
