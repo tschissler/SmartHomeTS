@@ -119,25 +119,44 @@
 
     /// <summary>
     /// One charging level: its number, the short name under the circle and the sentence that
-    /// says what it actually does. The wording of the explanations is the one the tooltips
-    /// carried - it is the only description of the levels that exists anywhere, so it is
-    /// copied over rather than rewritten; only "KW"/"Kw" became "kW" and a missing comma was
-    /// added.
+    /// says what it actually does.
     /// </summary>
+    /// <remarks>
+    /// The explanations were checked against ChargingDecisionsMaker.CalculateAvailableChargingPower
+    /// on 2026-09-20 and four of the six were wrong — level 3 claimed a battery threshold of
+    /// 50 %, a figure that appears nowhere in the controller. They are written from the code,
+    /// not from the wording the tooltips used to carry.
+    ///
+    /// THE FIGURES IN THESE SENTENCES ARE CONSTANTS OF ANOTHER SERVICE and cannot be read from
+    /// here: this project deliberately does not reference the ChargingController, because that
+    /// reference would put a second service into every rollout of this page. Whoever changes
+    /// BatteryChargingMaxPower (3.800 W), BatteryDischargingMaxPower (3.500 W) or the level-1
+    /// battery limit of 90 % in ChargingDecisionsMaker.cs has to correct these sentences by
+    /// hand — nothing here will notice. The minimum charging power is named instead of given
+    /// as a number for exactly that reason.
+    /// </remarks>
     private record Ladestufe(int Nummer, string Kurz, string Erklaerung);
 
     private static readonly IReadOnlyList<Ladestufe> Ladestufen =
     [
         new(0, "Aus", "Laden ist deaktiviert."),
         new(1, "PV-Laden mit Batterie-Prio",
-            "Lädt das Auto nur mit PV-Überschuss, der 3,8 kW übersteigt."),
+            "Die Hausbatterie hat Vorrang: Das Auto lädt erst mit dem PV-Überschuss oberhalb von "
+            + "3,8 kW, mindestens aber mit der Mindestladeleistung. Ab 90 % Batteriefüllstand "
+            + "bekommt das Auto den ganzen Überschuss."),
         new(2, "PV-Laden mit Auto-Prio",
-            "Lädt das Auto, wenn der PV-Überschuss die Mindestladeleistung übersteigt."),
+            "Das Auto hat Vorrang: Es lädt mit dem vollen PV-Überschuss, sobald der die "
+            + "Mindestladeleistung erreicht."),
         new(3, "PV + Batterie-Laden",
-            "Lädt das Auto, wenn der PV-Überschuss plus Batteriekapazität die Mindestladeleistung "
-            + "übersteigt und die Batterie zu mehr als 50 % geladen ist."),
-        new(4, "Sofort-Laden", "Lädt das Auto mit mindestens der Mindestladeleistung."),
-        new(5, "Schnell-Laden", "Lädt das Auto mit 8 kW."),
+            "Lädt mit dem vollen PV-Überschuss; reicht der nicht für die Mindestladeleistung, "
+            + "steuert die Hausbatterie bis zu 3,5 kW bei. Wird sie dabei zu leer, bekommt sie "
+            + "wieder Vorrang, bis sie sich erholt hat — bis dahin lädt das Auto wie in Stufe 1."),
+        new(4, "Sofort-Laden",
+            "Lädt immer mindestens mit der Mindestladeleistung — was der PV-Überschuss nicht "
+            + "hergibt, kommt aus Hausbatterie oder Netz. Sind beide Boxen belegt und freigegeben, "
+            + "bekommt jede die Mindestladeleistung."),
+        new(5, "Schnell-Laden",
+            "Lädt mit mindestens 8 kW, bei größerem PV-Überschuss entsprechend mehr."),
     ];
 
     /// <summary>
