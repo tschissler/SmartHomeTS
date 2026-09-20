@@ -189,18 +189,114 @@ To add a new field: register it in the portal, then add a `case` in `VehicleStat
 
 | Token | Expires | Managed by |
 |---|---|---|
-| `id_token` | 60 min | Service refreshes every 50 min automatically |
-| `access_token` | 60 min | Refreshed alongside id_token |
-| `refresh_token` | ~90 days | Must re-run bootstrap when expired |
+| `id_token` | 1 hour | Service refreshes every 50 min automatically |
+| `access_token` | 1 hour | Refreshed alongside id_token |
+| `refresh_token` | 2 weeks **after its last use** | Rotates on every refresh; bootstrap only once it has lapsed |
 
-On each 50-minute refresh, the service writes all three updated tokens back to the Kubernetes Secret.
+**The refresh token rotates.** Every refresh returns a new set of all three tokens and restarts
+each of their clocks, so a service refreshing every 50 minutes keeps its refresh token
+indefinitely young. Two things end that: two weeks without a successful refresh, or the
+`client_id` being unsubscribed from its services, which voids the refresh token at once.
+Only then is a new device code flow (bootstrap) required.
+
+> **Source.** BMW's own portals (`bmw-cardata.bmwgroup.com`, customer and third-party) are
+> JavaScript applications whose text cannot be retrieved mechanically, so the figures above come
+> from a community transcript of the CarData documentation:
+> <https://github.com/kvanbiesen/bmw-cardata-ha/blob/main/cardata_api_documentation.md>
+> (retrieved 2026-09-20) — **not a primary source**, and for the two weeks no independent second
+> source was found. The one-hour token lifetime is corroborated by a practitioner report in
+> <https://github.com/bimmerconnected/bimmer_connected/discussions/745> ("ID token expires in:
+> 0:59:58"), and the rotation itself is confirmed by our own measurement: on 2026-09-20 the
+> Mini's stored `id_token` carried an `iat` of that morning alongside an `auth_time` of
+> 2026-03-08.
+>
+> This replaces an earlier "~90 days" that stood here without any source and sent a diagnosis
+> in the wrong direction. If you correct these numbers, bring a citation.
+
+On each 50-minute refresh, the service writes all three updated tokens back to the Kubernetes
+Secret **before** adopting them. That order matters: once BMW has issued the new set, the token
+still sitting in the Secret is already void, so a failed write would leave the only usable
+refresh token in the pod's memory. A write failure is retried four times and, if it still fails,
+logged as an error naming that risk — never as a passing remark.
+
 The service logs `[Vehicle] Proactive token refresh, reconnecting...` — this is normal.
 
 ---
 
-## Re-authentication checklist (~every 90 days)
+## Credential precedence — why an environment variable cannot overwrite the Secret
 
-When auth starts failing (refresh_token expired):
+`BMW_CLIENT_ID`, `BMW_GCID`, `Mini_CLIENT_ID` and `Mini_GCID` live in the
+`bmwconnector-credentials` Secret, and there is no versioned copy of it anywhere: if it is
+overwritten, the values have to come back out of KeePass. On 2026-09-20 exactly that happened.
+A bootstrap run inherited `REPLACE_ME` placeholders from the user's systemd environment
+(`systemctl --user set-environment`, which every new shell inherits and no dotfile grep finds),
+preferred them over the Secret, and wrote them into it.
+
+The rules now are:
+
+| Situation | Outcome |
+|---|---|
+| Value looks like a placeholder (`REPLACE_ME`, `changeme`, `your-…-here`, `<…>`, …) | Refused, with the offending value named in the log |
+| Value is not a UUID (8-4-4-4-12) | Refused — both CLIENT_ID and GCID are UUIDs |
+| Running in the cluster | The Secret always wins; the environment variable is ignored and logged |
+| Running locally | A well-formed environment variable overrides **for that process only** |
+| Running locally with `--save-credentials` | ...and is additionally written into the Secret |
+
+An overridden Secret value is logged masked (`1111…5555 (36 bytes)`), which is what makes an
+accidental overwrite visible at all — the 2026-09-20 incident was only noticeable by the byte
+lengths in the Secret.
+
+None of this applies to the **tokens**: those are written back on every refresh by design, see
+the lifecycle section above.
+
+To check what the environment would contribute before running anything:
+
+```fish
+env | grep -E '^(BMW|Mini)_'
+systemctl --user show-environment | grep -E '^(BMW|Mini)_'
+```
+
+---
+
+## Health endpoints
+
+| Endpoint | Probe | Answers 503 when |
+|---|---|---|
+| `/healthz/live` | liveness, startup | never (the process is serving or it is not answering at all) |
+| `/healthz/ready` | readiness | any vehicle has been without a broker connection for longer than `BMW_VEHICLE_STALE_MINUTES` (default 5) |
+| `/healthz/tokens` | none — informational | never; reports `Degraded` when a stored token has not been refreshed for `BMW_TOKEN_REFRESH_STALE_DAYS` (default 7) |
+
+Liveness is deliberately independent of the vehicles. A restart cannot renew a token, so letting
+a BMW outage restart the pod would replace a visible outage with a CrashLoop. Readiness is the
+one that must fail: before this split, both probes ran the same check set and `Degraded` — one of
+two vehicles gone — answered 200, which is why the August 2026 outage went unnoticed for 35 days.
+
+Because the token check reads the **Secret** rather than the process's memory, it also catches
+the case where refreshes succeed but no longer reach the Secret. The two halves cover each
+other: the persistence fix prevents that failure, and this check is what makes it visible if
+the fix ever stops working. Neither is worth much alone — a silent persistence failure is
+invisible for weeks and only surfaces at the next pod restart.
+
+What healthy looks like in the log: one `Connected to the BMW broker — vehicle is ready.` per
+vehicle after each 50-minute refresh cycle, and no `has not been refreshed for` warning.
+
+To confirm it directly rather than waiting for a failure, watch the `iat` of the stored
+id_token move every 50 minutes. If it stands still while the service keeps logging refreshes,
+the write to the Secret is failing:
+
+```fish
+kubectl -n smarthome get secret bmwconnector-bmw-tokens -o jsonpath='{.data.id_token\.txt}' \
+  | base64 -d | cut -d. -f2 | base64 -d 2>/dev/null | jq '.iat | todate'
+```
+
+---
+
+## Re-authentication checklist
+
+Needed when the refresh token has actually lapsed — two weeks without a successful refresh, or
+the `client_id` unsubscribed. `/healthz/tokens` and the `has not been refreshed for` warning in
+the log give about a week's notice; a hard failure shows up as
+`Token refresh failed (HTTP 400): invalid_request`.
 
 1. Run bootstrap again — reads credentials from k8s Secret automatically:
    ```fish
@@ -238,7 +334,9 @@ The pod requires a ServiceAccount with permission to read and update the token S
 
 ### Required RBAC
 
-The pod's ServiceAccount needs the following Role (included in the Helm chart):
+The pod's ServiceAccount needs the following Role (included in the Helm chart). Note that the
+write permissions exist for the **token** Secrets; the connector no longer writes credentials
+unless asked to with `--save-credentials`, which is a local operation:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
