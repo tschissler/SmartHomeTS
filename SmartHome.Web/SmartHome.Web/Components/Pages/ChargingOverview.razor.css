@@ -74,15 +74,31 @@
    than a wrapping row: the values change every few seconds, and fixed columns keep the
    entries from shifting sideways whenever a number gains or loses a digit.
 
-   205px is the width of the longest entry, "Netzeinspeisung: 1.800 W" — below that the
-   value wrapped under its own label and the legend got a second line per entry. The
-   min() keeps the track from outgrowing a container narrower than one column, which is
-   what a phone in portrait gives it. */
+   The minimum track width is the width of the longest entry — below that the value wraps
+   under its own label and that entry gets a second line. It is therefore a measured number,
+   not a chosen one, and it has to be re-measured whenever the type size, the indicator or
+   the longest label change. Longest entry today: "Netzeinspeisung: 1.800 W", 158.0px at the
+   sizes below (Arial, the widest of the fallback chain); 160px is that, rounded up.
+
+   The whole legend is set smaller than the page so that eight entries fit into two columns
+   on a phone in portrait instead of eight rows: at 360 CSS-pixels — the narrowest of the
+   "schmal" range — the content is 336px wide (2 × 12px --inhalt-rand; .uebersichtBox drops
+   its side padding below the breakpoint), which leaves two tracks of 162px. That is why the
+   indicator shrinks with the type: a 20px square next to 12px type would set the row height
+   on its own and eat the width the second column needs.
+
+   The one case this does not cover is a five-digit watt value: "Netzeinspeisung: 12.345 W"
+   needs 164.7px and therefore wraps at 360px (but not from 366px up). Covering it would mean
+   going down to about 11px type. The sizes here are a deliberate stop before that.
+
+   The min() keeps the track from outgrowing a container narrower than one column. */
 .LegendContainer {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(205px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     grid-column-gap: 12px;
-    grid-row-gap: 4px;
+    grid-row-gap: 2px;
+    font-size: 0.75rem;
+    line-height: 1.35;
 }
 
 .LegendGroup {
@@ -90,9 +106,9 @@
 }
 
 .LegendColorIndicator {
-    margin-right: 10px;
-    width: 20px;
-    height: 20px;
+    margin-right: 6px;
+    width: 12px;
+    height: 12px;
     flex: none;
 }
 
