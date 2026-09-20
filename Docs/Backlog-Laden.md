@@ -983,6 +983,13 @@ keinen Ort für die Position.
   als Gegenstück zum Export, Zuordnung über die `uid`, Trockenlauf und Vorher-Anzeige.
   Braucht keine Änderung am Grafana-Deployment und ist sofort nutzbar.
 
+  **Offen und zeitlich befristet: Der Grafana-Service-Account steht auf Admin.**
+  Thomas hat ihn am 2026-09-20 bewusst wieder hochgestuft, mit der ausdrücklichen
+  Bedingung „bis der Import-Weg sauber steht". Für reines Exportieren genügt Viewer;
+  Admin war nötig, weil Ordner-Rechte sonst 403 statt 404 auf fünf Dashboards liefern.
+  **Diese Zeile bleibt stehen, bis das Recht zurückgenommen ist** — temporäre
+  Berechtigungen werden nicht durch eine Entscheidung dauerhaft, sondern durch Vergessen.
+
   **Schritt 2 (geplant am 2026-09-20):** Provisioning. Grafana liest die Dashboards aus
   dem Cluster statt aus seiner Datenbank; provisionierte Dashboards sind im UI
   **schreibgeschützt**. Was in Schritt 1 eine Verabredung bleibt („am Original nicht im
