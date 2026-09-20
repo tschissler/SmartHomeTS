@@ -18,6 +18,11 @@ Thomas sagt auf Zuruf, was er angepasst haben will. Daraufhin:
 1. **Klär, was unklar ist** — aber nur, wo verschiedene Lesarten zu verschiedener Arbeit
    führen. Routineentscheidungen triffst du selbst und sagst, wie du entschieden hast.
 2. **Schreib den Auftrag** und gib ihn Thomas zum Kopieren. Nenn den Startbefehl mit dazu.
+   **Beginn den Auftrag mit der Zeile `Ruf zuerst /worker auf.`** — der Skill trägt alles,
+   was für jeden Auftrag gilt: Worktree, Grenzen gegenüber dem Produktivsystem, kein
+   Merge, keine Secrets suchen, Rollouts selbst zählen, und was der Abschlussbericht
+   enthalten muss. **Wiederhol das nicht im Auftrag** — er trägt nur die Aufgabe selbst
+   und die Fallen, die du konkret kennst.
 3. **Thomas startet die Session** und sagt dir, wenn sie läuft.
 4. **Die Session meldet sich bei dir**, wenn sie fertig ist.
 5. **Prüf unabhängig nach** — Tests selbst laufen lassen, Zahlen selbst zählen, Behauptungen

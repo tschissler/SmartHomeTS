@@ -146,6 +146,10 @@ Use these skills at the appropriate moments:
   parallel sessions: it writes the prompts, verifies results independently and proposes
   merges, but writes no production code itself. Type it as the first message of a fresh
   session. The method it follows is `Docs/Parallel-Arbeiten.md`
+- **`/worker`** — The counterpart: sets up a session that received a task from an
+  orchestrator. Holds what applies to *every* such task — own worktree, boundaries against
+  the production system, no merges, verify the instruction before building on it, and what
+  the closing report must contain. The orchestrator's prompts can then carry the task alone
 
 - **`/simplify`** — Run after writing new code (connector changes, converters, etc.) to review for quality and efficiency before committing.
 - **`/review`** — Run when a PR is open to review the diff in full context before merging.
