@@ -1206,6 +1206,43 @@ keinen Ort für die Position.
   sonst Stunden, Schaltzyklen und Kilometer nebeneinander. Thomas neigt zur Erweiterung
   von `counter_values`. **Solange `distance_values` noch keine Daten hat, ist der Wechsel
   billig; danach ist er eine Migration mit verwaisten Reihen.**
+- **InfluxDB-Modellierung: die Einheit trennt, der Datentyp folgt.** *Festgelegt am
+  2026-09-20 im Gespräch, gehört mittelfristig als eigenes Dokument nach `Docs/` — hier
+  festgehalten, damit es nicht verloren geht.*
+
+  **Tabellen werden nach der Einheit geschnitten, nicht nach dem Speichertyp.** Faktisch
+  war es schon so: Sechs der acht Tabellen (`energy_`, `power_`, `temperature_`,
+  `percent_`, `voltage_`, `volume_`) trennen nach Einheit und sind allesamt `Float64` —
+  der Typ trennt dort gar nichts. Wer `power_values` abfragt, weiß ohne Nachschlagen, dass
+  Watt herauskommt. Der Typ ist damit eine Speicherentscheidung, keine
+  Modellierungsentscheidung. Genau diese Verwechslung hat bei Punkt 17 zur falschen
+  Begründung für `distance_values` geführt (die Tabelle selbst ist richtig).
+
+  **Feld oder `measurement`-Tag?** *Feld, wenn die Werte ohne einander unvollständig sind.
+  Tag, wenn jeder für sich eine Aussage ist.* Die Regel erklärt den gesamten Bestand:
+  `value_latitude` + `value_longitude` sind Felder (eine Breite ohne Länge ist keine halbe
+  Position, sondern keine); die drei kWh-Aspekte sind Felder (dieselbe Messung);
+  `LadeleistungPv`/`-Batterie`/`-Netz` sind Tags (einzeln sinnvoll, einzeln abgefragt);
+  `remainingRange` und `mileage` sind Tags (unabhängig, nur die Einheit teilen sie).
+  Praktischer Grund: Ein Feld erzeugt in jeder Zeile eine Spalte, auch wenn nur einer der
+  Werte geschrieben wird — drei unabhängige Größen als Felder hießen zwei `NULL` je Zeile.
+
+  **`counter_values` ist die dokumentierte Ausnahme** und wird **nicht** migriert. Es
+  trägt `Betriebsstunden_Waermeerzeuger` (Stunden) und `Schaltzyklen_Waermeerzeuger`
+  (dimensionslos) nebeneinander — zwei Größen, zusammengehalten allein vom Datentyp. Die
+  Migration löst kein Problem, das nicht billiger zu lösen wäre: Der einzige reale Schaden
+  ist der Überlauf, und den behebt das Streichen von `Convert.ToInt16` vollständig, ohne
+  eine Zeile Bestandsdaten anzufassen. Eine über zwei Tabellen geteilte Historie bräuchte
+  dagegen ein `UNION` — beim Wallbox-Umbenennen rettete ein `IN`-Filter die Kennzahl, über
+  Tabellengrenzen hinweg gäbe es das nicht. **Nichts Neues kommt in `counter_values`.**
+
+  **Offen, später genauer anzusehen: `energy_values` mit drei Feldern.** `value_kwh`,
+  `value_cumulated_kwh` und `value_delta_kwh` fallen gemeinsam an, also tragen sie die
+  Regel — aber `value_kwh` wird soweit erkennbar von niemandem mehr geschrieben. Schreibt
+  künftig jemand nur den Zählerstand ohne Delta, steht in jeder Zeile ein `NULL` und die
+  Begründung „fallen gemeinsam an" stimmt nicht mehr. Dann wäre die Ausnahme „ein Feld
+  darf leer bleiben, wenn die Größe es zulässt" nachzutragen — oder die Tabelle zu
+  bereinigen.
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
