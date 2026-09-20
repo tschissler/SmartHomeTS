@@ -21,6 +21,7 @@ Präfix setzt.
 
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
+| 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | in Arbeit — `smarthome_app/` nach `Depricated/`, zwei Workflows raus, CLAUDE.md und README.md nachziehen. Merge löst **keinen** Rollout aus |
 | 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | in Arbeit — Sofortmaßnahme: retained Kommando darf den Frischezähler nicht zurücksetzen. Nur KebaConnector |
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | in Arbeit — Health-Semantik des BMWConnectors und Schutz des Produktiv-Secrets vor Umgebungsvariablen. Gebündelt, weil beide denselben Secret-Store anfassen |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
@@ -280,8 +281,13 @@ Nutzen pro Zeile.
       — fällt mit Punkt 7/8 ohnehin an
 - [ ] Testfall: Controller schweigt, Connector startet neu → Freigabe muss nach
       `StaleReleaseAfter` erfolgen
-- [ ] Prüfen, ob dieselbe Verwechslung anderswo steckt — die `RulesEngine` wertet
-      `MaxStatusAge` ebenfalls gegen die Empfangszeit aus
+- [x] ~~Prüfen, ob dieselbe Verwechslung anderswo steckt~~ — **ja, in der `RulesEngine`**
+      (`Program.cs:116/127/139` setzen die Empfangszeit, `MixerPositionRule` und
+      `CoolingFlowTemperatureRule` bewerten `MaxStatusAge` dagegen). Aber harmloser und
+      nicht belegt: der Fail-Safe öffnet den Mischer, was „nur Effizienz kostet, nie
+      Komfort", und ob der CAN-Gateway überhaupt retained publiziert, lässt sich aus
+      diesem Repo nicht feststellen. Als offener Befund unten erfasst, hier nicht mit
+      umgesetzt
 
 **Abhängig von** nichts.
 
@@ -623,6 +629,17 @@ keinen Ort für die Position.
 
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
+- **`MaxStatusAge` in der RulesEngine.** Dieselbe Verwechslung wie in Punkt 16: Die
+  Regeln bewerten das Alter gegen die Empfangszeit, ein retained Status gilt nach einem
+  Neustart als taufrisch und die Stale-Regel feuert nie. Erst prüfen, ob das Problem
+  real ist: `mosquitto_sub -v -t 'cangateway/M1/WEZ/Status/FA_Status'` mit einem frischen
+  Client — kommt sofort ein Wert, ist das Topic retained. Der CAN-Gateway liegt nicht in
+  diesem Repo.
+- **Testprojekte laufen nicht in der CI.** `ChargingControllerTests`, `EnphaseLib.Tests`
+  und `ShellyLibTests` existieren, werden aber von keinem Workflow ausgeführt — einzig
+  `RulesEngine.yml` ruft `dotnet test` auf. Tests, die nie laufen, sind Selbstbetrug.
+- **`SmartHome.Web/Dockerfile` kopiert `DataContracts`**, obwohl das Projekt es nirgends
+  referenziert, auch nicht in der `.sln`. Sieht nach einem Überbleibsel aus.
 - **WiCAN.** Für den VW alternativlos, sobald das Portal wegfällt: Nur ein
   fahrzeugseitiger Sensor kann zeitnah melden, dass angesteckt wurde. Beim BMW vorher
   die OBD-Sperre neuerer Modelle prüfen; CarData liefert dort bereits alles Nötige.
