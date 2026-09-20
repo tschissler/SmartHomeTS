@@ -6,6 +6,9 @@ on:
     paths:
       - .github/workflows/ChargingController.yml
       - ChargingController/**
+      # Shared code this service references (transitively resolved) - without
+      # these the image is not rebuilt and the change deploys silently nowhere.
+      - SharedContracts/**
   workflow_dispatch:
 
 # A newer push supersedes a running build of the same branch.

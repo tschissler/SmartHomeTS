@@ -6,6 +6,9 @@ on:
     paths:
       - .github/workflows/RulesEngine.yml
       - RulesEngine/**
+      # Shared code this service references (transitively resolved) - without
+      # these the image is not rebuilt and the change deploys silently nowhere.
+      # SmartHomeHelpers is referenced via MQTTClient, not directly - do not drop it.
       - MQTTClient/**
       - SmartHomeHelpers/**
   workflow_dispatch:

@@ -6,6 +6,11 @@ on:
     paths:
       - .github/workflows/EnphaseConnector.yml
       - EnphaseConnector/**
+      # Shared code this service references (transitively resolved) - without
+      # these the image is not rebuilt and the change deploys silently nowhere.
+      - MQTTClient/**
+      - SharedContracts/**
+      - SmartHomeHelpers/**
 
 # A newer push supersedes a running build of the same branch.
 concurrency:
