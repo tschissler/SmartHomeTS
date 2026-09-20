@@ -9,6 +9,8 @@
         Temperature,
         Status,
         Counter,
-        Volume
+        Volume,
+        Distance,
+        Position
     }
 }

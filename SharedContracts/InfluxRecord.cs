@@ -97,4 +97,35 @@
             MeasurementType = MeasurementType.Volume;
         }
     }
+
+    /// <summary>
+    /// A distance in km — range and odometer of a vehicle. Its own table for the same reason
+    /// every other quantity has one: the unit belongs to the table, not to the reader of a
+    /// query. Counter and status values are Int16 in the database and would overflow at an
+    /// odometer beyond 32767 km, so neither of those was an option.
+    /// </summary>
+    public record InfluxDistanceRecord : InfluxRecord
+    {
+        public required string SubCategory { get; init; }
+        public required decimal Value_Km { get; init; } // in km
+        public InfluxDistanceRecord()
+        {
+            MeasurementType = MeasurementType.Distance;
+        }
+    }
+
+    /// <summary>
+    /// A geographic position. Two fields of one point rather than two measurements, because a
+    /// latitude without its longitude is not half a position — it is nothing.
+    /// </summary>
+    public record InfluxPositionRecord : InfluxRecord
+    {
+        public required string SubCategory { get; init; }
+        public required double Value_Latitude { get; init; }
+        public required double Value_Longitude { get; init; }
+        public InfluxPositionRecord()
+        {
+            MeasurementType = MeasurementType.Position;
+        }
+    }
 }

@@ -24,6 +24,9 @@ WORKDIR /src
 COPY ["${PROJECT_NAME}/${PROJECT_NAME}.sln", "${PROJECT_NAME}/"]
 COPY ["${PROJECT_NAME}/${PROJECT_NAME}/${PROJECT_NAME}.csproj", "${PROJECT_NAME}/${PROJECT_NAME}/"]
 COPY ["${PROJECT_NAME}/Influx3Connector/Influx3Connector.csproj", "${PROJECT_NAME}/Influx3Connector/"]
+# The test project is not published, but it is part of the solution — and the restore below
+# is a solution restore, which fails on a project file it cannot find.
+COPY ["${PROJECT_NAME}/${PROJECT_NAME}Tests/${PROJECT_NAME}Tests.csproj", "${PROJECT_NAME}/${PROJECT_NAME}Tests/"]
 COPY ["MQTTClient/MQTTClient.csproj", "MQTTClient/"]
 COPY ["SharedContracts/SharedContracts.csproj", "SharedContracts/"]
 COPY ["SmartHomeHelpers/SmartHomeHelpers.csproj", "SmartHomeHelpers/"]

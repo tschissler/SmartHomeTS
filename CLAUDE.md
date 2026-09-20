@@ -89,6 +89,9 @@ Docker image versions use format `1.0.{github.run_number}`.
   UI concept, PV/battery/grid attribution
 - `Docs/Ladeprotokoll.md` — charging log: PV/battery/grid attribution rule, the three
   virtual meters per wallbox, the `ladesitzungen` table, who publishes what, Grafana scope
+- `Docs/Fahrzeugdaten-in-InfluxDB.md` — which vehicle value goes into which table, the tag
+  set, **why the timestamp is `lastUpdate` and not the arrival time**, why that alone makes
+  the write idempotent, and what the fields deliberately left out are
 - `Docs/Backlog-Laden.md` — ordered backlog for charging, vehicle assignment, charging log
   and the topic cleanup; work it top to bottom
 - `Docs/ChargingController-Regelkreis.md` — control loop of the EV charging (smoothing,

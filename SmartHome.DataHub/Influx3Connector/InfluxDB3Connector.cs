@@ -114,36 +114,59 @@ namespace Influx3Connector
             cancellationTokenSource.Dispose();
         }
 
+        /// <summary>
+        /// Writes a set of records stamped with the moment they arrive. Only for sources that
+        /// carry no measurement time of their own — anything that does must hand it in, see the
+        /// overload below.
+        /// </summary>
         public void WriteInfluxRecords(IEnumerable<InfluxRecord> records)
+            => WriteInfluxRecords(records, DateTimeOffset.UtcNow);
+
+        /// <summary>
+        /// Writes a set of records under one given timestamp.
+        /// </summary>
+        /// <param name="timestamp">
+        /// The time the values were <i>measured</i>, which for a retained MQTT payload is not
+        /// the time it arrives: the broker replays it on every subscribe, and stamping it with
+        /// the arrival time would enter a weeks old value as a fresh measurement on every
+        /// restart. Handing in the measurement time also makes the write idempotent — same
+        /// series, same timestamp, one row.
+        /// </param>
+        public void WriteInfluxRecords(IEnumerable<InfluxRecord> records, DateTimeOffset timestamp)
         {
             foreach (var record in records)
             {
                 switch (record.MeasurementType)
                 {
                     case MeasurementType.Temperature:
-                        WriteTemperatureValue(
-                            (InfluxTemperatureRecord)record,
-                            DateTimeOffset.UtcNow);
+                        WriteTemperatureValue((InfluxTemperatureRecord)record, timestamp);
                         break;
                     case MeasurementType.Percent:
-                        WritePercentageValue(
-                            (InfluxPercentageRecord)record,
-                            DateTimeOffset.UtcNow);
+                        WritePercentageValue((InfluxPercentageRecord)record, timestamp);
                         break;
                     case MeasurementType.Energy:
-                        WriteEnergyValue(
-                            (InfluxEnergyRecord)record,
-                            DateTimeOffset.UtcNow);
+                        WriteEnergyValue((InfluxEnergyRecord)record, timestamp);
                         break;
                     case MeasurementType.Power:
-                        WritePowerValue(
-                            (InfluxPowerRecord)record,
-                            DateTimeOffset.UtcNow);
+                        WritePowerValue((InfluxPowerRecord)record, timestamp);
                         break;
                     case MeasurementType.Voltage:
-                        WriteVoltageValue(
-                            (InfluxVoltageRecord)record,
-                            DateTimeOffset.UtcNow);
+                        WriteVoltageValue((InfluxVoltageRecord)record, timestamp);
+                        break;
+                    case MeasurementType.Status:
+                        WriteStatusValue((InfluxStatusRecord)record, timestamp);
+                        break;
+                    case MeasurementType.Counter:
+                        WriteCounterValue((InfluxCounterRecord)record, timestamp);
+                        break;
+                    case MeasurementType.Volume:
+                        WriteVolumeValue((InfluxVolumeRecord)record, timestamp);
+                        break;
+                    case MeasurementType.Distance:
+                        WriteDistanceValue((InfluxDistanceRecord)record, timestamp);
+                        break;
+                    case MeasurementType.Position:
+                        WritePositionValue((InfluxPositionRecord)record, timestamp);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -316,6 +339,45 @@ namespace Influx3Connector
                 pointsBatch.Add(point);
             }
             pointsEnqueuedByTable.AddOrUpdate("volume_values", 1, (_, c) => c + 1);
+        }
+
+        public void WriteDistanceValue(InfluxDistanceRecord record, DateTimeOffset timestamp)
+        {
+            var point = PointData.Measurement("distance_values")
+                .SetTag("measurement_id", record.MeasurementId)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory)
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_km", Convert.ToDouble(record.Value_Km))
+                .SetTimestamp(timestamp);
+            lock (pointsBatch)
+            {
+                pointsBatch.Add(point);
+            }
+            pointsEnqueuedByTable.AddOrUpdate("distance_values", 1, (_, c) => c + 1);
+        }
+
+        public void WritePositionValue(InfluxPositionRecord record, DateTimeOffset timestamp)
+        {
+            var point = PointData.Measurement("position_values")
+                .SetTag("measurement_id", record.MeasurementId)
+                .SetTag("category", record.Category.ToString())
+                .SetTag("sub_category", record.SubCategory)
+                .SetTag("sensor_type", record.SensorType)
+                .SetTag("location", record.Location)
+                .SetTag("device", record.Device)
+                .SetTag("measurement", record.Measurement)
+                .SetField("value_latitude", record.Value_Latitude)
+                .SetField("value_longitude", record.Value_Longitude)
+                .SetTimestamp(timestamp);
+            lock (pointsBatch)
+            {
+                pointsBatch.Add(point);
+            }
+            pointsEnqueuedByTable.AddOrUpdate("position_values", 1, (_, c) => c + 1);
         }
 
         public void WritePointDataToInfluxDb(
