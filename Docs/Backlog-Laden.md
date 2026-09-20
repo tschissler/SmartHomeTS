@@ -21,8 +21,8 @@ Präfix setzt.
 
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
-| 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | in Arbeit — `smarthome_app/` nach `Depricated/`, zwei Workflows raus, CLAUDE.md und README.md nachziehen. Merge löst **keinen** Rollout aus |
-| 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | in Arbeit — Sofortmaßnahme: retained Kommando darf den Frischezähler nicht zurücksetzen. Nur KebaConnector |
+| 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | **erledigt und gemergt** (`a12202b`), kein Rollout |
+| 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt und gemergt** (`c46f54f`), fünf Rollouts. **Offen: Log-Prüfung nach dem Rollout** — ohne `Received retained message` im Connector-Log ist der Fix wirkungslos |
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | in Arbeit — Health-Semantik des BMWConnectors und Schutz des Produktiv-Secrets vor Umgebungsvariablen. Gebündelt, weil beide denselben Secret-Store anfassen |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
@@ -285,12 +285,12 @@ der liegt in Welle C. Von den kleinen Punkten der ersten Welle hat dieser den gr
 Nutzen pro Zeile.
 
 **Umfang**
-- [ ] Sofortmaßnahme ohne Contract-Änderung: MQTTnet liefert bei einer Retain-Zustellung
+- [x] Sofortmaßnahme ohne Contract-Änderung: MQTTnet liefert bei einer Retain-Zustellung
       das Retain-Flag mit. Eine so gekennzeichnete Nachricht darf den Sollwert zwar
       **setzen**, aber den Frischezähler **nicht zurücksetzen**
 - [ ] Dauerhaft: `Zeitpunkt` im Kommando-Payload, Alter daraus statt aus der Empfangszeit
       — fällt mit Punkt 7/8 ohnehin an
-- [ ] Testfall: Controller schweigt, Connector startet neu → Freigabe muss nach
+- [x] Testfall: Controller schweigt, Connector startet neu → Freigabe muss nach
       `StaleReleaseAfter` erfolgen
 - [x] ~~Prüfen, ob dieselbe Verwechslung anderswo steckt~~ — **ja, in der `RulesEngine`**
       (`Program.cs:116/127/139` setzen die Empfangszeit, `MixerPositionRule` und
