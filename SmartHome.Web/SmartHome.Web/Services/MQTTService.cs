@@ -18,6 +18,13 @@ namespace SmartHome.Web.Services
         public ChargingSettings ChargingSettings { get; set; }
         public ChargingSituation ChargingSituation { get; set; }
         public IluminationSituation IluminationSituation { get; set; }
+
+        /// <summary>
+        /// Was der Nutzer ueber die im Code stehenden Szenen der Schrankbeleuchtung
+        /// gespeichert hat. <c>null</c>, solange nichts gespeichert wurde - dann gelten
+        /// ueberall die Code-Vorgaben.
+        /// </summary>
+        public SzenenVorgaben? SzenenVorgaben { get; private set; }
         public ClimateData ClimateData { get; set; }
         public HeatingCommandData? HeatingKinderzimmerCommand { get; private set; }
         public HeatingCommandData? HeatingEsszimmerCommand { get; private set; }
@@ -146,6 +153,7 @@ namespace SmartHome.Web.Services
                 await _client.SubscribeAsync(LadeTopics.Einstellungen);
                 await _client.SubscribeAsync("commands/illumination/LEDStripe/setColor");
                 await _client.SubscribeAsync("commands/shelly/Lampe");
+                await _client.SubscribeAsync(BeleuchtungTopics.Szenen);
                 await _client.SubscribeAsync("commands/Heating/#");
                 await _client.SubscribeAsync("status/#");
                 await _client.SubscribeAsync("config/DeviceMonitor/ack/#");
@@ -216,6 +224,14 @@ namespace SmartHome.Web.Services
                 {
                     ResetAcks.TryRemove(message.Topic["config/DeviceMonitor/ack/".Length..], out _);
                 }
+                else if (message.Topic == BeleuchtungTopics.Szenen)
+                {
+                    // Ein geloeschtes retained Topic heisst "es gibt hier keinen Zustand
+                    // mehr". Ohne diesen Zweig behielte eine laufende Instanz die Werte im
+                    // Speicher, waehrend eine frisch gestartete die Code-Vorgaben zeigt --
+                    // zwei Browser saehen dann verschiedene Szenen.
+                    SzenenVorgaben = null;
+                }
                 return;
             }
 
@@ -259,6 +275,21 @@ namespace SmartHome.Web.Services
                 case "commands/illumination/LEDStripe/setColor":
                     {
                         IluminationSituation = JsonSerializer.Deserialize<IluminationSituation>(payload);
+                        break;
+                    }
+                case BeleuchtungTopics.Szenen:
+                    {
+                        try
+                        {
+                            // Wie bei den Wallboxen: Ein unlesbarer Payload behaelt den
+                            // Stand, den wir haben, statt die Szenen auf null zu ziehen.
+                            SzenenVorgaben = JsonSerializer.Deserialize<SzenenVorgaben>(payload)
+                                             ?? SzenenVorgaben;
+                        }
+                        catch (JsonException ex)
+                        {
+                            Console.WriteLine($"Ignoring malformed scene presets on {message.Topic}: {ex.Message}");
+                        }
                         break;
                     }
                 case "daten/temperatur/M1/Keller":

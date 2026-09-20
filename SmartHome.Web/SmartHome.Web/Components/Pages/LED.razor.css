@@ -49,7 +49,8 @@
 .istAus .abschnitt,
 .istAus .regler,
 .istAus .zielWahl,
-.istAus .szenen {
+.istAus .szenen,
+.istAus .szenenHinweis {
     opacity: 0.55;
 }
 
@@ -109,9 +110,25 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 8px;
+    /* Ohne das zoege der aufgeklappte Speichern-Knopf die Nachbarkacheln derselben Zeile
+       auf seine Hoehe mit -- die Zeile waechst dann als Ganzes statt nur an einer Stelle. */
+    align-items: start;
+}
+
+/* Die Zelle traegt den Knopf zum Speichern, der nur bei Tastaturfokus sichtbar wird --
+   untereinander, nicht uebereinander. Ueber die Kachel gelegt verdeckte er den
+   Szenennamen ("Arbeitslicht" wurde zu "Arbeit"), und bei einem Speichern, das sich nicht
+   zuruecknehmen laesst, muss man lesen koennen, welche Szene man gerade ueberschreibt. */
+.szeneZelle {
+    display: flex;
+    flex-direction: column;
 }
 
 .szene {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -123,6 +140,97 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
+    /* Langes Druecken darf nicht als Textauswahl oder Kontextmenue enden -- sonst liegt
+       waehrend des Haltens ein blauer Markierungsbalken oder ein Menue ueber dem Knopf. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+/* Die Fuellung am unteren Rand laeuft waehrend des Haltens mit: Sie sagt, dass gleich etwas
+   passiert, und macht das Loslassen zum Abbruch statt zum Zufall. Die Dauer kommt als
+   --haltedauer aus dem Markup, damit hier und im Code nicht zwei Zahlen auseinanderlaufen.
+   Die Angabe steht nur in .haelt, damit die Fuellung beim Abbruch sofort verschwindet
+   statt rueckwaerts zu laufen. */
+.szene::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    height: 3px;
+    background: #006bb7;
+}
+
+.szene.haelt::after {
+    width: 100%;
+    transition: width var(--haltedauer, 700ms) linear;
+}
+
+/* Bestaetigung. Ein Speichern laesst sich nicht zuruecknehmen, also sagt es sich mit drei
+   Zeichen gleichzeitig: Rahmen, Flaeche und der Balken, der stehen bleibt. Der Satz in der
+   Statuszeile ist der vierte und der einzige, den eine Vorlesesoftware bekommt. */
+.szeneZelle .szene.gespeichert {
+    border-color: #2f7d32;
+    background: #eef7ee;
+}
+
+.szeneZelle .szene.gespeichert::after {
+    width: 100%;
+    background: #2f7d32;
+}
+
+/* Unsichtbar, aber fokussierbar -- display:none oder visibility:hidden waeren aus der
+   Tabulatorreihenfolge heraus und damit genau das Gegenteil dessen, wofuer der Knopf da ist.
+   pointer-events: none haelt ihn dabei fuer Maus und Finger aus dem Weg. */
+/* Zusammengefaltet statt ausgeblendet: display:none oder visibility:hidden waeren aus der
+   Tabulatorreihenfolge heraus und damit genau das Gegenteil dessen, wofuer der Knopf da
+   ist. Hoehe 0 mit overflow:hidden nimmt ihm den Platz, laesst ihn aber fokussierbar. */
+.szeneSpeichern {
+    height: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    border: 1px solid #006bb7;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #006bb7;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+/* :focus-visible, nicht :focus-within. Mit :focus-within erschien der Knopf schon beim
+   Antippen der Kachel -- ein Druck setzt den Fokus -- und lag dann mitten auf ihr: Im
+   Browser gemessen ging pointerup und click an .szeneSpeichern statt an .szene, das Halten
+   brach mit pointerleave ab, und kurzes Tippen lud keine Szene mehr. :focus-visible setzt
+   der Browser bei Maus und Finger nicht, nur bei Tastaturbedienung -- also genau dort, wo
+   der Knopf gebraucht wird, und nirgends sonst.
+   :has() ist in dieser Datei schon in Gebrauch (.zielKnopf:has(input:checked)). */
+.szeneZelle:has(.szene:focus-visible) .szeneSpeichern,
+.szeneSpeichern:focus-visible {
+    height: auto;
+    margin-top: 4px;
+    padding: 6px 10px;
+    border: 1px solid #006bb7;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.szeneSpeichern:focus-visible {
+    outline: 2px solid #006bb7;
+    outline-offset: 2px;
+}
+
+/* Langes Druecken sieht man nicht, also steht es da. Klein und grau: ein Hinweis, der einmal
+   gelesen wird, keine Beschriftung, die jedes Mal mitliest. */
+.szenenHinweis {
+    margin: 8px 0 0 0;
+    font-size: 0.8rem;
+    color: #6b6b6b;
 }
 
 .szene:hover {

@@ -61,15 +61,39 @@
         </div>
 
         <h3 class="abschnitt">Szenen</h3>
+        @* Kurz tippen laedt die Szene, langes Druecken speichert die aktuellen Werte hinein.
+           Beides ist derselbe Vorgang mit zwei Ausloesern, nicht zwei Wege: Der Knopf unter
+           der Kachel ruft dieselbe Methode. Er klappt nur bei Tastaturfokus auf, weil ein
+           <button> kein langes Druecken kennt und das Speichern per Tastatur sonst gar nicht
+           erreichbar waere. Fuer Finger und Maus bleibt die Kachel so ruhig wie vorher. *@
         <div class="szenen">
             @foreach (var szene in Szenen)
             {
-                <button type="button" class="szene" @onclick="() => SzeneAnwendenAsync(szene)">
-                    <span class="szenePunkt" style="background-color:@Css(szene.AlsStreifen())"></span>
-                    <span class="szeneName">@szene.Name</span>
-                </button>
+                <div class="szeneZelle">
+                    <button type="button"
+                            class="szene @(HaeltSzene == szene.Schluessel ? "haelt" : "") @(GespeicherteSzene == szene.Schluessel ? "gespeichert" : "")"
+                            style="--haltedauer:@(HalteDauerMs)ms"
+                            @onclick="() => SzeneGeklicktAsync(szene)"
+                            @onpointerdown="() => HaltenBeginntAsync(szene)"
+                            @onpointerup="HaltenEndet"
+                            @onpointerleave="HaltenEndet"
+                            @onpointercancel="HaltenEndet"
+                            @oncontextmenu:preventDefault="true">
+                        <span class="szenePunkt" style="background-color:@Css(szene.AlsStreifen())"></span>
+                        <span class="szeneName">@szene.Name</span>
+                    </button>
+                    <button type="button" class="szeneSpeichern"
+                            title="@($"Aktuelle Werte als „{szene.Name}“ speichern")"
+                            @onclick="() => SzeneSpeichernAsync(szene)">
+                        Speichern
+                    </button>
+                </div>
             }
         </div>
+        @* Langes Druecken sieht man nicht. Ohne diesen Satz findet es nur, wer ihn kennt. *@
+        <p class="szenenHinweis">
+            Lange auf eine Szene drücken, um die aktuellen Werte darin zu speichern.
+        </p>
 
         <h3 class="abschnitt">Einstellen für</h3>
         @* Der Normalfall ist "Beide": die Regler darunter aendern dann beide Streifen wie
@@ -317,7 +341,13 @@
     /// Fest vorgegebene Voreinstellungen. Im Alltag ist das der Griff, den man tut --
     /// die Regler darunter sind fuer den Fall, dass keine davon passt.
     /// </summary>
-    private sealed record Szene(string Name, int Farbton, int Saettigung, int Helligkeit, int Dichte)
+    /// <param name="Schluessel">
+    /// Der unveraenderliche Bezug, unter dem gespeicherte Werte zu dieser Szene gehoeren.
+    /// Bewusst nicht der Anzeigename und bewusst nicht die Position in der Liste: Der Name
+    /// darf sich aendern, ohne dass gespeicherte Werte verlorengehen, und eine eingefuegte
+    /// Szene darf die Werte ihrer Nachbarn nicht verschieben.
+    /// </param>
+    private sealed record Szene(string Schluessel, string Name, int Farbton, int Saettigung, int Helligkeit, int Dichte)
     {
         public Streifen AlsStreifen() => new()
         {
@@ -328,24 +358,210 @@
         };
     }
 
-    private static readonly Szene[] Szenen =
+    /// <summary>
+    /// Die Szenen, wie sie der Code vorgibt. Diese Liste bestimmt, <b>welche</b> Szenen es
+    /// gibt und in welcher Reihenfolge; gespeicherte Werte ueberschreiben nur die Zahlen.
+    /// </summary>
+    private static readonly Szene[] SzenenVorgabe =
     [
         // Der Alltagsfall: warmes Licht aus allen LEDs. Nicht weiss, sondern deutlich
         // gesaettigtes Bernstein -- WS2812B ohne Weisskanal wirkt bei S=0 blaeulich.
         // Diese Werte hat Thomas am Streifen ausgesucht, nicht am Bildschirm; sie sind
         // damit das Mass, an dem sich eine Rechnung zu messen hat und nicht umgekehrt.
-        new("Warmweiß",       43,  79,  45, 100),
+        new("warmweiss",       "Warmweiß",       43,  79,  45, 100),
         // Hell und moeglichst neutral, zum Suchen im Schrank.
-        new("Arbeitslicht",   45,   8, 100, 100),
+        new("arbeitslicht",    "Arbeitslicht",   45,   8, 100, 100),
         // Dieselbe durchgehende Linie, nur gedaempft und waermer.
-        new("Abendlicht",     25,  65,  40, 100),
+        new("abendlicht",      "Abendlicht",     25,  65,  40, 100),
         // Voll gesaettigt, die Farbe ist hier der Zweck.
-        new("Sonnenuntergang", 8,  95,  75, 100),
+        new("sonnenuntergang", "Sonnenuntergang", 8,  95,  75, 100),
         // Wenige warme Punkte statt einer Linie: dunkel, unruhig, kein Arbeitslicht.
-        new("Kerzenschein",   18,  90,  25,  21),
+        new("kerzenschein",    "Kerzenschein",   18,  90,  25,  21),
         // Einzelne kuehle Punkte -- das Muster, fuer das der Fuellgrad ueberhaupt da ist.
-        new("Sternenhimmel", 205,  45,  65,   6),
+        new("sternenhimmel",   "Sternenhimmel", 205,  45,  65,   6),
     ];
+
+    /// <summary>
+    /// Die Szenen, wie sie auf der Seite stehen: die Liste aus dem Code, die Werte
+    /// ueberschrieben von dem, was gespeichert ist.
+    /// </summary>
+    private Szene[] Szenen = SzenenVorgabe;
+
+    /// <summary>
+    /// Wie lange gedrueckt werden muss. 700 ms statt der ueblichen 500: Ein Speichern laesst
+    /// sich nicht zuruecknehmen, und die Fuellung am Knopfrand laeuft waehrenddessen mit --
+    /// wer nicht speichern wollte, sieht es kommen und zieht den Finger weg.
+    /// </summary>
+    private const int HalteDauerMs = 700;
+
+    /// <summary>Wie lange der Knopf nach dem Speichern bestaetigt bleibt.</summary>
+    private const int BestaetigungMs = 1800;
+
+    private string? HaeltSzene;
+    private string? GespeicherteSzene;
+    private CancellationTokenSource? _halten;
+    private CancellationTokenSource? _bestaetigung;
+
+    /// <summary>
+    /// Wahr, solange der Klick, der auf ein langes Druecken folgt, noch zu verschlucken ist.
+    /// Ohne das wuerde dasselbe Druecken erst speichern und danach die Szene laden.
+    /// </summary>
+    private bool _langGedrueckt;
+
+    /// <summary>
+    /// Fuehrt Code-Vorgabe und Gespeichertes zusammen. Der Code sagt, welche Szenen es gibt;
+    /// das Topic sagt nur, welche Werte der Nutzer geaendert hat. Eine spaeter im Code
+    /// ergaenzte Szene erscheint damit sofort, statt vom retained Payload verdeckt zu werden.
+    /// </summary>
+    private void SzenenZusammenfuehren()
+    {
+        var gespeichert = MqttService.SzenenVorgaben?.Szenen;
+        if (gespeichert is null || gespeichert.Count == 0)
+        {
+            Szenen = SzenenVorgabe;
+            return;
+        }
+
+        Szenen = SzenenVorgabe.Select(s => gespeichert.TryGetValue(s.Schluessel, out var w)
+            ? s with
+            {
+                // Geklemmt, weil der Payload von aussen kommt: Ein Wert daneben wuerde sonst
+                // die Regler auf eine Stellung werfen, die es auf der Skala nicht gibt.
+                Farbton = Math.Clamp(w.Farbton, 0, 360),
+                Saettigung = Math.Clamp(w.Saettigung, 0, 100),
+                Helligkeit = Math.Clamp(w.Helligkeit, 0, 100),
+                Dichte = Math.Clamp(w.Dichte, 0, 100),
+            }
+            : s).ToArray();
+    }
+
+    /// <summary>Kurzes Tippen laedt die Szene -- es sei denn, es war der Rest eines langen Drucks.</summary>
+    private async Task SzeneGeklicktAsync(Szene szene)
+    {
+        if (_langGedrueckt)
+        {
+            _langGedrueckt = false;
+            return;
+        }
+
+        await SzeneAnwendenAsync(szene);
+    }
+
+    /// <summary>
+    /// Wartet die Haltezeit im Ereignishandler selbst ab. Das sieht nach einer Falle aus --
+    /// Blazor Server fuehrt Handler auf dem Renderer-Dispatcher aus --, ist aber keine:
+    /// <see cref="ComponentBase"/> zeichnet am ersten <c>await</c> neu, und andere
+    /// Ereignisse laufen weiter. Im Browser gegengemessen, dieselbe Seite einmal so und
+    /// einmal mit dem Warten in einem eigenen Task daneben:
+    /// <list type="bullet">
+    /// <item>Die Klasse <c>haelt</c> stand beide Male nach 22 ms im DOM.</item>
+    /// <item><c>gespeichert</c> beide Male nach 739 bzw. 741 ms.</item>
+    /// <item>Ein Klick auf eine andere Szene mitten im Halten wurde nach 15 ms beantwortet.</item>
+    /// </list>
+    /// Der Umweg ueber einen Hintergrundtask kostet also nur Zeilen und bringt nichts.
+    /// </summary>
+    private async Task HaltenBeginntAsync(Szene szene)
+    {
+        _langGedrueckt = false;
+        _halten?.Cancel();
+        _halten = new CancellationTokenSource();
+        var abbruch = _halten.Token;
+
+        HaeltSzene = szene.Schluessel;
+
+        try
+        {
+            await Task.Delay(HalteDauerMs, abbruch);
+        }
+        catch (OperationCanceledException)
+        {
+            // Losgelassen oder weggezogen, bevor die Zeit um war: nichts tun.
+            return;
+        }
+
+        _langGedrueckt = true;
+        HaeltSzene = null;
+        await SzeneSpeichernAsync(szene);
+    }
+
+    private void HaltenEndet()
+    {
+        _halten?.Cancel();
+        HaeltSzene = null;
+    }
+
+    /// <summary>
+    /// Speichert die Werte, die gerade eingestellt sind, in diese Szene -- die des aktiven
+    /// Streifens, also genau die, die die Regler darunter zeigen.
+    /// </summary>
+    private async Task SzeneSpeichernAsync(Szene szene)
+    {
+        // Vom gespeicherten Stand ausgehen, nicht von der zusammengefuehrten Anzeige: Sonst
+        // schriebe jedes Speichern die Code-Vorgaben aller uebrigen Szenen mit fest, und die
+        // waeren ab dann gegen jede spaetere Code-Aenderung taub.
+        var bisher = MqttService.SzenenVorgaben?.Szenen;
+        var szenen = bisher is null
+            ? new Dictionary<string, SzenenWerte>()
+            : new Dictionary<string, SzenenWerte>(bisher);
+
+        szenen[szene.Schluessel] = new SzenenWerte
+        {
+            Farbton = Aktiv.Farbton,
+            Saettigung = Aktiv.Saettigung,
+            Helligkeit = Aktiv.Helligkeit,
+            Dichte = DichteZuStufe(Aktiv.Stufe),
+        };
+
+        var vorgaben = new SzenenVorgaben
+        {
+            Zeitpunkt = DateTimeOffset.UtcNow,
+            Szenen = szenen,
+        };
+
+        try
+        {
+            await MqttService.PublishAsync(BeleuchtungTopics.Szenen,
+                JsonSerializer.Serialize(vorgaben),
+                MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce, true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Ein stumm fehlgeschlagenes Speichern waere von einem Fehlgriff nicht zu
+            // unterscheiden -- also sagen, dass nichts gespeichert wurde.
+            StatusMessage = $"„{szene.Name}“ nicht gespeichert: {ex.Message}";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        StatusMessage = $"Szene „{szene.Name}“ auf die aktuellen Werte gesetzt";
+        await BestaetigungZeigenAsync(szene);
+    }
+
+    /// <summary>
+    /// Laesst den Knopf kurz bestaetigen. Die Statuszeile allein reicht nicht: Sie steht am
+    /// Seitenende, und der Blick ist beim Knopf.
+    /// </summary>
+    private async Task BestaetigungZeigenAsync(Szene szene)
+    {
+        _bestaetigung?.Cancel();
+        _bestaetigung = new CancellationTokenSource();
+        var abbruch = _bestaetigung.Token;
+
+        GespeicherteSzene = szene.Schluessel;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await Task.Delay(BestaetigungMs, abbruch);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        GespeicherteSzene = null;
+        await InvokeAsync(StateHasChanged);
+    }
 
     private async Task SzeneAnwendenAsync(Szene szene)
     {
@@ -457,6 +673,7 @@
     protected override void OnInitialized()
     {
         MqttService.OnMessageReceived += UpdateData;
+        SzenenZusammenfuehren();
         UpdateValues();
         // Stimmen die beiden Streifen nicht ueberein, zeigen die Regler unter "Beide" nur
         // den linken -- also faengt die Seite dann bei "Links" an und luegt nicht.
@@ -471,6 +688,14 @@
         if (args.Topic == topicName || args.Topic == lampeTopicName)
         {
             UpdateValues();
+        }
+        else if (args.Topic == BeleuchtungTopics.Szenen)
+        {
+            // Auch die eigene Nachricht kommt hier wieder herein. Das ist erwuenscht: Danach
+            // zeigt die Seite genau das, was am Broker liegt, und nicht das, was sie gesendet
+            // zu haben glaubt.
+            SzenenZusammenfuehren();
+            InvokeAsync(StateHasChanged);
         }
     }
 
