@@ -37,7 +37,8 @@ Rollout auf und nicht danach. **Für `laden-0708-schnitt` heißt das: Die Tests 
 sofort Teil der Abnahme.** Geänderte Erwartungswerte gehören begründet in den Commit,
 nicht stillschweigend angepasst.
 
-**Offene Entscheidung zu Punkt 7/8: drei Grafana-Dashboards werden vom Schnitt blind.**
+**Entschieden (2026-09-20): drei Grafana-Dashboards werden vom Schnitt blind, die Session
+repariert sie im selben Commit.**
 Der DataHub zieht `Device` jetzt aus dem Topic-Pfad und schreibt damit `Garage` /
 `Stellplatz` statt `KebaGarage` / `KebaOutside`. `Location` bleibt `M3`, `sensor_type`
 bleibt `Wallbox` — es bricht ausschließlich der `device`-Filter. Betroffen sind
@@ -45,14 +46,15 @@ bleibt `Wallbox` — es bricht ausschließlich der `device`-Filter. Betroffen si
 `energy-overview-dashboard.json` (3× je Name) und `energy-sankey-dashboard.json`
 (2× je Name). Die beiden letzten bleiben dauerhaft kaputt, wenn sie niemand anfasst.
 
-Vorschlag der Session: in den Queries auf beide Werte filtern
+Umgesetzt wird: in den Queries auf beide Werte filtern
 (`device IN ('KebaGarage','Garage')`). Das überbrückt den Tag-Wechsel in der Abfrage,
 hält die Historie sichtbar und braucht keine Datenmigration. Für die Sankey-Kennzahl
 `MAX(value_cumulated_kwh) - MIN(...)` ist es sogar die einzig richtige Variante: Der
 Zählerstand läuft über den Umbenennungszeitpunkt hinweg durch, die Differenz stimmt nur,
 wenn beide Tag-Werte in derselben Abfrage liegen.
 
-Zwei Ergänzungen aus der Nachprüfung, die im Vorschlag fehlten:
+Zwei Ergänzungen aus der Nachprüfung, die im Vorschlag der Session fehlten und
+mit beauftragt sind:
 1. **Der Sankey wird generiert.** `gen_sankey.py` erzeugt `energy-sankey-dashboard.json`;
    die Gerätenamen stehen in Zeile 536/537/545/546. Eine Korrektur nur im JSON wäre beim
    nächsten Lauf des Skripts wieder weg — sie muss ins Skript.
@@ -64,6 +66,33 @@ Zwei Ergänzungen aus der Nachprüfung, die im Vorschlag fehlten:
 Die Delta-Berechnung im DataHub ist vom Namenswechsel **nicht** betroffen: `previousValues`
 ist ein In-Memory-Dictionary, das jeder Pod-Neustart ohnehin leert. Die erste Messung unter
 dem neuen `MeasurementId` liefert Delta 0, genau wie nach jedem Neustart — kein Sprung.
+
+**Rollout-Ablauf für Punkt 7/8, wenn der Merge freigegeben wird.** Der Schnitt ist hart:
+Zwischen dem Merge und dem Ende der drei Rollouts sprechen alte und neue Dienste
+verschiedene Topics. Reihenfolge und Handgriffe:
+
+1. **Merge.** Löst Builds für KebaConnector, ChargingController, DataHub und Web aus,
+   danach je ein ArgoCD-Rollout binnen ~2 min. `grafana-dashboards/` steht in keinem
+   Pfadfilter und baut nichts.
+2. **Während der Rollouts regelt der Controller nicht.** Das ist die gewollte
+   Rückfallebene: Der KebaConnector gibt die Boxen nach `StaleReleaseAfter` auf vollen
+   Strom frei. Gemessen ist dieses Fenster etwa eine Minute — nicht zehn, wie eine frühere
+   Annahme in diesem Dokument behauptete.
+3. **Einstellungen einmalig umkopieren**, sonst steht die Regelung ohne Einstellungen da:
+   von `config/charging/settings` nach
+   `konfiguration/Laden/M3/Regelung/Einstellungen`, retained, QoS 1. Der alte Payload ist
+   unverändert gültig; das neue Pflichtfeld `Zeitpunkt` fehlt darin, was der Controller
+   verträgt. **Alternative ohne Broker-Eingriff:** nach dem Rollout die Ladestufe in der
+   Oberfläche einmal neu klicken — Web publiziert sie dann selbst auf das neue Topic,
+   inklusive `Zeitpunkt`.
+4. **Alte retained Topics leeren** (leere retained Nachricht), damit ein späterer Rollback
+   kein uraltes Kommando wiederbelebt: `commands/charging/KebaGarage`,
+   `commands/charging/KebaOutside`, `data/charging/situation`, `config/charging/settings`.
+5. **Dashboards importieren.** Manuell in Grafana, sie liegen nicht im ArgoCD-Pfad.
+6. **Verifikation im Connector-Log:** Bei jedem Kommando muss das Alter aus dem
+   `Zeitpunkt` im Payload gezogen werden. Das löst zugleich das Prüfkriterium aus Punkt 16
+   ab — `Received retained message` taugt nicht mehr, weil das Retain-Flag für die
+   Altersbestimmung keine Rolle mehr spielt.
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
