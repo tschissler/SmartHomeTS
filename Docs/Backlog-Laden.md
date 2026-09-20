@@ -1350,6 +1350,31 @@ sowieso ersetzt werden: Sie hängen am Hover, und am Telefon ist die Bedienung d
 Ladestufen damit unbeschriftet. Wer sie touchtauglich macht, wird sie kaum als
 `SfTooltip` behalten.
 
+#### Was der Ausbau gebracht hat, gemessen
+
+**Der Web-Build fiel von 7m54s auf 2m35s** — 67 % schneller, Faktor 3,1 gegen den Median
+der drei Vorläufe. Von Thomas aus den Actions-Läufen geholt, von mir über die
+GitHub-API unabhängig bestätigt:
+
+| Lauf | Merge | Dauer |
+|---|---|---|
+| #180 | Punkt 21 | 7m 53s |
+| #181 | Punkt 13b | 9m 17s |
+| #182 | Punkt 3 | 7m 54s |
+| **#183** | **Punkt 23/24** | **2m 35s** |
+
+**Die Zahl ist kein Cache-Geschenk, sondern eher noch untertrieben:** Der Merge hat beide
+`.csproj` angefasst, und das Dockerfile kopiert die Projektdateien vor dem Restore — Lauf
+#183 musste den Restore also **vollständig neu machen**, während #182 ihn aus dem Cache
+nehmen konnte. Er war trotzdem dreimal schneller.
+
+Die Veröffentlichung schrumpfte von **238 MB auf 8,3 MB**, allein
+`Syncfusion.Blazor.Themes` lieferte 211 MB statische Assets für **eine** eingebundene
+CSS-Datei. Der Publish-Schritt allein, lokal kalt gegen kalt: 66,6 s → 4,0 s.
+
+*Einschränkung: ein Lauf auf dem neuen Stand. Die Ersparnis ist strukturell — weniger
+holen, weniger schreiben, weniger schieben —, aber n = 1 bleibt n = 1.*
+
 **Umfang**
 - [ ] **Sofort und risikolos:** die vier unbenutzten Paketverweise in
       `SmartHome.Web.csproj` und die drei in `UIComponentsLib.csproj` entfernen
