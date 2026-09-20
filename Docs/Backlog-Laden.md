@@ -9,7 +9,78 @@ Konzept und Begründungen: `Fahrzeug-Wallbox-Zuordnung.md`, `Ladeprotokoll.md`,
 
 ---
 
+## Bearbeitungsstand
+
+Wer arbeitet gerade woran. **Nur auf `main` pflegen, nie im Feature-Branch** — sonst wird
+diese Tabelle selbst zum Merge-Konflikt. Arbeits-Sessions fassen sie nicht an; die
+Integrator-Session trägt ein und aus.
+
+| Punkt | Branch | seit | Stand |
+|---|---|---|---|
+| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | in Arbeit |
+
+Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
+Updater binnen ~2 min ein Deployment ins laufende System.
+
+---
+
+## Parallelisierung in Wellen
+
+Die Punkte 7→8→9→10→11→13→14 hängen in einer Kette; echte Parallelität gibt es nur an zwei
+Stellen. Sinnvoll sind 2–3 gleichzeitige Sessions, jede in einem eigenen git worktree, mit
+einem Branch pro Punkt.
+
+| Welle | parallel | Anmerkung |
+|---|---|---|
+| A | 0, 1, 2, 4 | 1 braucht Thomas interaktiv (BMW-Login); 1 und 2 berühren beide den BMWConnector, aber disjunkte Dateien |
+| B | 3 | braucht 2 (Begriff von „gesund") und 0 (sonst baut der Helfer in `Libs/` nichts neu) |
+| C | 7 + 8 zusammen in **einer** Session | harter Schnitt, muss ein Release sein — nicht aufteilen |
+| D | 9 ∥ 12 | Web gegen ChargingController, saubere Trennung — sobald die Payload-Verträge aus C stehen |
+| E | 10 → 11 → 13 → 14 seriell; 15 optional nach 10 | |
+
+Innerhalb einer Welle gilt: kein Punkt wird von zwei Sessions angefasst, und
+`Docs/Backlog-Laden.md` bearbeitet ausschließlich die Integrator-Session.
+
+---
+
 ## Unabhängige Vorarbeiten
+
+### 0. CI-Trigger für geteilten Code
+
+**Problem.** Kein Service-Workflow hat einen Pfadfilter auf den geteilten Code, den er
+referenziert. Eine Änderung an `SharedContracts` (von 7 Projekten referenziert),
+`MQTTClient` oder `SmartHomeHelpers` (je 4) baut **kein** Image neu — es gibt keinen
+Fehler, nur ein stilles Nicht-Deployment. Einzige Ausnahme ist `RulesEngine.yml`, und
+selbst dort fehlt `SharedContracts`.
+
+| Service | referenziert | Filter heute |
+|---|---|---|
+| ChargingController | SharedContracts | keiner |
+| KebaConnector | SharedContracts, MQTTClient, Libs/HelpersLib | keiner |
+| ShellyConnector | SharedContracts, MQTTClient, SmartHomeHelpers | keiner |
+| EnphaseConnector | SharedContracts, MQTTClient, SmartHomeHelpers | keiner |
+| SmartHome.DataHub | SharedContracts, MQTTClient | keiner |
+| SmartHome.Web | SharedContracts, SmartHomeHelpers | keiner |
+| RulesEngine | MQTTClient | MQTTClient, SmartHomeHelpers |
+
+**Warum zuerst.** Punkt 7/8 legt die neuen Payload-Typen nach `SharedContracts`, Punkt 3
+den Heartbeat-Helfer nach `Libs/`, Punkt 12 ändert die Einheitenkommentare in
+`ChargingSituation`. In allen drei Fällen wäre der harte Schnitt halb ausgerollt, ohne
+dass es auffällt.
+
+**Umfang**
+- [ ] Je Service-Workflow die tatsächlich referenzierten Pfade in `paths:` ergänzen
+      (Quelle: die `ProjectReference`-Einträge der `.csproj`)
+- [ ] `SmartHomeHelpers` aus `RulesEngine.yml` entfernen, wenn es dort nicht referenziert ist
+- [ ] `.claude/worktrees/` in `.gitignore` aufnehmen — Worktrees liegen im Repo und
+      erscheinen sonst als untracked
+
+**Fertig, wenn** eine Teständerung an `SharedContracts` die Builds aller sieben Services
+auslöst.
+
+**Blockiert** 3, 7, 8, 12.
+
+---
 
 ### 1. BMW-Token erneuern und Doku korrigieren
 
@@ -121,6 +192,12 @@ Die App wird nicht mehr aktiv entwickelt; gepflegt wird die Web-PWA.
 `SitzungsBeginn` sollte deshalb primär aus der selbst beobachteten Steckerflanke
 stammen und nur ersatzweise aus der Box-Zeit.
 
+**Zu klären vor Umsetzung.** Punkt 7 gibt `…/Ladesitzung` dem KebaConnector, Punkt 13
+lässt den ChargingController dasselbe retained Topic publizieren. Zwei Publisher auf einem
+retained Topic überschreiben sich gegenseitig — es braucht genau einen. Naheliegend ist der
+ChargingController, weil nur er die Zähler aus Punkt 12 führt; der KebaConnector
+publiziert dann hier nur `Status`.
+
 **Abhängig von** 5.
 
 ---
@@ -186,6 +263,12 @@ kommen an, werden aber nirgends angezeigt.
 - [ ] Zuordnung in den `Ladesitzung`-Payload, nicht in ein eigenes Topic
 - [ ] Web: Vertrauensgrad sichtbar (grau + Fragezeichen bei Vermutung), Korrektur per Klick
 - [ ] Zustand nach Neustart aus den retained Topics wiederherstellen
+
+**Zu klären vor Umsetzung.** Der vierte Unterpunkt („Zuordnung in den
+`Ladesitzung`-Payload, nicht in ein eigenes Topic") widerspricht Punkt 13, wo die
+RulesEngine `daten/Laden/M3/<Box>/Zuordnung` als eigenes Topic publiziert und der DataHub
+beide über die `SitzungsId` zusammenführt. Für das eigene Topic spricht, dass sonst zwei
+Dienste in denselben Payload schreiben müssten.
 
 **Abhängig von** 6, 10.
 
