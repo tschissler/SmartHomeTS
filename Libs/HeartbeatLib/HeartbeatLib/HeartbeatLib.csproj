@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- HealthReport/HealthStatus, BackgroundService and ILogger come from the shared ASP.NET
+         framework instead of from NuGet: every service using this library is a Sdk.Web project
+         and already carries it, so a PackageReference would only pin a second version next to
+         the framework one. Deliberately no MQTTnet reference either - the services run two
+         major versions of it (BMWConnector 4.3, everyone else 5.0), so this library takes a
+         publish delegate instead of a client. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

@@ -84,6 +84,11 @@ Docker image versions use format `1.0.{github.run_number}`.
 - `Docs/MQTT-Topic-Konvention.md` — **binding naming rule for all new topics**
   (`art/Kategorie/[Ort/]Geraet/Aspekt`, German from the category level, JSON payload with
   `Zeitpunkt`, state retained / events never). Read before adding any topic
+- `Docs/Service-Heartbeat.md` — every service publishes on `status/Cluster/Dienst/<Name>` in
+  the **ESP32 device format**: which fields it fills, which it deliberately omits (an absent
+  field must never be sent as 0), why a service heartbeat carries `Zeitpunkt` while a device
+  one does not, and that the health state must come from the service's existing health checks.
+  Read before adding a heartbeat to a service or touching `Libs/HeartbeatLib`
 - `Docs/Fahrzeug-Wallbox-Zuordnung.md` — which vehicle charges at which wallbox: the
   wallbox is the source of truth, why elimination does not work, confidence levels,
   UI concept, PV/battery/grid attribution
@@ -114,7 +119,7 @@ Docker image versions use format `1.0.{github.run_number}`.
 - **Each .NET service has its own solution file** — there is no monolithic solution
 - **Secrets are managed via** GitHub Secrets (CI) and Kubernetes Secrets (runtime). `Secrets.cs` files are gitignored
 - **.NET target frameworks vary**: .NET 10.0 (DataHub, Web, ChargingController), .NET 9.0 (MCPServer), .NET 8.0 (connectors)
-- **Shared .NET libraries** in `Libs/` (ShellyLib, MQTTControllerLib, HelpersLib) and `SharedContracts/`
+- **Shared .NET libraries** in `Libs/` (ShellyLib, MQTTControllerLib, HelpersLib, HeartbeatLib) and `SharedContracts/`
 - **`Depricated/` folder** contains legacy/replaced projects — avoid modifying these
 
 ## Recommended Skills

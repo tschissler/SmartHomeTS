@@ -204,6 +204,34 @@
     margin-right: 0.2rem;
 }
 
+/* Gesundheit, wie der Sender sie selbst meldet. Nur Dienste füllen das Feld; "gesund" bleibt
+   bewusst unauffällig, auffallen soll die Abweichung. */
+.health-chip {
+    border-radius: 0.35rem;
+    padding: 0.05rem 0.45rem;
+    font-weight: 600;
+}
+
+.health-chip.health-ok {
+    color: #2e9e5b;
+    background: #eaf6ef;
+}
+
+.health-chip.health-warn {
+    color: #9a6700;
+    background: #fff3cd;
+}
+
+.health-chip.health-bad {
+    color: #c9302c;
+    background: #fdecea;
+}
+
+.health-chip.health-unknown {
+    color: #6a737d;
+    background: #f1f3f5;
+}
+
 .reset-warn {
     color: #9a6700;
     background: #fff3cd;
