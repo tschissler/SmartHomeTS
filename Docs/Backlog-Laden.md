@@ -771,9 +771,10 @@ im Regelzyklus fortgeschrieben — behandelt wie ein Shelly oder der Envoy.
 
 **Umfang**
 - [ ] Einheitenkommentare korrigieren: `ChargingSituation.PowerFromPV`/`PowerFromGrid`/
-      `PowerFromBattery` und `ChargingGetData.CurrentChargingPower` behaupten „mW",
-      führen aber **Watt** (`Program.cs:206-212` teilt durch 1000). Muss vor der
-      Zurechnung stimmen
+      `PowerFromBattery` behaupten „mW", führen aber **Watt**. Muss vor der Zurechnung
+      stimmen. *(Der frühere vierte Fall `ChargingGetData.CurrentChargingPower` ist mit
+      Punkt 7/8 erledigt — er heißt jetzt `WallboxStatus.Ladeleistung` und ist korrekt
+      als W dokumentiert.)*
 - [ ] Zurechnung als reine, unit-getestete Funktion — inklusive Einspeise-, Misch- und
       Grenzfällen (`V ≤ 0`, fehlende Eingangswerte → Intervall überspringen)
 - [ ] ChargingController führt je Box `EnergieLadungPv`, `EnergieLadungBatterie`,
