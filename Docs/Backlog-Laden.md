@@ -1442,31 +1442,47 @@ keinen Ort für die Position.
   wollte und den Anker nicht mehr fand. **Regel daraus: Wer einen Bereich zwischen zwei
   Markern ersetzt, muss wissen, was dazwischen steht** — `git log -S` nach dem Commit ist
   billiger als der Verlust.
-- **Fünf HealthChecks melden dauerhaft „gesund", solange sie nie erfolgreich waren.**
-  `ChargingControllerHealthCheck` und vier Geschwister antworten
-  „Healthy: Service is starting up", solange `_lastSuccessfulRead == MinValue` — und das
-  bleibt so, **wenn es nie einen Erfolg gibt**. Ein KebaConnector, der noch nie eine
-  Wallbox gelesen hat, ist damit für immer gesund: in der Readiness-Probe **und** auf der
-  Geräteseite. Gefunden von `laden-03-heartbeat` im lokalen Lauf, bewusst nicht mit
-  geändert (kein zweiter Gesundheitsbegriff, das war die Auftragsgrenze). Punkt 2 hat die
-  Abbildung der Proben geprüft, nicht diese Semantik.
+- **Ein irreführender Satz auf der Dienst-Karte, kein Defekt.**
+  `ChargingControllerHealthCheck` und vier Geschwister melden „Healthy: Service is starting
+  up", solange `_lastSuccessfulRead == MinValue` — auch nach Tagen.
 
-  Der Anlaufzustand braucht eine eigene Antwort — „noch nie gelesen" ist etwas anderes als
-  „gerade gestartet", und nach ein paar Minuten ist es etwas anderes als beides.
+  *Hier stand zuerst, das sei ein Fehler mit Wirkung. Thomas hat widersprochen, und er hat
+  recht.* Nachgelesen im Code: Die Bedingung lautet
+  `_isMqttConnected && (_lastSuccessfulRead == MinValue || timeSinceLastRead < 5 min)` —
+  **ein Broker-Ausfall wird also sehr wohl gefangen.** Offen bleibt nur „MQTT läuft, aber
+  die Wallbox wurde nie gelesen", und eine rote Probe brächte dort nichts: Ein Neustart
+  repariert keine Wallbox, die aus ist.
+
+  Sichtbar ist der Fall ohnehin: `LastSuccessfulRead` gibt vor dem ersten Lesen `null`
+  zurück, der Heartbeat lässt `lastDataSecondsAgo` dann weg, und auf der Karte fehlt die
+  Zeile „Daten vor X" ganz.
+
+  **Was bleibt, ist der Satz.** „Service is starting up" erzählt nach drei Tagen die
+  falsche Geschichte — „gleich geht's los" statt „hat noch nie funktioniert". Eine Zeile,
+  mitzunehmen, wenn jemand ohnehin dort ist.
 - **Zwei Workflows führen ihre vorhandenen Tests nicht aus.** `SmartHome.DataHub.yml` hat
   keinen Test-Job, obwohl `SmartHome.DataHubTests` **65 grüne Tests** hat;
   `EnphaseConnector.yml` ebenso wenig. Das ist der Nachzug zu Punkt 19, der nur den
-  ChargingController abgedeckt hat.
+  ChargingController abgedeckt hat. **Die beiden sind nicht gleich viel Arbeit:** Beim DataHub ist es ein Test-Job nach dem Muster aus `ChargingController.yml`, beim EnphaseConnector nicht.
 
   **Bei Enphase steckt eine zweite Frage dahinter:** `EnphaseLib.Tests` ist **rot**, weil
   zwei Tests echte Enphase-Zugangsdaten aus der Umgebung brauchen. Ein Test-Job würde den
   Build sofort blockieren. Die Tests gehören also erst getrennt — was ohne Netz läuft,
   vom Rest.
-- **`SmartHome.Web` hat kein Testprojekt, und eins anzulegen bricht den Image-Build.**
-  Sein Dockerfile kopiert die `.csproj` einzeln; ein neues Projekt in der Solution fällt
-  dabei durch und `dotnet restore` bricht ab. Die Verbraucherseite des Heartbeats wurde
-  deshalb **außerhalb des Repos** geprüft (16 Prüfungen gegen die kompilierte DLL), nicht
-  in der CI. Wer dem Web Tests geben will, muss zuerst das Dockerfile umstellen.
+- **Die Rechenlogik der Weboberfläche hat keine Tests — und sie hat heute zwei Fehler
+  gleichzeitig getragen.** Beide saßen in `ChargingSituationManager.CalculatePowerPercent`:
+  die Ganzzahldivision (1.350 W und 1.499 W zeichneten dasselbe) und darunter verdeckt die
+  Kulturformatierung (`width: 11,28%` ist unter `de-DE` ungültiges CSS, der Balken blieb
+  leer). Der zweite wurde erst sichtbar, als der erste behoben war.
+
+  **Die testenswerte Logik liegt nicht in `SmartHome.Web`**, sondern in
+  `SmartHomeWebManagers` — einer gewöhnlichen `Microsoft.NET.Sdk`-Bibliothek mit drei
+  Dateien und ohne Blazor-Bezug. Ein Test `CalculatePowerPercent(1350) != (1499)` hätte den
+  ersten gefangen, ein Test auf die gerenderte Breite den zweiten.
+
+  Für `SmartHome.Web` selbst gilt weiter: Ein Testprojekt in der Solution bricht den
+  Image-Build, weil das Dockerfile die `.csproj` einzeln kopiert. Für die Manager-Bibliothek
+  ist das zu prüfen, aber kein offensichtliches Hindernis.
 - **Die Tabelle in Punkt 0 ist veraltet.** Dort steht, der BMWConnector habe gar keine
   `ProjectReference`. Seit `2e83815` (Punkt 10) referenziert er `SharedContracts` —
   nachgeprüft. Der Pfadfilter war glücklicherweise schon vorhanden, es ist also kein
