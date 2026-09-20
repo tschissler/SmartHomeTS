@@ -524,8 +524,16 @@ wie 7/8, für einen Umbau, der hier ohnehin anfällt.
 **Beteiligte.** Schreiber: `BMWConnector` (BMW und Mini, `VehicleConfig.cs:27`) und
 `VWConnector` (`vw_mqtt.py:22`). Leser: `ChargingController` (`Program.cs:281-282` — der
 Mini fehlt dort heute), `SmartHome.Web/MQTTService.cs:157-172` und der DataHub über sein
-`data/charging/#`-Abonnement. Beim VW vorher prüfen, ob er überhaupt noch Teilnehmer ist:
-Die WeConnect-API ist abgeschaltet, seine Daten gehen in keine Regelung mehr ein.
+`data/charging/#`-Abonnement.
+
+Der VW **bleibt Teilnehmer** und wird mit umgestellt: Die WeConnect-API ist zwar
+abgeschaltet, der Zugang läuft aber seit dem 2026-08-29 über den EU Data Act
+(`carconnectivity-connector-vw-eu-data-act`, verifiziert). Zu beachten ist etwas anderes:
+Der `ChargingController` **abonniert** `data/charging/VW`, hat aber gar keinen Handler
+dafür — die Nachricht landet im „Unknown topic"-Zweig, `VWData.cs` ist eine ungenutzte
+Record-Definition, und die Ladeentscheidung stützt sich allein auf Enphase- und
+Keba-Daten. Diese Subscription kann bei der Umstellung ersatzlos entfallen, statt sie auf
+das neue Topic mitzuziehen.
 
 **Abhängig von** 9.
 
