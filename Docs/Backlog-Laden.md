@@ -1323,6 +1323,38 @@ keinen Ort für die Position.
   InfluxDB steht von ihm trotzdem nichts, weil BMW CarData nur bei Fahrzeugereignissen
   sendet und er steht. Kein Defekt, aber bis zur ersten Fahrt auch kein Beweis. Erst dann
   ist Punkt 17 für alle drei Fahrzeuge belegt statt für zwei.
+- **Fünf HealthChecks melden dauerhaft „gesund", solange sie nie erfolgreich waren.**
+  `ChargingControllerHealthCheck` und vier Geschwister antworten
+  „Healthy: Service is starting up", solange `_lastSuccessfulRead == MinValue` — und das
+  bleibt so, **wenn es nie einen Erfolg gibt**. Ein KebaConnector, der noch nie eine
+  Wallbox gelesen hat, ist damit für immer gesund: in der Readiness-Probe **und** auf der
+  Geräteseite. Gefunden von `laden-03-heartbeat` im lokalen Lauf, bewusst nicht mit
+  geändert (kein zweiter Gesundheitsbegriff, das war die Auftragsgrenze). Punkt 2 hat die
+  Abbildung der Proben geprüft, nicht diese Semantik.
+
+  Der Anlaufzustand braucht eine eigene Antwort — „noch nie gelesen" ist etwas anderes als
+  „gerade gestartet", und nach ein paar Minuten ist es etwas anderes als beides.
+- **Zwei Workflows führen ihre vorhandenen Tests nicht aus.** `SmartHome.DataHub.yml` hat
+  keinen Test-Job, obwohl `SmartHome.DataHubTests` **65 grüne Tests** hat;
+  `EnphaseConnector.yml` ebenso wenig. Das ist der Nachzug zu Punkt 19, der nur den
+  ChargingController abgedeckt hat.
+
+  **Bei Enphase steckt eine zweite Frage dahinter:** `EnphaseLib.Tests` ist **rot**, weil
+  zwei Tests echte Enphase-Zugangsdaten aus der Umgebung brauchen. Ein Test-Job würde den
+  Build sofort blockieren. Die Tests gehören also erst getrennt — was ohne Netz läuft,
+  vom Rest.
+- **`SmartHome.Web` hat kein Testprojekt, und eins anzulegen bricht den Image-Build.**
+  Sein Dockerfile kopiert die `.csproj` einzeln; ein neues Projekt in der Solution fällt
+  dabei durch und `dotnet restore` bricht ab. Die Verbraucherseite des Heartbeats wurde
+  deshalb **außerhalb des Repos** geprüft (16 Prüfungen gegen die kompilierte DLL), nicht
+  in der CI. Wer dem Web Tests geben will, muss zuerst das Dockerfile umstellen.
+- **Die Tabelle in Punkt 0 ist veraltet.** Dort steht, der BMWConnector habe gar keine
+  `ProjectReference`. Seit `2e83815` (Punkt 10) referenziert er `SharedContracts` —
+  nachgeprüft. Der Pfadfilter war glücklicherweise schon vorhanden, es ist also kein
+  Schaden entstanden, aber die Tabelle sollte niemand mehr als Beleg benutzen.
+- **`meta/RulesEngine/version` war nie sichtbar.** `Devices.razor` überspringt in
+  `ParseLegacy` alle Einträge, deren Typ kein bekannter OTA-Gerätetyp ist — das Topic war
+  seit jeher tot und geht mit Punkt 3 im Heartbeat auf.
 - **Die Balken der Ladeseite sind auf 150-W-Stufen gerastert.**
   `ChargingSituationManager.CalculatePowerPercent` rechnet
   `return (power * 100) / PowerMaximum;` — `power` ist `int`, `PowerMaximum` ist
