@@ -88,6 +88,16 @@ Docker image versions use format `1.0.{github.run_number}`.
 
 ## Documentation
 
+- `Docs/MQTT-Topic-Konvention.md` — **binding naming rule for all new topics**
+  (`art/Kategorie/[Ort/]Geraet/Aspekt`, German from the category level, JSON payload with
+  `Zeitpunkt`, state retained / events never). Read before adding any topic
+- `Docs/Fahrzeug-Wallbox-Zuordnung.md` — which vehicle charges at which wallbox: the
+  wallbox is the source of truth, why elimination does not work, confidence levels,
+  UI concept, PV/battery/grid attribution
+- `Docs/Ladeprotokoll.md` — charging log: PV/battery/grid attribution rule, the three
+  virtual meters per wallbox, the `ladesitzungen` table, who publishes what, Grafana scope
+- `Docs/Backlog-Laden.md` — ordered backlog for charging, vehicle assignment, charging log
+  and the topic cleanup; work it top to bottom
 - `Docs/ChargingController-Regelkreis.md` — control loop of the EV charging (smoothing,
   contactor protection delays, tuning parameters, diagnostics)
 - `Docs/microK8s/Setup MicroK8s.md` — cluster setup
