@@ -185,13 +185,10 @@ nicht repariert.
 - [ ] Liveness von der Fahrzeugverbindung entkoppeln: sie prüft nur, ob der Prozess
       bedienbar ist. Ein Neustart repariert keinen Token
 - [ ] Readiness so mappen, dass `Degraded` nicht als betriebsbereit durchgeht
-- [ ] Proaktive Warnung: Token-Alter bewerten, bevor der Ausfall eintritt. **Quelle ist
-      der `auth_time`-Claim des `id_token`** — er nennt den Zeitpunkt des interaktiven
-      Logins und überlebt die 50-Minuten-Refreshes; das `creationTimestamp` des Secrets
-      taugt nicht (beide Secrets stehen auf 2026-03-08, obwohl BMW am 2026-09-20 neu
-      gebootstrapt wurde). **Die Schwelle ist nicht 80 Tage:** gemessen lief der Mini bei
-      195 Tagen weiter, der BMW fiel nach 161 Tagen aus. Die „~90 Tage" in `SETUP.md` sind
-      nicht belegt. Default 150 Tage, über `BMW_TOKEN_AGE_WARN_DAYS` konfigurierbar
+- [ ] Proaktive Warnung, **bevor** der Ausfall eintritt. Maßgeblich ist die Zeit seit dem
+      letzten **erfolgreichen Refresh**, nicht das Alter des Logins: Quelle ist der
+      `iat`-Claim des aktuellen `id_token`, ersatzweise ein eigener Zeitstempel beim
+      Schreiben. Schwelle 7 Tage — die Hälfte der Frist. Konfigurierbar
 - [ ] Die Alters-Warnung geht **nicht** in die Readiness ein — ein gewarnter, aber
       funktionierender Connector muss betriebsbereit bleiben
 - [x] ~~Prüfen, ob dieselbe Probe-Verwechslung in den anderen Services steckt~~ —
@@ -201,6 +198,20 @@ nicht repariert.
       ein statisches „alive" und auf `/ready` 503, sobald nicht `Healthy` — `Degraded`
       fällt dort korrekt durch. Der BMWConnector war der einzige mit beiden Proben auf
       demselben Checksatz
+
+**Das Token-Modell, recherchiert am 2026-09-20 in der BMW-CarData-Dokumentation.**
+`access_token` und `id_token` gelten je **1 Stunde**, der `refresh_token` **zwei Wochen**
+(1 209 600 s). Entscheidend: **der refresh_token rotiert** — jeder Refresh erzeugt ein
+neues Set aus allen drei Tokens und setzt deren Frist zurück. Läuft er ab, ist ein neuer
+Device-Code-Flow nötig; wird die client_id von ihren Services abgemeldet, verfällt er
+sofort. Die „~90 Tage" in `SETUP.md` waren unbelegt und falsch — sie haben die Diagnose in
+die Irre geführt. Dass der Mini bei einem 195 Tage alten Login läuft, ist kein
+Widerspruch, sondern der Beweis der Rotation.
+
+**Folge für Punkt 18.** Weil der alte refresh_token nach einem Refresh sofort ungültig
+ist, ist das Speichern des neuen Tokens der kritische Schritt: Schlägt es fehl, ist der
+Zugang unwiederbringlich verloren — ohne sichtbaren Fehler beim Abruf. Das ist die
+plausibelste Erklärung für den Ausfall am 2026-08-16.
 
 **Fertig, wenn** ein simulierter Ausfall eines von zwei Fahrzeugen nach außen sichtbar ist.
 
