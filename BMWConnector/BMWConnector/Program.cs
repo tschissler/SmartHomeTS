@@ -111,15 +111,25 @@ var builder = WebApplication.CreateBuilder(args);
 var staleAfter = TimeSpan.FromMinutes(
     double.TryParse(Environment.GetEnvironmentVariable("BMW_VEHICLE_STALE_MINUTES"), out double m) ? m : 5);
 
+// BMW's refresh token expires two weeks after its last use. Half of that leaves a week to act
+// on a stored token that has stopped being refreshed.
+var tokenStaleAfter = TimeSpan.FromDays(
+    double.TryParse(Environment.GetEnvironmentVariable("BMW_TOKEN_REFRESH_STALE_DAYS"), out double d) ? d : 7);
+
 var healthRegistry = new HealthRegistry(loggerFactory.CreateLogger<HealthRegistry>(), staleAfter);
+var tokenRefreshMonitor = new TokenRefreshMonitor(
+    configs, store, loggerFactory.CreateLogger<TokenRefreshMonitor>(), tokenStaleAfter);
+
 builder.Services.AddSingleton(healthRegistry);
+builder.Services.AddSingleton<IHostedService>(tokenRefreshMonitor);
 
 builder.Services.AddHealthChecks()
     // Liveness answers one question only: is this process still serving? A dead BMW connection
     // must never restart the pod — a restart cannot renew an expired refresh token, it would
     // only bury a 35-day outage under a CrashLoop.
     .AddCheck("process-liveness", () => HealthCheckResult.Healthy("Process is serving."), tags: ["live"])
-    .AddCheck("bmw-broker", healthRegistry.GetResult, tags: ["ready"]);
+    .AddCheck("bmw-broker", healthRegistry.GetResult, tags: ["ready"])
+    .AddCheck("stored-token-freshness", tokenRefreshMonitor.GetResult, tags: ["tokens"]);
 
 foreach (var config in configs)
 {
@@ -144,6 +154,14 @@ app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
     // Degraded means one of two vehicles is gone. Left at its default it would answer 200 and
     // the probe would be satisfied — which is exactly how the Aug 2026 outage stayed invisible.
     ResultStatusCodes = ProbeStatusCodes.Readiness(),
+    ResponseWriter = WriteReportAsync,
+});
+
+// Informational only — never wired to a Kubernetes probe. A stale stored token still works.
+app.MapHealthChecks("/healthz/tokens", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("tokens"),
+    ResultStatusCodes = ProbeStatusCodes.Informational(),
     ResponseWriter = WriteReportAsync,
 });
 
