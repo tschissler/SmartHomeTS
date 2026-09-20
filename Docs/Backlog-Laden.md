@@ -21,6 +21,7 @@ Präfix setzt.
 
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
+| 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | in Arbeit — Health-Semantik des BMWConnectors und Schutz des Produktiv-Secrets vor Umgebungsvariablen. Gebündelt, weil beide denselben Secret-Store anfassen |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
