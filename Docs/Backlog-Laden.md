@@ -29,8 +29,8 @@ Präfix setzt.
 | 9 Wallbox-Kacheln | `laden-09-kacheln` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`5c23df9`, Image `1.0.172`). Nachkontrolle am Broker: sechs Klicks → sechs retained Nachrichten, eins zu eins. Der Doppelklick erzeugt zwei (zwei Klicks = zweimal umschalten, beide Zustände gewollt); die frühere dritte Phantomnachricht mit `Outside=true` **und** `Prefered=2`, die niemand angeklickt hatte, ist weg. Die Regelung lief während des Tests unbeirrt weiter (Stellplatz 8932 → 10294 → 10907 mA, PV-geführt) |
 | 12 Energieaufteilung | `laden-12-energieaufteilung` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`44c0e80`, ChargingController `1.0.50`). Die Zurechnung selbst trifft auf 0,1 W, über alle drei Mischungsarten. **Aber: ein Zyklus Versatz**, siehe den Befund unten — meine erste Messung hatte ihn unbemerkt herausgekürzt |
 | 10 Fahrzeugdaten | `laden-10-fahrzeugdaten` | 2026-09-20 | **erledigt und gemergt** (`0206430`). 18 Dateien, BMWConnector 56/56 und ChargingController 94/94 grün (selbst nachgelaufen). Neun bisher verworfene Felder kommen an, **alle** Werte nullbar statt nur `Battery`, Altersanzeige aus `lastUpdate` statt `Zeitpunkt`. `BMW_OUTPUT_TOPIC` im Deployment nicht gesetzt — der Connector meldet sein Ausgabetopic jetzt bei jedem Start und warnt bei einem Override. Entsperrt 11 und 17 |
-| 11 Zuordnung | `laden-11-zuordnung` | 2026-09-20 | **erledigt und gemergt** (`3e6bd68`). RulesEngineTests 64/64, ChargingControllerTests 94/94 (selbst nachgelaufen). Zwei Präzisierungen über den Auftrag hinaus: Eine Fahrzeugmeldung zählt nur, wenn ihre **Messzeit** zur Sitzung passen kann (sonst wäre die 35 Tage alte BMW-Meldung Evidenz über jetzt), und der Dienst schweigt 15 s nach dem Start, statt sich mit einem frischen `unbekannt` das eigene Gedächtnis zu überschreiben. **Entsperrt 13**. Nachkontrolle 13:02: RulesEngine `1.0.10` läuft, Konfigurationszeile bestätigt die Parameter (Boxzustand 5 min, Fahrzeugmeldung 6 h, Wiederanlauf-Fenster 15 s). **Funktional noch nicht beweisbar**: Beide Boxen stehen auf `SitzungsId: null`, kein Fahrzeug steckt. Die Regel lässt eine Box ohne Sitzung bewusst aus dem Ergebnis fallen (`Lage()` gibt `null` zurück), also steht auf `daten/Laden/+/+/Zuordnung` korrekt nichts. Der Beweis kommt beim nächsten Einstecken — **offen** |
-| 17 Fahrzeugdaten persistieren | `laden-17-fahrzeugdaten-persistieren` | 2026-09-20 | **erledigt und gemergt** (`352fc13`). 36/36 Tests grün — **der DataHub hatte bisher gar keine**. Zeitstempel aus `lastUpdate`; die Entdopplung fällt daraus ab, weil der Primärschlüssel Tabelle + Tags + Zeit ist. Zwei neue Tabellen `distance_values` und `position_values`, weil `counter_values` über `Convert.ToInt16` schreibt und der Mini bei 38954 km steht — Int16 endet bei 32767, das hätte eine `OverflowException` geworfen. **13 kann jetzt folgen**. **Nachkontrolle 13:05 am lebenden Objekt bestanden** — siehe unten |
+| 11 Zuordnung | `laden-11-zuordnung` | 2026-09-20 | **erledigt und gemergt** (`3e6bd68`). RulesEngineTests 64/64, ChargingControllerTests 94/94 (selbst nachgelaufen). Zwei Präzisierungen über den Auftrag hinaus: Eine Fahrzeugmeldung zählt nur, wenn ihre **Messzeit** zur Sitzung passen kann (sonst wäre die 35 Tage alte BMW-Meldung Evidenz über jetzt), und der Dienst schweigt 15 s nach dem Start, statt sich mit einem frischen `unbekannt` das eigene Gedächtnis zu überschreiben. **Entsperrt 13**. Nachkontrolle 13:02: RulesEngine `1.0.10` läuft, Konfigurationszeile bestätigt die Parameter (Boxzustand 5 min, Fahrzeugmeldung 6 h, Wiederanlauf-Fenster 15 s). **Funktional noch nicht beweisbar**: Beide Boxen stehen auf `SitzungsId: null`, kein Fahrzeug steckt. Die Regel lässt eine Box ohne Sitzung bewusst aus dem Ergebnis fallen (`Lage()` gibt `null` zurück), also steht auf `daten/Laden/+/+/Zuordnung` korrekt nichts. **Am 2026-09-20 um 14:52 bewiesen:** Der BMW steckte am Stellplatz, und die Regel entschied `Fahrzeug BMW / Vertrauen erkannt` — Stufe 2, 36 Sekunden nach Sitzungsbeginn. Nicht „vermutet“ und nicht „unbekannt“: Das Fahrzeug meldete sich verbunden, genau eine Box war belegt und unzugeordnet |
+| 17 Fahrzeugdaten persistieren | `laden-17-fahrzeugdaten-persistieren` | 2026-09-20 | **erledigt und gemergt** (`352fc13`). 36/36 Tests grün — **der DataHub hatte bisher gar keine**. Zeitstempel aus `lastUpdate`; die Entdopplung fällt daraus ab, weil der Primärschlüssel Tabelle + Tags + Zeit ist. Zwei neue Tabellen `distance_values` und `position_values`, weil `counter_values` über `Convert.ToInt16` schreibt und der Mini bei 38954 km steht — Int16 endet bei 32767, das hätte eine `OverflowException` geworfen. **Entsperrt 14**. **Am 2026-09-20 um 15:13 Ende zu Ende bewiesen** — die erste Zeile in `ladesitzungen` steht, siehe unten |
 | 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | **erledigt und gemergt** (`b560217`). Der gemeldete Fehler war der Text; die Ursache lag tiefer — `disconnected.svg` ist fest `#d4aa00`, die freie Box trug also dauerhaft eine Aufmerksamkeitsfarbe, und `connected.svg`/`connectednotready.svg` sind geometrisch identisch und unterscheiden sich nur im Strich. Symbol jetzt inline in `currentColor`: Geometrie sagt Fahrzeug ja/nein, Farbe kommt aus dem Zustand |
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
 | 13a Ladesitzungen | `laden-13a-ladesitzungen` | 2026-09-20 | **erledigt und gemergt** (`a6d9c30`). ChargingController 115/115, DataHub 65/65 (selbst nachgelaufen), kein bestehender Erwartungswert angefasst. Statt eines booleschen `beginn_geschaetzt` die Spalte **`beginn_quelle`** mit vier Werten: `steckflanke` und `regelzyklus` sind gemessen, `boxuhr` hat einen Fehler ohne Vorzeichen, `dienstanlauf` einen mit — dann ist `dauer_s` zu kurz. Ein Ja/Nein hätte die letzten beiden ununterscheidbar gemacht. **Zwei** Int16-Verengungen entfernt; die zweite (`Int16.Parse` beim Einlesen der CanGateway-Werte) wird tatsächlich erreicht. **Acht** Builds, nicht sechs — meine Zahl war falsch, die Session hat die `paths:`-Blöcke durchgezählt. **Entsperrt 14** |
@@ -1087,6 +1087,40 @@ das Topic nicht, und es müsste zweimal gegen zwei Schemata gebaut werden.
 **Welle E, seriell nach 13.** Kollidiert mit 8 und 13 im DataHub, deshalb nicht parallel zu
 diesen. Punkt 14 hängt nicht davon ab und kann davor oder danach laufen; Punkt 15 dagegen
 setzt 17 zwingend voraus.
+
+#### Die erste Ladesitzung, 2026-09-20 — Punkt 11 und 13a gemeinsam bewiesen
+
+Thomas steckte den BMW am Stellplatz an. Alle drei Topics trugen dieselbe `SitzungsId` 1261,
+und beim Ausstecken entstand die erste Zeile der Tabelle:
+
+| Spalte | Wert |
+|---|---|
+| `time` | 2026-09-20T14:51:40.80 (Sitzungsbeginn) |
+| `wallbox` | `Stellplatz` |
+| `fahrzeug` / `vertrauen` | `BMW` / `erkannt` |
+| `beginn_quelle` | **`steckflanke`** — gemessen, nicht geschätzt |
+| `dauer_s` / `ladezeit_s` | 1297 / 1215 |
+| `energie_kwh` | 1,414 |
+| PV / Batterie / Netz | 0,502025 / 0,897529 / 0,012628 |
+| `energie_unzugeordnet_kwh` | 0,001818 |
+
+**Die Arithmetik geht auf:** 0,502025 + 0,897529 + 0,012628 = 1,412182, und
+1,414 − 1,412182 = **0,001818** — genau der gespeicherte Wert. Quellenmix dieser Ladung:
+PV 35,5 %, Batterie 63,5 %, **Netz 0,9 %**.
+
+**Die Trennung von Steckdauer und Ladezeit trägt:** 1297 s angesteckt, 1215 s geladen —
+82 Sekunden hängt das Auto an der Box, ohne zu laden. Ohne die Trennung sähe die
+Durchschnittsleistung falsch aus.
+
+**Das Schema ist, wie es sein soll** (`information_schema.columns`): `wallbox` ist der
+einzige Tag (`Dictionary(Int32, Utf8)`), `fahrzeug`, `vertrauen` und alles Übrige sind
+Felder, `time` ist der Zeitstempel. Damit überschreibt ein wiederholt gelesener retained
+Payload denselben Punkt, statt eine zweite Zeile zu erzeugen.
+
+**Und `beginn_quelle` zeigt gleich beim ersten Mal seinen Wert.** `steckflanke` heißt: Der
+Beginn stammt aus der beobachteten Steckflanke des KebaConnectors, die Steckdauer ist also
+belastbar. Ein boolesches `beginn_geschaetzt` hätte hier dasselbe gesagt wie bei einer aus
+der Boxuhr geratenen Zeit.
 
 #### Nachkontrolle am 2026-09-20, 13:05 — bestanden
 
