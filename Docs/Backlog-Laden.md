@@ -22,8 +22,8 @@ Präfix setzt.
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
 | 4 Flutter stilllegen | `laden-04-flutter` | 2026-09-20 | **erledigt und gemergt** (`a12202b`), kein Rollout |
-| 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt und gemergt** (`c46f54f`), fünf Rollouts. **Offen: Log-Prüfung nach dem Rollout** — ohne `Received retained message` im Connector-Log ist der Fix wirkungslos |
-| 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **fertig**, 6 getrennte Commits, 52 Tests, Merge offen. Nur BMWConnector betroffen — ein Rollout |
+| 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`c46f54f`) |
+| 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **gemergt** (`1c8ff95`), Rollout läuft. Offen: Prüfung, ob der `iat` im Token-Secret sich alle 50 Minuten bewegt |
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | in Arbeit — harter Schnitt, KebaConnector + ChargingController + DataHub. Offene Frage an die Session: Verhalten zwischen den beiden Rollouts |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
@@ -301,17 +301,12 @@ Nutzen pro Zeile.
       diesem Repo nicht feststellen. Als offener Befund unten erfasst, hier nicht mit
       umgesetzt
 
-**Nach dem Rollout zu verifizieren — nicht optional.** Die MQTT-Spezifikation fordert das
-Verhalten ausdrücklich (MQTT-3.3.1-8: der Server *muss* das RETAIN-Flag auf 1 setzen, wenn
-eine Nachricht wegen eines neuen Abonnements zugestellt wird, damit der Client retained von
-live unterscheiden kann). In MQTTnet gab es dazu allerdings einen Fehlerbericht
-(dotnet/MQTTnet#482, 2018), dessen Auflösung nicht dokumentiert ist; `MQTTClient` nutzt
-heute 5.0.1.1416, also sieben Jahre jünger. Der Testsatz prüft die Alterslogik gegen einen
-Fake, nicht den MQTT-Pfad: Dass MQTTnet bei einer Wiedergabe aus dem Retained-Store das
-Retain-Flag setzt, ist eine Annahme über die Bibliothek. Beleg im Betrieb: Direkt nach
-einem Connector-Neustart muss im Log `Received retained message from
-commands/charging/…` stehen. Steht dort `Received message` ohne das Wort, greift der Fix
-nicht und die Annahme war falsch.
+**Nach dem Rollout verifiziert, 2026-09-20 09:03 — bestanden.** Im Log des neuen Pods
+stehen beim Verbindungsaufbau genau zwei `Received retained message`-Zeilen, eine je
+Wallbox, danach ausschließlich `Received message` ohne das Wort. MQTTnet 5.0.1.1416 setzt
+das Retain-Flag also korrekt; der Fehlerbericht dotnet/MQTTnet#482 von 2018 ist für diese
+Version gegenstandslos. Das retained Kommando für `KebaGarage` lautete dabei
+`{"ChargingCurrent":0}` — genau der Fall, vor dem der Punkt schützt.
 
 **Abhängig von** nichts.
 
