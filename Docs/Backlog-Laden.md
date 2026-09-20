@@ -15,9 +15,13 @@ Wer arbeitet gerade woran. **Nur auf `main` pflegen, nie im Feature-Branch** —
 diese Tabelle selbst zum Merge-Konflikt. Arbeits-Sessions fassen sie nicht an; die
 Integrator-Session trägt ein und aus.
 
-| Punkt | Branch | seit | Stand |
+**Name.** Session, Worktree und Branch eines Punktes tragen denselben Namen
+`laden-<NN>-<kurz>`. Der Branch heißt `worktree-<Name>`, weil `EnterWorktree` dieses
+Präfix setzt.
+
+| Punkt | Name | seit | Stand |
 |---|---|---|---|
-| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | Doku und Log-Hinweise fertig (2 Commits). **Enthält Code** (`Program.cs`, `BmwCarDataService.cs`) — der Merge löst also einen Rollout aus. Wartet auf die Secret-Reparatur: `bmwconnector-credentials` wurde beim Bootstrap aus der Shell-Umgebung mit Platzhaltern überschrieben, die richtigen Werte liegen in KeePass. Bootstrap nur mit `env -u BMW_GCID -u BMW_CLIENT_ID`, sonst wiederholt sich der Vorfall. Ursache als Punkt 18 erfasst |
+| 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | Doku, Log-Hinweise und Code fertig (2 Commits). Secret repariert, Bootstrap sauber gelaufen, Pod erneuert — Verifikation läuft. **Enthält Code**, der Merge löst einen Rollout aus; Freigabe offen. Ursache des Vorfalls als Punkt 18 erfasst |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
@@ -59,6 +63,11 @@ Punkte gleichzeitig bearbeitet, braucht zusätzlich diese Tabelle:
 ### Regeln
 
 - **Ein Punkt, eine Session.** Kein Punkt wird von zwei Sessions gleichzeitig angefasst.
+- **Ein Name für alles.** Ein Punkt bekommt einen Namen `laden-<NN>-<kurz>` und trägt ihn
+  überall: die Session wird mit `claude -n <Name>` gestartet, `EnterWorktree` legt den
+  Worktree unter diesem Namen an, der Branch heißt `worktree-<Name>`. Ohne `-n` vergibt der
+  CLI eine Nummer, die niemandem sagt, woran die Session arbeitet. Die Integrator-Session
+  heißt `laden-integrator`.
 - **Diese Datei** bearbeitet ausschließlich die Integrator-Session.
 - **Kein Merge nach `main` ohne Freigabe von Thomas.** Jeder Merge ist über den ArgoCD
   Image Updater binnen ~2 min ein Deployment ins laufende System.
