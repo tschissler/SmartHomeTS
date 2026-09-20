@@ -61,6 +61,15 @@
     }
 }
 
+/* breit -- neben der Seitenleiste darf es etwas mehr sein. Vorher stand das als
+   padding-left: 2rem !important auf article in MainLayout.razor.css, mit 1,5rem rechts;
+   die Asymmetrie war keine Absicht, sondern der Vorgabewert der Blazor-Vorlage. */
+@media (min-width: 1641px) {
+    :root {
+        --inhalt-rand: 2rem;
+    }
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

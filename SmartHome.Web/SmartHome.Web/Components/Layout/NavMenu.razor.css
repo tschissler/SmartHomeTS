@@ -1,4 +1,4 @@
-.navbar-toggler {
+﻿.navbar-toggler {
     appearance: none;
     cursor: pointer;
     width: 3.5rem;
@@ -87,6 +87,17 @@
 
 .navbar-toggler:checked ~ .nav-scrollable {
     display: block;
+}
+
+/* Querformat: Dort ist die Hoehe knapp, nicht die Breite. Fuenf Eintraege zu 3 rem plus
+   Kopfzeile sind rund 410 px -- mehr als ein Telefon quer hoch ist. Das aufgeklappte Menue
+   scrollt deshalb in sich, statt den Seiteninhalt so weit nach unten zu schieben, dass man
+   erst an ihm vorbeiscrollen muss. Breakpoint-Skala: Kopf von wwwroot/app.css, "breit". */
+@media (max-width: 1640.98px) {
+    .navbar-toggler:checked ~ .nav-scrollable {
+        max-height: calc(100vh - 3.5rem);
+        overflow-y: auto;
+    }
 }
 
 @media (min-width: 1641px) {
