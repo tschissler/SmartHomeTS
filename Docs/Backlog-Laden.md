@@ -35,7 +35,7 @@ Präfix setzt.
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
 | 13a Ladesitzungen | `laden-13a-ladesitzungen` | 2026-09-20 | **läuft** — ChargingController publiziert `Ladesitzung`, DataHub schreibt `ladesitzungen`. Fasst `SharedContracts`, `ChargingController`, `SmartHome.DataHub` an, **kein Web**. Nebenauftrag mit eigenem Commit: `Convert.ToInt16` aus dem `InfluxDB3Connector` entfernen |
 | 21 Ladeseite oben | `laden-21-ladeseite-oben` | 2026-09-20 | **läuft** — nur `SmartHome.Web`, nur oberhalb von `<h4>Wallboxen</h4>`. Farben kommen aus Grafana (PV `#F4D03F`, Batterie `#2ECC71`, Netz `#E74C3C`), Ladeleistung künftig aus `WallboxStatus` statt aus der einen Zyklus alten `ChargingSituation` |
-| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **arbeitet** — Token kam von Thomas, Blocker weg. Drei Commits durch und in Grafana angekommen: `6f889aa` (Dateiname ist die `uid`, `folderUid` in jeder Datei, 28 Renames — der kritische Push, vorher **gemessen statt angenommen**: 29 zu 29 Dashboards, null inhaltliche Abweichung, Trockenlauf 0 Ordnerwechsel; danach bestätigt: 27 geschrieben, 0 Ordnerwechsel, 2 provisionierte übersprungen), `2ff823b` (`docs/namenskonvention.md`), `63258f2` (erste Ordnerportion; die Action legte `Laden` und `Wasser` selbst an). Arbeitsverzeichnis sauber, Abgleich 29/0. Läuft weiter: restliche Ordner, Aufräumen, Titel, dann `docs/influxdb-reference.md` |
+| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **erledigt und abgenommen** — sieben weitere Commits bis `1cb4386`. Endstand **28 Dashboards** (`energiefluss-copy` gelöscht), Abgleich zweimal hintereinander 0 Unterschiede. Ordnerverteilung von mir unabhängig aus den `folderUid`-Feldern nachgerechnet: Infrastruktur 9, Energie 7, Wärme 5, Klima 2, Laden 2, Wasser 1, Provisioned 2 — deckungsgleich. Der kritische Umbenenn-Push (`6f889aa`) war **vorher gemessen, nicht angenommen**: 29 zu 29, null inhaltliche Abweichung, Trockenlauf 0 Ordnerwechsel. `docs/influxdb-reference.md` kennt jetzt die vier Fahrzeugtabellen |
 | Grafana-Action | `grafana-action` | 2026-09-20 | **erledigt** — zwei Forgejo Workflows live. Ein Push auf `dashboards/` schreibt ~20 s später nach Grafana, nur die geänderten Dateien. Abgleich doppelt geprüft (lokal und aus dem Runner): 29 Dashboards, 0 Unterschiede. **Der Editor-Test wurde von Thomas abgelehnt**, siehe unten |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
@@ -1078,11 +1078,30 @@ keinen Ort für die Position.
   **Offen ist nur, wie weit.** Die Session `grafana-konvention` hält in der README fest,
   alles Gemessene spreche dafür, dass die Rolle **Editor** für den Import genügt — nennt
   es aber ausdrücklich keinen Beweis, denn gelaufen ist der Import bislang ausschließlich
-  mit Admin. Der Prüfstein steht bereit: Dashboard `adbtrcf`, Testobjekt der Import-Action.
+  mit Admin. Der Prüfstein steht bereit: Dashboard `adbtrcf`, seit dem 2026-09-20 betitelt „Testobjekt Import-Action".
 
   **Die Messung braucht einen zweiten Token mit Rolle Editor, den nur Thomas anlegen
   kann.** Sie fasst weder das Repo noch die Dashboards an. Danach ist entweder Editor
   belegt oder die Ausnahme begründet — beides besser als ein Admin-Token aus Bequemlichkeit.
+- **Fremde Dashboard-Titel tragen den Schrägstrich, den die Konvention als schlimmsten
+  benennt** — „Kubernetes / Views / Pods", „Logs / App". Die Session hat sie bewusst
+  **nicht** angefasst, und die Begründung trägt: Ein Neuladen von grafana.com holte den
+  Titel zurück, das wäre Aufräumen mit eingebautem Rückfall. Begründet in `3184b7c` und in
+  der Konvention vermerkt. **Entscheidung liegt bei Thomas:** so lassen, oder die fremden
+  Dashboards bewusst aus der Konvention ausnehmen.
+- **Die drei alten Fahrzeug-Topics liegen noch retained am Broker.**
+  `data/charging/BMW`, `data/charging/Mini` und `data/charging/VW` stammen aus der Zeit vor
+  Punkt 10. **Im gesamten Code referenziert sie niemand mehr** (geprüft am 2026-09-20 über
+  `.cs`, `.razor`, `.py`, `.yaml` außerhalb von `Depricated/`). Ihre Inhalte sind veraltet
+  und sehen trotzdem gültig aus — der BMW steht dort auf 83 % Ladestand, tatsächlich sind
+  es 75 %. Genau die Klasse Altlast, die am 2026-09-20 schon einmal aufgeräumt wurde.
+  **Löschen ist Thomas' Entscheidung**, und seit dem letzten Mal gilt: Ein Rollback über
+  retained Nachrichten steht danach nicht mehr zur Verfügung.
+- **Der Mini ist angebunden, liefert aber noch keine Daten.** `[Mini] Output topic:
+  'daten/Fahrzeug/Mini/Status'`, `Connected to the BMW broker — vehicle is ready` — in
+  InfluxDB steht von ihm trotzdem nichts, weil BMW CarData nur bei Fahrzeugereignissen
+  sendet und er steht. Kein Defekt, aber bis zur ersten Fahrt auch kein Beweis. Erst dann
+  ist Punkt 17 für alle drei Fahrzeuge belegt statt für zwei.
 - **Velero ist in Grafana doppelt vorhanden.** `ozk-vlr-mon` und
   `velero-backup-overview`, beide aus grafana.com 23838, eines davon provisioniert.
   Entscheidung liegt bei Thomas: welches bleibt.
