@@ -325,15 +325,22 @@ bereits `dotnet test` aus, Letzteres als eigener `test`-Job vor dem Build: „A 
 never produce an image."
 
 **Umfang**
-- [ ] **Zuerst prüfen, ob die drei Testsuiten überhaupt grün sind.** Ein roter Test
+- [x] **Zuerst prüfen, ob die drei Testsuiten überhaupt grün sind.** Ein roter Test
       blockiert nach dem Einbau jedes künftige Deployment des Dienstes. Sind sie rot:
       melden, nicht reparieren und nicht den Job einbauen
-- [ ] `ChargingController.yml` und `EnphaseConnector.yml` bekommen den `test`-Job nach dem
-      Muster von `KebaConnector.yml`
-- [ ] `ShellyLibTests` klären: Es liegt unter `Libs/ShellyLib/` und ist in **keiner**
+- [x] `ChargingController.yml` bekommt den `test`-Job nach dem Muster von
+      `KebaConnector.yml`. **`EnphaseConnector.yml` bewusst nicht:** `EnphaseLib.Tests`
+      sind Integrationstests gegen die echte Anlage (Login mit `EnphaseUserName`/
+      `Password`), auf einem Runner nicht lauffähig und mit Credentials ein Test gegen
+      die Produktion
+- [x] `ShellyLibTests` geklärt: **verwaist und rot.** `ShellyLib` wird im ganzen Repo nur
+      von seinen eigenen Tests referenziert, der ShellyConnector nutzt es nicht; der Test
+      pollt zudem Hardware unter einer festen IP. Keine künstliche Zuordnung gebaut.
+      Ursprünglicher Auftrag: Es liegt unter `Libs/ShellyLib/` und ist in **keiner**
       Solution. Prüfen, ob der ShellyConnector `ShellyLib` überhaupt referenziert — wenn
       nicht, ist es ein verwaistes Testprojekt und gehört nicht in den Connector-Workflow
-- [ ] Pfadfilter mitziehen: Liegt ein Testprojekt außerhalb des Dienstverzeichnisses, muss
+- [x] Pfadfilter geprüft, nichts nachzuziehen — das Testprojekt liegt im
+      Dienstverzeichnis. Ursprünglich: Liegt ein Testprojekt außerhalb des Dienstverzeichnisses, muss
       der Workflow auch darauf triggern, sonst laufen die Tests bei einer Teständerung nicht
 
 **Fertig, wenn** jeder Dienst mit Testprojekt seine Tests in der CI ausführt und ein
@@ -749,12 +756,18 @@ keinen Ort für die Position.
 
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
-- **`MaxStatusAge` in der RulesEngine.** Dieselbe Verwechslung wie in Punkt 16: Die
-  Regeln bewerten das Alter gegen die Empfangszeit, ein retained Status gilt nach einem
-  Neustart als taufrisch und die Stale-Regel feuert nie. Erst prüfen, ob das Problem
-  real ist: `mosquitto_sub -v -t 'cangateway/M1/WEZ/Status/FA_Status'` mit einem frischen
-  Client — kommt sofort ein Wert, ist das Topic retained. Der CAN-Gateway liegt nicht in
-  diesem Repo.
+- **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
+  Punkt 16: Die Regeln bewerten das Alter gegen die Empfangszeit, ein retained Status gilt
+  nach einem Neustart als taufrisch und die Stale-Regel feuert nie. **Gemessen am
+  2026-09-20:** `cangateway/M1/WEZ/Status/FA_Status` liefert einem frischen Client nach
+  0,00 s einen Wert — das Topic **ist** retained. Milder als bei der Wallbox, weil der
+  Fail-Safe den Mischer öffnet („kostet nur Effizienz, nie Komfort"), aber die Ursache ist
+  dieselbe.
+- **`EnphaseLib.Tests` und `ShellyLibTests` sind Integrationstests, keine Unit-Tests.**
+  Ersteres meldet sich real bei Enphase an, Letzteres pollt eine feste IP im Heimnetz und
+  ist zudem fachlich fragil (erwartet Bezug, schlägt bei Einspeisung fehl). Entweder auf
+  gemocktes HTTP umschreiben oder als Integrationstests kennzeichnen und aus der CI
+  heraushalten — solange sie so bleiben, können sie dort nicht laufen.
 - **`Kubernetes/microk8s/InfluxDB/influxdb3-*.yaml` beschreiben ein Deployment**, während
   im Cluster ein StatefulSet (`influxdb3-enterprise`) läuft. Veraltet, aber außerhalb von
   Punkt 8, der nur die Telegraf- und InfluxDB-2-Teile entfernt.
