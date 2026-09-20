@@ -5,7 +5,6 @@
 ![SmartHome.Web](https://github.com/tschissler/SmartHomeTS/actions/workflows/Smarthome.Web.yml/badge.svg)
 ![SMLSensor Firmware](https://github.com/tschissler/SmartHomeTS/actions/workflows/SMLSensorFirmware.yml/badge.svg)
 ![BMW Connector](https://github.com/tschissler/SmartHomeTS/actions/workflows/bmwconnector.yml/badge.svg)
-![Flutter App](https://github.com/tschissler/SmartHomeTS/actions/workflows/Smarthome_app.yml/badge.svg)
 
 This repository documents a comprehensive smart home automation system that has been running in production for a couple of years. It serves dual purposes: managing actual home infrastructure (energy, climate, light) and providing a real-world test environment for exploring modern software development practices, architectural patterns, and emerging technologies.
 
@@ -30,7 +29,6 @@ Physical Devices ──► ESP32 Firmware ──► MQTT (Mosquitto) ──► .
                                     External APIs
                                (BMW, VW, Enphase, Heatpump)           InfluxDB 3 ──► Grafana
                                                                                  ──► Blazor Web
-                                                                                 ──► Flutter App
 ```
 
 All services run in a **k3s Kubernetes cluster** on Raspberry Pi nodes, deployed via **GitOps with ArgoCD**.
@@ -98,7 +96,6 @@ This repository showcases a variety of cutting-edge technologies, each solving s
 - **Model Context Protocol (MCP)**: A protocol for AI tools that allows structured retrieval and manipulation of data. This repository features a C# MCP server for InfluxDB, enabling AI assistants to directly query schema and sample data to provide better assistance in creating Flux queries. Learn more at [Model Context Protocol](https://github.com/microsoft/node-model-context-protocol).
 - **Kubernetes (k3s)**: A lightweight Kubernetes distribution ideal for resource-constrained nodes. k3s runs on a 6-node Raspberry Pi cluster and orchestrates all containerized services. Applications are deployed via **GitOps with ArgoCD**, keeping the cluster state declarative and version-controlled. Learn more at [k3s.io](https://k3s.io/) and [Kubernetes.io](https://kubernetes.io/). ![Kubernetes Cluster](./Docs/images/KubernetesCluster.jpg)
 - **Docker**: Simplifies application deployment by containerizing services. Container images are built during the build process and then used to deploy to the Kubernetes cluster. Learn more at [Docker Documentation](https://docs.docker.com/).
-- **Flutter**: A cross-platform framework for building mobile apps. The `smarthome_app` project illustrates how to use Flutter to build apps that run on mobile devices, Windows and in the browser (see [`smarthome_app/README.md`](smarthome_app/README.md)). Learn more at [Flutter.dev](https://flutter.dev/).
 - **Blazor**: A web framework for building interactive applications using C#. The SmartHome.Web project is an example of how to create responsive and feature-rich web interfaces. Learn more at [Blazor Documentation](https://learn.microsoft.com/en-us/aspnet/core/blazor/).
 - **Syncfusion**: Provides UI components for creating interactive and visually appealing applications. Used in SmartHome.Web, it demonstrates how to enhance user interfaces with minimal effort. Learn more at [Syncfusion Blazor Components](https://www.syncfusion.com/blazor-components).
 
