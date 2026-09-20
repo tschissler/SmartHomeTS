@@ -101,8 +101,14 @@
     /// <summary>
     /// A distance in km — range and odometer of a vehicle. Its own table for the same reason
     /// every other quantity has one: the unit belongs to the table, not to the reader of a
-    /// query. Counter and status values are Int16 in the database and would overflow at an
-    /// odometer beyond 32767 km, so neither of those was an option.
+    /// query. That is the whole reason, and it is enough — counter_values would have been
+    /// wrong here even if it fitted technically, because it carries no unit at all.
+    ///
+    /// An earlier version of this comment claimed counter_values and status_values store
+    /// Int16 and would overflow past 32767 km. That is not so: both columns are Int64 in
+    /// InfluxDB, checked on 2026-09-20. Only the C# side narrows, via Convert.ToInt16 in
+    /// InfluxDB3Connector — a latent overflow for every caller of those two tables, and a
+    /// defect to fix there rather than a reason to avoid them.
     /// </summary>
     public record InfluxDistanceRecord : InfluxRecord
     {
