@@ -78,12 +78,18 @@ ESP32 firmware CI uploads `.bin` to Azure Blob Storage, then publishes an MQTT m
 
 Docker image versions use format `1.0.{github.run_number}`.
 
+## Documentation
+
+- `Docs/ChargingController-Regelkreis.md` — control loop of the EV charging (smoothing,
+  contactor protection delays, tuning parameters, diagnostics)
+- `Docs/microK8s/Setup MicroK8s.md` — cluster setup
+
 ## Key Patterns
 
 - **MQTT is the integration backbone**: All services communicate via MQTT topics through Mosquitto broker
 - **Each .NET service has its own solution file** — there is no monolithic solution
 - **Secrets are managed via** GitHub Secrets (CI) and Kubernetes Secrets (runtime). `Secrets.cs` files are gitignored
-- **.NET target frameworks vary**: .NET 10.0 (DataHub, Web), .NET 9.0 (MCPServer), .NET 8.0 (ChargingController, connectors)
+- **.NET target frameworks vary**: .NET 10.0 (DataHub, Web, ChargingController), .NET 9.0 (MCPServer), .NET 8.0 (connectors)
 - **Shared .NET libraries** in `Libs/` (ShellyLib, MQTTControllerLib, HelpersLib) and `SharedContracts/`
 - **`Depricated/` folder** contains legacy/replaced projects — avoid modifying these
 

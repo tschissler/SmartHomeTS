@@ -74,6 +74,24 @@
         public decimal OutsideChargingCurrentSessionWh { get; set; }
 
         /// <summary>
+        /// The surplus power in Watts the controller based its latest decision on
+        /// (smoothed). Published for diagnostics.
+        /// </summary>
+        public int AvailableChargingPowerWatts { get; set; }
+
+        /// <summary>
+        /// Number of times the inside wallbox was switched on by the controller since
+        /// the service started. Used to monitor the contactor load.
+        /// </summary>
+        public int InsideSwitchCycles { get; set; }
+
+        /// <summary>
+        /// Number of times the outside wallbox was switched on by the controller since
+        /// the service started. Used to monitor the contactor load.
+        /// </summary>
+        public int OutsideSwitchCycles { get; set; }
+
+        /// <summary>
         /// Hysteresis state for battery supported charging (ChargingLevel 3):
         /// switched off when the battery drops below the minimum level and only
         /// switched on again once the battery has recovered a few percent above it,
@@ -87,5 +105,12 @@
             OutsideChargingLatestmA = -1;
             BatterySupportedChargingActive = true;
         }
+
+        /// <summary>
+        /// Shallow copy, used to hand filtered power readings to the decision logic
+        /// while this instance keeps the raw values for publishing and for the next
+        /// filter step.
+        /// </summary>
+        public ChargingSituation Clone() => (ChargingSituation)MemberwiseClone();
     }
 }

@@ -9,7 +9,9 @@ namespace ChargingController
 {
     public class ChargingDecisionsMaker
     {
-        private const int MinimumChargingPower = 230 * 6 * 3;
+        public const int MinimumChargingPower = 230 * 6 * 3;
+        /// <summary>Charging current that corresponds to <see cref="MinimumChargingPower"/> (3 x 6 A).</summary>
+        public const int MinimumChargingCurrentmA = 6000;
         private const int BatteryChargingMaxPower = 3800;
         private const int BatteryDischargingMaxPower = 3500;
         // Hysteresis for battery supported charging (level 3): switch off below the
@@ -63,12 +65,22 @@ namespace ChargingController
             return new ChargingResult(calculatedIsideChargingPower, calculatedOutsideChargingPower, insideChargingCurrent, outsideChargingCurrent);
         }
 
+        /// <summary>
+        /// The surplus that would be available for the cars if they stopped charging and the
+        /// house battery neither charged nor discharged. Independent of the current charging
+        /// power, because that power is added back in.
+        /// </summary>
+        public static int CalculateRawAvailablePower(ChargingSituation situation)
+        {
+            return situation.PowerFromGrid * -1
+                + situation.OutsideCurrentChargingPower
+                + situation.InsideCurrentChargingPower
+                - situation.PowerFromBattery;
+        }
+
         private static int CalculateAvailableChargingPower(ChargingSituation situation, ChargingSettings settings)
         {
-            var availableChargingPower = situation.PowerFromGrid * -1 
-                + situation.OutsideCurrentChargingPower 
-                + situation.InsideCurrentChargingPower 
-                - situation.PowerFromBattery;
+            var availableChargingPower = CalculateRawAvailablePower(situation);
 
             switch (settings.ChargingLevel)
             {

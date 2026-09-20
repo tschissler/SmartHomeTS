@@ -8,11 +8,19 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 IMqttClient mqttClient;
 ChargingSituation currentChargingSituation = new ChargingSituation();
 ChargingSettings currentChargingSettings = new ChargingSettings();
-DateTime lastOutsideSetTime = DateTime.MinValue;
-DateTime lastInsideSetTime = DateTime.MinValue;
 DateTime lastHeartbeatTime = DateTime.MinValue;
-const int minimumSetIntervalSeconds = 10;
+DateTime lastControlCycleTime = DateTime.MinValue;
+bool powerDataReceived = false;
 const int heartbeatIntervalSeconds = 60;
+// The decision runs on a fixed cycle instead of on every incoming message: the Enphase
+// connector publishes once per second, which is far faster than the dead time of the
+// wallbox and the car, and reacting that fast is what makes the loop oscillate.
+const int controlCycleSeconds = 5;
+
+// All tuning parameters of the control loop live in this options object
+var stabilizerOptions = new ChargingStabilizerOptions();
+var chargingSmoother = new ChargingSmoother(stabilizerOptions.SmoothingTimeConstant);
+var chargingStabilizer = new ChargingStabilizer(stabilizerOptions);
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
@@ -55,12 +63,70 @@ while (true)
         ChargingControllerHealthCheck.UpdateMqttConnectionStatus(false);
         await MQTTConnectAsync();
     }
+    if (DateTime.Now.Subtract(lastControlCycleTime).TotalSeconds >= controlCycleSeconds)
+    {
+        lastControlCycleTime = DateTime.Now;
+        await RunControlCycle();
+    }
     if (DateTime.Now.Subtract(lastHeartbeatTime).TotalSeconds >= heartbeatIntervalSeconds)
     {
         lastHeartbeatTime = DateTime.Now;
         await PublishHeartbeat();
     }
     await Task.Delay(1000);
+}
+
+// One pass of the control loop: filter the readings, calculate the ideal charging power,
+// apply the delays that protect the wallbox contactor, and publish the result.
+async Task RunControlCycle()
+{
+    if (!powerDataReceived || !mqttClient.IsConnected)
+        return;
+
+    try
+    {
+        var now = DateTimeOffset.Now;
+
+        // The decision works on filtered readings, while currentChargingSituation keeps the
+        // raw values: they are published for the UI and are the input of the next filter step.
+        var smoothedSituation = chargingSmoother.Smooth(currentChargingSituation, now);
+        var targetResult = await ChargingDecisionsMaker.CalculateChargingData(smoothedSituation, currentChargingSettings);
+        // The battery level hysteresis keeps its state in the situation, so it has to survive the copy
+        currentChargingSituation.BatterySupportedChargingActive = smoothedSituation.BatterySupportedChargingActive;
+        currentChargingSituation.AvailableChargingPowerWatts = ChargingDecisionsMaker.CalculateRawAvailablePower(smoothedSituation);
+
+        var command = chargingStabilizer.Stabilize(targetResult, currentChargingSituation, currentChargingSettings, now);
+
+        if (command.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
+        {
+            await PublishChargingCommand("commands/charging/KebaGarage", command.InsideChargingCurrentmA);
+            currentChargingSituation.InsideChargingLatestmA = command.InsideChargingCurrentmA;
+            Console.WriteLine($"Sent charging command for KebaGarage: {command.InsideChargingCurrentmA} mA");
+        }
+        if (command.OutsideChargingCurrentmA != currentChargingSituation.OutsideChargingLatestmA)
+        {
+            await PublishChargingCommand("commands/charging/KebaOutside", command.OutsideChargingCurrentmA);
+            currentChargingSituation.OutsideChargingLatestmA = command.OutsideChargingCurrentmA;
+            Console.WriteLine($"Sent charging command for KebaOutside: {command.OutsideChargingCurrentmA} mA");
+        }
+
+        await PublishChargingSituation();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error running control cycle: {ex.Message}");
+    }
+}
+
+async Task PublishChargingSituation()
+{
+    var payloadChargingSituation = JsonSerializer.Serialize(currentChargingSituation);
+    await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+        .WithTopic("data/charging/situation")
+        .WithPayload(payloadChargingSituation)
+        .WithRetainFlag()
+        .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
+        .Build());
 }
 
 // The KebaConnector only enforces a setpoint while it is fresh (wallboxes fall back to
@@ -99,7 +165,8 @@ async Task PublishChargingCommand(string topic, int chargingCurrentmA)
 }
 
 
-async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
+// Message handling only updates the situation, the control cycle acts on it
+Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
 {
     string payload = Encoding.UTF8.GetString(args.ApplicationMessage.Payload);
     var topic = args.ApplicationMessage.Topic;
@@ -107,11 +174,12 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
 
     try
     {
-        int value;
         if (topic == "config/charging/settings")
         {
             Console.WriteLine($"Received message from {topic} at {time}: {payload}");
             currentChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
+            // A setting changed by the user should take effect right away, not at the next cycle
+            lastControlCycleTime = DateTime.MinValue;
         }
 
         else if (topic == "data/electricity/envoym3")
@@ -123,6 +191,7 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.PowerFromBattery = (int)(pvData.PowerFromBattery / 1000);
             currentChargingSituation.PowerFromPV = (int)(pvData.PowerFromPV / 1000);
             currentChargingSituation.HouseConsumptionPower = (int)(pvData.PowerToHouse / 1000);
+            powerDataReceived = true;
         }
 
         else if (topic == "data/charging/KebaGarage")
@@ -148,48 +217,16 @@ async Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
         // Update health check on successful message processing
         ChargingControllerHealthCheck.UpdateLastSuccessfulRead();
 
-        var chargingResult = await ChargingDecisionsMaker.CalculateChargingData(currentChargingSituation, currentChargingSettings);
-        if (chargingResult.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
-        {
-            if (DateTime.Now.Subtract(lastInsideSetTime).TotalSeconds > minimumSetIntervalSeconds)
-            {
-                await PublishChargingCommand("commands/charging/KebaGarage", chargingResult.InsideChargingCurrentmA);
-                Console.WriteLine($"Sent charging command for KebaGarage: {chargingResult.InsideChargingCurrentmA} mA");
-                currentChargingSituation.InsideChargingLatestmA = chargingResult.InsideChargingCurrentmA;
-                lastInsideSetTime = DateTime.Now;
-            }
-            else
-            {
-                Console.WriteLine($"Inside charging current was set too recently. Skipping.");
-            }
-        }
-        if (chargingResult.OutsideChargingCurrentmA != currentChargingSituation.OutsideChargingLatestmA)
-        {
-            if (DateTime.Now.Subtract(lastOutsideSetTime).TotalSeconds > minimumSetIntervalSeconds)
-            {
-                await PublishChargingCommand("commands/charging/KebaOutside", chargingResult.OutsideChargingCurrentmA);
-                Console.WriteLine($"Sent charging command for KebaOutside: {chargingResult.OutsideChargingCurrentmA} mA");
-                currentChargingSituation.OutsideChargingLatestmA = chargingResult.OutsideChargingCurrentmA;
-                lastOutsideSetTime = DateTime.Now;
-            }
-            else
-            {
-                Console.WriteLine($"Outside charging current was set too recently. Skipping.");
-            }
-        }
-
-        var payloadChargingSituation = JsonSerializer.Serialize(currentChargingSituation);
-        await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
-            .WithTopic("data/charging/situation")
-            .WithPayload(payloadChargingSituation)
-            .WithRetainFlag()
-            .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
-            .Build());
+        // The charging decision is not taken here: it runs on the fixed control cycle, so the
+        // 1 Hz updates of the PV connector cannot drive the loop faster than the wallbox and
+        // the car can follow.
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error processing MQTT message: {ex.Message}");
     }
+
+    return Task.CompletedTask;
 }
 
 async Task MQTTConnectAsync()
