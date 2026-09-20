@@ -38,8 +38,16 @@
     --laden-farbe-wallbox-sonstige: #9e9e9e;
 }
 
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Der Innenabstand des Artikels kam bisher aus der Bootstrap-Klasse px-4 im MainLayout und
+   war damit eine feste Zahl, die keine Medienabfrage erreichen konnte. */
+.content {
+    padding-left: var(--inhalt-rand);
+    padding-right: var(--inhalt-rand);
 }
 
 a, .btn-link {

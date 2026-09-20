@@ -1,4 +1,4 @@
-.page {
+﻿.page {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -70,7 +70,9 @@ main {
         width: 0;
     }
 
-    .top-row, article {
+    /* Nur noch die Kopfzeile. Der Innenabstand des Artikels kommt aus --inhalt-rand in
+       app.css, damit er an einer Stelle steht und nicht an zweien gegeneinander. */
+    .top-row {
         padding-left: 2rem !important;
         padding-right: 1.5rem !important;
     }
