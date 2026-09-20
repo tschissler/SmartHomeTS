@@ -21,6 +21,7 @@ Präfix setzt.
 
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
+| 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | in Arbeit — Pfadfilter der Service-Workflows auf `SharedContracts`, `MQTTClient`, `SmartHomeHelpers`, `Libs/`; dazu `.gitignore` für `.claude/worktrees/` |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | Doku, Log-Hinweise und Code fertig (2 Commits). Secret repariert, Bootstrap sauber gelaufen, Pod erneuert — Verifikation läuft. **Enthält Code**, der Merge löst einen Rollout aus; Freigabe offen. Ursache des Vorfalls als Punkt 18 erfasst |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
