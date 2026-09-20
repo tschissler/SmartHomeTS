@@ -12,7 +12,8 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 
 **Key layers**:
 - **ESP32 firmware** (C++/Arduino via PlatformIO): 18 sensor/controller projects in `ESP32Firmwares/`, sharing libraries from `ESP32Firmwares/SharedLibs/`
-- **Connector services** (.NET/Python): Bridge external APIs to MQTT — `BMWConnector`, `VWConnector`, `EnphaseConnector`, `ShellyConnector`, `KebaConnector`
+- **Connector services**: Bridge external APIs to MQTT — `BMWConnector`, `EnphaseConnector`,
+  `ShellyConnector`, `KebaConnector` (all .NET) and `VWConnector` (Python, the only one)
 - **Business logic services** (.NET): `ChargingController` (EV charging optimization), `Thermostat` (climate control), `SmartHome.DataHub` (central data processing)
 - **Presentation**: `SmartHome.Web` (Blazor Server with Syncfusion), Grafana dashboards
 - **AI tooling**: `MCPServer` exposes InfluxDB schema/data via Model Context Protocol
@@ -57,9 +58,16 @@ pio device monitor         # Serial monitor
 
 ### Python services
 ```bash
-pip install -r BMWConnector/requirements.txt
 pip install -r VWConnector/requirements.txt
 ```
+The VWConnector is the **only** Python service (`vw_mqtt.py`). The BMWConnector is .NET —
+it has a `.slnx` and two `.csproj`, and `BMWConnector/requirements.txt` does not exist:
+```bash
+dotnet build BMWConnector/BMWConnector.slnx
+dotnet test BMWConnector/BMWConnectorTests/BMWConnectorTests.csproj
+```
+That it references `SharedContracts` is also why a change there rebuilds it — see the
+path filters.
 
 ## CI/CD
 
