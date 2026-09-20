@@ -312,6 +312,36 @@ Version gegenstandslos. Das retained Kommando für `KebaGarage` lautete dabei
 
 ---
 
+### 19. Vorhandene Tests in der CI ausführen
+
+**Problem.** `ChargingControllerTests`, `EnphaseLib.Tests` und `ShellyLibTests` existieren,
+werden aber von keinem Workflow ausgeführt. Tests, die nie laufen, sind Selbstbetrug — und
+der ChargingController, dessen Excel-basierte Szenariotests das Herz der Ladelogik prüfen,
+wird gerade in Punkt 7/8 umgebaut.
+
+**Muster vorhanden.** `RulesEngine.yml`, `bmwconnector.yml` und `KebaConnector.yml` führen
+bereits `dotnet test` aus, Letzteres als eigener `test`-Job vor dem Build: „A red test must
+never produce an image."
+
+**Umfang**
+- [ ] **Zuerst prüfen, ob die drei Testsuiten überhaupt grün sind.** Ein roter Test
+      blockiert nach dem Einbau jedes künftige Deployment des Dienstes. Sind sie rot:
+      melden, nicht reparieren und nicht den Job einbauen
+- [ ] `ChargingController.yml` und `EnphaseConnector.yml` bekommen den `test`-Job nach dem
+      Muster von `KebaConnector.yml`
+- [ ] `ShellyLibTests` klären: Es liegt unter `Libs/ShellyLib/` und ist in **keiner**
+      Solution. Prüfen, ob der ShellyConnector `ShellyLib` überhaupt referenziert — wenn
+      nicht, ist es ein verwaistes Testprojekt und gehört nicht in den Connector-Workflow
+- [ ] Pfadfilter mitziehen: Liegt ein Testprojekt außerhalb des Dienstverzeichnisses, muss
+      der Workflow auch darauf triggern, sonst laufen die Tests bei einer Teständerung nicht
+
+**Fertig, wenn** jeder Dienst mit Testprojekt seine Tests in der CI ausführt und ein
+absichtlich roter Test nachweislich kein Image erzeugt.
+
+**Abhängig von** nichts. Berührt nur `.github/workflows/`.
+
+---
+
 ### 18. Umgebungsvariablen dürfen das Produktiv-Secret nicht überschreiben
 
 **Problem.** Beim Re-Bootstrap am 2026-09-20 hat der Connector `BMW_CLIENT_ID` und
@@ -699,9 +729,6 @@ keinen Ort für die Position.
 - **Vier MQTTnet-Versionen im Repo.** `MQTTClient` nutzt 5.0.1.1416, andere Projekte
   4.3.1.873, 4.3.3.952 und 4.3.6.1152. Unterschiedliche Bibliotheksversionen können sich
   bei Randverhalten wie dem Retain-Flag unterschiedlich verhalten.
-- **Testprojekte laufen nicht in der CI.** `ChargingControllerTests`, `EnphaseLib.Tests`
-  und `ShellyLibTests` existieren, werden aber von keinem Workflow ausgeführt — einzig
-  `RulesEngine.yml` ruft `dotnet test` auf. Tests, die nie laufen, sind Selbstbetrug.
 - **`SmartHome.Web/Dockerfile` kopiert `DataContracts`**, obwohl das Projekt es nirgends
   referenziert, auch nicht in der `.sln`. Sieht nach einem Überbleibsel aus.
 - **WiCAN.** Für den VW alternativlos, sobald das Portal wegfällt: Nur ein
