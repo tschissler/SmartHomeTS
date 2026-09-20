@@ -28,7 +28,7 @@ Präfix setzt.
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **erledigt und gemergt** (`04cc432`). 26 Dateien, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün ohne einen geänderten Erwartungswert. Löst **sechs** Rollouts aus, nicht vier: Enphase und Shelly bauen wegen `SharedContracts/**` mit — der transitive Pfadfilter aus Punkt 0 wirkt wie vorgesehen. Rollout-Handgriffe siehe unten |
 | 9 Wallbox-Kacheln | `laden-09-kacheln` | 2026-09-20 | **erledigt und gemergt** (`5c23df9`). Sechs Dateien, Build grün (Warnungen 53 → 43). Löst genau einen Rollout aus (Web), ungefährlich: die Regelung hängt nicht daran |
 | 12 Energieaufteilung | `laden-12-energieaufteilung` | 2026-09-20 | läuft — Zurechnung PV/Batterie/Netz als reine Funktion, drei kumulierte Zähler je Box, Einheitenkommentare zuerst. ChargingController + DataHub + SharedContracts, **nicht** das Web |
-| Grafana-Repo | `grafana-dashboards` | 2026-09-20 | läuft — eigenes Repo im internen Forgejo, Export-Skript, Umzug. Außerhalb des Lade-Vorhabens, siehe unten |
+| Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
@@ -829,8 +829,9 @@ hinein.
 - [ ] Variablen: Fahrzeug, Wallbox, Schalter „nur sichere Zuordnungen"
 - [ ] Zeitraumsummen **aus den Zählern** (`MAX − MIN`), nicht aus der Sitzungstabelle —
       dann sind Monatsgrenzen kein Thema
-- [ ] Altes Dashboard entfernen, `grafana-dashboards/README.md` und
-      `influxdb-reference.md` um `ladesitzungen` und die neuen Measurements ergänzen
+- [ ] Altes Dashboard entfernen, `sankey/README.md` und `docs/influxdb-reference.md` im
+      Repo `forgejo.intern/thomas/Grafana` um `ladesitzungen` und die neuen Measurements
+      ergänzen
 
 **Abhängig von** 13.
 
@@ -882,21 +883,40 @@ keinen Ort für die Position.
 
 ## Offene Punkte außerhalb dieses Vorhabens
 
-- **Grafana-Dashboards sauber versionieren — eigenes Repo im internen Forgejo.**
-  Aufgekommen bei Punkt 7/8 und dort nur notdürftig behandelt. Heute ist Grafanas PVC die
-  einzige Wahrheit; im Repo liegen manuelle Exporte, deren letzter Commit und deren
-  Dateidaten von April bis Juli 2026 stammen. Niemand merkt die Abweichung, weil nie
-  verglichen wird. Dass `gen_sankey.py`, `README.md` und `influxdb-reference.md` per
-  `.gitignore` ausgeschlossen sind („bewusst nicht im öffentlichen Repo"), ist das
-  Symptom: Ausgerechnet die wissenstragenden Dateien bleiben unversioniert, weil
-  SmartHomeTS öffentlich ist. **Entschieden am 2026-09-20:** eigenes Repo im internen
-  Forgejo, weil die Einheit die Grafana-Instanz ist und nicht eine Domäne — Grafana trägt
-  auch Klima, Wärmepumpe und Zisterne. Dorthin gehören Dashboards, Generator,
-  Datasource-ConfigMap, die InfluxDB-Referenz und auf Sicht `Kubernetes/microk8s/Grafana/`.
-  Kern der Umsetzung ist ein Export-Skript über die Grafana-API, das die flüchtigen Felder
-  (`id`, `version`, `iteration`, `updated`) verwirft — ohne das produziert jeder Export
-  Rauschdiffs und die Historie wird wieder wertlos. **Geklärt am 2026-09-20: Das Forgejo wird gesichert**, der Umzug streicht
-  also kein Backup. Details im Prompt der Session.
+- ~~**Grafana-Dashboards sauber versionieren — eigenes Repo im internen Forgejo.**~~
+  **Erledigt am 2026-09-20.** Das Repo ist `forgejo.intern/thomas/Grafana` (privat
+  angelegt); dort liegen Dashboards, das Export-Skript, der Sankey-Generator und die
+  InfluxDB-Referenz. Die Sicherungsfrage war der Vorbehalt und ist ausgeräumt: Forgejo
+  läuft täglich über Velero nach Garage, und das Ziel steht in einem anderen Gebäude.
+
+  **Die Bestandsaufnahme fand etwas anderes als erwartet.** Nicht Abdrift war das Problem,
+  sondern Abdeckung. Von den acht Dateien im alten Ordner waren nur **sechs Dashboards** —
+  `Percentage.json` und `temp.json` sind Panel-Listen, keine Dashboards. Live existieren
+  **28**. Versioniert war also nicht einmal ein Viertel; nie exportiert waren unter
+  anderem Raumklima, Thermostate, Heizkreise, Pufferspeicher, Heizkörperlüfter, PV
+  Produktion, beide PV-Prognosen, beide Grundlast-Dashboards und der komplette
+  Infrastrukturblock (Longhorn, Velero, Node Exporter, Loki, K8s).
+
+  Die Abdrift der sechs ist dagegen **gering**. Jeder manuelle UI-Export schneidet den
+  eingebauten Annotations-Block weg, den die API mitliefert — dieselben acht Felder bei
+  jedem Dashboard, ohne Bedeutung. Abzüglich davon: Energieübersicht, Wallbox Charging
+  und Wärmepumpe **0** echte Änderungen, Energiefluss 3 (`schemaVersion`, `graphTooltip`,
+  `weekStart`), Klima-Dashboard 97 (alle in `panels`), Zisterne 221 und ein Panel weniger.
+  Vier von sechs waren seit April bzw. Juli inhaltlich unverändert.
+
+  **Zur Normalisierung, weil die Begründung präziser ist als gedacht:** Ein Doppellauf
+  ohne Speichern dazwischen ist auch *roh* diff-frei — dieser Test allein beweist nichts.
+  Das Rauschen entsteht beim Speichern. Über zwölf aufeinanderfolgende gespeicherte
+  Versionen trägt `version` in allen zwölf die bedeutungslose Änderung, bei `Temp_Test`
+  (5 → 6) war sie die einzige überhaupt. `id` fällt aus einem anderen Grund weg: eine
+  instanzlokale Zeilennummer, die erst beim Restore stört. `updated`, `updatedBy`,
+  `created`, `createdBy`, `orgId` und `expires` stehen in Grafana 13 gar nicht im
+  `dashboard`-Objekt, sondern im `meta`-Block, den das Skript ohnehin nicht mitnimmt.
+
+  **Nebenbefund:** Provisioning ist entgegen der Annahme **teilweise doch eingerichtet** —
+  `Cluster Errors Overview` und `Backup Overview (Velero + Garage)` sind `provisioned`
+  und im UI schreibgeschützt. Für Dashboards im UI-Betrieb bleibt es dabei: kein
+  Provisioning.
 - **Eine dritte Wallbox scheitert nicht am Web, sondern an `ChargingSettings`.** Dort gibt
   es nur zwei Freigabe-Booleans (`InsideChargingEnabled`, `OutsideChargingEnabled`). Im
   `MQTTService` und in der Seite kostet eine dritte Box nach Punkt 9 nur ihren Eintrag in
@@ -924,9 +944,11 @@ keinen Ort für die Position.
   ist zudem fachlich fragil (erwartet Bezug, schlägt bei Einspeisung fehl). Entweder auf
   gemocktes HTTP umschreiben oder als Integrationstests kennzeichnen und aus der CI
   heraushalten — solange sie so bleiben, können sie dort nicht laufen.
-- **`Kubernetes/microk8s/InfluxDB/influxdb3-*.yaml` beschreiben ein Deployment**, während
-  im Cluster ein StatefulSet (`influxdb3-enterprise`) läuft. Veraltet, aber außerhalb von
-  Punkt 8, der nur die Telegraf- und InfluxDB-2-Teile entfernt.
+- ~~**`Kubernetes/microk8s/InfluxDB/influxdb3-*.yaml` beschreiben ein Deployment**, während
+  im Cluster ein StatefulSet (`influxdb3-enterprise`) läuft.~~ **Erledigt am 2026-09-20:**
+  Der ganze Ordner `Kubernetes/microk8s/` liegt jetzt unter `Depricated/microk8s/`. Er war
+  durchgängig Altlast — alles darin stammte vom 2026-02-14 oder früher, und der Cluster
+  läuft seit Langem auf k3s mit ArgoCD aus `SmartHomeDeployments`.
 - **Vier MQTTnet-Versionen im Repo.** `MQTTClient` nutzt 5.0.1.1416, andere Projekte
   4.3.1.873, 4.3.3.952 und 4.3.6.1152. Unterschiedliche Bibliotheksversionen können sich
   bei Randverhalten wie dem Retain-Flag unterschiedlich verhalten.

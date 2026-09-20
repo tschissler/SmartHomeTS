@@ -19,7 +19,7 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 
 **Data storage**: InfluxDB 3 with primary table `energy_values` using tags (category, sub_category, device, location, measurement, sensor_type) and fields (value_kwh, value_cumulated_kwh).
 
-**Infrastructure**: Kubernetes manifests in `Kubernetes/`, Ansible playbooks in `ansible/`, 19 GitHub Actions workflows in `.github/workflows/`.
+**Infrastructure**: k3s cluster setup and Ansible playbooks in `Kubernetes/k3s/`, further Ansible playbooks in `ansible/`, 19 GitHub Actions workflows in `.github/workflows/`. The running services are deployed from a separate repository (`forgejo.intern/thomas/SmartHomeDeployments`), not from here; the superseded MicroK8s manifests sit in `Depricated/`.
 
 ## Build Commands
 
@@ -94,6 +94,11 @@ Docker image versions use format `1.0.{github.run_number}`.
 - `Docs/ChargingController-Regelkreis.md` — control loop of the EV charging (smoothing,
   contactor protection delays, tuning parameters, diagnostics)
 - `Docs/microK8s/Setup MicroK8s.md` — cluster setup
+- **Grafana dashboards no longer live here** — they moved to `forgejo.intern/thomas/Grafana`
+  (dashboards, the API export script, the Sankey generator, the InfluxDB field reference).
+  The unit is the Grafana instance, not a domain: it also serves climate, heat pump and
+  cistern. The move made the knowledge-bearing files versionable — in this public repo
+  they had to stay gitignored
 
 ## Key Patterns
 
