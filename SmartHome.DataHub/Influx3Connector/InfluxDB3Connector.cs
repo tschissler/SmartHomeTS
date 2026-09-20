@@ -270,7 +270,10 @@ namespace Influx3Connector
                 .SetTag("location", record.Location)
                 .SetTag("device", record.Device)
                 .SetTag("measurement", record.Measurement)
-                .SetField("value_status", Convert.ToInt16(record.Value_Status))
+                // Int64 in InfluxDB, and written as such. Convert.ToInt16 stood here and
+                // narrowed every value of this table to 32767 — a built in overflow with no
+                // purpose, checked against information_schema.columns on 2026-09-20.
+                .SetIntegerField("value_status", Convert.ToInt64(record.Value_Status))
                 .SetTimestamp(timestamp);
             lock (pointsBatch)
             {
@@ -291,7 +294,9 @@ namespace Influx3Connector
                 .SetTag("location", record.Location)
                 .SetTag("device", record.Device)
                 .SetTag("measurement", record.Measurement)
-                .SetField("value_counter", Convert.ToInt16(record.Value_Counter))
+                // Int64 in InfluxDB, same defect as value_status above: the operating hours
+                // stand at 2579 and the switching cycles at 1918, so nothing has overflowed yet.
+                .SetIntegerField("value_counter", Convert.ToInt64(record.Value_Counter))
                 .SetTimestamp(timestamp);
             lock (pointsBatch)
             {

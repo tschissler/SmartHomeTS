@@ -106,9 +106,9 @@
     ///
     /// An earlier version of this comment claimed counter_values and status_values store
     /// Int16 and would overflow past 32767 km. That is not so: both columns are Int64 in
-    /// InfluxDB, checked on 2026-09-20. Only the C# side narrows, via Convert.ToInt16 in
-    /// InfluxDB3Connector — a latent overflow for every caller of those two tables, and a
-    /// defect to fix there rather than a reason to avoid them.
+    /// InfluxDB, checked on 2026-09-20. The C# side narrowed, via Convert.ToInt16 in
+    /// InfluxDB3Connector; that narrowing is gone since backlog item 13a, both tables are
+    /// written as Int64, and the overflow it would have caused no longer exists.
     /// </summary>
     public record InfluxDistanceRecord : InfluxRecord
     {
