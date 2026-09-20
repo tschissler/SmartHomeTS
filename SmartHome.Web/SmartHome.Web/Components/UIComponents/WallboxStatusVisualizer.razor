@@ -113,7 +113,7 @@
             Freigabe
         </span>
         <span class="wallboxSchalter" @onclick="VorrangUmschalten"
-              title="Diese Wallbox wird zuerst bedient, wenn beide freigegeben sind. Der Vorrang gilt immer nur für eine Box.">
+              title="Der Vorrang entscheidet nur, wenn die verfügbare Leistung nicht für beide Boxen reicht: dann bekommt diese sie. Reicht sie für beide, wird geteilt. Der Vorrang gilt immer nur für eine Box.">
             <span class="wallboxStern">@(Priorisiert ? "★" : "☆")</span>
             Vorrang
         </span>
