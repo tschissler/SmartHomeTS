@@ -31,9 +31,11 @@
     white-space: nowrap;
 }
 
+/* Inline SVG: takes its colour from the state text next to it, never its own */
 .wallboxZustandIcon {
     height: 24px;
     width: 24px;
+    flex: none;
 }
 
 .wallboxZustand-laedt {
