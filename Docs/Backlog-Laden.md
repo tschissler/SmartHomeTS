@@ -493,6 +493,55 @@ setzt 17 zwingend voraus.
 
 ---
 
+### 18. Umgebungsvariablen dürfen das Produktiv-Secret nicht überschreiben
+
+**Problem.** Beim Re-Bootstrap am 2026-09-20 hat der Connector `BMW_CLIENT_ID` und
+`BMW_GCID` aus der lokalen Shell-Umgebung gelesen, als vorrangig behandelt und ungefragt
+ins Kubernetes-Secret `bmwconnector-credentials` zurückgeschrieben („using environment
+variable, saving to Kubernetes Secret…"). Die Shell-Werte waren Platzhalter — je 10 Bytes
+statt der 36 einer UUID. Der laufende Pod hielt die korrekten Werte nur noch im Speicher,
+die GCID war nirgends rekonstruierbar (im Pod-Log steht ausschließlich die Mini-GCID, der
+BMW-Client war seit dem Pod-Start nie verbunden) und musste aus KeePass geholt werden.
+`BMWConnector/templates/role.yaml` im Deployments-Repo gibt dem Pod dafür `get`, `update`
+und `replace` auf das Secret; eine versionierte Kopie, die ArgoCD wiederherstellen könnte,
+gibt es nicht.
+
+**Warum eigener Punkt.** Der abgelaufene Token war nur der Anlass. Die Fehlerquelle ist,
+dass eine Entwicklungs-Umgebungsvariable ohne Rückfrage Produktionszustand überschreibt —
+und der Bootstrap-Zyklus wiederholt sich in ~90 Tagen.
+
+**Umfang**
+- [ ] Vorrang umkehren oder absichern: im Cluster-Betrieb gewinnt das Secret. Eine
+      Env-Var darf lokal überschreiben, aber nicht zurückschreiben
+- [ ] Rückschreiben nur mit Plausibilitätsprüfung (GCID und CLIENT_ID sind UUIDs, also
+      Format und Länge prüfbar) und explizitem Opt-in, nicht als Nebenwirkung
+- [ ] Beim Überschreiben den ersetzten Wert maskiert protokollieren — der Vorfall war nur
+      an den Byte-Längen im Secret erkennbar
+- [ ] Dieselbe Rückschreib-Logik in den anderen Connectoren prüfen (VW, Keba, Shelly,
+      Enphase)
+- [ ] Erwägen, `bmwconnector-credentials` versioniert zu hinterlegen (SealedSecret im
+      Deployments-Repo), damit es überhaupt eine Wiederherstellungsquelle gibt
+
+**Fertig, wenn** ein Bootstrap mit gesetzten, falsch formatierten Env-Vars das Secret
+nicht mehr verändert.
+
+**Abhängig von** nichts. Berührt `BMWConnector`, kollidiert mit 1 und 2.
+
+**Welle A, gebündelt mit Punkt 2 in derselben Session** — nicht parallel dazu. Die
+Berührung ist größer, als die Kollisionstabelle vermuten lässt: Die proaktive
+Token-Alters-Warnung aus Punkt 2 liest ebenfalls das Secret, also denselben
+`KubernetesSecretStore`, den dieser Punkt umbaut. Und **nach** Punkt 1, damit das
+Re-Bootstrap nicht auf halb geändertem Verhalten läuft.
+
+**Abgrenzung beim Umsetzen — nicht überdehnen.** „Nicht zurückschreiben" gilt für die
+**Zugangsdaten** (`CLIENT_ID`, `GCID`), nicht für die **Tokens**. Der Dienst schreibt
+`id_token`, `access_token` und `refresh_token` bei jedem 50-Minuten-Refresh planmäßig ins
+Secret zurück (`SETUP.md`). Wird diese Schreiboperation mit abgeklemmt, überlebt keine
+Token-Erneuerung einen Pod-Neustart — und das ist genau der Ausfall, den Punkt 1 gerade
+behoben hat.
+
+---
+
 ## Offene Punkte außerhalb dieses Vorhabens
 
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
