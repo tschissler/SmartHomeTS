@@ -33,6 +33,8 @@ Präfix setzt.
 | 17 Fahrzeugdaten persistieren | `laden-17-fahrzeugdaten-persistieren` | 2026-09-20 | **erledigt und gemergt** (`352fc13`). 36/36 Tests grün — **der DataHub hatte bisher gar keine**. Zeitstempel aus `lastUpdate`; die Entdopplung fällt daraus ab, weil der Primärschlüssel Tabelle + Tags + Zeit ist. Zwei neue Tabellen `distance_values` und `position_values`, weil `counter_values` über `Convert.ToInt16` schreibt und der Mini bei 38954 km steht — Int16 endet bei 32767, das hätte eine `OverflowException` geworfen. **13 kann jetzt folgen**. **Nachkontrolle 13:05 am lebenden Objekt bestanden** — siehe unten |
 | 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | **erledigt und gemergt** (`b560217`). Der gemeldete Fehler war der Text; die Ursache lag tiefer — `disconnected.svg` ist fest `#d4aa00`, die freie Box trug also dauerhaft eine Aufmerksamkeitsfarbe, und `connected.svg`/`connectednotready.svg` sind geometrisch identisch und unterscheiden sich nur im Strich. Symbol jetzt inline in `currentColor`: Geometrie sagt Fahrzeug ja/nein, Farbe kommt aus dem Zustand |
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
+| 13a Ladesitzungen | `laden-13a-ladesitzungen` | 2026-09-20 | Prompt geschrieben, Session noch nicht gestartet |
+| 21 Ladeseite oben | `laden-21-ladeseite-oben` | 2026-09-20 | Prompt geschrieben, Session noch nicht gestartet |
 | Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **blockiert, nicht fertig** — Skripte und `docs/namenskonvention.md` liegen lokal fertig, aber nichts ist committet oder gepusht, und in Grafana ist nichts verändert. **Es fehlt der Service-Account-Token unter `~/.grafana-token`** (bewusst als Datei, damit er in keinem Transkript landet). Ohne ihn wäre der Push ein Blindflug: Der neue Export schreibt `folderUid` in jede Datei, nach dem Umbenennen auf `<uid>.json` sieht die Import-Action **alle 29 Dateien als geändert** — und eine Datei ohne `folderUid` heißt „Wurzel", womit die acht Kubernetes-Dashboards aus ihrem Ordner flögen. Die `folderUid`s gibt es nur aus Grafana |
 | Grafana-Action | `grafana-action` | 2026-09-20 | **erledigt** — zwei Forgejo Workflows live. Ein Push auf `dashboards/` schreibt ~20 s später nach Grafana, nur die geänderten Dateien. Abgleich doppelt geprüft (lokal und aus dem Runner): 29 Dashboards, 0 Unterschiede. **Der Editor-Test wurde von Thomas abgelehnt**, siehe unten |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
@@ -182,7 +184,8 @@ einem Branch pro Punkt.
 | B | 3 | braucht 2 (gemeinsamer Begriff von „gesund") und 0 (sonst baut der Helfer in `Libs/` nichts neu). Kollidiert mit fast allem — vorziehen und zügig abschließen oder bis nach 13 zurückstellen, nicht mittendrin einschieben |
 | C | 7 + 8 zusammen in **einer** Session | harter Schnitt, muss ein Release sein: 7 definiert den Contract, den 8 konsumiert |
 | D | 9 ∥ 12 | Web gegen ChargingController, disjunkt — sobald die Payload-Verträge aus C stehen. 12 erst nach 8, sonst treffen sich zwei Sessions im ChargingController |
-| E | 10 → 11 → 13 → 17 seriell | 14 hängt nicht an 17 und kann davor oder danach; 15 setzt 17 zwingend voraus |
+| E | 10 → 11 → 13a → 17 seriell | 14 hängt nicht an 17 und kann davor oder danach; 15 setzt 17 zwingend voraus |
+| F | **13a ∥ 21** | disjunkt seit der Teilung von 13: 13a fasst kein Web an, 21 nur das Web. Danach 14, erst dann 13b |
 
 ### Datei-Kollisionen
 
@@ -191,12 +194,12 @@ Punkte gleichzeitig bearbeitet, braucht zusätzlich diese Tabelle:
 
 | Bereich | angefasst von Punkt |
 |---|---|
-| `SharedContracts` | 7, 10, 12, 13 |
+| `SharedContracts` | 7, 10, 12, 13a |
 | `BMWConnector` | 1, 2, 18 — bei 2 und 18 dieselbe Secret-Store-Klasse |
 | `ChargingController` | 8, 12 |
 | `KebaConnector` | 7, 16 |
-| `SmartHome.DataHub` | 8, 13, 17 |
-| `SmartHome.Web` | 9, 10, 11, 13 |
+| `SmartHome.DataHub` | 8, 13a, 17 |
+| `SmartHome.Web` | 9, 10, 11, 13b, 21 |
 | alle fünf Dienste + `Devices.razor` | 3 |
 | `.github/workflows/` | 0, 4 — disjunkte Dateien: 0 ändert die Service-Workflows, 4 löscht die beiden App-Workflows |
 
@@ -804,21 +807,43 @@ plausibel zur Boxenergie passt.
 
 ### 13. Ladesitzungs-Tabelle, Grid aus der Web-UI entfernen
 
+**Geteilt am 2026-09-20 in 13a und 13b.** Der ursprüngliche Umfang entfernte die
+Sitzungsliste aus dem Web und verwies „stattdessen auf das Dashboard" — das Dashboard ist
+aber Punkt 14 und hängt seinerseits an 13. So gebaut entstünde ein Fenster ohne jede
+Sitzungsübersicht, so lang wie die Bauzeit von 14 plus die Wartezeit, bis genug Sitzungen
+aufgelaufen sind, damit das Dashboard überhaupt etwas zeigt. **Erst der Ersatz, dann der
+Abriss.** Nebeneffekt: 13a und Punkt 21 haben damit keine einzige gemeinsame Datei mehr
+und können parallel laufen.
+
+#### 13a. Ladesitzungs-Datensatz erzeugen und schreiben
+
 **Umfang**
 - [ ] ChargingController publiziert `daten/Laden/M3/<Box>/Ladesitzung` mit `SitzungsId`,
       Beginn, Ende, `Zustand: laufend | beendet`, Zählerständen und Ladezeit — er ist der
       **einzige** Autor dieses Topics (der KebaConnector publiziert nur `Status`, Punkt 7)
-- [ ] RulesEngine publiziert `daten/Laden/M3/<Box>/Zuordnung` mit derselben `SitzungsId`
+- [x] RulesEngine publiziert `daten/Laden/M3/<Box>/Zuordnung` mit derselben `SitzungsId`
+      — **bereits erledigt in Punkt 11**
 - [ ] DataHub führt beide zusammen und schreibt die Tabelle `ladesitzungen` — **nur bei
       übereinstimmender `SitzungsId`**, sonst nichts schreiben und protokollieren
 - [ ] Nur `wallbox` als Tag; `fahrzeug` und `vertrauen` als Felder (Idempotenz bei
       Retain-Wiedergabe), plus Wächter auf bereits geschriebene `SitzungsId`
 - [ ] Sitzungen mit 0 kWh werden geschrieben, aber im Dashboard ausgeblendet
+
+**Fasst an:** `SharedContracts`, `ChargingController`, `SmartHome.DataHub`. **Nicht** das Web.
+
+**Abhängig von** 11, 12 — beide erledigt.
+
+#### 13b. Sitzungs-Grid aus der Web-UI entfernen
+
+**Umfang**
 - [ ] Sitzungs-Grid, `CarSelection`-Filter und Excel-/PDF-Export aus
       `ChargingOverview.razor` entfernen, stattdessen Verweis auf das Dashboard
 - [ ] `ChargingSessionService.cs` ersatzlos löschen
+- [ ] `ChargingSession`-Record in `SharedContracts` mit entfernen, falls dann ungenutzt
 
-**Abhängig von** 11, 12.
+**Abhängig von** 13a **und 14** — nicht vorher. Das Dashboard muss stehen *und* Daten
+zeigen, bevor die Liste verschwindet. Kollidiert mit Punkt 21 in `ChargingOverview.razor`,
+läuft also nicht parallel zu 21.
 
 ---
 
