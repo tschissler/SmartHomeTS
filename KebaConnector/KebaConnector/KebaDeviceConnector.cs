@@ -21,24 +21,29 @@ namespace KebaConnector
         // Last desired current received from the ChargingController and when it arrived.
         // The wallbox forgets its current limit when a charging session ends, so the desired
         // value is re-applied as long as it is fresh (controller heartbeats every 60s).
+        // Only a command the controller actually sent counts as proof of life here — a
+        // retained replay from the broker leaves the timestamp untouched, see
+        // UpdateDeviceDesiredCurrent.
         private volatile int desiredCurrent = -1;
         private DateTimeOffset desiredCurrentReceivedAt;
         private DateTimeOffset lastEnforcementWriteAt = DateTimeOffset.MinValue;
         private bool staleReleaseDone = false;
+        private readonly TimeProvider time;
         private static readonly TimeSpan SetpointFreshDuration = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan StaleReleaseAfter = TimeSpan.FromMinutes(10);
         // Written when the controller goes silent: the box caps at its hardware limit (Curr HW),
         // so the car can always charge even if the control loop is down.
-        private const int ReleaseCurrent = 63000;
+        internal const int ReleaseCurrent = 63000;
 
-        public KebaDeviceConnector(IPAddress IpAddress, int UDPPort, object? lockObject = null)
+        public KebaDeviceConnector(IPAddress IpAddress, int UDPPort, object? lockObject = null, TimeProvider? timeProvider = null)
         {
             ipAddress = IpAddress;
             uDPPort = UDPPort;
-            desiredCurrentReceivedAt = DateTimeOffset.UtcNow;
+            time = timeProvider ?? TimeProvider.System;
+            desiredCurrentReceivedAt = time.GetUtcNow();
         }
 
-        private static bool WritesEnabled()
+        protected virtual bool WritesEnabled()
         {
             string? writeToDeviceFlag = Environment.GetEnvironmentVariable("KEBA_WRITE_TO_DEVICE");
             return writeToDeviceFlag != null && writeToDeviceFlag.ToLower() == "true";
@@ -52,11 +57,29 @@ namespace KebaConnector
         /// this method has a sleep between writing and reading.
         /// The method writes new data to the device only if the new data is different from the previous one.
         /// </remarks>
-        /// <param name="state"></param>
-        public async Task UpdateDeviceDesiredCurrent(int newCurrent)
+        /// <param name="newCurrent">Desired charging current in mA.</param>
+        /// <param name="retained">
+        /// True when the broker replayed the command from its retained store instead of the
+        /// ChargingController sending it just now. Such a message sets the setpoint but must
+        /// not refresh its age: it arrives on every subscribe and proves nothing about the
+        /// controller being alive. Without this distinction a connector restart while the
+        /// controller is dead restarts the freshness clock, and StaleReleaseAfter — the
+        /// emergency release that keeps charging possible without the control loop — never
+        /// fires. Writing the value is left to EnforceDesiredState, which checks the age
+        /// first, so a setpoint that is already stale never reaches the box.
+        /// </param>
+        public async Task UpdateDeviceDesiredCurrent(int newCurrent, bool retained = false)
         {
             desiredCurrent = newCurrent;
-            desiredCurrentReceivedAt = DateTimeOffset.UtcNow;
+
+            if (retained)
+            {
+                Console.WriteLine($"Retained charging command of {newCurrent} mA received: " +
+                    "applying the setpoint without refreshing its age");
+                return;
+            }
+
+            desiredCurrentReceivedAt = time.GetUtcNow();
             staleReleaseDone = false;
 
             if (!WritesEnabled())
@@ -87,7 +110,7 @@ namespace KebaConnector
             if (!WritesEnabled())
                 return;
 
-            var now = DateTimeOffset.UtcNow;
+            var now = time.GetUtcNow();
             var setpointAge = now - desiredCurrentReceivedAt;
 
             if (desiredCurrent >= 0 && setpointAge <= SetpointFreshDuration)
@@ -259,7 +282,7 @@ namespace KebaConnector
             return ExecuteUDPCommand($"report {reportId}");
         }
 
-        private void WriteChargingCurrentToDevice(int current)
+        protected virtual void WriteChargingCurrentToDevice(int current)
         {
             if (!udpSemaphore.Wait(TimeSpan.FromSeconds(5)))
             {

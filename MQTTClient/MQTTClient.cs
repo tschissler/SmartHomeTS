@@ -56,7 +56,8 @@ namespace MQTTClient
                     var messageReceivedEventArgs = new MqttMessageReceivedEventArgs
                     {
                         Topic = e.ApplicationMessage.Topic,
-                        Payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload)
+                        Payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload),
+                        Retained = e.ApplicationMessage.Retain
                     };
                     OnMessageReceived?.Invoke(this, messageReceivedEventArgs);
                 }
@@ -179,5 +180,13 @@ namespace MQTTClient
     {
         public string Topic { get; set; }
         public string Payload { get; set; }
+
+        /// <summary>
+        /// True when the broker replayed this message from its retained store instead of a
+        /// publisher sending it just now — it happens on every subscribe, so a retained
+        /// message says nothing about whether its publisher is still alive. Subscribers that
+        /// judge a value by its age must not treat the arrival time as the time it was sent.
+        /// </summary>
+        public bool Retained { get; set; }
     }
 }

@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="KebaConnectorTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Libs\HelpersLib\HelpersLib.csproj" />
     <ProjectReference Include="..\..\MQTTClient\MQTTClient.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />

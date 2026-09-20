@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelpersLib", "..\Libs\Helpe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MQTTClient", "..\MQTTClient\MQTTClient.csproj", "{1E4E10B3-8595-75E0-B6D6-EBBC17B05F3C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KebaConnectorTests", "KebaConnectorTests\KebaConnectorTests.csproj", "{3CF326E1-88D2-4DCB-A5E2-BD8B60AFCBDF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +42,10 @@ Global
 		{1E4E10B3-8595-75E0-B6D6-EBBC17B05F3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E4E10B3-8595-75E0-B6D6-EBBC17B05F3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E4E10B3-8595-75E0-B6D6-EBBC17B05F3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3CF326E1-88D2-4DCB-A5E2-BD8B60AFCBDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CF326E1-88D2-4DCB-A5E2-BD8B60AFCBDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CF326E1-88D2-4DCB-A5E2-BD8B60AFCBDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CF326E1-88D2-4DCB-A5E2-BD8B60AFCBDF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
