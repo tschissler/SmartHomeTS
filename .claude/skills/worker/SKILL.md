@@ -86,7 +86,10 @@ Darin:
   was er nicht neu übersetzt hat
 - **wie viele Rollouts der Merge auslöst, selbst nachgezählt** an den `paths:`-Blöcken.
   Übernimm die Zahl nicht aus dem Auftrag, sie ändert sich mit jeder neuen
-  `ProjectReference`
+  `ProjectReference`. Zähl mit **einfachen Einzelbefehlen**: In einem Worktree verweigert
+  die Isolation jeden Befehl, der zu komplex wird und das Wort `git` enthält — und
+  `.github/workflows` enthält es. `grep -rln "<Pfad>" .github/workflows/` läuft durch,
+  eine `for`-Schleife über mehrere Globs wird abgelehnt
 - **wo der Auftrag nicht gestimmt hat.** Das ist der wertvollste Teil
 - bei sichtbaren Änderungen: **worauf Thomas nach dem Rollout schauen soll.** Er ist der
   Einzige, der das Ergebnis auf dem echten Gerät sieht
