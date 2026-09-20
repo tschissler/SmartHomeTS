@@ -40,8 +40,15 @@ var configuration = new ConfigurationBuilder()
 var mqttBroker = configuration["MqttBroker"] ?? "smarthomepi2";
 var mqttPort = int.Parse(configuration["MqttPort"] ?? "32004");
 var healthCheckPort = int.Parse(configuration["HealthCheckPort"] ?? "8080");
+// The client id has to be unique per instance. During a rolling update the old and the new
+// pod are connected at the same time, and with a shared id the broker kicks them alternately
+// (DISCONNECT with Reason code=SessionTakenOver), so both keep losing their subscriptions.
+// The machine name is the pod name inside Kubernetes and stays stable across reconnects.
+// Same scheme as the shared MQTTClient library uses for the connectors.
+var mqttClientId = $"Smarthome.ChargingController_{Environment.MachineName}";
 
 Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
+Console.WriteLine($" ### MQTT Client Id: {mqttClientId}");
 
 // Start health check HTTP server in background
 var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
@@ -233,7 +240,7 @@ async Task MQTTConnectAsync()
 {
     var mqttOptions = new MqttClientOptionsBuilder()
         .WithTcpServer(mqttBroker, mqttPort)
-        .WithClientId("Smarthome.ChargingController")
+        .WithClientId(mqttClientId)
         .WithKeepAlivePeriod(new TimeSpan(0, 1, 0,0))
         .Build();
 
