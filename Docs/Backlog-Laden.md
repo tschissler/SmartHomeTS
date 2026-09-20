@@ -842,9 +842,36 @@ und können parallel laufen.
 - [ ] `ChargingSessionService.cs` ersatzlos löschen
 - [ ] `ChargingSession`-Record in `SharedContracts` mit entfernen, falls dann ungenutzt
 
-**Abhängig von** 13a **und 14** — nicht vorher. Das Dashboard muss stehen *und* Daten
-zeigen, bevor die Liste verschwindet. Kollidiert mit Punkt 21 in `ChargingOverview.razor`,
-läuft also nicht parallel zu 21.
+**Abhängig von** 13a. **Die Abhängigkeit von 14 ist am 2026-09-20 entfallen** — sie
+beruhte auf einer falschen Annahme von mir.
+
+Begründet hatte ich sie mit „erst der Ersatz, dann der Abriss“: Die Liste nicht
+entfernen, solange das Dashboard fehlt. Das setzt voraus, dass es etwas zu erhalten gibt.
+Nachgesehen am 2026-09-20 — gibt es nicht:
+
+| Stelle | Zustand |
+|---|---|
+| `@inject IChargingSessionService` (`ChargingOverview.razor` Z. 22) | auskommentiert |
+| `builder.Services.AddScoped<IChargingSessionService, …>` (`Program.cs` Z. 76) | auskommentiert |
+| `public class ChargingSessionService` | **die ganze Klasse** auskommentiert |
+| `ChargingSessions = await …GetChargingSessionsAsync(…)` (Z. 345) | auskommentiert |
+
+`ChargingSessions` bleibt dauerhaft eine leere Liste, `FilteredChargingSessions` damit
+auch. Das Grid rendert Kopfzeilen, einen Monatswähler, drei Fahrzeug-Häkchen und eine
+Excel-/PDF-Export-Leiste über **null Zeilen**. Es zeigt eine Bedienung, die
+funktionsfähig aussieht und nichts tut — das Entfernen verbessert den Zustand sofort,
+statt eine Lücke zu reißen.
+
+Der Verweis auf das Dashboard entfällt damit vorerst: Er kann erst gesetzt werden, wenn
+Punkt 14 steht. Ein Link auf etwas Ungebautes wäre schlechter als kein Link.
+
+**Zum `ChargingSession`-Record:** Er wird tatsächlich frei. Die Treffer im KebaConnector
+sind `EnergyCurrentChargingSession`, ein Feldname, nicht der Typ — geprüft am
+2026-09-20. Sein Löschen fasst `SharedContracts` an und löst damit **acht** Builds aus;
+das ist der Preis dafür, toten geteilten Code einmal wirklich loszuwerden.
+
+Kollidiert in `ChargingOverview.razor` mit 21 (erledigt) und 23. **Kann parallel zu Punkt 3
+laufen** — der fasst im Web nur `Devices.razor` an.
 
 ---
 
