@@ -1389,6 +1389,53 @@ keinen Ort für die Position.
   InfluxDB steht von ihm trotzdem nichts, weil BMW CarData nur bei Fahrzeugereignissen
   sendet und er steht. Kein Defekt, aber bis zur ersten Fahrt auch kein Beweis. Erst dann
   ist Punkt 17 für alle drei Fahrzeuge belegt statt für zwei.
+- **Arbeitsfehler der Integrator-Session am 2026-09-20, hier festgehalten, damit er sich
+  nicht wiederholt:** Um die Abnahme von `grafana-konvention` nachzurechnen, habe ich in
+  *ihrem* Arbeitsverzeichnis `~/Repos/Forgejo.intern/Grafana` ein `git checkout origin/main`
+  ausgeführt, statt in einem eigenen Klon. Das hat ihr den HEAD losgelöst; ihr nächster
+  Commit landete auf dem abgehängten HEAD statt auf `main` und war damit unpushbar, ohne
+  dass sie es merken konnte — sie meldete sich als fertig, während die Arbeit lokal
+  festhing. Repariert mit `git checkout -B main <commit>`, eine reine Vorwärtsbewegung bei
+  sauberem Arbeitsverzeichnis, ohne eine Datei anzufassen.
+
+  **Regel daraus: Nachrechnen in einem Repo, in dem eine andere Session arbeitet, nur über
+  einen eigenen Klon.** Lesen ist harmlos, aber `checkout`, `fetch --prune` und alles, was
+  HEAD oder Refs bewegt, ist ein Eingriff in fremde Arbeit.
+
+  **Die Session fand die zweite Hälfte des Fehlers, und die ist allgemeiner:** Sie hatte
+  nach jedem Push „gepusht" gemeldet, weil `git push -q origin main && echo gepusht`
+  erfolgreich war. Auf losgelöstem HEAD pusht dieser Befehl aber die *lokale Referenz*
+  `main` — die unverändert auf dem alten Stand stand. Ergebnis: „Everything up-to-date",
+  **Exit-Code 0**, Erfolgsmeldung. Sieben Pushes davor ging es gut, hätte es aber nicht
+  müssen.
+
+  **Regel daraus: Der Exit-Code eines `git push` ist kein Nachweis.** Nachgewiesen ist ein
+  Push erst durch `git fetch` und einen Vergleich von `rev-parse origin/main` mit dem
+  erwarteten Commit. Das gilt besonders dort, wo ein Push ein Schreibvorgang im laufenden
+  System ist — im Grafana-Repo löst er den Import aus, hier den Rollout.
+- **Warnungszahlen aus einem inkrementellen Build sind wertlos.** Am 2026-09-20 meldete
+  `laden-2324-telefon-syncfusion` einen Rückgang von 42 auf 13 Warnungen; nachgemessen
+  waren es 42 auf **22**. Die Ursache war nicht die falsche Solution, sondern **kalt gegen
+  warm**: Ein inkrementeller Build meldet nur die Warnungen der Projekte, die er
+  tatsächlich neu übersetzt hat — was unverändert im `obj` liegt, schweigt. Die 42 stammten
+  aus dem ersten, kalten Debug-Lauf, jede spätere Zahl aus einem Aufwärmlauf.
+
+  Die Session hat die Schwankung sogar bemerkt (zwischendurch 19, dann wieder 25) und als
+  Buchführungsrauschen abgetan, statt `--no-incremental` zu tippen. Sie hat den Fehler von
+  sich aus vollständig aufgeklärt, nachdem ich die Abweichung gemeldet hatte.
+
+  **Regel daraus: Jede Warnungs- oder Fehlerzahl, die verglichen wird, muss auf beiden
+  Ständen aus einem Lauf mit `--no-incremental` stammen.** Und eine Zahl, die zwischen zwei
+  Messungen schwankt, ist ein Hinweis auf die Messung, nicht auf den Code.
+- **Zweiter Arbeitsfehler der Integrator-Session am 2026-09-20, und ein bitterer:** Der
+  Commit `950e531`, mit dem ich die erledigten Grafana-Punkte abgehakt habe, hat die beiden
+  Einträge direkt darüber **gelöscht** — genau die zwei Lehren, die hier stehen. Mein
+  Textabschnitt reichte von einem Marker zum nächsten und verschluckte alles dazwischen.
+
+  Aufgefallen ist es nur, weil ich zwei Stunden später eine dritte Lehre danebenschreiben
+  wollte und den Anker nicht mehr fand. **Regel daraus: Wer einen Bereich zwischen zwei
+  Markern ersetzt, muss wissen, was dazwischen steht** — `git log -S` nach dem Commit ist
+  billiger als der Verlust.
 - **Fünf HealthChecks melden dauerhaft „gesund", solange sie nie erfolgreich waren.**
   `ChargingControllerHealthCheck` und vier Geschwister antworten
   „Healthy: Service is starting up", solange `_lastSuccessfulRead == MinValue` — und das
