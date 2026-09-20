@@ -848,6 +848,21 @@ keinen Ort für die Position.
 
 ## Offene Punkte außerhalb dieses Vorhabens
 
+- **Grafana-Dashboards sauber versionieren — eigenes Repo im internen Forgejo.**
+  Aufgekommen bei Punkt 7/8 und dort nur notdürftig behandelt. Heute ist Grafanas PVC die
+  einzige Wahrheit; im Repo liegen manuelle Exporte, deren letzter Commit und deren
+  Dateidaten von April bis Juli 2026 stammen. Niemand merkt die Abweichung, weil nie
+  verglichen wird. Dass `gen_sankey.py`, `README.md` und `influxdb-reference.md` per
+  `.gitignore` ausgeschlossen sind („bewusst nicht im öffentlichen Repo"), ist das
+  Symptom: Ausgerechnet die wissenstragenden Dateien bleiben unversioniert, weil
+  SmartHomeTS öffentlich ist. **Entschieden am 2026-09-20:** eigenes Repo im internen
+  Forgejo, weil die Einheit die Grafana-Instanz ist und nicht eine Domäne — Grafana trägt
+  auch Klima, Wärmepumpe und Zisterne. Dorthin gehören Dashboards, Generator,
+  Datasource-ConfigMap, die InfluxDB-Referenz und auf Sicht `Kubernetes/microk8s/Grafana/`.
+  Kern der Umsetzung ist ein Export-Skript über die Grafana-API, das die flüchtigen Felder
+  (`id`, `version`, `iteration`, `updated`) verwirft — ohne das produziert jeder Export
+  Rauschdiffs und die Historie wird wieder wertlos. Vor dem Umzug zu klären: ob das
+  Forgejo gesichert ist. Details im Prompt der Session.
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
