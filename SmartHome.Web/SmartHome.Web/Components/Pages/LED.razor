@@ -330,9 +330,11 @@
 
     private static readonly Szene[] Szenen =
     [
-        // Der Alltagsfall: warmes Licht aus allen LEDs. Nicht weiss, sondern leicht
-        // gesaettigtes Orange -- WS2812B ohne Weisskanal wirkt bei S=0 blaeulich.
-        new("Warmweiß",       30,  35, 100, 100),
+        // Der Alltagsfall: warmes Licht aus allen LEDs. Nicht weiss, sondern deutlich
+        // gesaettigtes Bernstein -- WS2812B ohne Weisskanal wirkt bei S=0 blaeulich.
+        // Diese Werte hat Thomas am Streifen ausgesucht, nicht am Bildschirm; sie sind
+        // damit das Mass, an dem sich eine Rechnung zu messen hat und nicht umgekehrt.
+        new("Warmweiß",       43,  79,  45, 100),
         // Hell und moeglichst neutral, zum Suchen im Schrank.
         new("Arbeitslicht",   45,   8, 100, 100),
         // Dieselbe durchgehende Linie, nur gedaempft und waermer.
