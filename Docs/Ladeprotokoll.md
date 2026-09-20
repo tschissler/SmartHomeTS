@@ -147,6 +147,7 @@ eigene Tabelle; `WritePointDataToInfluxDb` im `Influx3Connector` ist bereits gen
 | `time` | Zeitstempel | Sitzungsbeginn |
 | `wallbox` | **Tag** | `Garage`, `Stellplatz` |
 | `sitzungs_id` | Feld | ID der Keba-Sitzung |
+| `beginn_quelle` | Feld | woher der Beginn stammt: `steckflanke`, `regelzyklus`, `boxuhr`, `dienstanlauf`. Entscheidet, ob `time` und `dauer_s` gemessen sind |
 | `fahrzeug` | Feld | `BMW`, `Mini`, `VW`, `-` |
 | `vertrauen` | Feld | `bestaetigt`, `erkannt`, `vermutet`, `unbekannt` |
 | `ende` | Feld | Zeitstempel des Aussteckens |
@@ -164,6 +165,23 @@ DataHub-Neustart liest es erneut. Als Feld überschreibt ein wiederholter Schrei
 denselben Punkt; als Tag entstünde bei abweichendem Inhalt eine zweite Zeile. Zusätzlich
 prüft der DataHub, ob die `SitzungsId` bereits geschrieben wurde — analog zu
 `LastChargingSessionPublishedViaMQTT` im KebaConnector.
+
+**`beginn_quelle` sagt, ob die Steckdauer überhaupt gemessen ist.** `time` ist der
+Sitzungsbeginn und `dauer_s` daraus gerechnet — beide sind nur so gut wie die Quelle des
+Beginns, und eine geschätzte Steckdauer sieht in einer Tabelle genauso solide aus wie eine
+gemessene. Vier Werte statt eines Ja/Nein, weil die vier Fälle verschiedene Fehler haben:
+
+| Wert | Woher | Fehler |
+|---|---|---|
+| `steckflanke` | Die vom KebaConnector beobachtete Steckflanke | gemessen |
+| `regelzyklus` | Der ChargingController sah die Sitzung auftauchen | gemessen, höchstens einen Zyklus (5 s) zu spät |
+| `boxuhr` | Die Uhr der Box, bei einer geerbten Sitzung | unbekannt, in beide Richtungen — die Box meldet `"timeQ": 0` |
+| `dienstanlauf` | Der erste Blick des Controllers auf eine schon laufende Sitzung | **zu spät**, um einen unbekannten Betrag: die Steckdauer ist zu kurz |
+
+„Ist die Steckdauer gemessen?" liest sich damit als
+`beginn_quelle IN ('steckflanke','regelzyklus')` — genauso kurz wie ein boolescher Filter,
+sagt aber im Zweifel auch, warum nicht. Ein Feld, kein Tag: `wallbox` bleibt der einzige
+Tag, ein zweiter mit vier Werten vervielfachte die Reihen der Tabelle ohne Gewinn.
 
 **Steckdauer und Ladezeit werden getrennt geführt.** Ein Fahrzeug hängt über Nacht an der
 Box und lädt nur zwei Stunden bei Überschuss; die Keba meldet trotzdem eine einzige
@@ -195,6 +213,95 @@ Zählerstände exakt fest. Der DataHub führt beim Schreiben zusammen und **schr
 wenn die `SitzungsId` beider Quellen übereinstimmt**; andernfalls wird nichts geschrieben
 und der Fall protokolliert. Damit ist die Sorge vor auseinanderlaufenden Topics
 ausgeräumt, statt sie durch einen gemeinsamen Autor zu umgehen.
+
+### Stand der Umsetzung (Punkt 13a)
+
+Der ChargingController publiziert je Box retained auf
+`daten/Laden/M3/<Box>/Ladesitzung` (`LadeTopics.Ladesitzung`), Payload
+`SharedContracts.Ladesitzung`. Er **abonniert dieses Topic selbst** — aus demselben Grund
+wie bei der Energieaufteilung: ohne den retained Stand zerschnitte jeder Rollout eine
+laufende Ladung in zwei Sitzungen. Dieselbe Wiederherstellungsfrist von 15 s gilt.
+
+**Der Payload trägt Sitzungswerte, keine Zählerstände.** Die drei virtuellen Zähler laufen
+unverändert in der `Energieaufteilung`; was eine Sitzung verbraucht hat, ist die Differenz
+zwischen zwei ihrer Stände. Der Controller bildet sie selbst, weil er der einzige Dienst
+ist, der die Sitzungsgrenzen im 5-Sekunden-Takt sieht. Ein Leser des Topics braucht damit
+kein zweites Topic und keine Fensterrechnung.
+
+**Woher der Beginn kommt — in dieser Reihenfolge:**
+
+| Bedingung | `Beginnquelle` |
+|---|---|
+| `SitzungsBeginn` liegt vor und `SitzungsBeginnAusBoxZeit == false` | `steckflanke` |
+| geerbte Sitzung, Boxzeit plausibel (nicht in der Zukunft, nicht älter als 14 Tage) | `boxuhr` |
+| der Controller hat den Übergang selbst gesehen | `regelzyklus` |
+| sonst — geerbte Sitzung ohne brauchbare Boxzeit | `dienstanlauf` |
+
+`WallboxStatus.SitzungsBeginnAusBoxZeit` heißt das Gegenteil dessen, was der Name
+nahelegt: `true` bedeutet, der Wert **stammt** aus der Boxuhr — und die meldet `"timeQ": 0`
+und darf beliebig falsch sein. `Beginnquelle` sagt stattdessen geradeheraus, was die
+Sitzung datiert hat; niemand muss die Falle kennen, um den Datensatz zu lesen.
+`Ladesitzung.BeginnGeschaetzt` gibt es weiterhin, aber als **abgeleitete, nicht
+serialisierte** Eigenschaft (`quelle ∉ {steckflanke, regelzyklus}`) — so können die beiden
+einander nicht widersprechen. Ein Payload ohne das Feld liest sich als `unbekannt` und
+damit als geschätzt, nicht als gemessen.
+
+**Sitzungsende.** Der Controller schließt die Sitzung in dem Zyklus, in dem die Box keine
+oder eine andere `SitzungsId` meldet; das Intervall, das gerade vergangen ist, gehört noch
+der endenden Sitzung. Hat er das Ende verschlafen (Ausfall über die Steckdauer hinaus),
+wird als Ende der `Zeitpunkt` des retained Payloads eingetragen — der letzte Moment, in
+dem überhaupt jemand von der Sitzung wusste. „Jetzt" einzutragen erfände eine Steckdauer,
+die niemand beobachtet hat.
+
+**Die Boxenergie wird im letzten laufenden Zyklus festgehalten**, nicht aus der Meldung
+gelesen, die das Ende anzeigt: Die Keba zählt `E pres` je Sitzung und setzt den Wert für
+die nächste zurück.
+
+Der DataHub abonniert `daten/Laden/+/+/Ladesitzung` und `daten/Laden/+/+/Zuordnung`,
+führt sie in `SmartHome.DataHub.Ladesitzungen` zusammen und schreibt die Tabelle. Beide
+Topics sind retained und kommen in beliebiger Reihenfolge, deshalb ist **jede** eingehende
+Nachricht ein neuer Versuch — von welcher Seite sie auch kommt.
+
+**Drei Festlegungen, die die Spaltenliste oben nicht trifft:**
+
+1. **`ende` ist ein String-Feld im Format ISO 8601 (UTC).** InfluxDB hat genau eine
+   Zeitspalte, und die trägt den Sitzungsbeginn. Ein zweiter Zeitstempel kann nur Feld
+   sein, und ein Feld ist entweder Zahl oder Text; der lesbare Text gewinnt, weil das
+   Rechnen ohnehin `dauer_s` daneben erledigt.
+2. **`beginn_quelle` ist eine eigene Spalte** — von Thomas am 2026-09-20 entschieden, bevor
+   die Tabelle das erste Mal geschrieben wurde. Der Zeitpunkt war das Argument: Käme die
+   Spalte später dazu, trügen alle bis dahin geschriebenen Sitzungen dort dauerhaft `NULL`.
+   Begründung und Werte stehen oben bei der Spaltentabelle.
+3. **Nur Sitzungen aus `M3` werden geschrieben.** Die Tabelle hat `wallbox` als einzigen
+   Tag und keine Ortsspalte; eine gleichnamige Box in einem anderen Gebäude fiele sonst
+   still in dieselbe Reihe. Heute hängen beide Boxen in M3, es wird also nichts
+   abgewiesen, was es gibt.
+
+**Der Zyklus-Versatz aus Punkt 12 spielt für die Sitzungsenergie keine Rolle.** Die
+Zurechnung zum Zeitpunkt `T` verbucht die Ladeleistung von `T − 5 s`, der Zählerstand ist
+also der Stand von `T − 5 s`. Die Sitzungsenergie ist eine *Differenz* zweier solcher
+Stände, und der Versatz steckt in beiden Enden gleich:
+
+```
+Sitzung = M(t_ende) − M(t_beginn) ≈ E(t_ende − 5 s) − E(t_beginn − 5 s)
+        = Energie über [t_beginn − 5 s, t_ende − 5 s]
+```
+
+Das Fenster ist um 5 s verschoben, nicht verkürzt. In beiden Verschiebungsfenstern lädt
+die Box nicht — vor dem Einstecken kann sie nicht, und nach dem Ladeende bis zum
+Ausstecken tut sie es nicht mehr —, also ist die Differenz exakt die wahre
+Sitzungsenergie. Auch die Ladezeit ist eine Differenz und verhält sich genauso.
+
+Ein messbarer Rest bleibt nur, wenn **unter voller Last ausgesteckt** wird: dann fehlen
+bis zu 5 s × P, bei 11 kW also 0,015 kWh. Im selben Zug fehlen sie aber auch der
+Boxenergie, die ebenfalls im letzten laufenden Zyklus abgegriffen wird — in
+`energie_unzugeordnet_kwh` heben sie sich damit weitgehend auf.
+
+Die −6,1 % aus dem Befund zu Punkt 12 sind kein Widerspruch: Dort endete das
+Auswertungsfenster **mitten in einer Ladung**, sodass nur die Anfangsflanke gezählt wurde.
+Pro Sitzung heben Anfangs- und Endflanke einander auf. Daraus folgt für Punkt 14: Die
+Gegenprobe „Summe der drei = Boxenergie" gehört **je Sitzung** gestellt, nicht über einen
+frei gewählten Zeitraum — über einen Zeitraum misst man die Flanken mit.
 
 ## Dashboard
 

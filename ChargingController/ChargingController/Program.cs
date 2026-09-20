@@ -36,6 +36,13 @@ var chargingStabilizer = new ChargingStabilizer(stabilizerOptions);
 // The three virtual meters per box. Started here so the grace period it waits for its own
 // retained topic begins with the process, not with the first control cycle.
 var energyLedger = new EnergyAttributionLedger(DateTimeOffset.Now);
+// The session bookkeeping on top of them, with the same grace period and for the same reason:
+// a rollout in the middle of a charge must not cut the running session in two.
+var sessionLedger = new ChargingSessionLedger(DateTimeOffset.Now);
+// The last status of each box, kept whole. The control loop only needs four numbers out of it
+// and copies those into the situation, but the session boundaries are in the fields it does
+// not copy — SitzungsId, SitzungsBeginn, EnergieSitzungWh.
+Dictionary<string, WallboxStatus> latestWallboxStatus = new();
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
@@ -181,6 +188,29 @@ async Task UpdateBoxMeters(string wallbox, int chargingPowerW, Quellenanteile? a
         return; // still waiting for the retained meter readings
 
     await PublishEnergieaufteilung(wallbox, stand);
+
+    // The session is a difference between two meter readings, so it is carried forward with the
+    // reading of this very cycle — not with the one the next cycle will produce.
+    if (!latestWallboxStatus.TryGetValue(wallbox, out var status))
+        return;
+    foreach (var sitzung in sessionLedger.Fortschreiben(wallbox, status, stand, now))
+    {
+        await PublishLadesitzung(wallbox, sitzung);
+    }
+}
+
+// Published retained because it is state, and because it is the controller's own backup: this
+// is the topic a running session is restored from after a restart. The controller is the only
+// author — see LadeTopics.Ladesitzung.
+async Task PublishLadesitzung(string wallbox, Ladesitzung sitzung)
+{
+    var payload = JsonSerializer.Serialize(sitzung);
+    await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+        .WithTopic(LadeTopics.Ladesitzung(wallbox))
+        .WithPayload(payload)
+        .WithRetainFlag()
+        .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
+        .Build());
 }
 
 // Published retained because it is state — and because it is the controller's own backup:
@@ -312,6 +342,16 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                 energyLedger.Wiederherstellen(box, aufteilung);
         }
 
+        // The controller's own retained session records, replayed by the broker on subscribe.
+        // The location is checked for the same reason as above.
+        else if (LadeTopics.ZerlegeLadesitzungTopic(topic) is (string sitzungsOrt, string sitzungsBox)
+                 && sitzungsOrt == LadeTopics.Ort)
+        {
+            var sitzung = JsonSerializer.Deserialize<Ladesitzung>(payload);
+            if (sitzung is not null)
+                sessionLedger.Wiederherstellen(sitzungsBox, sitzung);
+        }
+
         else if (LadeTopics.ZerlegeStatusTopic(topic) is (_, string wallbox))
         {
             var status = JsonSerializer.Deserialize<WallboxStatus>(payload);
@@ -321,6 +361,7 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
                 return Task.CompletedTask;
             }
             var connected = status.FahrzeugVerbunden;
+            latestWallboxStatus[wallbox] = status;
 
             if (wallbox == LadeTopics.Garage)
             {
@@ -393,6 +434,9 @@ async Task MQTTConnectAsync()
                 // how the meter readings survive a restart. Only the first message per box is
                 // adopted, so the echo of our own publications changes nothing.
                 await mqttClient.SubscribeAsync(LadeTopics.EnergieaufteilungAlle);
+                // Same again for the session records: the retained payload is what keeps a
+                // charge that is running during a rollout from being cut in two.
+                await mqttClient.SubscribeAsync(LadeTopics.LadesitzungAlle);
                 break;
             }
         }

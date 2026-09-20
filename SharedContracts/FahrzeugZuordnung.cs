@@ -40,6 +40,30 @@ namespace SharedContracts
     }
 
     /// <summary>
+    /// The wire spelling of a <see cref="Vertrauensgrad"/> — the same string the JSON payload
+    /// carries, and the string the <c>vertrauen</c> field of the <c>ladesitzungen</c> table is
+    /// written with.
+    /// </summary>
+    /// <remarks>
+    /// One place produces this name, so that the Grafana filter
+    /// <c>vertrauen IN ('bestaetigt','erkannt')</c> matches the payload without a translation
+    /// layer anywhere. The switch has to agree with the
+    /// <see cref="JsonStringEnumMemberNameAttribute"/> above; a test holds it to that rather
+    /// than trusting the eye.
+    /// </remarks>
+    public static class Vertrauensgrade
+    {
+        public static string Drahtname(Vertrauensgrad grad) => grad switch
+        {
+            Vertrauensgrad.Unbekannt => "unbekannt",
+            Vertrauensgrad.Vermutet => "vermutet",
+            Vertrauensgrad.Erkannt => "erkannt",
+            Vertrauensgrad.Bestaetigt => "bestaetigt",
+            _ => throw new ArgumentOutOfRangeException(nameof(grad), grad, null),
+        };
+    }
+
+    /// <summary>
     /// Which vehicle charges at one wallbox, published retained by the RulesEngine to
     /// daten/Laden/&lt;Ort&gt;/&lt;Box&gt;/Zuordnung — and, with the same shape, by the web
     /// interface to konfiguration/Laden/&lt;Ort&gt;/&lt;Box&gt;/Zuordnung as a manual override.

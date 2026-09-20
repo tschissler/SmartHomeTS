@@ -41,6 +41,10 @@ Dictionary<string, decimal> previousValues = new();
 // create a second point — same series, same measurement time, one row — but it is work nobody
 // needs, and the intent belongs here rather than in the storage engine.
 ConcurrentDictionary<string, string> letzteFahrzeugPayloads = new();
+// The join of the two session topics. Its state is the two latest retained payloads per box
+// plus the session it last wrote, so a restart re-reads both and writes the same row again —
+// same tags, same time, one row.
+var ladesitzungen = new Ladesitzungen();
 
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 var configuration = new ConfigurationBuilder()
@@ -154,6 +158,10 @@ using (var scope = app.Services.CreateScope())
     var mqttClient = scope.ServiceProvider.GetRequiredService<MQTTClient.MQTTClient>();
     await mqttClient.SubscribeToTopic(LadeTopics.StatusAlle);
     await mqttClient.SubscribeToTopic(LadeTopics.EnergieaufteilungAlle);
+    // The two halves of the session record. Both retained, both replayed on subscribe, and
+    // either may arrive first — the join tries again from whichever side a message comes.
+    await mqttClient.SubscribeToTopic(LadeTopics.LadesitzungAlle);
+    await mqttClient.SubscribeToTopic(LadeTopics.ZuordnungAlle);
     await mqttClient.SubscribeToTopic(FahrzeugTopics.StatusAlle);
     await mqttClient.SubscribeToTopic("data/electricity/M1/#");
     await mqttClient.SubscribeToTopic("data/electricity/M3/#");
@@ -361,6 +369,22 @@ using (var scope = app.Services.CreateScope())
             if (LadeTopics.ZerlegeEnergieaufteilungTopic(topic) is (string aufteilungOrt, string aufteilungBox))
             {
                 WriteEnergieaufteilungToDB(influx3Connector, payload, aufteilungOrt, aufteilungBox);
+                return;
+            }
+
+            if (LadeTopics.ZerlegeLadesitzungTopic(topic) is (string sitzungsOrt, string sitzungsBox))
+            {
+                var sitzung = Deserialisiere<Ladesitzung>(payload, topic);
+                if (sitzung is not null && IstUnsereLadeBox(sitzungsOrt, sitzungsBox, topic))
+                    VerarbeiteZusammenfuehrung(influx3Connector, ladesitzungen.MeldeSitzung(sitzungsBox, sitzung));
+                return;
+            }
+
+            if (LadeTopics.ZerlegeZuordnungTopic(topic) is (string zuordnungsOrt, string zuordnungsBox))
+            {
+                var zuordnung = Deserialisiere<FahrzeugZuordnung>(payload, topic);
+                if (zuordnung is not null && IstUnsereLadeBox(zuordnungsOrt, zuordnungsBox, topic))
+                    VerarbeiteZusammenfuehrung(influx3Connector, ladesitzungen.MeldeZuordnung(zuordnungsBox, zuordnung));
                 return;
             }
 
@@ -720,7 +744,10 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Location = location,
                     Device = "Waermepumpe",
                     Measurement = meassurement,
-                    Value_Status = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    // Not Int16.Parse: status_values is Int64, and a narrowing parse throws an
+                    // OverflowException past 32767 that the try/catch around this swallows — the
+                    // value would then simply stop arriving, without a trace.
+                    Value_Status = Decimal.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
                 },
                 DateTimeOffset.UtcNow);
             break;
@@ -767,9 +794,91 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                     Location = location,
                     Device = "Waermepumpe",
                     Measurement = meassurement,
-                    Value_Counter = Int16.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    // Same again for counter_values, and this is the one that will actually get
+                    // there: Betriebsstunden_Waermeerzeuger stood at 2579 on 2026-09-20 and only
+                    // ever grows.
+                    Value_Counter = Int32.Parse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture),
                 },
                 DateTimeOffset.UtcNow);
+            break;
+    }
+}
+
+T? Deserialisiere<T>(string payload, string topic) where T : class
+{
+    try
+    {
+        return JsonSerializer.Deserialize<T>(payload, jsonOptions);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError($"####Error deserializing {typeof(T).Name} for topic {topic}: {ex.Message}");
+        logger.LogError($"Payload: {payload}");
+        return null;
+    }
+}
+
+// The ladesitzungen table carries the box as its only tag and no location, so two boxes of the
+// same name in different buildings would silently merge into one series. Until the table gets a
+// location of its own, anything outside M3 is refused rather than mixed in. Both wallboxes are
+// in M3 (LadeTopics.Ort), so this refuses nothing that exists today.
+bool IstUnsereLadeBox(string ort, string wallbox, string topic)
+{
+    if (ort == LadeTopics.Ort)
+        return true;
+    logger.LogWarning($"Ladesitzungen: ignoring {topic} — the table has no location column, so a "
+        + $"box \"{wallbox}\" outside {LadeTopics.Ort} cannot be told apart from the one in it.");
+    return false;
+}
+
+// One row of the ladesitzungen table, or a log line saying why there is none. The column names
+// are spelled here and nowhere else; they are the ones in Docs/Ladeprotokoll.md.
+void VerarbeiteZusammenfuehrung(InfluxDB3Connector influx3Connector, Zusammenfuehrungsergebnis ergebnis)
+{
+    switch (ergebnis.Art)
+    {
+        case Zusammenfuehrung.Geschrieben:
+            var satz = ergebnis.Satz!;
+            influx3Connector.WritePointDataToInfluxDb(
+                "ladesitzungen",
+                new[] { ("wallbox", satz.Wallbox) },
+                new (string, object)[]
+                {
+                    ("sitzungs_id", (long)satz.SitzungsId),
+                    ("fahrzeug", satz.Fahrzeug),
+                    ("vertrauen", satz.Vertrauen),
+                    // A field, not a second time column — InfluxDB has only one of those, and
+                    // the row is placed on it by the session start. ISO 8601 in UTC so it reads
+                    // the same everywhere; the arithmetic is served by dauer_s next to it.
+                    ("ende", satz.Ende.ToUniversalTime().ToString("o")),
+                    ("dauer_s", satz.DauerSekunden),
+                    // How the session start was arrived at, and with it whether dauer_s is
+                    // measured at all. A field and not a tag: two or three values over every
+                    // session would multiply the series of the table for nothing.
+                    ("beginn_quelle", satz.Beginnquelle),
+                    ("ladezeit_s", satz.LadezeitSekunden),
+                    ("energie_kwh", Convert.ToDouble(satz.EnergieKwh)),
+                    ("energie_pv_kwh", Convert.ToDouble(satz.EnergiePvKwh)),
+                    ("energie_batterie_kwh", Convert.ToDouble(satz.EnergieBatterieKwh)),
+                    ("energie_netz_kwh", Convert.ToDouble(satz.EnergieNetzKwh)),
+                    ("energie_unzugeordnet_kwh", Convert.ToDouble(satz.EnergieUnzugeordnetKwh)),
+                },
+                satz.Beginn);
+            logger.LogInformation($"Ladesitzungen: {ergebnis.Begruendung}");
+            break;
+
+        // A record that is not written is the interesting case, not the noise: it means a
+        // charge happened that the history will not show.
+        case Zusammenfuehrung.ZuordnungFehlt:
+        case Zusammenfuehrung.SitzungsIdPasstNicht:
+        case Zusammenfuehrung.ZeitenUnbrauchbar:
+            logger.LogWarning($"Ladesitzungen: {ergebnis.Begruendung}");
+            break;
+
+        // Every control cycle of a running session lands here, and so does every retained
+        // replay of one already written. Neither is worth a line.
+        default:
+            logger.LogDebug($"Ladesitzungen: {ergebnis.Begruendung}");
             break;
     }
 }
