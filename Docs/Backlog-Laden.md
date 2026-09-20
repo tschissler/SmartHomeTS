@@ -254,7 +254,20 @@ gibt es nicht.
 dass eine Entwicklungs-Umgebungsvariable ohne Rückfrage Produktionszustand überschreibt —
 und der Bootstrap-Zyklus wiederholt sich in ~90 Tagen.
 
+**Wie die Variablen dorthin kamen.** Sie standen in keiner Datei, sondern in der
+systemd-User-Umgebung (`systemctl --user set-environment`), mit `REPLACE_ME` als Wert —
+also aus einer unausgefüllten Vorlage. Von dort erbt sie jeder neu gestartete Prozess,
+auch jedes neue Terminal; ein grep durch die Dotfiles findet sie nicht, und nach einem
+Logout sind sie verschwunden, was den Vorfall unreproduzierbar macht. Das Muster selbst
+ist im Repo etabliert und für Firmware-Builds sinnvoll
+(`ESP32Firmwares/SMLSensor.Firmware/set_env.fish` schreibt eine `.env` genau so in die
+User-Umgebung). Gefährlich ist erst die Kombination: eine global vererbte
+Entwicklungsvariable trifft auf einen Dienst, der Env-Vars ins Produktiv-Secret
+zurückschreibt.
+
 **Umfang**
+- [ ] Platzhalterwerte (`REPLACE_ME` und Ähnliches) beim Start erkennen und ablehnen
+      statt sie zu verwenden — sie sind das eigentliche Einfallstor
 - [ ] Vorrang umkehren oder absichern: im Cluster-Betrieb gewinnt das Secret. Eine
       Env-Var darf lokal überschreiben, aber nicht zurückschreiben
 - [ ] Rückschreiben nur mit Plausibilitätsprüfung (GCID und CLIENT_ID sind UUIDs, also
