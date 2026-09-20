@@ -19,6 +19,25 @@ const char* version = FIRMWARE_VERSION;
 CRGB ledsRight[NUM_LEDS];
 CRGB ledsLeft[NUM_LEDS];
 
+// Der Streifen bekommt die Farbe so, wie ein Bildschirm sie bekommt: gamma-kodiert.
+// 2,2 ist der Exponent der sRGB-Kurve, und genau in sRGB rechnet der Browser, der die
+// Vorschau in der Web-App zeichnet -- derselbe Zahlenwert ergibt damit hier dieselbe
+// wahrgenommene Helligkeit wie dort. Die PWM des WS2812B ist dagegen linear; ohne diese
+// Korrektur leuchtet jeder mittlere Wert deutlich zu hell.
+//
+// Ein groesserer Exponent macht es unten nicht feiner, sondern groeber: Nachgerechnet
+// fallen bei 2,2 die Helligkeitsstufen 1..11 der Web-App auf denselben PWM-Wert 1, bei
+// 2,6 schon die Stufen 1..15 und bei 2,8 die Stufen 1..17. Mehr Aufloesung im Dunkeln
+// gaebe nur mehr als 8 Bit PWM.
+static const float GAMMA = 2.2f;
+
+// Weissabgleich: Der gruene Kanal eines WS2812B ist deutlich effizienter als Rot und
+// Blau. Ohne Korrektur hat jedes Weiss und jedes Pastell einen Gruenstich. Die Faktoren
+// sind die von FastLEDs TypicalLEDStrip (0xFFB0F0).
+static const uint8_t WEISSABGLEICH_R = 255;
+static const uint8_t WEISSABGLEICH_G = 176;
+static const uint8_t WEISSABGLEICH_B = 240;
+
 // WiFi credentials are read from environment variables and used during compile-time (see platformio.ini)
 // Set WIFI_PASSWORDS as environment variables on your dev-system following the pattern:
 // WIFI_PASSWORDS="ssid1;password1|ssid2;password2"
@@ -119,28 +138,62 @@ void setColorFromJson(String jsonPayload) {
 }
 
 void setLEDColor(int r, int g, int b, int d, Panel panel) {
+  // Voller Fuellgrad heisst "alle an" und laeuft deshalb nicht ueber die Modulo-Formel.
+  // Ueber sie gerechnet blieb ausgerechnet LED 0 dunkel: Der Sonderfall setzte
+  // trigger2 = 999, und 0 % 999 == 0 macht die Bedingung (i % trigger2 != 0) falsch --
+  // 255 von 256 LEDs. Ein Wert ueber 100, wie ihn die Web-App frueher als Maximum
+  // schickte, war schlimmer statt besser: 101 ergibt trigger2 = 100 / -1 = -100, und
+  // weil das Vorzeichen in C++ dem Dividenden folgt, blieben die LEDs 0, 100 und 200
+  // dunkel -- 253 von 256.
+  const bool alleAn = (d >= 100);
   int trigger = (d == 0 ? 999 : 100 / d);
-  int trigger2 = (d == 100 ? 999 : 100 / (100 - d));
+  // Bei alleAn wird trigger2 nicht mehr gelesen; die 1 steht nur, damit an dieser
+  // Stelle nicht durch 0 geteilt wird.
+  int trigger2 = (alleAn ? 1 : 100 / (100 - d));
+
+  // Alle LEDs eines Panels bekommen dieselbe Farbe, also werden Gamma und Weissabgleich
+  // einmal je Nachricht gerechnet und nicht 256-mal. Deshalb braucht es auch keine
+  // Wertetabelle im Flash.
+  CRGB farbe = CRGB(r, g, b);
+
+  // Die _video-Variante zieht einen Wert > 0 nie auf 0 -- eine dunkle Farbe bleibt sonst
+  // nicht dunkel, sondern verschwindet.
+  napplyGamma_video(farbe, GAMMA);
+
+  // Der Weissabgleich wird hier von Hand gerechnet und nicht ueber .setCorrection() am
+  // Controller. Der Grund ist der Zusammenstoss der beiden Korrekturen im untersten
+  // Bereich: FastLED skaliert beim show() mit scale8(), und scale8(1, 176) ist 0. Die 1,
+  // auf die napplyGamma_video gerade geklemmt hat, faellt damit wieder weg -- Gruen und
+  // Blau verschwinden bei wenig Helligkeit ganz, und aus einem Grau wird Rot. Genau die
+  // Farbverschiebung also, die diese Korrektur beseitigen soll. scale8_video haelt einen
+  // Wert > 0 bei mindestens 1 und hat das Problem nicht.
+  farbe.r = scale8_video(farbe.r, WEISSABGLEICH_R);
+  farbe.g = scale8_video(farbe.g, WEISSABGLEICH_G);
+  farbe.b = scale8_video(farbe.b, WEISSABGLEICH_B);
 
   // Helper function to set LED color
   auto setLed = [&](int i, bool condition) {
     if (panel == Panel::BOTH || panel == Panel::RIGHT) {
-      ledsRight[i] = condition ? CRGB(r, g, b) : CRGB(0, 0, 0);
+      ledsRight[i] = condition ? farbe : CRGB(0, 0, 0);
     } 
     if (panel == Panel::BOTH || panel == Panel::LEFT) {
-      ledsLeft[i] = condition ? CRGB(r, g, b) : CRGB(0, 0, 0);
+      ledsLeft[i] = condition ? farbe : CRGB(0, 0, 0);
     }
   };
 
   // Set LED color
   for (int i = 0; i < NUM_LEDS; i++) {
-    bool condition = (d <= 50) ? (i % trigger == 0) : (i % trigger2 != 0);
+    bool condition = alleAn || ((d <= 50) ? (i % trigger == 0) : (i % trigger2 != 0));
     setLed(i, condition);
   }
 
   FastLED.show();
 }
 
+// Die Startanzeige laeuft bewusst ohne Gamma und ohne Weissabgleich: Sie ist keine Farbe,
+// die stimmen muss, sondern das einzige Zeichen am Geraet selbst, dass es nach einem
+// OTA-Update wieder hochgekommen ist. Korrigiert waere aus (10, 80, 10) ein kaum
+// sichtbares Glimmen geworden.
 void initLEDGreen(Panel panel) {
   for (int i = 0; i < NUM_LEDS; i++) {
     if (panel == Panel::BOTH || panel == Panel::RIGHT) {
