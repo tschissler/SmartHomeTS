@@ -1,4 +1,5 @@
 using ChargingController;
+using HeartbeatLib;
 using MQTTnet;
 using SharedContracts;
 using System.Text;
@@ -8,6 +9,10 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 IMqttClient mqttClient;
 ChargingSituation currentChargingSituation = new ChargingSituation();
 ChargingSettings? currentChargingSettings = null;
+// Set once the health check web app is up. Until then there is nothing to report and the
+// service heartbeat waits - it must say what the registered checks say, not guess.
+HealthCheckService? healthChecks = null;
+DateTime lastServiceHeartbeatTime = DateTime.MinValue;
 DateTime lastHeartbeatTime = DateTime.MinValue;
 DateTime lastControlCycleTime = DateTime.MinValue;
 // Waiting is a normal state at startup and a fault if it lasts. Saying once per minute what
@@ -46,6 +51,9 @@ Dictionary<string, WallboxStatus> latestWallboxStatus = new();
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
+// Makes the service visible on status/# next to the 17 ESP32 devices - a stopped connector is
+// invisible on MQTT otherwise. See Docs/Service-Heartbeat.md.
+var serviceHeartbeat = new ServiceHeartbeat("ChargingController", versionInfo.Version);
 Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
 Console.WriteLine("║  ChargingController Starting                                       ║");
 Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
@@ -71,6 +79,7 @@ var mqttClientId = $"Smarthome.ChargingController_{Environment.MachineName}";
 
 Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
 Console.WriteLine($" ### MQTT Client Id: {mqttClientId}");
+Console.WriteLine($" ### Service heartbeat topic: {serviceHeartbeat.Topic}");
 
 // Start health check HTTP server in background
 var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
@@ -101,6 +110,13 @@ while (true)
     {
         lastHeartbeatTime = DateTime.Now;
         await PublishHeartbeat();
+    }
+    // Only counted as sent when it actually went out, so a broker that is still coming up does
+    // not cost a whole interval of silence on the device page.
+    if (DateTime.Now.Subtract(lastServiceHeartbeatTime).TotalSeconds >= heartbeatIntervalSeconds
+        && await PublishServiceHeartbeat())
+    {
+        lastServiceHeartbeatTime = DateTime.Now;
     }
     await Task.Delay(1000);
 }
@@ -277,6 +293,32 @@ async Task PublishHeartbeat()
     }
 }
 
+// The service heartbeat of the device page. Retained, because it is state: the last one stays
+// on the broker after the pod dies, and its Zeitpunkt is what turns the card silent - which is
+// the whole point. Nothing about the charging loop, so a failure here only costs the card.
+async Task<bool> PublishServiceHeartbeat()
+{
+    if (!mqttClient.IsConnected || healthChecks is null)
+        return false;
+    try
+    {
+        var report = await healthChecks.CheckHealthAsync();
+        var payload = serviceHeartbeat.BuildPayload(report, ChargingControllerHealthCheck.LastSuccessfulRead);
+        await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+            .WithTopic(serviceHeartbeat.Topic)
+            .WithPayload(payload)
+            .WithRetainFlag()
+            .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
+            .Build());
+        return true;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error publishing service heartbeat: {ex.Message}");
+        return false;
+    }
+}
+
 // The command carries the time it was decided. It is published retained, so the broker
 // replays it to the KebaConnector on every subscribe — only this timestamp lets the connector
 // tell a live setpoint from an arbitrarily old one and release the box when control is gone.
@@ -448,7 +490,7 @@ async Task MQTTConnectAsync()
     }
 }
 
-static void StartHealthCheckServer(int port)
+void StartHealthCheckServer(int port)
 {
     var builder = WebApplication.CreateBuilder();
     // Health check probes would otherwise rotate away the useful log lines within hours
@@ -459,6 +501,10 @@ static void StartHealthCheckServer(int port)
         .AddCheck<ChargingControllerHealthCheck>("charging_controller");
 
     var app = builder.Build();
+
+    // The same HealthCheckService the /ready probe answers from. The service heartbeat reports
+    // what it says rather than re-deciding what "healthy" means.
+    healthChecks = app.Services.GetRequiredService<HealthCheckService>();
 
     // Configure health check endpoints
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

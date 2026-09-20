@@ -36,6 +36,13 @@ gesamte Flotte bedeutet. **Neue Teilnehmer übernehmen dieses Bestandsformat**, 
 .NET-Dienste verwenden `Cluster` als Ort. Die Migration des ganzen Namensraums ist ein
 eigener, späterer Schritt für alle Teilnehmer gemeinsam.
 
+Die acht Dienste senden seit Punkt 3 auf `status/Cluster/Dienst/<Name>`. Sie übernehmen
+das Bestandsformat, lassen aber alles weg, was ESP32-Hardware beschreibt (`mac`,
+`chipModel`, `ip`, `rssi`, `freeHeap`, `resetReason`) und tragen zusätzlich `Zeitpunkt`,
+`Zustand` und `ZustandText`. **Ein Feld, das ein Sender nicht ehrlich füllen kann, fehlt —
+es wird nicht als 0 gesendet**, sonst liest der Verbraucher eine Messung, die es nie gab.
+Der Feldsatz und die Begründung je Feld stehen in `Service-Heartbeat.md`.
+
 ## Warum diese Reihenfolge
 
 Die Ebenen bilden die Tags der InfluxDB-Tabelle `energy_values` ab
@@ -113,10 +120,10 @@ Ein Fahrzeug ist ortslos: es bewegt sich und lädt manchmal auswärts. Kategorie
 | Bereich | Stand |
 |---|---|
 | `daten/Laden/…`, `daten/Fahrzeug/…` | wird mit dem Ladevorhaben umgestellt (siehe `Backlog-Laden.md`) |
-| `status/<Ort>/<Geraetetyp>/<Name>` | **dokumentierte Ausnahme** (siehe oben): Kategorie- und Aspekt-Ebene fehlen. Neue Teilnehmer folgen dem Bestandsformat; Migration nur gemeinsam mit der ESP32-Flotte |
+| `status/<Ort>/<Geraetetyp>/<Name>` | **dokumentierte Ausnahme** (siehe oben): Kategorie- und Aspekt-Ebene fehlen. Neue Teilnehmer folgen dem Bestandsformat; Migration nur gemeinsam mit der ESP32-Flotte. Die Dienste liegen unter `status/Cluster/Dienst/…` und tragen bereits `Zeitpunkt` — siehe `Service-Heartbeat.md` |
 | `daten/temperatur/…`, `daten/luftfeuchtigkeit/…` | Kleinschreibung und fehlende Aspekt-Ebene; 18 ESP32-Firmwares, nur bei OTA-Anlass |
 | `cangateway/…` | ohne Art-Ebene; Migration offen |
-| `meta/…`, `OTAUpdate/…` | sollen langfristig in `status/` bzw. `konfiguration/Ota/` aufgehen |
+| `meta/…`, `OTAUpdate/…` | sollen langfristig in `status/` bzw. `konfiguration/Ota/` aufgehen. `meta/RulesEngine/version` ist mit Punkt 3 bereits im Heartbeat aufgegangen und wurde gelöscht; die `meta/…/version` der Geräte bleiben, solange Firmwares ohne Heartbeat laufen |
 | `data/…` (englisch) | Altbestand, wird bei Berührung nach `daten/` gezogen |
 | `Nachrichten/…` | wurde nur von der Flutter-App gelesen, entfällt mit deren Stilllegung |
 

@@ -92,9 +92,31 @@ else
                             {
                                 <div class="meta-row">
                                     <span title="Laufzeit"><i class="bi bi-clock-history"></i> @Humanize(TimeSpan.FromSeconds(l.UptimeSeconds))</span>
-                                    <span title="WLAN @l.Rssi dBm"><i class="bi @RssiIcon(l.Rssi)"></i> @l.Rssi</span>
-                                    <span title="Freier Speicher"><i class="bi bi-memory"></i> @(l.FreeHeap / 1024) KB</span>
-                                    <span title="Verbindungen seit Neustart"><i class="bi bi-plug"></i> @l.MqttConnects</span>
+                                    @* The sender's own health verdict, for the senders that have one. It is
+                                       shown next to the card state rather than merged into it: the card state
+                                       is about silence, and a service that answers but reports trouble is a
+                                       different fault than one that has stopped talking. *@
+                                    @if (!string.IsNullOrEmpty(l.Zustand))
+                                    {
+                                        <span class="health-chip @HealthClass(l.Zustand)" title="@(l.ZustandText ?? l.Zustand)">
+                                            <i class="bi @HealthIcon(l.Zustand)"></i> @HealthLabel(l.Zustand)
+                                        </span>
+                                    }
+                                    @* Hardware values only a device has. A service leaves them out, and an
+                                       omitted field must not be drawn as a measured 0 - a missing RSSI would
+                                       otherwise show up as perfect reception. *@
+                                    @if (l.Rssi is { } rssi)
+                                    {
+                                        <span title="WLAN @rssi dBm"><i class="bi @RssiIcon(rssi)"></i> @rssi</span>
+                                    }
+                                    @if (l.FreeHeap is { } freeHeap)
+                                    {
+                                        <span title="Freier Speicher"><i class="bi bi-memory"></i> @(freeHeap / 1024) KB</span>
+                                    }
+                                    @if (l.MqttConnects is { } connects)
+                                    {
+                                        <span title="Verbindungen seit Neustart"><i class="bi bi-plug"></i> @connects</span>
+                                    }
                                     @if (DataAge(l) is { } dataAge)
                                     {
                                         <span title="Zuletzt Daten gesendet"><i class="bi bi-graph-up-arrow"></i> Daten @Humanize(dataAge)</span>
@@ -151,8 +173,10 @@ else
 }
 
 <p class="footnote">
-    Heartbeat-Alter wird lokal gemessen und beginnt mit dem Start der Anwendung –
-    nach einem Neustart sehen kurzzeitig alle Geräte aktuell aus.
+    Geräte senden keinen Zeitstempel, den man vergleichen könnte – ihr Heartbeat-Alter wird
+    lokal gemessen und beginnt mit dem Start der Anwendung, nach einem Neustart sehen sie
+    deshalb kurzzeitig alle aktuell aus. Die Dienste unter „Cluster“ senden einen
+    <code>Zeitpunkt</code> mit; ihr Alter stimmt auch direkt nach einem Neustart.
 </p>
 
 @code {
@@ -371,6 +395,32 @@ else
     // Everything except poweron/software hints at a crash or watchdog
     private static bool IsNoteworthyReset(string reason) =>
         reason is not ("" or "poweron" or "software" or "external");
+
+    // The three values Microsoft.Extensions.Diagnostics.HealthChecks knows. Anything else is a
+    // sender the page does not know and is shown verbatim rather than hidden.
+    private static string HealthLabel(string zustand) => zustand switch
+    {
+        "Healthy" => "gesund",
+        "Degraded" => "eingeschränkt",
+        "Unhealthy" => "gestört",
+        _ => zustand,
+    };
+
+    private static string HealthClass(string zustand) => zustand switch
+    {
+        "Healthy" => "health-ok",
+        "Degraded" => "health-warn",
+        "Unhealthy" => "health-bad",
+        _ => "health-unknown",
+    };
+
+    private static string HealthIcon(string zustand) => zustand switch
+    {
+        "Healthy" => "bi-heart-pulse",
+        "Degraded" => "bi-exclamation-triangle",
+        "Unhealthy" => "bi-x-octagon",
+        _ => "bi-question-circle",
+    };
 
     private static string RssiIcon(int rssi) => rssi switch
     {

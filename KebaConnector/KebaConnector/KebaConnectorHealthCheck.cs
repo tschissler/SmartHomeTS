@@ -7,6 +7,15 @@ namespace KebaConnector
         private static DateTime _lastSuccessfulRead = DateTime.MinValue;
         private static bool _isMqttConnected = false;
 
+        /// <summary>
+        /// When a wallbox was last read successfully; null before the first read. Exposed so the
+        /// service heartbeat on status/ reports the same moment this check judges by - two
+        /// counters would let readiness and the device page disagree.
+        /// </summary>
+        public static DateTimeOffset? LastSuccessfulRead => _lastSuccessfulRead == DateTime.MinValue
+            ? null
+            : new DateTimeOffset(_lastSuccessfulRead, TimeSpan.Zero);
+
         public static void UpdateLastSuccessfulRead()
         {
             _lastSuccessfulRead = DateTime.UtcNow;

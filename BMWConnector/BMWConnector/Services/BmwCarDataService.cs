@@ -257,6 +257,7 @@ public class BmwCarDataService : BackgroundService
             .Build();
 
         await _localClient.PublishAsync(message);
+        _health.MarkPublished();
         _log.LogInformation("[{Vehicle}] Published to {Topic}", _config.Name, _config.OutputTopic);
     }
 

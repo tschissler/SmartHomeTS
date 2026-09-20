@@ -27,6 +27,7 @@ COPY ["${PROJECT_NAME}/Influx3Connector/Influx3Connector.csproj", "${PROJECT_NAM
 # The test project is not published, but it is part of the solution — and the restore below
 # is a solution restore, which fails on a project file it cannot find.
 COPY ["${PROJECT_NAME}/${PROJECT_NAME}Tests/${PROJECT_NAME}Tests.csproj", "${PROJECT_NAME}/${PROJECT_NAME}Tests/"]
+COPY ["Libs/HeartbeatLib/HeartbeatLib/HeartbeatLib.csproj", "Libs/HeartbeatLib/HeartbeatLib/"]
 COPY ["MQTTClient/MQTTClient.csproj", "MQTTClient/"]
 COPY ["SharedContracts/SharedContracts.csproj", "SharedContracts/"]
 COPY ["SmartHomeHelpers/SmartHomeHelpers.csproj", "SmartHomeHelpers/"]

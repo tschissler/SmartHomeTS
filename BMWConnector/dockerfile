@@ -1,17 +1,26 @@
 # Build context is the repository root, not BMWConnector/: the connector references
-# SharedContracts for its topic names, and a context of BMWConnector/ cannot reach it.
+# SharedContracts for its topic names and HeartbeatLib for its status/ heartbeat, and a
+# context of BMWConnector/ cannot reach either.
 # The ChargingController image is built the same way, for the same reason.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# The image tag, handed in by the workflow. It ends up in the assembly version and from there
+# in the service heartbeat, which is the only place the running build is visible.
+ARG VERSION=1.0.0
 WORKDIR /src
 
 # Project files first, so a code change does not invalidate the restore layer.
 COPY BMWConnector/BMWConnector/BMWConnector.csproj BMWConnector/BMWConnector/
 COPY SharedContracts/SharedContracts.csproj SharedContracts/
+COPY Libs/HeartbeatLib/HeartbeatLib/HeartbeatLib.csproj Libs/HeartbeatLib/HeartbeatLib/
 RUN dotnet restore BMWConnector/BMWConnector/BMWConnector.csproj
 
 COPY BMWConnector/ BMWConnector/
 COPY SharedContracts/ SharedContracts/
-RUN dotnet publish BMWConnector/BMWConnector/BMWConnector.csproj -c Release -o /app/publish
+COPY Libs/HeartbeatLib/HeartbeatLib/ Libs/HeartbeatLib/HeartbeatLib/
+RUN dotnet publish BMWConnector/BMWConnector/BMWConnector.csproj -c Release -o /app/publish \
+    -p:Version=${VERSION} \
+    -p:AssemblyVersion=${VERSION} \
+    -p:FileVersion=${VERSION}
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app

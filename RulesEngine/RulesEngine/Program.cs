@@ -1,3 +1,4 @@
+using HeartbeatLib;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MQTTClient;
 using MQTTnet.Protocol;
@@ -8,6 +9,12 @@ using System.Text.Json;
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
+// Makes the service visible on status/# next to the 17 ESP32 devices, and replaces
+// meta/RulesEngine/version, which carried nothing but a number. See Docs/Service-Heartbeat.md.
+var serviceHeartbeat = new ServiceHeartbeat("RulesEngine", versionInfo.Version);
+// Set once the health check web app is up. Until then there is nothing to report and the
+// service heartbeat waits - it must say what the registered checks say, not guess.
+HealthCheckService? healthChecks = null;
 Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
 Console.WriteLine("║  RulesEngine Starting                                              ║");
 Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
@@ -49,6 +56,7 @@ var maxVehicleReportAgeHours = int.Parse(configuration["MaxVehicleReportAgeHours
 var assignmentRestoreSeconds = int.Parse(configuration["AssignmentRestoreSeconds"] ?? "15");
 
 Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
+Console.WriteLine($" ### Service heartbeat topic: {serviceHeartbeat.Topic}");
 Console.WriteLine($" ### FA_Status topic: {faStatusTopic}");
 Console.WriteLine($" ### Mixer command topics: {string.Join(", ", mixerCommandTopics)}");
 Console.WriteLine($" ### Max status age: {maxStatusAgeMinutes} min, evaluation interval: {evaluationIntervalSeconds} s");
@@ -113,7 +121,10 @@ await mqttClient.SubscribeToTopic(LadeTopics.ZuordnungAlle);
 await mqttClient.SubscribeToTopic(LadeTopics.ZuordnungKorrekturAlle);
 Console.WriteLine("    ...Done");
 
-await mqttClient.PublishAsync("meta/RulesEngine/version", versionInfo.Version, MqttQualityOfServiceLevel.AtLeastOnce, true);
+// The version now rides in the service heartbeat, together with uptime and health. The old
+// retained meta topic is cleared with an empty payload rather than simply abandoned - left
+// alone it would sit on the broker forever, naming a version nobody updates any more.
+await mqttClient.PublishAsync("meta/RulesEngine/version", "", MqttQualityOfServiceLevel.AtLeastOnce, true);
 
 // Publish once at startup to establish the retained command, then only when
 // the decision changes. The periodic evaluation exists so the staleness rule
@@ -131,7 +142,31 @@ var evaluationTimer = new Timer(_ =>
     EvaluateAssignments();
 }, null, evaluationIntervalSeconds * 1000, evaluationIntervalSeconds * 1000);
 
+// Separate from the evaluation tick on purpose: the heartbeat has to keep going when a rule
+// evaluation fails, because that failure is exactly what it is supposed to report.
+var heartbeatTimer = new Timer(PublishServiceHeartbeat, null,
+    TimeSpan.Zero, ServiceHeartbeat.DefaultIntervall);
+
 Thread.Sleep(Timeout.Infinite);
+
+// Retained, because it is state: the last heartbeat stays on the broker after the pod dies,
+// and its Zeitpunkt is what turns the card on the device page silent.
+async void PublishServiceHeartbeat(object? state)
+{
+    try
+    {
+        if (healthChecks is null || !mqttClient.IsConnected)
+            return;
+        var report = await healthChecks.CheckHealthAsync();
+        var payload = serviceHeartbeat.BuildPayload(report, RulesEngineHealthCheck.LastEvaluation);
+        await mqttClient.PublishAsync(serviceHeartbeat.Topic, payload,
+            MqttQualityOfServiceLevel.AtLeastOnce, true);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error publishing service heartbeat: {ex.Message}");
+    }
+}
 
 void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
 {
@@ -424,7 +459,7 @@ static TimeSpan Age(DateTimeOffset timestamp, DateTimeOffset now)
 static string PositionToPayload(MixerPosition position)
     => position == MixerPosition.Closed ? "close" : "open";
 
-static void StartHealthCheckServer(int port)
+void StartHealthCheckServer(int port)
 {
     var builder = WebApplication.CreateBuilder();
     // Health check probes would otherwise rotate away the useful log lines within hours
@@ -435,6 +470,10 @@ static void StartHealthCheckServer(int port)
         .AddCheck<RulesEngineHealthCheck>("rules_engine");
 
     var app = builder.Build();
+
+    // The same HealthCheckService the /ready probe answers from. The service heartbeat reports
+    // what it says rather than re-deciding what "healthy" means.
+    healthChecks = app.Services.GetRequiredService<HealthCheckService>();
 
     // Configure health check endpoints
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

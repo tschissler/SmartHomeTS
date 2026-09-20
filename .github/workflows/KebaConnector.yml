@@ -8,6 +8,7 @@ on:
       - KebaConnector/**
       # Shared code this service references (transitively resolved) - without
       # these the image is not rebuilt and the change deploys silently nowhere.
+      - Libs/HeartbeatLib/**
       - Libs/HelpersLib/**
       - MQTTClient/**
       - SharedContracts/**

@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="../Libs/HeartbeatLib/HeartbeatLib/HeartbeatLib.csproj" />
+  <Project Path="../Libs/HeartbeatLib/HeartbeatLibTests/HeartbeatLibTests.csproj" />
   <Project Path="BMWConnector/BMWConnector.csproj" />
   <Project Path="BMWConnectorTests/BMWConnectorTests.csproj" />
 </Solution>

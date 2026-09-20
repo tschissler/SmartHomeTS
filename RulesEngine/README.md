@@ -105,7 +105,8 @@ B:65535) und trotzdem Kühlleistung ankommt (zu warm).
 | `daten/Fahrzeug/+/Status` | in (retained) | Fahrzeugdaten (`chargerConnected`, `lastUpdate`) |
 | `konfiguration/Laden/+/+/Zuordnung` | in (retained) | manuelle Korrektur aus der Weboberfläche |
 | `daten/Laden/M3/<Box>/Zuordnung` | **in und out** (retained) | eigene Aussage: `SitzungsId`, `Fahrzeug`, `Vertrauen`, `Zeitpunkt`. Wird zurückgelesen, weil sie nach einem Neustart die laufende Zuordnung **und** die Historie ist |
-| `meta/RulesEngine/version` | out (retained) | Service-Version |
+| `status/Cluster/Dienst/RulesEngine` | out (retained, 60 s) | Service-Heartbeat: Version, Laufzeit, letzte Regelauswertung, Zustand der Health-Checks. Erscheint auf der Geräteseite der Weboberfläche — siehe `Docs/Service-Heartbeat.md` |
+| `meta/RulesEngine/version` | — | **entfällt.** Ging im Heartbeat auf; der Service löscht das retained Topic beim Start mit leerem Payload |
 
 Die Zielposition wird retained publiziert — einmal beim Start und danach nur
 bei **Entscheidungsänderungen**. Intern wertet der Service die Regel zyklisch

@@ -7,6 +7,15 @@ public class RulesEngineHealthCheck : IHealthCheck
     private static DateTime _lastEvaluation = DateTime.MinValue;
     private static bool _isMqttConnected = false;
 
+    /// <summary>
+    /// When the rules were last evaluated; null before the first evaluation. Exposed so the
+    /// service heartbeat on status/ reports the same moment this check judges by - two counters
+    /// would let readiness and the device page disagree.
+    /// </summary>
+    public static DateTimeOffset? LastEvaluation => _lastEvaluation == DateTime.MinValue
+        ? null
+        : new DateTimeOffset(_lastEvaluation, TimeSpan.Zero);
+
     public static void UpdateLastEvaluation()
     {
         _lastEvaluation = DateTime.UtcNow;

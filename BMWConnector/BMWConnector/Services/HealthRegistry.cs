@@ -20,6 +20,7 @@ public class HealthRegistry
     private readonly ILogger<HealthRegistry> _log;
     private readonly TimeSpan _staleAfter;
     private readonly Func<DateTimeOffset> _now;
+    private long _lastPublishedTicks;
 
     public HealthRegistry(ILogger<HealthRegistry> log, TimeSpan staleAfter, Func<DateTimeOffset>? now = null)
     {
@@ -51,6 +52,23 @@ public class HealthRegistry
         else
             _log.LogInformation("[{Vehicle}] Disconnected from the BMW broker, reconnecting. "
                               + "Readiness holds for {Grace} minutes.", vehicle, _staleAfter.TotalMinutes);
+    }
+
+    /// <summary>
+    /// A vehicle state was published to the local broker. Recorded here rather than in a counter
+    /// of its own so the service heartbeat on status/ and this registry describe the same service.
+    /// </summary>
+    public void MarkPublished()
+        => Interlocked.Exchange(ref _lastPublishedTicks, _now().UtcTicks);
+
+    /// <summary>When any vehicle was last published; null before the first one.</summary>
+    public DateTimeOffset? LastPublishedAt
+    {
+        get
+        {
+            var ticks = Interlocked.Read(ref _lastPublishedTicks);
+            return ticks == 0 ? null : new DateTimeOffset(ticks, TimeSpan.Zero);
+        }
     }
 
     /// <summary>

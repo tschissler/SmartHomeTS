@@ -1,6 +1,8 @@
+using System.Reflection;
 using System.Text.Json;
 using BMWConnector.Models;
 using BMWConnector.Services;
+using HeartbeatLib;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -123,6 +125,28 @@ var tokenRefreshMonitor = new TokenRefreshMonitor(
 builder.Services.AddSingleton(healthRegistry);
 builder.Services.AddSingleton<IHostedService>(tokenRefreshMonitor);
 
+// Makes the connector visible on status/# next to the 17 ESP32 devices. Without it the 35-day
+// outage of Aug 2026 was invisible on MQTT - the device page simply did not know the service
+// existed. See Docs/Service-Heartbeat.md.
+var serviceHeartbeat = new ServiceHeartbeat("BMWConnector", AssemblyVersion());
+var heartbeatPublisher = new LocalBrokerPublisher(
+    Environment.GetEnvironmentVariable("MQTT_BROKER") ?? "mosquitto.intern",
+    int.Parse(Environment.GetEnvironmentVariable("MQTT_PORT") ?? "1883"),
+    $"bmw-connector-heartbeat-{Environment.MachineName}",
+    loggerFactory.CreateLogger<LocalBrokerPublisher>());
+
+// Registered as well as captured, so the container closes the connection on shutdown.
+builder.Services.AddSingleton(heartbeatPublisher);
+builder.Services.AddSingleton<IHostedService>(sp => new ServiceHeartbeatWorker(
+    serviceHeartbeat,
+    // The readiness checks only. The token age warning is deliberately not among them - a
+    // warned but working connector is ready, and the heartbeat must not claim otherwise.
+    ct => sp.GetRequiredService<HealthCheckService>()
+            .CheckHealthAsync(check => check.Tags.Contains("ready"), ct),
+    (topic, payload, ct) => heartbeatPublisher.PublishRetainedAsync(topic, payload, ct),
+    () => healthRegistry.LastPublishedAt,
+    log: loggerFactory.CreateLogger<ServiceHeartbeatWorker>()));
+
 builder.Services.AddHealthChecks()
     // Liveness answers one question only: is this process still serving? A dead BMW connection
     // must never restart the pod — a restart cannot renew an expired refresh token, it would
@@ -166,6 +190,16 @@ app.MapHealthChecks("/healthz/tokens", new HealthCheckOptions
 });
 
 app.Run();
+
+// The image tag the pod is running, for the heartbeat. The CI passes it into the build as
+// -p:Version; outside the pipeline there is no such number and "dev" is the honest answer.
+static string AssemblyVersion()
+{
+    var version = Assembly.GetExecutingAssembly().GetName().Version;
+    return version is null || version is { Major: 1, Minor: 0, Build: 0 }
+        ? "dev"
+        : $"{version.Major}.{version.Minor}.{version.Build}";
+}
 
 // Names which vehicle is missing instead of just "Degraded" — the status alone sent the
 // last diagnosis down the wrong path.

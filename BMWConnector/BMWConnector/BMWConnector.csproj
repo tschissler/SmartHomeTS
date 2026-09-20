@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Libs\HeartbeatLib\HeartbeatLib\HeartbeatLib.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
   </ItemGroup>
 

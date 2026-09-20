@@ -1,3 +1,4 @@
+using HeartbeatLib;
 using HelpersLib;
 using KebaConnector;
 using MQTTnet;
@@ -11,9 +12,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 MQTTClient.MQTTClient mqttClient;
 KebaDeviceConnector kebaStellplatz;
 KebaDeviceConnector kebaGarage;
+// Set once the health check web app is up. Until then there is nothing to report and the
+// service heartbeat waits - it must say what the registered checks say, not guess.
+HealthCheckService? healthChecks = null;
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
+// Makes the service visible on status/# next to the 17 ESP32 devices - a stopped connector is
+// invisible on MQTT otherwise. See Docs/Service-Heartbeat.md.
+var serviceHeartbeat = new ServiceHeartbeat("KebaConnector", versionInfo.Version);
 Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
 Console.WriteLine("║  KebaConnector Starting                                            ║");
 Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
@@ -38,6 +45,7 @@ var kebaPort = int.Parse(configuration["KebaPort"] ?? "7090");
 
 Console.WriteLine($" ### Configuration: MQTT Broker={mqttBroker}:{mqttPort}, Health Check Port={healthCheckPort}");
 Console.WriteLine($" ### Wallboxes: {LadeTopics.Stellplatz}={kebaStellplatzHost}:{kebaPort}, {LadeTopics.Garage}={kebaGarageHost}:{kebaPort}");
+Console.WriteLine($" ### Service heartbeat topic: {serviceHeartbeat.Topic}");
 
 // Start health check HTTP server in background
 var healthCheckTask = Task.Run(() => StartHealthCheckServer(healthCheckPort));
@@ -76,9 +84,32 @@ await mqttClient.SubscribeToTopic(LadeTopics.LadestromAlle);
 Console.WriteLine("    ...Done");
 
 var timer = new Timer(Update, null, 2000, 5000);
+// Separate from the wallbox cycle on purpose: the heartbeat has to keep going when reading a
+// box fails, because that failure is exactly what it is supposed to report.
+var heartbeatTimer = new Timer(PublishServiceHeartbeat, null,
+    TimeSpan.Zero, ServiceHeartbeat.DefaultIntervall);
 
 Thread.Sleep(Timeout.Infinite);
 
+
+// Retained, because it is state: the last heartbeat stays on the broker after the pod dies,
+// and its Zeitpunkt is what turns the card on the device page silent.
+async void PublishServiceHeartbeat(object? state)
+{
+    try
+    {
+        if (healthChecks is null || !mqttClient.IsConnected)
+            return;
+        var report = await healthChecks.CheckHealthAsync();
+        var payload = serviceHeartbeat.BuildPayload(report, KebaConnectorHealthCheck.LastSuccessfulRead);
+        await mqttClient.PublishAsync(serviceHeartbeat.Topic, payload,
+            MqttQualityOfServiceLevel.AtLeastOnce, retain: true);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error publishing service heartbeat - " + ex.ToDetailedString());
+    }
+}
 
 async void Update(object? state)
 {
@@ -199,7 +230,7 @@ static async Task PublishWallboxStatus(MQTTClient.MQTTClient mqttClient, KebaDat
         MqttQualityOfServiceLevel.AtLeastOnce, true);
 }
 
-static void StartHealthCheckServer(int port)
+void StartHealthCheckServer(int port)
 {
     var builder = WebApplication.CreateBuilder();
     // Health check probes would otherwise rotate away the useful log lines within hours
@@ -210,6 +241,10 @@ static void StartHealthCheckServer(int port)
         .AddCheck<KebaConnectorHealthCheck>("keba_connector");
 
     var app = builder.Build();
+
+    // The same HealthCheckService the /ready probe answers from. The service heartbeat reports
+    // what it says rather than re-deciding what "healthy" means.
+    healthChecks = app.Services.GetRequiredService<HealthCheckService>();
 
     // Configure health check endpoints
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

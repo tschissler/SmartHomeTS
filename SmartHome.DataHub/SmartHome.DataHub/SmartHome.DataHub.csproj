@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Libs\HeartbeatLib\HeartbeatLib\HeartbeatLib.csproj" />
     <ProjectReference Include="..\..\MQTTClient\MQTTClient.csproj" />
     <ProjectReference Include="..\..\SharedContracts\SharedContracts.csproj" />
     <ProjectReference Include="..\Influx3Connector\Influx3Connector.csproj" />
