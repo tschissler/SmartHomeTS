@@ -3,7 +3,7 @@
 Was der DataHub aus `daten/Fahrzeug/<Auto>/Status` in die Datenbank schreibt, in welche
 Tabelle, unter welchen Tags — und warum der Zeitstempel nicht der Empfangszeitpunkt ist.
 
-Umgesetzt mit Punkt 17 des `Backlog-Laden.md`. Der Payload selbst ist
+Umgesetzt mit Punkt 17 des Lade-Vorhabens (`Archiv/Backlog-Laden-2026-09.md`). Der Payload selbst ist
 `SharedContracts/CarStatusData.cs`, die Topics stehen in `SharedContracts/FahrzeugTopics.cs`,
 die Umsetzung in `SmartHome.DataHub/SmartHome.DataHub/Fahrzeugdaten.cs`.
 

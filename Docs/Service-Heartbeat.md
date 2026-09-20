@@ -10,7 +10,7 @@ Verbindlich für jeden neuen Dienst. Die Topic-Regel selbst steht in
 
 Auf `status/#` lagen 17 ESP32-Geräte und kein einziger Dienst. Ein toter Connector war auf
 MQTT unsichtbar: Der Ausfall des BMWConnectors blieb 35 Tage unbemerkt (siehe
-`Backlog-Laden.md`, Punkt 1/2), und die Geräteseite der Weboberfläche wusste nicht einmal,
+`Archiv/Backlog-Laden-2026-09.md`, Punkt 1/2), und die Geräteseite der Weboberfläche wusste nicht einmal,
 dass es den Dienst gibt. Ein Dienst, der schweigt, muss genauso auffallen wie ein Sensor,
 der schweigt — und zwar an derselben Stelle.
 
@@ -140,7 +140,7 @@ Publish-Delegate statt eines Clients. Die Health-Typen kommen über
 ## Pfadfilter nicht vergessen
 
 `Libs/**` löst ohne Eintrag in `paths:` **keinen** Build aus — kein Fehler, nur kein
-Deployment (`Backlog-Laden.md`, Punkt 0). `Libs/HeartbeatLib/**` steht deshalb in den
+Deployment — die Regel und ihre Begründung stehen in `Parallel-Arbeiten.md`. `Libs/HeartbeatLib/**` steht deshalb in den
 `paths:`-Blöcken von sieben Workflows: `bmwconnector.yml`, `ChargingController.yml`,
 `EnphaseConnector.yml`, `KebaConnector.yml`, `RulesEngine.yml`, `ShellyConnector.yml`,
 `SmartHome.DataHub.yml`. Der VWConnector braucht keinen — er ist Python und hat keine

@@ -109,7 +109,7 @@ Ein Fahrzeug ist ortslos: es bewegt sich und lädt manchmal auswärts. Kategorie
   retained Kommando wird beim Verbinden sofort zugestellt, unabhängig von seinem Alter.
   Wer stattdessen die Empfangszeit als Alter nimmt, hält ein beliebig altes Kommando für
   frisch. Im Bestand setzte genau das die Notfallfreigabe der Wallbox außer Kraft — siehe
-  `Backlog-Laden.md`, Punkt 16. Der `KebaConnector` behilft sich bis zur Umstellung damit,
+  `Archiv/Backlog-Laden-2026-09.md`, Punkt 16. Der `KebaConnector` behilft sich bis zur Umstellung damit,
   dass er das Retain-Flag der Zustellung auswertet: eine vom Broker wiedergegebene
   Nachricht setzt den Sollwert, aber nicht dessen Alter. Das ist eine Notlösung, keine
   Alternative zum `Zeitpunkt` — sie erkennt nur, dass die Nachricht nicht gerade gesendet
@@ -119,7 +119,7 @@ Ein Fahrzeug ist ortslos: es bewegt sich und lädt manchmal auswärts. Kategorie
 
 | Bereich | Stand |
 |---|---|
-| `daten/Laden/…`, `daten/Fahrzeug/…` | wird mit dem Ladevorhaben umgestellt (siehe `Backlog-Laden.md`) |
+| `daten/Laden/…`, `daten/Fahrzeug/…` | **umgestellt am 2026-09-20.** Die alten Topics `data/charging/{BMW,Mini,VW}` lagen danach noch retained am Broker und wurden gelöscht, nachdem geprüft war, dass sie niemand mehr referenziert |
 | `status/<Ort>/<Geraetetyp>/<Name>` | **dokumentierte Ausnahme** (siehe oben): Kategorie- und Aspekt-Ebene fehlen. Neue Teilnehmer folgen dem Bestandsformat; Migration nur gemeinsam mit der ESP32-Flotte. Die Dienste liegen unter `status/Cluster/Dienst/…` und tragen bereits `Zeitpunkt` — siehe `Service-Heartbeat.md` |
 | `daten/temperatur/…`, `daten/luftfeuchtigkeit/…` | Kleinschreibung und fehlende Aspekt-Ebene; 18 ESP32-Firmwares, nur bei OTA-Anlass |
 | `cangateway/…` | ohne Art-Ebene; Migration offen |

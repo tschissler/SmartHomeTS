@@ -114,6 +114,11 @@ Docker image versions use format `1.0.{github.run_number}`.
   InfluxDB. If a rule does not fit your case or does not answer it, discuss it with
   Thomas instead of deciding alone — a table that carries data can only be changed
   at a loss
+- `Docs/Parallel-Arbeiten.md` — how several sessions work one initiative at once: the
+  integrator role, one point per session, the two tables (dependencies *and* file
+  collisions), why a missing path filter deploys nowhere without erroring, and four rules
+  about measuring that were learned the expensive way. **Read before splitting work across
+  sessions**
 - `Docs/microK8s/Setup MicroK8s.md` — cluster setup
 - **Grafana dashboards no longer live here** — they moved to `forgejo.intern/thomas/Grafana`
   (dashboards, the API export script, the Sankey generator, the InfluxDB field reference).
