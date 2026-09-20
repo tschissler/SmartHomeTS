@@ -29,11 +29,11 @@ Präfix setzt.
 | 9 Wallbox-Kacheln | `laden-09-kacheln` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`5c23df9`, Image `1.0.172`). Nachkontrolle am Broker: sechs Klicks → sechs retained Nachrichten, eins zu eins. Der Doppelklick erzeugt zwei (zwei Klicks = zweimal umschalten, beide Zustände gewollt); die frühere dritte Phantomnachricht mit `Outside=true` **und** `Prefered=2`, die niemand angeklickt hatte, ist weg. Die Regelung lief während des Tests unbeirrt weiter (Stellplatz 8932 → 10294 → 10907 mA, PV-geführt) |
 | 12 Energieaufteilung | `laden-12-energieaufteilung` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`44c0e80`, ChargingController `1.0.50`). Die Zurechnung selbst trifft auf 0,1 W, über alle drei Mischungsarten. **Aber: ein Zyklus Versatz**, siehe den Befund unten — meine erste Messung hatte ihn unbemerkt herausgekürzt |
 | 10 Fahrzeugdaten | `laden-10-fahrzeugdaten` | 2026-09-20 | **erledigt und gemergt** (`0206430`). 18 Dateien, BMWConnector 56/56 und ChargingController 94/94 grün (selbst nachgelaufen). Neun bisher verworfene Felder kommen an, **alle** Werte nullbar statt nur `Battery`, Altersanzeige aus `lastUpdate` statt `Zeitpunkt`. `BMW_OUTPUT_TOPIC` im Deployment nicht gesetzt — der Connector meldet sein Ausgabetopic jetzt bei jedem Start und warnt bei einem Override. Entsperrt 11 und 17 |
-| 11 Zuordnung | `laden-11-zuordnung` | 2026-09-20 | **erledigt und gemergt** (`3e6bd68`). RulesEngineTests 64/64, ChargingControllerTests 94/94 (selbst nachgelaufen). Zwei Präzisierungen über den Auftrag hinaus: Eine Fahrzeugmeldung zählt nur, wenn ihre **Messzeit** zur Sitzung passen kann (sonst wäre die 35 Tage alte BMW-Meldung Evidenz über jetzt), und der Dienst schweigt 15 s nach dem Start, statt sich mit einem frischen `unbekannt` das eigene Gedächtnis zu überschreiben. **Entsperrt 13** |
-| 17 Fahrzeugdaten persistieren | `laden-17-fahrzeugdaten-persistieren` | 2026-09-20 | **erledigt und gemergt** (`352fc13`). 36/36 Tests grün — **der DataHub hatte bisher gar keine**. Zeitstempel aus `lastUpdate`; die Entdopplung fällt daraus ab, weil der Primärschlüssel Tabelle + Tags + Zeit ist. Zwei neue Tabellen `distance_values` und `position_values`, weil `counter_values` über `Convert.ToInt16` schreibt und der Mini bei 38954 km steht — Int16 endet bei 32767, das hätte eine `OverflowException` geworfen. **13 kann jetzt folgen** |
+| 11 Zuordnung | `laden-11-zuordnung` | 2026-09-20 | **erledigt und gemergt** (`3e6bd68`). RulesEngineTests 64/64, ChargingControllerTests 94/94 (selbst nachgelaufen). Zwei Präzisierungen über den Auftrag hinaus: Eine Fahrzeugmeldung zählt nur, wenn ihre **Messzeit** zur Sitzung passen kann (sonst wäre die 35 Tage alte BMW-Meldung Evidenz über jetzt), und der Dienst schweigt 15 s nach dem Start, statt sich mit einem frischen `unbekannt` das eigene Gedächtnis zu überschreiben. **Entsperrt 13**. Nachkontrolle 13:02: RulesEngine `1.0.10` läuft, Konfigurationszeile bestätigt die Parameter (Boxzustand 5 min, Fahrzeugmeldung 6 h, Wiederanlauf-Fenster 15 s). **Funktional noch nicht beweisbar**: Beide Boxen stehen auf `SitzungsId: null`, kein Fahrzeug steckt. Die Regel lässt eine Box ohne Sitzung bewusst aus dem Ergebnis fallen (`Lage()` gibt `null` zurück), also steht auf `daten/Laden/+/+/Zuordnung` korrekt nichts. Der Beweis kommt beim nächsten Einstecken — **offen** |
+| 17 Fahrzeugdaten persistieren | `laden-17-fahrzeugdaten-persistieren` | 2026-09-20 | **erledigt und gemergt** (`352fc13`). 36/36 Tests grün — **der DataHub hatte bisher gar keine**. Zeitstempel aus `lastUpdate`; die Entdopplung fällt daraus ab, weil der Primärschlüssel Tabelle + Tags + Zeit ist. Zwei neue Tabellen `distance_values` und `position_values`, weil `counter_values` über `Convert.ToInt16` schreibt und der Mini bei 38954 km steht — Int16 endet bei 32767, das hätte eine `OverflowException` geworfen. **13 kann jetzt folgen**. **Nachkontrolle 13:05 am lebenden Objekt bestanden** — siehe unten |
 | 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | **erledigt und gemergt** (`b560217`). Der gemeldete Fehler war der Text; die Ursache lag tiefer — `disconnected.svg` ist fest `#d4aa00`, die freie Box trug also dauerhaft eine Aufmerksamkeitsfarbe, und `connected.svg`/`connectednotready.svg` sind geometrisch identisch und unterscheiden sich nur im Strich. Symbol jetzt inline in `currentColor`: Geometrie sagt Fahrzeug ja/nein, Farbe kommt aus dem Zustand |
 | 20 Quellenmix-Verlauf | `grafana-wallbox-verlauf` | 2026-09-20 | **erledigt und live** — Dashboard `laden-quellenmix` im Grafana-Repo, importiert und visuell geprüft. Lieferte nebenbei den Versatz-Befund zu Punkt 12 und `import_dashboards.py`. Ernstester Anzeigefehler war die **leere Box**: Sie skalierte automatisch auf 0…100 W, wodurch Rauschen wie Ladung aussah, und das Gegenprobe-Panel hatte die Nulllinie am unteren Rand — ein Ausschlag nach unten wäre unsichtbar gewesen. Behoben |
-| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | läuft — Ordnerunterstützung in beiden Skripten, Dateinamen auf `<uid>.json`, Grafana-Ordner nach Bereich, `docs/namenskonvention.md`. Gefahrenstelle: Umbenennen und Export-Umstellung **im selben Push**, sonst meldet der Abgleich 29 geänderte Dateien |
+| Grafana-Konvention | `grafana-konvention` | 2026-09-20 | **blockiert, nicht fertig** — Skripte und `docs/namenskonvention.md` liegen lokal fertig, aber nichts ist committet oder gepusht, und in Grafana ist nichts verändert. **Es fehlt der Service-Account-Token unter `~/.grafana-token`** (bewusst als Datei, damit er in keinem Transkript landet). Ohne ihn wäre der Push ein Blindflug: Der neue Export schreibt `folderUid` in jede Datei, nach dem Umbenennen auf `<uid>.json` sieht die Import-Action **alle 29 Dateien als geändert** — und eine Datei ohne `folderUid` heißt „Wurzel", womit die acht Kubernetes-Dashboards aus ihrem Ordner flögen. Die `folderUid`s gibt es nur aus Grafana |
 | Grafana-Action | `grafana-action` | 2026-09-20 | **erledigt** — zwei Forgejo Workflows live. Ein Push auf `dashboards/` schreibt ~20 s später nach Grafana, nur die geänderten Dateien. Abgleich doppelt geprüft (lokal und aus dem Runner): 29 Dashboards, 0 Unterschiede. **Der Editor-Test wurde von Thomas abgelehnt**, siehe unten |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
@@ -955,6 +955,42 @@ das Topic nicht, und es müsste zweimal gegen zwei Schemata gebaut werden.
 **Welle E, seriell nach 13.** Kollidiert mit 8 und 13 im DataHub, deshalb nicht parallel zu
 diesen. Punkt 14 hängt nicht davon ab und kann davor oder danach laufen; Punkt 15 dagegen
 setzt 17 zwingend voraus.
+
+#### Nachkontrolle am 2026-09-20, 13:05 — bestanden
+
+DataHub `1.0.87`. Der BMW fuhr während der Prüfung, was den Nachweis erst wertvoll macht:
+Es sind nicht nur Zeilen da, sie bewegen sich plausibel.
+
+**Die Fahrt steht in `position_values`** — sechs aufeinanderfolgende Punkte, Breite steigend,
+Länge fallend, also eine zusammenhängende Strecke und keine springende Punktwolke:
+
+| Zeit | Breite | Länge | km-Stand | Reichweite |
+|---|---|---|---|---|
+| 12:50:42 | 48,4128 | 9,8753 | | |
+| 12:54:23 | 48,4195 | 9,8788 | | |
+| 12:58:52 | 48,4240 | 9,8651 | | |
+| 13:00:21 | 48,4297 | 9,8602 | 2091 | 347 |
+| 13:01:27 | 48,4354 | 9,8486 | 2092 | 340 |
+| 13:03:10 | 48,4384 | 9,8265 | 2094 | 332 |
+
+Kilometerstand steigt, Reichweite fällt, Ladestand 76 → 75 %. Die Werte hängen zusammen.
+
+**Der Zeitstempel ist die Messzeit.** Die Zeile 13:01:27 trägt exakt den `lastUpdate` des
+MQTT-Payloads, dessen `Zeitpunkt` 13:01:28,6 lautet — die Ankunftszeit steht nirgends.
+
+**Die Entdopplung trägt, und der VW beweist sie am schärfsten.** Über alle vier Tabellen gilt
+`COUNT(*) = COUNT(DISTINCT time)`: 17 Zeilen, 17 verschiedene Zeiten, obwohl der DataHub
+zwischendurch neu startete und den retained Payload erneut las. Der VW steht seit 12:20 und
+sein Payload ändert sich nicht — er hat **genau eine Zeile je Messwert**, nicht eine je
+Empfang. Das ist der Primärschlüssel Tabelle + Tags + Zeit bei der Arbeit.
+
+**Fehlende Werte werden nicht geschrieben.** Der VW liefert keine Position und hat deshalb
+*keine* Zeile in `position_values` — kein `NULL`, und vor allem keine 0/0, die das Auto in
+den Golf von Guinea gesetzt hätte.
+
+**Offener Faden außerhalb dieses Repos:** `docs/influxdb-reference.md` im Grafana-Repo kennt
+`distance_values` und `position_values` weiterhin nicht. Wer dort nachschlägt, findet die
+beiden neuen Tabellen nicht — nachzutragen im Repo `forgejo.intern/thomas/Grafana`.
 
 ---
 
