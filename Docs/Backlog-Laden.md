@@ -1296,44 +1296,13 @@ keinen Ort für die Position.
   `Cluster Errors Overview` und `Backup Overview (Velero + Garage)` sind `provisioned`
   und im UI schreibgeschützt. Für Dashboards im UI-Betrieb bleibt es dabei: kein
   Provisioning.
-- **Grafana-Token steht weiter auf Admin — die Bedingung dafür ist inzwischen erfüllt.**
-  Thomas hatte das Service-Account-Token am 2026-09-20 „erst mal auf Admin hochgestuft …
-  bis der Import-Weg sauber steht". Er steht jetzt: Die Forgejo Action ist live, drei
-  Pushes sind durchgelaufen, der Abgleich meldet 29 Dashboards und 0 Unterschiede. Damit
-  ist die Rückstufung fällig.
-
-  **Offen ist nur, wie weit.** Die Session `grafana-konvention` hält in der README fest,
-  alles Gemessene spreche dafür, dass die Rolle **Editor** für den Import genügt — nennt
-  es aber ausdrücklich keinen Beweis, denn gelaufen ist der Import bislang ausschließlich
-  mit Admin. Der Prüfstein steht bereit: Dashboard `adbtrcf`, seit dem 2026-09-20 betitelt „Testobjekt Import-Action".
-
-  **Die Messung braucht einen zweiten Token mit Rolle Editor, den nur Thomas anlegen
-  kann.** Sie fasst weder das Repo noch die Dashboards an. Danach ist entweder Editor
-  belegt oder die Ausnahme begründet — beides besser als ein Admin-Token aus Bequemlichkeit.
-- **Arbeitsfehler der Integrator-Session am 2026-09-20, hier festgehalten, damit er sich
-  nicht wiederholt:** Um die Abnahme von `grafana-konvention` nachzurechnen, habe ich in
-  *ihrem* Arbeitsverzeichnis `~/Repos/Forgejo.intern/Grafana` ein `git checkout origin/main`
-  ausgeführt, statt in einem eigenen Klon. Das hat ihr den HEAD losgelöst; ihr nächster
-  Commit landete auf dem abgehängten HEAD statt auf `main` und war damit unpushbar, ohne
-  dass sie es merken konnte — sie meldete sich als fertig, während die Arbeit lokal
-  festhing. Repariert mit `git checkout -B main <commit>`, eine reine Vorwärtsbewegung bei
-  sauberem Arbeitsverzeichnis, ohne eine Datei anzufassen.
-
-  **Regel daraus: Nachrechnen in einem Repo, in dem eine andere Session arbeitet, nur über
-  einen eigenen Klon.** Lesen ist harmlos, aber `checkout`, `fetch --prune` und alles, was
-  HEAD oder Refs bewegt, ist ein Eingriff in fremde Arbeit.
-
-  **Die Session fand die zweite Hälfte des Fehlers, und die ist allgemeiner:** Sie hatte
-  nach jedem Push „gepusht" gemeldet, weil `git push -q origin main && echo gepusht`
-  erfolgreich war. Auf losgelöstem HEAD pusht dieser Befehl aber die *lokale Referenz*
-  `main` — die unverändert auf dem alten Stand stand. Ergebnis: „Everything up-to-date",
-  **Exit-Code 0**, Erfolgsmeldung. Sieben Pushes davor ging es gut, hätte es aber nicht
-  müssen.
-
-  **Regel daraus: Der Exit-Code eines `git push` ist kein Nachweis.** Nachgewiesen ist ein
-  Push erst durch `git fetch` und einen Vergleich von `rev-parse origin/main` mit dem
-  erwarteten Commit. Das gilt besonders dort, wo ein Push ein Schreibvorgang im laufenden
-  System ist — im Grafana-Repo löst er den Import aus, hier den Rollout.
+- ~~**Grafana-Token steht weiter auf Admin.**~~ **Erledigt am 2026-09-20, 15:37.** Thomas
+  hat `sa-1-claude` von Admin auf Editor zurückgestuft und die Rolle danach gemessen
+  (`9f7794f` im Grafana-Repo): Import schreibt weiter durch, die beiden reinen
+  Admin-Aufrufe antworten mit 403. **Editor genügt zum Importieren, Viewer zum
+  Exportieren** — die frühere Vermutung, Admin sei nötig, ist damit widerlegt.
+- ~~**Velero ist in Grafana doppelt vorhanden.**~~ **Erledigt am 2026-09-20, 15:36**
+  (`a85e754`): Das unangepasste Exemplar ist entfernt, `velero-backup-overview` bleibt.
 - **Fremde Dashboard-Titel tragen den Schrägstrich, den die Konvention als schlimmsten
   benennt** — „Kubernetes / Views / Pods", „Logs / App". Die Session hat sie bewusst
   **nicht** angefasst, und die Begründung trägt: Ein Neuladen von grafana.com holte den
@@ -1353,9 +1322,6 @@ keinen Ort für die Position.
   InfluxDB steht von ihm trotzdem nichts, weil BMW CarData nur bei Fahrzeugereignissen
   sendet und er steht. Kein Defekt, aber bis zur ersten Fahrt auch kein Beweis. Erst dann
   ist Punkt 17 für alle drei Fahrzeuge belegt statt für zwei.
-- **Velero ist in Grafana doppelt vorhanden.** `ozk-vlr-mon` und
-  `velero-backup-overview`, beide aus grafana.com 23838, eines davon provisioniert.
-  Entscheidung liegt bei Thomas: welches bleibt.
 - **Die Balken der Ladeseite sind auf 150-W-Stufen gerastert.**
   `ChargingSituationManager.CalculatePowerPercent` rechnet
   `return (power * 100) / PowerMaximum;` — `power` ist `int`, `PowerMaximum` ist
