@@ -24,7 +24,23 @@ env:
   IMAGE_NAME: smarthomedatahub
   
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    # A red test must never produce an image
+    - name: Run unit tests
+      run: dotnet test ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.sln -c Release
+
   build:
+    needs: test
     runs-on: ubuntu-latest  # Use GitHub-hosted runner for building
 
     steps:

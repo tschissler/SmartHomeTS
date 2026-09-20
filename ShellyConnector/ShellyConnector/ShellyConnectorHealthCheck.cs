@@ -38,7 +38,11 @@ namespace ShellyConnector
             if (isHealthy)
             {
                 var message = _lastSuccessfulRead == DateTime.MinValue 
-                    ? "Service is starting up" 
+                // Not "starting up": this branch is also taken after three days, and then that
+                // word tells a reader the wrong story - "give it a moment" instead of "this has
+                // never worked". The state is genuinely healthy (MQTT is connected), so the
+                // message states the fact instead of claiming a phase.
+                    ? "No successful read yet"
                     : $"Last successful read: {timeSinceLastRead.TotalSeconds:F0} seconds ago";
                 
                 return Task.FromResult(
