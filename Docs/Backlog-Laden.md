@@ -25,7 +25,7 @@ Präfix setzt.
 | 16 Ladestrom-Retain | `laden-16-ladestrom` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`c46f54f`) |
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`1c8ff95`). Im neuen Pod: `Loaded tokens … (issued …)`, `Stored token refreshed 0.9 h ago, well inside the 7 day limit`, sofortiger Refresh mit erfolgreicher Persistierung, `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True` |
 | 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | **erledigt und gemergt** (`ef244fe`). Ab jetzt läuft `dotnet test` vor jedem ChargingController-Build; ein roter Test erzeugt kein Image und damit kein Deployment |
-| 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | in Arbeit — harter Schnitt, KebaConnector + ChargingController + DataHub. Offene Frage an die Session: Verhalten zwischen den beiden Rollouts |
+| 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **fertig**, Commit `9e224f4`, auf `48bcb11` rebased, Merge offen. 23 Dateien, sechs Dienste bauen grün, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün **ohne einen geänderten Erwartungswert** — der Schnitt ändert Topics und Payloads, nicht die Entscheidungslogik. Offen: Entscheidung zu den Grafana-Dashboards (siehe unten) |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
@@ -36,6 +36,34 @@ Tests reagiert, wird der Umbau Erwartungswerte anfassen müssen — jetzt fällt
 Rollout auf und nicht danach. **Für `laden-0708-schnitt` heißt das: Die Tests sind ab
 sofort Teil der Abnahme.** Geänderte Erwartungswerte gehören begründet in den Commit,
 nicht stillschweigend angepasst.
+
+**Offene Entscheidung zu Punkt 7/8: drei Grafana-Dashboards werden vom Schnitt blind.**
+Der DataHub zieht `Device` jetzt aus dem Topic-Pfad und schreibt damit `Garage` /
+`Stellplatz` statt `KebaGarage` / `KebaOutside`. `Location` bleibt `M3`, `sensor_type`
+bleibt `Wallbox` — es bricht ausschließlich der `device`-Filter. Betroffen sind
+`wallbox-charging-dashboard.json` (4× je Name, wird von Punkt 14 ohnehin abgelöst),
+`energy-overview-dashboard.json` (3× je Name) und `energy-sankey-dashboard.json`
+(2× je Name). Die beiden letzten bleiben dauerhaft kaputt, wenn sie niemand anfasst.
+
+Vorschlag der Session: in den Queries auf beide Werte filtern
+(`device IN ('KebaGarage','Garage')`). Das überbrückt den Tag-Wechsel in der Abfrage,
+hält die Historie sichtbar und braucht keine Datenmigration. Für die Sankey-Kennzahl
+`MAX(value_cumulated_kwh) - MIN(...)` ist es sogar die einzig richtige Variante: Der
+Zählerstand läuft über den Umbenennungszeitpunkt hinweg durch, die Differenz stimmt nur,
+wenn beide Tag-Werte in derselben Abfrage liegen.
+
+Zwei Ergänzungen aus der Nachprüfung, die im Vorschlag fehlten:
+1. **Der Sankey wird generiert.** `gen_sankey.py` erzeugt `energy-sankey-dashboard.json`;
+   die Gerätenamen stehen in Zeile 536/537/545/546. Eine Korrektur nur im JSON wäre beim
+   nächsten Lauf des Skripts wieder weg — sie muss ins Skript.
+2. **Dashboards werden manuell importiert**, sie liegen nicht im ArgoCD-Pfad
+   (`grafana-dashboards/README.md`). Ein Merge repariert Grafana also nicht; der Import
+   ist ein eigener Handgriff nach dem Rollout. Umgekehrt löst ein Merge dieser Dateien
+   auch keinen Build aus — `grafana-dashboards/` steht in keinem Pfadfilter.
+
+Die Delta-Berechnung im DataHub ist vom Namenswechsel **nicht** betroffen: `previousValues`
+ist ein In-Memory-Dictionary, das jeder Pod-Neustart ohnehin leert. Die erste Messung unter
+dem neuen `MeasurementId` liefert Delta 0, genau wie nach jedem Neustart — kein Sprung.
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
