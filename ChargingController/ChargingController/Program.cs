@@ -7,17 +7,16 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 IMqttClient mqttClient;
 ChargingSituation currentChargingSituation = new ChargingSituation();
-ChargingSettings currentChargingSettings = new ChargingSettings();
+ChargingSettings? currentChargingSettings = null;
 DateTime lastHeartbeatTime = DateTime.MinValue;
 DateTime lastControlCycleTime = DateTime.MinValue;
+// Waiting is a normal state at startup and a fault if it lasts. Saying once per minute what
+// is missing is what tells the two apart in the log.
+DateTime lastWaitingLogTime = DateTime.MinValue;
 bool powerDataReceived = false;
 bool insideDataReceived = false;
 bool outsideDataReceived = false;
-DateTime firstPowerDataTime = DateTime.MinValue;
 const int heartbeatIntervalSeconds = 60;
-// Deciding before the wallbox readings have arrived would command 0 mA while a session is
-// running and open the contactor. If a wallbox stays silent, control has to start anyway.
-const int startupGraceSeconds = 30;
 // The decision runs on a fixed cycle instead of on every incoming message: the Enphase
 // connector publishes once per second, which is far faster than the dead time of the
 // wallbox and the car, and reacting that fast is what makes the loop oscillate.
@@ -95,9 +94,17 @@ async Task RunControlCycle()
 {
     if (!powerDataReceived || !mqttClient.IsConnected)
         return;
-    if (!(insideDataReceived && outsideDataReceived)
-        && DateTime.Now.Subtract(firstPowerDataTime).TotalSeconds < startupGraceSeconds)
+    // No command for a box this controller has never heard from, and none at all without
+    // settings. Deciding blind means commanding 0 mA — which opens the contactor of a box
+    // that may well be charging — and a setpoint of 0 is published retained, so it switches
+    // the box off again on every reconnect until something overwrites it. Both wallbox status
+    // and settings are retained topics: whatever exists is delivered on subscribe, within
+    // milliseconds. What does not arrive is genuinely absent, and a box that is not there
+    // cannot be controlled anyway. Staying silent hands the box to the emergency release of
+    // the KebaConnector, which is exactly what that release is for.
+    if (!insideDataReceived || !outsideDataReceived || currentChargingSettings is null)
     {
+        LogWhyTheLoopIsWaiting();
         return;
     }
 
@@ -117,15 +124,15 @@ async Task RunControlCycle()
 
         if (command.InsideChargingCurrentmA != currentChargingSituation.InsideChargingLatestmA)
         {
-            await PublishChargingCommand("commands/charging/KebaGarage", command.InsideChargingCurrentmA);
+            await PublishChargingCommand(LadeTopics.Garage, command.InsideChargingCurrentmA);
             currentChargingSituation.InsideChargingLatestmA = command.InsideChargingCurrentmA;
-            Console.WriteLine($"Sent charging command for KebaGarage: {command.InsideChargingCurrentmA} mA");
+            Console.WriteLine($"Sent charging command for {LadeTopics.Garage}: {command.InsideChargingCurrentmA} mA");
         }
         if (command.OutsideChargingCurrentmA != currentChargingSituation.OutsideChargingLatestmA)
         {
-            await PublishChargingCommand("commands/charging/KebaOutside", command.OutsideChargingCurrentmA);
+            await PublishChargingCommand(LadeTopics.Stellplatz, command.OutsideChargingCurrentmA);
             currentChargingSituation.OutsideChargingLatestmA = command.OutsideChargingCurrentmA;
-            Console.WriteLine($"Sent charging command for KebaOutside: {command.OutsideChargingCurrentmA} mA");
+            Console.WriteLine($"Sent charging command for {LadeTopics.Stellplatz}: {command.OutsideChargingCurrentmA} mA");
         }
 
         await PublishChargingSituation();
@@ -136,11 +143,27 @@ async Task RunControlCycle()
     }
 }
 
+void LogWhyTheLoopIsWaiting()
+{
+    if (DateTime.Now.Subtract(lastWaitingLogTime).TotalSeconds < 60)
+        return;
+    lastWaitingLogTime = DateTime.Now;
+
+    var missing = new List<string>();
+    if (!insideDataReceived) missing.Add($"status of {LadeTopics.Garage}");
+    if (!outsideDataReceived) missing.Add($"status of {LadeTopics.Stellplatz}");
+    if (currentChargingSettings is null) missing.Add(LadeTopics.Einstellungen);
+    Console.WriteLine($"Not controlling yet, still missing: {string.Join(", ", missing)}. " +
+        "The wallboxes keep whatever they are set to; the KebaConnector releases them to full " +
+        "current once the setpoint is stale.");
+}
+
 async Task PublishChargingSituation()
 {
+    currentChargingSituation.Zeitpunkt = DateTimeOffset.UtcNow;
     var payloadChargingSituation = JsonSerializer.Serialize(currentChargingSituation);
     await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
-        .WithTopic("data/charging/situation")
+        .WithTopic(LadeTopics.Situation)
         .WithPayload(payloadChargingSituation)
         .WithRetainFlag()
         .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
@@ -158,11 +181,11 @@ async Task PublishHeartbeat()
             return;
         if (currentChargingSituation.InsideChargingLatestmA >= 0)
         {
-            await PublishChargingCommand("commands/charging/KebaGarage", currentChargingSituation.InsideChargingLatestmA);
+            await PublishChargingCommand(LadeTopics.Garage, currentChargingSituation.InsideChargingLatestmA);
         }
         if (currentChargingSituation.OutsideChargingLatestmA >= 0)
         {
-            await PublishChargingCommand("commands/charging/KebaOutside", currentChargingSituation.OutsideChargingLatestmA);
+            await PublishChargingCommand(LadeTopics.Stellplatz, currentChargingSituation.OutsideChargingLatestmA);
         }
     }
     catch (Exception ex)
@@ -171,11 +194,18 @@ async Task PublishHeartbeat()
     }
 }
 
-async Task PublishChargingCommand(string topic, int chargingCurrentmA)
+// The command carries the time it was decided. It is published retained, so the broker
+// replays it to the KebaConnector on every subscribe — only this timestamp lets the connector
+// tell a live setpoint from an arbitrarily old one and release the box when control is gone.
+async Task PublishChargingCommand(string wallbox, int chargingCurrentmA)
 {
-    var payloadOut = JsonSerializer.Serialize(new ChargingSetData() { ChargingCurrent = chargingCurrentmA });
+    var payloadOut = JsonSerializer.Serialize(new LadestromKommando()
+    {
+        Zeitpunkt = DateTimeOffset.UtcNow,
+        LadestromMa = chargingCurrentmA,
+    });
     await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
-        .WithTopic(topic)
+        .WithTopic(LadeTopics.Ladestrom(wallbox))
         .WithPayload(payloadOut)
         .WithRetainFlag()
         .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
@@ -192,12 +222,16 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
 
     try
     {
-        if (topic == "config/charging/settings")
+        if (topic == LadeTopics.Einstellungen)
         {
             Console.WriteLine($"Received message from {topic} at {time}: {payload}");
-            currentChargingSettings = JsonSerializer.Deserialize<ChargingSettings>(payload);
-            // A setting changed by the user should take effect right away, not at the next cycle
-            lastControlCycleTime = DateTime.MinValue;
+            var settings = JsonSerializer.Deserialize<ChargingSettings>(payload);
+            if (settings is not null)
+            {
+                currentChargingSettings = settings;
+                // A setting changed by the user should take effect right away, not at the next cycle
+                lastControlCycleTime = DateTime.MinValue;
+            }
         }
 
         else if (topic == "data/electricity/envoym3")
@@ -209,29 +243,37 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.PowerFromBattery = (int)(pvData.PowerFromBattery / 1000);
             currentChargingSituation.PowerFromPV = (int)(pvData.PowerFromPV / 1000);
             currentChargingSituation.HouseConsumptionPower = (int)(pvData.PowerToHouse / 1000);
-            if (!powerDataReceived)
+            powerDataReceived = true;
+        }
+
+        else if (LadeTopics.ZerlegeStatusTopic(topic) is (_, string wallbox))
+        {
+            var status = JsonSerializer.Deserialize<WallboxStatus>(payload);
+            if (status is null)
             {
-                powerDataReceived = true;
-                firstPowerDataTime = DateTime.Now;
+                Console.WriteLine($"Failed to deserialize wallbox status from {topic}: {payload}");
+                return Task.CompletedTask;
             }
-        }
+            var connected = status.FahrzeugVerbunden;
 
-        else if (topic == "data/charging/KebaGarage")
-        {
-            var kebaGarageData = JsonSerializer.Deserialize<ChargingGetData>(payload);
-            currentChargingSituation.InsideCurrentChargingPower = kebaGarageData.CurrentChargingPower;
-            currentChargingSituation.InsideConnected = kebaGarageData.CarIsPlugedIn;
-            currentChargingSituation.InsideChargingCurrentSessionWh = kebaGarageData.EnergyCurrentChargingSession;
-            insideDataReceived = true;
-        }
-
-        else if (topic == "data/charging/KebaOutside")
-        {
-            var kebaOutsideData = JsonSerializer.Deserialize<ChargingGetData>(payload);
-            currentChargingSituation.OutsideCurrentChargingPower = kebaOutsideData.CurrentChargingPower;
-            currentChargingSituation.OutsideConnected = kebaOutsideData.CarIsPlugedIn;
-            currentChargingSituation.OutsideChargingCurrentSessionWh = kebaOutsideData.EnergyCurrentChargingSession;
-            outsideDataReceived = true;
+            if (wallbox == LadeTopics.Garage)
+            {
+                currentChargingSituation.InsideCurrentChargingPower = status.Ladeleistung;
+                currentChargingSituation.InsideConnected = connected;
+                currentChargingSituation.InsideChargingCurrentSessionWh = status.EnergieSitzungWh;
+                insideDataReceived = true;
+            }
+            else if (wallbox == LadeTopics.Stellplatz)
+            {
+                currentChargingSituation.OutsideCurrentChargingPower = status.Ladeleistung;
+                currentChargingSituation.OutsideConnected = connected;
+                currentChargingSituation.OutsideChargingCurrentSessionWh = status.EnergieSitzungWh;
+                outsideDataReceived = true;
+            }
+            else
+            {
+                Console.WriteLine($"Status of unknown wallbox {wallbox}, ignoring it");
+            }
         }
         else
         {
@@ -276,12 +318,11 @@ async Task MQTTConnectAsync()
                 mqttClient.ApplicationMessageReceivedAsync -= MqttMessageReceived;
                 mqttClient.ApplicationMessageReceivedAsync += MqttMessageReceived;
 
-                await mqttClient.SubscribeAsync("data/charging/KebaGarage");
-                await mqttClient.SubscribeAsync("data/charging/KebaOutside");
-                await mqttClient.SubscribeAsync("data/charging/BMW");
-                await mqttClient.SubscribeAsync("data/charging/VW");
+                // One wildcard instead of a list of boxes: the levels of the convention put
+                // every wallbox at the same depth, so a new box needs no change here.
+                await mqttClient.SubscribeAsync(LadeTopics.StatusAlle);
                 await mqttClient.SubscribeAsync("data/electricity/envoym3");
-                await mqttClient.SubscribeAsync("config/charging/#");
+                await mqttClient.SubscribeAsync(LadeTopics.Einstellungen);
                 break;
             }
         }

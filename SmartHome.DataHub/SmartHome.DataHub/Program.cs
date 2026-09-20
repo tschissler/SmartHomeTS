@@ -146,7 +146,7 @@ app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
 using (var scope = app.Services.CreateScope())
 {
     var mqttClient = scope.ServiceProvider.GetRequiredService<MQTTClient.MQTTClient>();
-    await mqttClient.SubscribeToTopic("data/charging/#");
+    await mqttClient.SubscribeToTopic(LadeTopics.StatusAlle);
     await mqttClient.SubscribeToTopic("data/electricity/M1/#");
     await mqttClient.SubscribeToTopic("data/electricity/M3/#");
     await mqttClient.SubscribeToTopic("data/electricity/envoym1");
@@ -188,13 +188,12 @@ using (var scope = app.Services.CreateScope())
                 return;
             }
 
-            if (topic == "data/charging/KebaOutside" ||
-                topic == "data/charging/KebaGarage")
+            if (LadeTopics.ZerlegeStatusTopic(topic) is (string ort, string wallbox))
             {
-                ChargingGetData? chargingData;
+                WallboxStatus? chargingData;
                 try
                 {
-                    chargingData = JsonSerializer.Deserialize<ChargingGetData>(payload, jsonOptions);
+                    chargingData = JsonSerializer.Deserialize<WallboxStatus>(payload, jsonOptions);
                 }
                 catch (Exception ex)
                 {
@@ -205,8 +204,11 @@ using (var scope = app.Services.CreateScope())
                 if (chargingData != null)
                 {
                     tags = new Dictionary<string, string>();
-                    var location = "M3";
-                    var device = topicParts[2];
+                    // Read from the topic path instead of hard coding "M3": the levels of the
+                    // convention (art/Kategorie/Ort/Geraet/Aspekt) map onto the InfluxDB tags,
+                    // which is what makes this converter mechanical.
+                    var location = ort;
+                    var device = wallbox;
                     var measurement = "AutoIstEingesteckt";
                     influx3Connector.WriteStatusValue(
                         new InfluxStatusRecord
@@ -218,7 +220,7 @@ using (var scope = app.Services.CreateScope())
                             Location = location,
                             Device = device,
                             Measurement = measurement,
-                            Value_Status = chargingData.CarIsPlugedIn ? 1m : 0m,
+                            Value_Status = chargingData.FahrzeugVerbunden ? 1m : 0m,
                         },
                         DateTimeOffset.UtcNow);
                     measurement = "AktuelleLadeleistung";
@@ -232,11 +234,11 @@ using (var scope = app.Services.CreateScope())
                             Location = location,
                             Device = device,
                             Measurement = measurement,
-                            Value_W = chargingData.CurrentChargingPower,
+                            Value_W = chargingData.Ladeleistung,
                         },
                         DateTimeOffset.UtcNow);
 
-                    decimal currentValue = chargingData.EnergyCurrentChargingSession / 1000m;
+                    decimal currentValue = chargingData.EnergieSitzungWh / 1000m;
                     measurement = "EnergieAktuelleLadesitzung";
                     var measurementId = $"Energie_{location}_{device}_{measurement}";
                     var delta = 0m;
@@ -266,7 +268,7 @@ using (var scope = app.Services.CreateScope())
                         },
                         DateTimeOffset.UtcNow);
 
-                    currentValue = chargingData.EnergyTotal / 1000m;
+                    currentValue = chargingData.EnergieGesamtWh / 1000m;
                     measurement = "EnergieGesamt";
                     measurementId = $"Energie_{location}_{device}_{measurement}";
                     delta = 0m;

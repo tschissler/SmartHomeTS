@@ -751,7 +751,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(AVG(value_watt), 0) AS \"WbStellplatz\"\nFROM \"power_values\"\nWHERE sensor_type = 'Wallbox'\n  AND measurement = 'AktuelleLadeleistung'\n  AND device = 'KebaOutside'\n  AND location = 'M3'\n  AND time >= now() - INTERVAL '2 minutes'",
+          "rawSql": "SELECT COALESCE(AVG(value_watt), 0) AS \"WbStellplatz\"\nFROM \"power_values\"\nWHERE sensor_type = 'Wallbox'\n  AND measurement = 'AktuelleLadeleistung'\n  AND device IN ('KebaOutside', 'Stellplatz')\n  AND location = 'M3'\n  AND time >= now() - INTERVAL '2 minutes'",
           "refId": "F",
           "sql": {
             "columns": [
@@ -779,7 +779,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(AVG(value_watt), 0) AS \"WbGarage\"\nFROM \"power_values\"\nWHERE sensor_type = 'Wallbox'\n  AND measurement = 'AktuelleLadeleistung'\n  AND device = 'KebaGarage'\n  AND location = 'M3'\n  AND time >= now() - INTERVAL '2 minutes'",
+          "rawSql": "SELECT COALESCE(AVG(value_watt), 0) AS \"WbGarage\"\nFROM \"power_values\"\nWHERE sensor_type = 'Wallbox'\n  AND measurement = 'AktuelleLadeleistung'\n  AND device IN ('KebaGarage', 'Garage')\n  AND location = 'M3'\n  AND time >= now() - INTERVAL '2 minutes'",
           "refId": "G",
           "sql": {
             "columns": [
@@ -975,7 +975,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"WbStellplatz_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Wallbox'\n  AND measurement = 'EnergieGesamt'\n  AND device = 'KebaOutside'\n  AND location = 'M3'",
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"WbStellplatz_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Wallbox'\n  AND measurement = 'EnergieGesamt'\n  AND device IN ('KebaOutside', 'Stellplatz')\n  AND location = 'M3'",
           "refId": "FE",
           "sql": {
             "columns": [
@@ -1003,7 +1003,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"WbGarage_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Wallbox'\n  AND measurement = 'EnergieGesamt'\n  AND device = 'KebaGarage'\n  AND location = 'M3'",
+          "rawSql": "SELECT COALESCE(MAX(value_cumulated_kwh) - MIN(value_cumulated_kwh), 0) AS \"WbGarage_kwh\"\nFROM \"energy_values\"\nWHERE $__timeFilter(time)\n  AND sensor_type = 'Wallbox'\n  AND measurement = 'EnergieGesamt'\n  AND device IN ('KebaGarage', 'Garage')\n  AND location = 'M3'",
           "refId": "GE",
           "sql": {
             "columns": [
