@@ -28,7 +28,7 @@ Präfix setzt.
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **erledigt und gemergt** (`04cc432`). 26 Dateien, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün ohne einen geänderten Erwartungswert. Löst **sechs** Rollouts aus, nicht vier: Enphase und Shelly bauen wegen `SharedContracts/**` mit — der transitive Pfadfilter aus Punkt 0 wirkt wie vorgesehen. Rollout-Handgriffe siehe unten |
 | 9 Wallbox-Kacheln | `laden-09-kacheln` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`5c23df9`, Image `1.0.172`). Nachkontrolle am Broker: sechs Klicks → sechs retained Nachrichten, eins zu eins. Der Doppelklick erzeugt zwei (zwei Klicks = zweimal umschalten, beide Zustände gewollt); die frühere dritte Phantomnachricht mit `Outside=true` **und** `Prefered=2`, die niemand angeklickt hatte, ist weg. Die Regelung lief während des Tests unbeirrt weiter (Stellplatz 8932 → 10294 → 10907 mA, PV-geführt) |
 | 12 Energieaufteilung | `laden-12-energieaufteilung` | 2026-09-20 | **erledigt und gemergt** (`44c0e80`). Tests **94/94 grün** (48 neu), von mir selbst nachgelaufen; kein Erwartungswert der 46 Alttests angefasst. Neues Topic `daten/Laden/M3/<Box>/Energieaufteilung`, retained. Löst **sechs** Rollouts aus (`SharedContracts`) |
-| 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | läuft — `PlugStatus 1` und `3` heißen „Kabel nur in der Box, kein Fahrzeug", werden aber als „Kabel eingesteckt" in Aufmerksamkeitsfarbe angezeigt, während das Symbol korrekt zwei getrennte Stecker zeigt. Nur `SmartHome.Web` |
+| 9b Steckerzustand | `laden-09b-steckerzustand` | 2026-09-20 | **erledigt und gemergt** (`b560217`). Der gemeldete Fehler war der Text; die Ursache lag tiefer — `disconnected.svg` ist fest `#d4aa00`, die freie Box trug also dauerhaft eine Aufmerksamkeitsfarbe, und `connected.svg`/`connectednotready.svg` sind geometrisch identisch und unterscheiden sich nur im Strich. Symbol jetzt inline in `currentColor`: Geometrie sagt Fahrzeug ja/nein, Farbe kommt aus dem Zustand |
 | Grafana-Repo | `grafana-dashboards` | 2026-09-20 | erledigt — `forgejo.intern/thomas/Grafana`, Export-Skript über die API, 28 Dashboards statt 6. Siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
@@ -990,40 +990,43 @@ keinen Ort für die Position.
   **Diese Zeile bleibt stehen, bis das Recht zurückgenommen ist** — temporäre
   Berechtigungen werden nicht durch eine Entscheidung dauerhaft, sondern durch Vergessen.
 
-  **Schritt 2 (geplant am 2026-09-20):** Provisioning. Grafana liest die Dashboards aus
-  dem Cluster statt aus seiner Datenbank; provisionierte Dashboards sind im UI
-  **schreibgeschützt**. Was in Schritt 1 eine Verabredung bleibt („am Original nicht im
-  UI arbeiten"), wird damit erzwungen — Grafana lässt gar nicht erst speichern, statt
-  dass eine Änderung beim nächsten Import verschwindet. Dazu ein nicht-provisionierter
-  Ordner für Thomas' Kopien. Teilweise läuft Provisioning bereits: `Cluster Errors
-  Overview` und `Backup Overview (Velero + Garage)`.
+  **Schritt 2, entschieden am 2026-09-20: eine Forgejo Action, nicht Provisioning.**
+  Push ins Dashboard-Repo → Action → Import über die Grafana-API. Die Voraussetzungen
+  sind da: drei `act-runner` laufen im Cluster (ein amd64, zwei arm64), das Repo hat noch
+  keine Workflows.
 
-  **Geprüfte Rahmenbedingungen:**
-  - Grafana wird von **ArgoCD** verwaltet: App `grafana`, Quelle
-    `forgejo.intern/thomas/SmartHomeDeployments.git`, Pfad `grafana`, Namespace `grafana`.
-    Die Manifeste unter `Depricated/microk8s/Grafana/` sind tot — der Umzug dorthin war
-    richtig. **Die Deployment-Änderung gehört ins Deployments-Repo**, nicht hierher und
-    nicht ins Dashboard-Repo.
-  - **Eine einzige ConfigMap reicht nicht.** Die 28 Dashboards sind zusammen 1,5 MB, die
-    Grenze liegt bei 1 MiB. `node-exporter-full.json` allein ist 464 KB,
-    `k8s-dashboard.json` 196 KB. Es braucht also eine ConfigMap je Dashboard oder einen
-    anderen Weg.
-  - **Zwei Repos.** Die Dashboards liegen in `forgejo.intern/thomas/Grafana`, das
-    Deployment in `SmartHomeDeployments`. Wie die Dashboards von dort in den Cluster
-    kommen, ohne sie zu duplizieren, ist die eigentliche Entwurfsfrage dieses Punktes.
+  Die Action löst die drei Dinge, die Provisioning schwer machten, indem sie sie
+  gar nicht erst hat: keine Änderung am Grafana-Deployment, keine 1-MiB-Grenze
+  (die 28 Dashboards sind 1,5 MB, `node-exporter-full.json` allein 464 KB), keine
+  Cross-Repo-Konstruktion zwischen Dashboard- und Deployments-Repo. Und sie baut auf dem
+  `import_dashboards.py` auf, das ohnehin entsteht.
 
-  **Zu entscheiden (nicht vorweggenommen):** ArgoCD-Multi-Source (eine App, zwei Quellen),
-  ein `k8s-sidecar`, der gelabelte ConfigMaps einsammelt (so macht es das offizielle
-  Grafana-Helm-Chart; das hiesige Deployment ist handgeschrieben), ein git-sync-Sidecar,
-  oder ein Lauf im Dashboard-Repo, der die ConfigMaps erzeugt und ins Deployments-Repo
-  schreibt. Letzteres dupliziert und wäre meine letzte Wahl.
+  **Was sie ausdrücklich NICHT leistet, damit das niemand später für einen Fehler hält:**
+  Sie macht die Dashboards nicht schreibgeschützt. Eine versehentliche UI-Änderung am
+  Original überlebt bis zum nächsten Push und verschwindet dann stillschweigend. Und sie
+  ist push-getrieben, nicht abgleichend — verändert sich etwas in Grafana, korrigiert es
+  niemand bis zum nächsten Push. Beides ist bewusst in Kauf genommen: Bei der vereinbarten
+  Arbeitsweise (am Original wird nicht im UI gearbeitet, sondern an einer Kopie) ist das
+  Risiko ein Versehen, keine Gewohnheit — und dafür einen Eingriff ins laufende
+  Grafana-Deployment zu bauen, wäre unverhältnismäßig.
 
-  **Vorsicht beim Umschalten:** Die 28 Dashboards liegen heute in Grafanas PVC. Wird
-  dieselbe `uid` provisioniert, gewinnt die Datei — die UI-Fassung ist dann nicht mehr
-  erreichbar. Vor dem Umschalten muss der Repo-Stand also nachweislich dem Live-Stand
-  entsprechen, sonst fällt stillschweigend auf einen älteren Stand zurück. Der
-  Export vom 2026-09-20 ist frisch, aber das gilt nur, solange niemand mehr im UI
-  arbeitet.
+  **Die Lücke schließt eine zweite, zeitgesteuerte Action:** exportieren, mit dem
+  Repo-Stand vergleichen, bei Abweichung melden. Das ist genau die Erkennung, die bis zum
+  2026-09-20 gefehlt hat, und sie kostet ein paar Zeilen im selben Workflow-Ordner.
+
+  **Nebeneffekt, der den offenen Punkt oben erledigt:** Die Action braucht einen
+  Grafana-Token als Forgejo-Secret — mit Editor-Rechten, nicht Admin. Das ist die
+  Gelegenheit, den hochgestuften Token wieder zurückzunehmen, statt ihn zu vergessen.
+
+  **Provisioning bleibt die Rückfallebene**, falls sich die Verabredung als nicht
+  tragfähig erweist. Die Rahmenbedingungen dafür sind oben festgehalten und gelten
+  weiter: ArgoCD-App `grafana` aus `SmartHomeDeployments.git`, Pfad `grafana`, Namespace
+  `grafana`; das Deployment ist handgeschrieben und mountet heute nur Storage.
+
+  **Vorsicht bleibt beim ersten vollständigen Import:** Wird ein Dashboard importiert,
+  dessen Repo-Stand älter ist als der Live-Stand, fällt es stillschweigend zurück. Vor dem
+  ersten Lauf über alle Dashboards also exportieren, vergleichen, und erst laufen lassen,
+  wenn die Differenz leer oder erklärt ist.
 
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
