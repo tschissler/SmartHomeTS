@@ -1075,6 +1075,29 @@ die Quellenzähler je Wallbox seit 11:31 Uhr. Rückwirkend ist nichts zu holen, 
 **akzeptiert** — der Quellenmix wurde am selben Tag eingebaut. Der erste vollständige
 Monat ist Oktober.
 
+#### Ein Irrtum im Auftrag, gemessen statt vermutet
+
+Der Auftrag verlangte *„zwei gestapelte Balkendiagramme aus derselben Abfrage — in
+Grafana derselbe Panel-Typ, einmal `Stack series: Normal`, einmal `100%`"*. **Das trägt
+nicht**, und `laden-14-dashboard-laden` hat es am laufenden Dashboard nachgewiesen:
+
+Bei normierter Stapelung beschriftet Grafana die Achse mit der Feld-Unit, formatiert
+Tooltip und Wertelabel aber **unabhängig davon**. Es gibt deshalb keine Unit, die beides
+richtig macht:
+
+| Unit | Achse | Tooltip |
+|---|---|---|
+| `kwatth` | „0 … 1 kWh", wo ein Anteil steht | — |
+| `percentunit` | korrekt in % | las die Roh-kWh als Prozent: **Netz 1,26 %, Batterie 89,8 %, PV 50,2 %** — zusammen 141 %, keine Zahl stimmt |
+
+**Die Anteile werden deshalb in SQL gerechnet** (`100.0 * SUM(netz) / NULLIF(SUM(...), 0)`)
+und gewöhnlich gestapelt. Damit stimmen Achse, Tooltip und Label. Die Regel „Prozente aus
+Summen" ist dadurch erst recht erfüllt; aufgegeben wurde allein die wörtliche *„dieselbe
+Abfrage"*.
+
+**Allgemein:** Ein Grafana-Panel mit 100-%-Stapelung zeigt im Tooltip die Rohwerte, nicht
+die Anteile. Wer Prozente braucht, rechnet sie in der Abfrage.
+
 **Umfang**
 - [ ] Kennzahlen: kWh gesamt im Zeitraum, **Netzanteil in Prozent**, Anzahl Sitzungen
 - [ ] Protokolltabelle: Beginn, Wallbox, Fahrzeug, Vertrauen, Steckdauer, Ladezeit, kWh,
