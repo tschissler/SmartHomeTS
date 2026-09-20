@@ -866,10 +866,26 @@ statt eine Lücke zu reißen.
 Der Verweis auf das Dashboard entfällt damit vorerst: Er kann erst gesetzt werden, wenn
 Punkt 14 steht. Ein Link auf etwas Ungebautes wäre schlechter als kein Link.
 
-**Zum `ChargingSession`-Record:** Er wird tatsächlich frei. Die Treffer im KebaConnector
-sind `EnergyCurrentChargingSession`, ein Feldname, nicht der Typ — geprüft am
-2026-09-20. Sein Löschen fasst `SharedContracts` an und löst damit **acht** Builds aus;
-das ist der Preis dafür, toten geteilten Code einmal wirklich loszuwerden.
+**Zum `ChargingSession`-Record: Er bleibt.** Er wird vom KebaConnector benutzt.
+
+*Hier stand zuvor das Gegenteil, und das war ein Fehler der Integrator-Session.* Die
+Behauptung lautete, die Treffer im KebaConnector seien nur `EnergyCurrentChargingSession`,
+ein Feldname. Tatsächlich benutzt `KebaDeviceConnector.cs` den Typ dreimal
+(Z. 319 `ReadRunningSession`, Z. 327 `ReadReport`, Z. 342 `new ChargingSession {…}`), dazu
+`SessionTrackingTests.cs` sechsmal. `SharedContracts/ChargingSession.cs` ist repoweit die
+**einzige** Definition.
+
+**Wie der Fehler entstand:** Die Suche fand sechs Dateien; nachgesehen wurden davon nur
+zwei (`KebaData.cs`, `KebaDeviceStatusData.cs`). In beiden stand nur der Feldname — und
+dieses Ergebnis wurde auf alle sechs verallgemeinert. `KebaDeviceConnector.cs` stand in
+der Trefferliste und wurde nie geöffnet.
+
+**Wie die Session es richtig gemacht hat:** nicht gelesen, sondern nachgestellt. Datei
+weggeschoben, `dotnet build KebaConnector/KebaConnector.sln` → zweimal `CS0246`, Datei
+zurück, Build grün. **Ein Experiment schlägt eine Stichprobe.**
+
+Damit entfällt auch der Acht-Builds-Anlass: 13b ändert nur `SmartHome.Web/**` und löst
+genau **einen** Rollout aus.
 
 Kollidiert in `ChargingOverview.razor` mit 21 (erledigt) und 23. **Kann parallel zu Punkt 3
 laufen** — der fasst im Web nur `Devices.razor` an.
