@@ -893,8 +893,8 @@ keinen Ort für die Position.
   Datasource-ConfigMap, die InfluxDB-Referenz und auf Sicht `Kubernetes/microk8s/Grafana/`.
   Kern der Umsetzung ist ein Export-Skript über die Grafana-API, das die flüchtigen Felder
   (`id`, `version`, `iteration`, `updated`) verwirft — ohne das produziert jeder Export
-  Rauschdiffs und die Historie wird wieder wertlos. Vor dem Umzug zu klären: ob das
-  Forgejo gesichert ist. Details im Prompt der Session.
+  Rauschdiffs und die Historie wird wieder wertlos. **Geklärt am 2026-09-20: Das Forgejo wird gesichert**, der Umzug streicht
+  also kein Backup. Details im Prompt der Session.
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
