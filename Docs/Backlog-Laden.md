@@ -21,7 +21,7 @@ Präfix setzt.
 
 | Punkt | Name | seit | Stand |
 |---|---|---|---|
-| 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **fertig**, 1 Commit, Merge offen. Pfadfilter in sechs Service-Workflows, `.gitignore` für `.claude/worktrees/`. **Achtung beim Merge:** jeder Workflow triggert auch auf sich selbst — der Merge löst sechs Builds und sechs Rollouts aus, ohne jede Code-Änderung |
+| 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
@@ -117,16 +117,17 @@ den Heartbeat-Helfer nach `Libs/`, Punkt 12 ändert die Einheitenkommentare in
 dass es auffällt.
 
 **Umfang**
-- [ ] Je Service-Workflow die tatsächlich referenzierten Pfade in `paths:` ergänzen
+- [x] Je Service-Workflow die tatsächlich referenzierten Pfade in `paths:` ergänzen
       (Quelle: die `ProjectReference`-Einträge der `.csproj`)
 - [x] ~~`SmartHomeHelpers` aus `RulesEngine.yml` entfernen~~ — **gegenstandslos, nicht
       aufräumen:** RulesEngine referenziert es transitiv über `MQTTClient`
-- [ ] `.claude/worktrees/` in `.gitignore` aufnehmen — Worktrees liegen im Repo und
+- [x] `.claude/worktrees/` in `.gitignore` aufnehmen — Worktrees liegen im Repo und
       erscheinen sonst als untracked
 
-**Fertig, wenn** eine Änderung an `SharedContracts` sechs Builds auslöst — alle außer
-RulesEngine, das es nicht referenziert — und eine an `MQTTClient` alle sieben. Praktisch
-beweisbar ist das erst nach dem Merge; vorher zählt das Matching der `paths:`-Einträge.
+**Erledigt am 2026-09-20**, gemergt als `d95d3f5`. Nachgewiesen über das Matching der
+`paths:`-Muster gegen Testpfade in `SharedContracts`, `MQTTClient`, `SmartHomeHelpers` und
+`Libs/HelpersLib`; der Ende-zu-Ende-Beweis war ohne Merge nicht führbar. Eine Änderung an
+`SharedContracts` erreicht sechs Dienste, eine an `MQTTClient` alle sieben.
 
 **Blockiert** 3, 7, 8, 12.
 
