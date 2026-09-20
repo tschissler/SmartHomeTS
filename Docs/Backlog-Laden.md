@@ -966,27 +966,36 @@ keinen Ort für die Position.
   `ChargingSettings = JsonSerializer.Deserialize<…>(payload)` kann `null` zuweisen (CS8601
   an vier Stellen im `MQTTService`), und `ChargingOverview` dereferenziert
   `chargingSettings` ungeprüft. Von Punkt 9 weder verursacht noch behoben.
-- **Grafana-Abgleich automatisieren — aber als Erkennung, nicht als Überschreiben.**
-  Aufgekommen am 2026-09-20 nach dem Umzug nach `forgejo.intern/thomas/Grafana`.
-  Der Export über die API steht, ein `import_dashboards.py` als Gegenstück entsteht in
-  der Session `grafana-wallbox-verlauf`. Offen ist die Automatisierung — und dabei ist
-  **die naheliegende Lösung die falsche**: Ein Import, der bei jedem Push automatisch
-  läuft, überschreibt stillschweigend jede UI-Änderung, die seit dem letzten Export
-  gemacht wurde. Thomas arbeitet im UI; Export ist die normale Richtung, Import die
-  Ausnahme. Automatisch in beide Richtungen zu synchronisieren heißt, das Problem
-  „letzter Schreiber gewinnt" einzubauen, statt es zu lösen.
+- **Grafana-Dashboards: das Repo wird die Quelle, nicht der Spiegel.**
+  *Entschieden am 2026-09-20, nachdem der erste Entwurf umgedreht wurde.* Ursprünglich
+  war gedacht: im UI wird gearbeitet, das Repo spiegelt per Export. Daraus folgte ein
+  Zwei-Schreiber-Problem — ein automatischer Import hätte stillschweigend UI-Änderungen
+  überschrieben, weshalb nur eine *Erkennung* von Abdrift sicher gewesen wäre.
 
-  **Was stattdessen automatisiert gehört, ist die Erkennung.** Ein regelmäßiger Lauf
-  (Forgejo Action, CronJob im Cluster oder Timer) exportiert nach `/tmp`, vergleicht mit
-  dem Repo-Stand und meldet, wenn beide auseinanderlaufen — ohne irgendetwas zu ändern.
-  Das löst das ursprüngliche Problem genau: Bis heute war die Abdrift unsichtbar, weil
-  nie verglichen wurde. Eine Meldung reicht dafür; das Schreiben bleibt eine bewusste
-  Handlung.
+  **Thomas hat die Arbeitsweise anders festgelegt:** Die Dashboards werden überwiegend
+  im Repo gebaut (von Claude-Sessions). Will er selbst etwas ändern, macht er in Grafana
+  eine **Kopie**, ändert die Kopie und lässt die Änderung von dort ins Repo übernehmen.
+  Die Kopie ist ein Wegwerf-Objekt; nur ihr Unterschied wandert zurück. Damit gibt es
+  keine zwei konkurrierenden Schreiber mehr auf demselben Dashboard, und die Abdrift, die
+  am 2026-09-20 überhaupt erst auffiel, kann strukturell nicht mehr entstehen.
 
-  Zu entscheiden: wo der Lauf lebt (Forgejo Actions gegen CronJob), wie er meldet
-  (MQTT auf `Nachrichten/#` wäre hausüblich, ist aber an den fehlenden Meldeweg für die
-  Web-PWA gekoppelt — siehe den Punkt darunter), und ob er zusätzlich committet, was er
-  findet (ein automatischer Export-Commit wäre harmlos und gäbe die Historie geschenkt).
+  **Schritt 1 (in Arbeit, Session `grafana-wallbox-verlauf`):** `import_dashboards.py`
+  als Gegenstück zum Export, Zuordnung über die `uid`, Trockenlauf und Vorher-Anzeige.
+  Braucht keine Änderung am Grafana-Deployment und ist sofort nutzbar.
+
+  **Schritt 2 (offen):** Provisioning. Grafana liest die Dashboards aus einer ConfigMap,
+  ArgoCD synct sie aus dem Repo. Entscheidend ist nicht die Automatik, sondern dass
+  provisionierte Dashboards im UI **schreibgeschützt** sind: Was in Schritt 1 eine
+  Verabredung bleibt („am Original nicht im UI arbeiten"), wird damit erzwungen — Grafana
+  lässt gar nicht erst speichern, statt dass eine Änderung beim nächsten Import
+  verschwindet. Dazu ein nicht-provisionierter Ordner für Thomas' Kopien.
+  Teilweise ist Provisioning bereits in Gebrauch: `Cluster Errors Overview` und
+  `Backup Overview (Velero + Garage)` laufen schon so.
+
+  Der Preis von Schritt 2: Eine Änderung braucht dann Commit und ArgoCD-Sync, also etwa
+  zwei Minuten statt sofort, und das Grafana-Deployment muss angefasst werden — es
+  mountet heute nur Storage, keine Provisioning-Konfiguration.
+
 - **Benachrichtigungen.** `Nachrichten/#` wurde nur von der Flutter-App gelesen. Ein
   Meldeweg für die Web-PWA fehlt danach — eigenes Thema.
 - **`MaxStatusAge` in der RulesEngine — bestätigt real.** Dieselbe Verwechslung wie in
