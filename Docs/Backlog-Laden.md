@@ -17,7 +17,7 @@ Integrator-Session trägt ein und aus.
 
 | Punkt | Branch | seit | Stand |
 |---|---|---|---|
-| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | in Arbeit |
+| 1 BMW-Token | `worktree-laden-01-bmw-token` | 2026-09-20 | **blockiert** — Doku fertig; `bmwconnector-credentials` beim Bootstrap mit Platzhaltern überschrieben. Pod `bmwconnector-7bb447bc4b-4mbdt` **nicht** löschen: er hält die einzigen korrekten BMW-Werte im Speicher |
 
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
