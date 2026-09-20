@@ -1,0 +1,114 @@
+.wallboxBox {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid #D6D6D6;
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+    text-align: left;
+}
+
+.wallboxHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid #D6D6D6;
+    padding-bottom: 6px;
+}
+
+.wallboxName {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.wallboxZustand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.wallboxZustandIcon {
+    height: 24px;
+    width: 24px;
+}
+
+.wallboxZustand-laedt {
+    color: #2f7d32;
+    font-weight: 600;
+}
+
+.wallboxZustand-wartet {
+    color: #b06f00;
+}
+
+.wallboxZustand-unterbrochen {
+    color: #b06f00;
+}
+
+.wallboxZustand-fehler {
+    color: #c62828;
+    font-weight: 600;
+}
+
+.wallboxZustand-frei,
+.wallboxZustand-unbekannt {
+    color: #6b6b6b;
+}
+
+.wallboxWerte {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-column-gap: 12px;
+    grid-row-gap: 2px;
+}
+
+.wallboxLabel {
+    color: #6b6b6b;
+}
+
+.wallboxWert {
+    white-space: nowrap;
+}
+
+/* A value that is not exact must not look exact */
+.wallboxUngenau {
+    color: #6b6b6b;
+    font-style: italic;
+    cursor: help;
+}
+
+.wallboxKeineDaten,
+.wallboxVeraltet {
+    color: #c62828;
+    font-size: 0.85rem;
+}
+
+.wallboxBedienung {
+    display: flex;
+    gap: 20px;
+    border-top: 1px solid #D6D6D6;
+    padding-top: 6px;
+}
+
+.wallboxSchalter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.wallboxSchalterIcon {
+    height: 24px;
+    width: 24px;
+}
+
+.wallboxStern {
+    font-size: 1.3rem;
+    line-height: 24px;
+    color: #b06f00;
+}
