@@ -14,7 +14,16 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
 ## Arbeitsweise
 
 - **Eigener Worktree.** Leg ihn mit `EnterWorktree` unter dem Namen an, den der Auftrag
-  nennt. Arbeite ausschließlich darin.
+  nennt. Arbeite ausschließlich darin. **`EnterWorktree` stellt dem Branch `worktree-`
+  voran** — nennt der Auftrag einen Branchnamen, zieh ihn hinterher mit
+  `git branch -m <name>` gerade, sonst heißt der Branch anders als alles andere.
+- **Halt deine Shell-Befehle einfach.** Die Worktree-Isolation lehnt jeden Befehl ab, der
+  ihr zu komplex wird, um zu belegen, dass er im Worktree bleibt — und sie schlägt schon
+  auf die Zeichenfolge `git` an, die in diesem Repo in **jedem** absoluten Pfad steckt
+  (`/home/thomas/Repos/GitHub/…`) und auch in `.github/workflows`. Einzelne, gerade Befehle
+  laufen durch; `for`-Schleifen über Globs und lange `&&`-Ketten werden abgelehnt, auch
+  wenn gar kein git darin vorkommt. Brauchst du eine Schleife, schreib sie in eine
+  Skriptdatei und ruf die auf.
 - **Ein Punkt, eine Session.** Was der Auftrag nicht nennt, gehört jemand anderem — auch
   wenn es auf dem Weg liegt und klein aussieht. Im Zweifel melden statt anfassen.
 - **Das Arbeitsdokument des Vorhabens fasst du nicht an.** Das führt die
@@ -64,6 +73,12 @@ Beweis, eine aus Schriftgröße mal Zeichenzahl geschätzte ist eine Vermutung. 
 Zweifel in der Seite selbst (`getBoundingClientRect`, `getComputedStyle`), statt einem
 Screenshot anzusehen, ob etwas passt.
 
+**`file://` nimmt die Erweiterung nicht an.** Für eine lokale Datei brauchst du einen
+Server: `python3 -m http.server 8731 --bind 127.0.0.1` im Verzeichnis, dann
+`http://127.0.0.1:8731/…`. Das kostet eine Minute, wenn man es weiß, und einen Fehlschlag,
+wenn nicht. Lass ihn laufen, wenn Thomas selbst hinsehen soll — und nenn ihm die URL und
+wie er ihn beendet.
+
 Drei Auflagen:
 
 - **Eigener Tab** (`tabs_create_mcp`), statt einen vorhandenen zu übernehmen. Thomas
@@ -72,6 +87,14 @@ Drei Auflagen:
   Erweiterung, und danach nimmt sie keine Befehle mehr an.
 - **Ein Screenshot ersetzt Thomas' Blick nicht.** Er sieht das Ergebnis auf dem echten
   Gerät; dein Bild sagt nur, dass es dort überhaupt ankommen kann.
+
+**Rechne damit, dass der Screenshot scheitert.** Steht der Tab nicht im Vordergrund seines
+Fensters, meldet er `document.visibilityState: "hidden"`, und die Aufnahme läuft nach 30 s
+in einen Timeout. Den Fokus dafür zu übernehmen ist nichts, was du ungefragt tust — Thomas
+arbeitet dort. **Miss stattdessen in der Seite**: Das Layout hängt nicht an der
+Sichtbarkeit, `getBoundingClientRect` und `getComputedStyle` liefern auch im verborgenen
+Tab. Aus demselben Grund ist ein Behälter fester Breite die verlässlichere Messgröße als
+die Fenstergröße — `resize_window` greift nicht immer.
 
 ## Der Abschlussbericht
 
@@ -86,10 +109,7 @@ Darin:
   was er nicht neu übersetzt hat
 - **wie viele Rollouts der Merge auslöst, selbst nachgezählt** an den `paths:`-Blöcken.
   Übernimm die Zahl nicht aus dem Auftrag, sie ändert sich mit jeder neuen
-  `ProjectReference`. Zähl mit **einfachen Einzelbefehlen**: In einem Worktree verweigert
-  die Isolation jeden Befehl, der zu komplex wird und das Wort `git` enthält — und
-  `.github/workflows` enthält es. `grep -rln "<Pfad>" .github/workflows/` läuft durch,
-  eine `for`-Schleife über mehrere Globs wird abgelehnt
+  `ProjectReference`. Zähl mit **einfachen Einzelbefehlen** — siehe unten, warum
 - **wo der Auftrag nicht gestimmt hat.** Das ist der wertvollste Teil
 - bei sichtbaren Änderungen: **worauf Thomas nach dem Rollout schauen soll.** Er ist der
   Einzige, der das Ergebnis auf dem echten Gerät sieht
