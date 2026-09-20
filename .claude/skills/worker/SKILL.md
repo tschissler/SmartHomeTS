@@ -49,6 +49,30 @@ Arbeit.
 Manchmal ist es richtig. Dann gilt: **eigener Commit, der sich fallen lässt**, und im
 Bericht die Begründung samt Kosten. So kann die Freigabe getrennt entschieden werden.
 
+## Im Browser nachsehen
+
+**Chrome steht dir zur Verfügung.** Die Werkzeuge heißen `mcp__claude-in-chrome__*` und
+sind anfangs nicht geladen — hol sie mit `ToolSearch` in **einem** Aufruf, nicht einzeln:
+
+```
+select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__resize_window,mcp__claude-in-chrome__javascript_tool,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__tabs_close_mcp
+```
+
+Bei allem, was man **sieht** — Layout, Umbrüche, Breiten, Farben — gilt dieselbe Regel wie
+sonst: stell die Prüfung an, statt sie zu rechnen. Eine im Browser gemessene Breite ist ein
+Beweis, eine aus Schriftgröße mal Zeichenzahl geschätzte ist eine Vermutung. Miss im
+Zweifel in der Seite selbst (`getBoundingClientRect`, `getComputedStyle`), statt einem
+Screenshot anzusehen, ob etwas passt.
+
+Drei Auflagen:
+
+- **Eigener Tab** (`tabs_create_mcp`), statt einen vorhandenen zu übernehmen. Thomas
+  arbeitet in diesem Browser.
+- **Keine JavaScript-Dialoge auslösen** (`alert`, `confirm`, `prompt`). Sie blockieren die
+  Erweiterung, und danach nimmt sie keine Befehle mehr an.
+- **Ein Screenshot ersetzt Thomas' Blick nicht.** Er sieht das Ergebnis auf dem echten
+  Gerät; dein Bild sagt nur, dass es dort überhaupt ankommen kann.
+
 ## Der Abschlussbericht
 
 Geht an die Orchestrierungs-Session. **Frag ihren Namen mit `ListAgents` ab** — er ist

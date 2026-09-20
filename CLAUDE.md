@@ -15,7 +15,8 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 - **Connector services**: Bridge external APIs to MQTT — `BMWConnector`, `EnphaseConnector`,
   `ShellyConnector`, `KebaConnector` (all .NET) and `VWConnector` (Python, the only one)
 - **Business logic services** (.NET): `ChargingController` (EV charging optimization), `Thermostat` (climate control), `SmartHome.DataHub` (central data processing)
-- **Presentation**: `SmartHome.Web` (Blazor Server with Syncfusion), Grafana dashboards
+- **Presentation**: `SmartHome.Web` (Blazor Server, no component library — native HTML
+  elements and its own CSS), Grafana dashboards
 - **AI tooling**: `MCPServer` exposes InfluxDB schema/data via Model Context Protocol
 
 **Data storage**: InfluxDB 3 with primary table `energy_values` using tags (category, sub_category, device, location, measurement, sensor_type) and fields (value_kwh, value_cumulated_kwh).
@@ -137,6 +138,11 @@ Docker image versions use format `1.0.{github.run_number}`.
 - **.NET target frameworks vary**: .NET 10.0 (DataHub, Web, ChargingController), .NET 9.0 (MCPServer), .NET 8.0 (connectors)
 - **Shared .NET libraries** in `Libs/` (ShellyLib, MQTTControllerLib, HelpersLib, HeartbeatLib) and `SharedContracts/`
 - **`Depricated/` folder** contains legacy/replaced projects — avoid modifying these
+- **Syncfusion is gone from `SmartHome.Web` — do not bring it back.** Removing it cut the
+  image build from 7m54s to 2m35s and the publish output from 238 MB to 8.3 MB. The
+  sliders and switches are native `<input>` elements on purpose: they carry the hit area
+  the OS gives a finger, which the replaced Syncfusion controls did not. Details in
+  `Docs/Archiv/Backlog-Laden-2026-09.md`, point 24
 
 ## Recommended Skills
 
