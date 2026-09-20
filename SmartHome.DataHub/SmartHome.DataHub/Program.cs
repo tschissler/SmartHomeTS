@@ -147,6 +147,7 @@ using (var scope = app.Services.CreateScope())
 {
     var mqttClient = scope.ServiceProvider.GetRequiredService<MQTTClient.MQTTClient>();
     await mqttClient.SubscribeToTopic(LadeTopics.StatusAlle);
+    await mqttClient.SubscribeToTopic(LadeTopics.EnergieaufteilungAlle);
     await mqttClient.SubscribeToTopic("data/electricity/M1/#");
     await mqttClient.SubscribeToTopic("data/electricity/M3/#");
     await mqttClient.SubscribeToTopic("data/electricity/envoym1");
@@ -297,6 +298,12 @@ using (var scope = app.Services.CreateScope())
                         },
                         DateTimeOffset.UtcNow);
                 }
+                return;
+            }
+
+            if (LadeTopics.ZerlegeEnergieaufteilungTopic(topic) is (string aufteilungOrt, string aufteilungBox))
+            {
+                WriteEnergieaufteilungToDB(influx3Connector, payload, aufteilungOrt, aufteilungBox);
                 return;
             }
 
@@ -707,6 +714,85 @@ void WriteCangatewayDataToDB(InfluxDB3Connector influx3Connector, string payload
                 },
                 DateTimeOffset.UtcNow);
             break;
+    }
+}
+
+// The three virtual meters of one wallbox, written like any other energy value. The
+// ChargingController owns the attribution; here it is just a cumulative counter per source,
+// which is what makes MAX(value_cumulated_kwh) - MIN(...) answer "how much PV charging in
+// February" without knowing anything about charging sessions. See Docs/Ladeprotokoll.md.
+void WriteEnergieaufteilungToDB(InfluxDB3Connector influx3Connector, string payload, string location, string device)
+{
+    Energieaufteilung? aufteilung;
+    try
+    {
+        aufteilung = JsonSerializer.Deserialize<Energieaufteilung>(payload, jsonOptions);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError($"####Error deserializing Energieaufteilung for {location}/{device}: {ex.Message}");
+        logger.LogError($"Payload: {payload}");
+        return;
+    }
+    if (aufteilung == null)
+        return;
+
+    WriteLadungsenergie("EnergieLadungPv", aufteilung.EnergieLadungPvKwh);
+    WriteLadungsenergie("EnergieLadungBatterie", aufteilung.EnergieLadungBatterieKwh);
+    WriteLadungsenergie("EnergieLadungNetz", aufteilung.EnergieLadungNetzKwh);
+
+    WriteLadeleistung("LadeleistungPv", aufteilung.LadeleistungPvW);
+    WriteLadeleistung("LadeleistungBatterie", aufteilung.LadeleistungBatterieW);
+    WriteLadeleistung("LadeleistungNetz", aufteilung.LadeleistungNetzW);
+
+    void WriteLadungsenergie(string measurement, decimal currentValue)
+    {
+        var measurementId = $"Energie_{location}_{device}_{measurement}";
+        var delta = 0m;
+        var previousValue = previousValues.FirstOrDefault(kv => kv.Key == measurementId);
+        if (previousValue.Key != null)
+        {
+            delta = currentValue - previousValue.Value;
+            previousValues[measurementId] = currentValue;
+        }
+        else
+        {
+            previousValues.Add(measurementId, currentValue);
+        }
+
+        influx3Connector.WriteEnergyValue(
+            new InfluxEnergyRecord
+            {
+                MeasurementId = measurementId,
+                Category = MeasurementCategory.Laden,
+                SubCategory = MeasurementSubCategory.Consumption,
+                SensorType = "Wallbox",
+                Location = location,
+                Device = device,
+                Measurement = measurement,
+                Value_Cumulated_KWh = currentValue,
+                Value_Delta_KWh = delta,
+            },
+            DateTimeOffset.UtcNow);
+    }
+
+    // The momentary split of the charging power, so the history chart can stack it by source
+    // instead of differentiating the meters.
+    void WriteLadeleistung(string measurement, decimal currentValue)
+    {
+        influx3Connector.WritePowerValue(
+            new InfluxPowerRecord
+            {
+                MeasurementId = $"Leistung_{location}_{device}_{measurement}",
+                Category = MeasurementCategory.Laden,
+                SubCategory = "Ladeleistung",
+                SensorType = "Wallbox",
+                Location = location,
+                Device = device,
+                Measurement = measurement,
+                Value_W = currentValue,
+            },
+            DateTimeOffset.UtcNow);
     }
 }
 

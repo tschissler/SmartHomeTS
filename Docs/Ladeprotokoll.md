@@ -113,6 +113,30 @@ Das hat vier Vorteile:
   (`LadeleistungPv`/`-Batterie`/`-Netz` je Gerät), damit das Verlaufsdiagramm ohne
   Ableitung auskommt.
 
+### Stand der Umsetzung (Punkt 12)
+
+Der ChargingController publiziert je Box retained auf
+`daten/Laden/M3/<Box>/Energieaufteilung` (`LadeTopics.Energieaufteilung`), Payload
+`SharedContracts.Energieaufteilung` mit den drei Zählerständen, den drei momentanen
+Aufteilungsleistungen und `LadezeitSekunden`. Er **abonniert dieses Topic selbst** — der
+retained Payload ist die Sicherung der Zählerstände über einen Neustart hinweg.
+
+Drei Schwellen, die in der Regel nicht stehen, aber die Buchführung tragen:
+
+| Schwelle | Wert | Wofür |
+|---|---|---|
+| Wiederherstellungsfrist | 15 s | So lange zählt der Controller nach dem Start **nicht**, sondern wartet auf seinen eigenen retained Stand. Ohne sie publiziert ein Rollout eine frische Null, bevor der Broker den alten Wert nachgeliefert hat |
+| Maximales Intervall | 30 s | Δt darüber wird nicht zugerechnet. Ein längeres Intervall ist ein Controller-Ausfall, und ihn mit der jetzt gemessenen Leistung zu verbuchen erfände Energie |
+| Alter der Envoy-Werte | 30 s | Ältere Messwerte gelten als fehlend, das Intervall wird übersprungen. Der Regelkreis arbeitet davon unberührt weiter wie bisher |
+
+`HouseConsumptionPower` in `ChargingSituation` **ist** der Envoy-Kanal `PowerToHouse` von
+M3, nur in Watt statt Milliwatt (`ChargingController/Program.cs`, Zweig
+`data/electricity/envoym3`). Die beiden Namen in dieser Regel meinen also dieselbe Größe.
+
+Die Ladezeit wird auch dann gezählt, wenn der Mix unbekannt ist: die Ladeleistung ist
+gemessen, die Zurechnung gerechnet. Ein gemessenes Faktum wegzulassen, weil ein
+gerechnetes fehlt, machte die Ladezeit still zu kurz.
+
 ## Tabelle `ladesitzungen`
 
 Eine Sitzung ist ein Datensatz mit Attributen, keine Messung. Sie bekommt deshalb eine

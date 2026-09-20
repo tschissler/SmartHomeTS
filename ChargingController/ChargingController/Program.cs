@@ -14,9 +14,15 @@ DateTime lastControlCycleTime = DateTime.MinValue;
 // is missing is what tells the two apart in the log.
 DateTime lastWaitingLogTime = DateTime.MinValue;
 bool powerDataReceived = false;
+DateTimeOffset lastPowerDataTime = DateTimeOffset.MinValue;
 bool insideDataReceived = false;
 bool outsideDataReceived = false;
 const int heartbeatIntervalSeconds = 60;
+// How old the Envoy readings may be before the energy attribution skips the interval. The
+// connector publishes at 1 Hz, so anything approaching this is an outage of the connector or
+// the broker, not jitter. Deliberately only guards the bookkeeping: the control loop keeps
+// working on its last readings, which is existing behaviour and a separate question.
+const int powerDataMaxAgeSeconds = 30;
 // The decision runs on a fixed cycle instead of on every incoming message: the Enphase
 // connector publishes once per second, which is far faster than the dead time of the
 // wallbox and the car, and reacting that fast is what makes the loop oscillate.
@@ -26,6 +32,10 @@ const int controlCycleSeconds = 5;
 var stabilizerOptions = new ChargingStabilizerOptions();
 var chargingSmoother = new ChargingSmoother(stabilizerOptions.SmoothingTimeConstant);
 var chargingStabilizer = new ChargingStabilizer(stabilizerOptions);
+
+// The three virtual meters per box. Started here so the grace period it waits for its own
+// retained topic begins with the process, not with the first control cycle.
+var energyLedger = new EnergyAttributionLedger(DateTimeOffset.Now);
 
 // Display version information on startup
 var versionInfo = VersionInfo.GetVersionInfo();
@@ -136,11 +146,54 @@ async Task RunControlCycle()
         }
 
         await PublishChargingSituation();
+        await UpdateEnergyAttribution(now);
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error running control cycle: {ex.Message}");
     }
+}
+
+// Bookkeeping, not control. The meters are carried forward from the raw readings, not from
+// the smoothed ones: the smoothing exists to keep the contactor calm, while the meters are
+// supposed to describe what actually flowed.
+async Task UpdateEnergyAttribution(DateTimeOffset now)
+{
+    // Stale Envoy readings are treated as missing ones. Attributing an hour of charging to a
+    // source mix that was measured an hour ago would be a guess, and a guessed attribution
+    // lands in a meter that is never reset.
+    var powerDataFresh = (now - lastPowerDataTime).TotalSeconds <= powerDataMaxAgeSeconds;
+    var anteile = powerDataFresh
+        ? EnergyAttribution.BerechneAnteile(
+            currentChargingSituation.HouseConsumptionPower,
+            currentChargingSituation.PowerFromGrid,
+            currentChargingSituation.PowerFromBattery)
+        : null;
+
+    await UpdateBoxMeters(LadeTopics.Garage, currentChargingSituation.InsideCurrentChargingPower, anteile, now);
+    await UpdateBoxMeters(LadeTopics.Stellplatz, currentChargingSituation.OutsideCurrentChargingPower, anteile, now);
+}
+
+async Task UpdateBoxMeters(string wallbox, int chargingPowerW, Quellenanteile? anteile, DateTimeOffset now)
+{
+    var stand = energyLedger.Fortschreiben(wallbox, chargingPowerW, anteile, now);
+    if (stand is null)
+        return; // still waiting for the retained meter readings
+
+    await PublishEnergieaufteilung(wallbox, stand);
+}
+
+// Published retained because it is state — and because it is the controller's own backup:
+// this is the topic it restores its meters from after a restart.
+async Task PublishEnergieaufteilung(string wallbox, Energieaufteilung aufteilung)
+{
+    var payload = JsonSerializer.Serialize(aufteilung);
+    await mqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+        .WithTopic(LadeTopics.Energieaufteilung(wallbox))
+        .WithPayload(payload)
+        .WithRetainFlag()
+        .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
+        .Build());
 }
 
 void LogWhyTheLoopIsWaiting()
@@ -244,6 +297,19 @@ Task MqttMessageReceived(MqttApplicationMessageReceivedEventArgs args)
             currentChargingSituation.PowerFromPV = (int)(pvData.PowerFromPV / 1000);
             currentChargingSituation.HouseConsumptionPower = (int)(pvData.PowerToHouse / 1000);
             powerDataReceived = true;
+            lastPowerDataTime = DateTimeOffset.Now;
+        }
+
+        // The controller's own retained meter readings, replayed by the broker on subscribe.
+        // The location is checked rather than assumed: the wildcard subscription would
+        // otherwise let a box of another building overwrite the meters of the M3 box of the
+        // same name.
+        else if (LadeTopics.ZerlegeEnergieaufteilungTopic(topic) is (string ort, string box)
+                 && ort == LadeTopics.Ort)
+        {
+            var aufteilung = JsonSerializer.Deserialize<Energieaufteilung>(payload);
+            if (aufteilung is not null)
+                energyLedger.Wiederherstellen(box, aufteilung);
         }
 
         else if (LadeTopics.ZerlegeStatusTopic(topic) is (_, string wallbox))
@@ -323,6 +389,10 @@ async Task MQTTConnectAsync()
                 await mqttClient.SubscribeAsync(LadeTopics.StatusAlle);
                 await mqttClient.SubscribeAsync("data/electricity/envoym3");
                 await mqttClient.SubscribeAsync(LadeTopics.Einstellungen);
+                // Subscribing to what this service itself publishes: the retained payload is
+                // how the meter readings survive a restart. Only the first message per box is
+                // adopted, so the echo of our own publications changes nothing.
+                await mqttClient.SubscribeAsync(LadeTopics.EnergieaufteilungAlle);
                 break;
             }
         }
