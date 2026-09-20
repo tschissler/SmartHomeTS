@@ -30,11 +30,21 @@
             return consumptionData;
         }
 
+        /// <summary>
+        /// Share of one value in the bar, in percent of <see cref="PowerMaximum"/>.
+        /// </summary>
+        /// <remarks>
+        /// The 100 is a decimal on purpose. Both operands used to be int, so the division was
+        /// an integer one and the result only became a decimal afterwards -- the fraction never
+        /// existed. The bar was therefore quantised to steps of 150 W: everything below that
+        /// vanished from it while the legend next to it still read "Batterie laden: 6 W", and
+        /// 1.350 W and 1.499 W drew exactly the same segment.
+        /// </remarks>
         private static decimal CalculatePowerPercent(int power)
         {
             if (power < 0)
                 return 0;
-            return (power * 100) / PowerMaximum;
+            return (power * 100m) / PowerMaximum;
         }
     }
 }

@@ -3,6 +3,7 @@
 @using SmartHome.Web.Services
 @using SmartHomeWebManagers
 @using System.Text.Json
+@using System.Globalization
 @using SharedContracts
 
 @page "/chargingoverview"
@@ -114,9 +115,6 @@
 </div>
 
 @code {
-    private int _batteryMinLevel = 30;
-    private int _manualCurrent = 6;
-    private bool _useManualCharging = false;
     ChargingSituation _chargingSituation = new ();
 
     /// <summary>
@@ -170,7 +168,7 @@
             @foreach (var anteil in anteile.Where(a => a.Prozent > 0))
             {
                 <div class="AvailabilityLevel" title="@anteil.Name"
-                     style="width: @(anteil.Prozent)%; background-color: @anteil.Farbe"></div>
+                     style="width: @Breite(anteil.Prozent); background-color: @anteil.Farbe"></div>
             }
         </div>
     </text>;
@@ -232,6 +230,22 @@
     /// bars stop being readable as a pair.
     /// </summary>
     private IReadOnlyList<Anteil> AlleAnteile => [.. Quellen, .. Verbraeuche];
+
+    /// <summary>
+    /// Width of one segment, as CSS needs it: a dot as the decimal separator.
+    /// </summary>
+    /// <remarks>
+    /// The application runs under de-DE (Program.cs sets it), so a decimal renders as "11,28".
+    /// "width: 11,28%" is not a valid CSS length, the browser drops the whole declaration, and
+    /// the segment ends up 0 px wide - the bar is simply empty. It never showed while the share
+    /// was an integer; it appeared the moment the integer division in
+    /// ChargingSituationManager.CalculatePowerPercent was fixed. CarStatusDataVisualizer does
+    /// the same thing for the battery height, for the same reason.
+    ///
+    /// Two decimals are enough: on a 350 px bar that is a twentieth of a pixel.
+    /// </remarks>
+    private static string Breite(decimal prozent) =>
+        prozent.ToString("0.##", CultureInfo.InvariantCulture) + "%";
 
     private static int Positiv(int watt) => Math.Max(0, watt);
 
