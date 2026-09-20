@@ -124,6 +124,31 @@ erzeugen, die es erzeugen soll. Der Pfad zeigt jetzt neben das Skript. Gegenprob
 gepatchte Generator erzeugt das gemergte `energy-sankey-dashboard.json` byteidentisch
 (`git status` nach dem Lauf sauber).
 
+**Nachkontrolle zu Punkt 7/8 bestanden (2026-09-20, nach dem Klick auf die Ladestufe).**
+Gemessen am produktiven Broker mit einem frischen Client und in InfluxDB:
+
+- Alle vier neuen Topics sind da und retained — sie kamen beim Subscribe sofort.
+  Jeder Payload trägt `Zeitpunkt`, wie die Konvention es verlangt. In
+  `daten/Laden/M3/<Box>/Status` stehen `SollstromMa` und `SitzungsBeginnAusBoxZeit`,
+  und Letzteres trägt tatsächlich Information: Stellplatz meldet `true` bei gesetztem
+  `SitzungsBeginn`, Garage `false` bei `null`.
+- Die Regelung läuft: `befehle/Laden/M3/<Box>/Ladestrom` wird publiziert,
+  `daten/Laden/M3/Regelung/Situation` im Sekundentakt fortgeschrieben.
+- **Der Tag-Wechsel in InfluxDB ist sauber geschnitten.** `KebaGarage`/`KebaOutside`
+  enden um 09:44:49 UTC, `Garage`/`Stellplatz` setzen dort ein — das ist exakt der
+  DataHub-Rollout. Keine Lücke, keine Überlappung.
+- **Der IN-Filter ist messbar nötig, nicht nur theoretisch.** Für den Stellplatz über
+  die letzten drei Stunden: `KebaOutside` läuft von 16824,164 auf 16827,895 kWh,
+  `Stellplatz` steht seitdem konstant bei 16827,895. Die Sankey-Kennzahl mit
+  IN-Filter liefert **3,731 kWh**; nur auf den neuen Namen gefiltert wären es
+  **0,000 kWh**. Genau die 3,73 kWh wären verloren gewesen.
+- Die vier alten retained Topics stehen noch, wie erwartet. `commands/charging/KebaOutside`
+  trägt weiterhin `{"ChargingCurrent":6000}` — das ist der Rollback-Fall in Reinform:
+  Ein Rückfall auf die alten Images würde sofort 6 A ziehen. Aufräumen bleibt offen.
+- Der Burst von drei `Einstellungen`-Publikationen innerhalb von 124 ms war **kein
+  Fehler**, sondern Thomas beim Klicken. Gegenprobe: 30 s ohne Bedienung, keine
+  einzige weitere Publikation.
+
 Merges nach `main` gibt ausschließlich Thomas frei: jeder Merge ist über den ArgoCD Image
 Updater binnen ~2 min ein Deployment ins laufende System.
 
