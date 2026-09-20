@@ -49,8 +49,15 @@
 
 /* The segments are set apart rather than butted together: the house and the grid feed-in are
    both warm colours and stand next to each other whenever the battery is full, and the gap is
-   what keeps that boundary readable. */
+   what keeps that boundary readable.
+
+   Full scale is ChargingSituationManager.PowerMaximum, today 10 kW. Beyond it the widths add
+   up to more than 100 %, and because the segments keep the flex default shrink factor of 1
+   they are shrunk back into the full width proportionally - the ratios stay exact, the
+   absolute measure is gone, and 10 kW and 18 kW draw the same full bar. That is what
+   .AvailabilityUeberlauf marks; position: relative is here for it. */
 .AvailabilityComponent {
+    position: relative;
     display: flex;
     gap: 2px;
     width: 100%;
@@ -60,6 +67,27 @@
 .AvailabilityLevel {
     border-radius: 3px;
     height: 100%;
+}
+
+/* The bar has left the scale: a hatched cut at the right end, the way a chart marks a broken
+   axis. Absolutely positioned on purpose - as a flex item it would take width away from the
+   segments and so alter the very ratios that are all the bar has left to show. It carries no
+   figure: the watt values stand in the legend underneath, and a second copy of them here
+   could drift away from them.
+
+   9px of roughly 350 is small enough to stay quiet for the 0.3 % of the time it appears, and
+   the hard black/white hatch reads on every segment colour of the palette - a translucent
+   mark would disappear on the dark ones. */
+.AvailabilityUeberlauf {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 9px;
+    border-radius: 0 3px 3px 0;
+    background: repeating-linear-gradient(135deg,
+        #1f1f1f 0 2px,
+        #ffffff 2px 4px);
 }
 
 /* The two bars belong together and sit directly on top of each other: same width, same

@@ -194,8 +194,29 @@
                 <div class="AvailabilityLevel" title="@anteil.Name"
                      style="width: @Breite(anteil.Prozent); background-color: @anteil.Farbe"></div>
             }
+            @if (IstUeberlauf(anteile))
+            {
+                <div class="AvailabilityUeberlauf" title="@UeberlaufHinweis"></div>
+            }
         </div>
     </text>;
+
+    /// <summary>
+    /// Whether this bar has left the scale. It is the total that decides, not the largest
+    /// segment: three shares of 40 % overflow just as a single one of 120 % does, and a bar
+    /// that is full in both cases cannot say which of the two it is showing.
+    /// </summary>
+    private static bool IstUeberlauf(IReadOnlyList<Anteil> anteile) =>
+        anteile.Sum(a => a.Prozent) > 100m;
+
+    /// <summary>
+    /// What the mark says when one points at it. It names the scale, not the value: the watt
+    /// figures stand in the legend directly underneath, and a second copy of them inside the
+    /// bar would be a duplicate that can drift away from them.
+    /// </summary>
+    private static string UeberlaufHinweis =>
+        $"Mehr als {(ChargingSituationManager.PowerMaximum / 1000m):0.#} kW — "
+        + "der Balken zeigt ab hier nur noch die Verhältnisse";
 
     /// <summary>
     /// The one legend for both bars. It keeps every entry, including the ones at zero: the
