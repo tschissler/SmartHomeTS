@@ -15,6 +15,9 @@
 #include "soc/rtc_cntl_reg.h"
 
 // Pin configuration
+// CAUTION: GPIO 2 carries the on-board LED *and* the TFT's D/C line (TFT_DC in
+// TFTDisplay.h). On a device with a display the LED must never be driven, or the
+// status blinking would corrupt the SPI traffic - see setStatusLed().
 #define LED_INTERNAL_PIN 2
 #define DHTPIN 25    
 #define SWITCH_TOP_PIN 33
@@ -26,7 +29,11 @@ TFTDisplay tftDisplay;
 const char* version = TEMPSENSORFW_VERSION;
 String chipID = "";
 
-#define BLINK_DURATION 10       // Blink duration in milliseconds, blinking will happen every second
+// The LED stays dark while everything works; a blink pattern means something is wrong.
+// Driven from millis() instead of the loop cadence, so the pattern stays readable no
+// matter how long a loop iteration takes.
+#define BLINK_SLOT_MS 200       // Length of one on- or off-slot of the blink pattern
+#define BLINK_CYCLE_MS 2000     // Pattern repeats every 2 seconds
  
 #define DHTTYPE DHT22   
 DHT dht(DHTPIN, DHTTYPE);
@@ -43,6 +50,10 @@ MQTTClientLib* mqttClientLib = nullptr;
 static bool otaInProgress = false;
 static bool otaEnable = true;
 static bool sendMQTTMessages = true;
+// Only the dev board has a TFT attached; the sensors in the field do not. Configured
+// via MQTT and defaulting to false, so a device without config leaves GPIO 2 alone.
+static bool hasDisplay = false;
+static bool displayInitialized = false;
 static bool mqttSuccess = false;
 static bool lastPingSuccess = false;
 static int lastMQTTSentMinute = 0;
@@ -73,7 +84,17 @@ String extractVersionFromUrl(String url) {
 }
 
 void printInformationOnTFT(String temperature, String humidity, bool displayMQTTMessage) {
-  
+  if (!hasDisplay) {
+    return;
+  }
+
+  // Initialized on first use rather than in setup(), because the display is only known
+  // to exist once the MQTT config has arrived.
+  if (!displayInitialized) {
+    tftDisplay.init();
+    displayInitialized = true;
+  }
+
   DisplayInformation data;
   
   // Update NTP client
@@ -116,6 +137,15 @@ void parseConfigJSON(String jsonPayload) {
   if (!doc["Location"].isNull()) {
     location = doc["Location"].as<String>();
     Serial.println("Location set to: " + location);
+  }
+
+  if (!doc["HasDisplay"].isNull()) {
+    hasDisplay = doc["HasDisplay"].as<bool>();
+    Serial.println("Display support set to: " + String(hasDisplay ? "true" : "false"));
+    if (hasDisplay) {
+      // Bring the display up right away instead of waiting for the next sensor reading.
+      printInformationOnTFT("-", "-", false);
+    }
   }
 }
 
@@ -208,6 +238,34 @@ void readSensorAndPublish() {
   printInformationOnTFT(String(temperature), String(humidity), true);
 }
 
+// Both helpers are no-ops on a device with a display, where GPIO 2 belongs to the TFT.
+void setStatusLed(bool on) {
+  if (hasDisplay) {
+    return;
+  }
+  digitalWrite(LED_INTERNAL_PIN, on ? HIGH : LOW);
+}
+
+// Dark while healthy; 2 flashes when the broker is unreachable, 3 when publishing failed
+// (which also covers a device that has not received its config yet and sends nothing).
+void updateStatusLed() {
+  int blinks = 0;
+  if (!lastPingSuccess) {
+    blinks = 2;
+  }
+  if (!mqttSuccess) {
+    blinks = 3;
+  }
+
+  if (blinks == 0) {
+    setStatusLed(false);
+    return;
+  }
+
+  uint32_t slot = (millis() % BLINK_CYCLE_MS) / BLINK_SLOT_MS;
+  setStatusLed(slot < (uint32_t)(blinks * 2) && slot % 2 == 0);
+}
+
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
   Serial.begin(9600);
@@ -226,8 +284,10 @@ void setup() {
   wifiLib.connect();
   String ssid = wifiLib.getSSID();
 
-  // Initialize display
-  tftDisplay.init();
+  // The display is not initialized here: whether one exists arrives with the MQTT config,
+  // and on a device without one the init would claim GPIO 2 as the TFT's D/C line.
+  pinMode(LED_INTERNAL_PIN, OUTPUT);
+  setStatusLed(false);
 
   // Set up MQTT
   String mqttClientID = "ESP32TemperatureSensorClient_" + chipID;
@@ -267,6 +327,9 @@ void loop() {
       lastMQTTSentMinute = currentMinute;
 
       readSensorAndPublish();
+      // Keep the LED dark across the ping, which blocks for seconds and would otherwise
+      // freeze it mid-pattern.
+      setStatusLed(false);
       lastPingSuccess = Ping.ping(mqtt_broker.c_str());
     } 
 
@@ -280,27 +343,7 @@ void loop() {
       lastHeartbeatMs = millis();
       mqttClientLib->publishStatus(location, "TemperaturSensor", sensorName, String(version));
     }
-    digitalWrite(LED_INTERNAL_PIN, HIGH);
-    delay(BLINK_DURATION);
-    digitalWrite(LED_INTERNAL_PIN, LOW);
-    if (!lastPingSuccess) {
-      Serial.println("Ping failed");
-      delay(BLINK_DURATION);
-      digitalWrite(LED_INTERNAL_PIN, HIGH);
-      delay(BLINK_DURATION);
-      digitalWrite(LED_INTERNAL_PIN, LOW);
-    }
-    if (!mqttSuccess) {
-      Serial.println("MQTT failed");
-      delay(BLINK_DURATION);
-      digitalWrite(LED_INTERNAL_PIN, HIGH);
-      delay(BLINK_DURATION);
-      digitalWrite(LED_INTERNAL_PIN, LOW);
-      delay(BLINK_DURATION);
-      digitalWrite(LED_INTERNAL_PIN, HIGH);
-      delay(BLINK_DURATION);
-      digitalWrite(LED_INTERNAL_PIN, LOW);
-    }
+    updateStatusLed();
   }
   delay(100);
 }
