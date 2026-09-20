@@ -300,6 +300,13 @@ Nutzen pro Zeile.
       diesem Repo nicht feststellen. Als offener Befund unten erfasst, hier nicht mit
       umgesetzt
 
+**Nach dem Rollout zu verifizieren.** Der Testsatz prüft die Alterslogik gegen einen
+Fake, nicht den MQTT-Pfad: Dass MQTTnet bei einer Wiedergabe aus dem Retained-Store das
+Retain-Flag setzt, ist eine Annahme über die Bibliothek. Beleg im Betrieb: Direkt nach
+einem Connector-Neustart muss im Log `Received retained message from
+commands/charging/…` stehen. Steht dort `Received message` ohne das Wort, greift der Fix
+nicht und die Annahme war falsch.
+
 **Abhängig von** nichts.
 
 ---
