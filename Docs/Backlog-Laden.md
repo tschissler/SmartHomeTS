@@ -26,6 +26,7 @@ Präfix setzt.
 | 2 + 18 Health & Secret | `laden-02-health` | 2026-09-20 | **erledigt, ausgerollt und verifiziert** (`1c8ff95`). Im neuen Pod: `Loaded tokens … (issued …)`, `Stored token refreshed 0.9 h ago, well inside the 7 day limit`, sofortiger Refresh mit erfolgreicher Persistierung, `Connected to the BMW broker — vehicle is ready.` je Fahrzeug, Readiness `True` |
 | 19 CI-Tests | `laden-19-ci-tests` | 2026-09-20 | **erledigt und gemergt** (`ef244fe`). Ab jetzt läuft `dotnet test` vor jedem ChargingController-Build; ein roter Test erzeugt kein Image und damit kein Deployment |
 | 7 + 8 Topic-Schnitt | `laden-0708-schnitt` | 2026-09-20 | **erledigt und gemergt** (`04cc432`). 26 Dateien, ChargingControllerTests 46/46 und KebaConnectorTests 17/17 grün ohne einen geänderten Erwartungswert. Löst **sechs** Rollouts aus, nicht vier: Enphase und Shelly bauen wegen `SharedContracts/**` mit — der transitive Pfadfilter aus Punkt 0 wirkt wie vorgesehen. Rollout-Handgriffe siehe unten |
+| Grafana-Repo | `grafana-dashboards` | 2026-09-20 | läuft — eigenes Repo im internen Forgejo, Export-Skript, Umzug. Außerhalb des Lade-Vorhabens, siehe unten |
 | 0 CI-Trigger | `laden-00-ci-trigger` | 2026-09-20 | **erledigt und gemergt** (`d95d3f5`); sieben Rollouts ausgelöst |
 | 1 BMW-Token | `laden-01-bmw-token` | 2026-09-20 | **erledigt und gemergt** (`d5b829b`), Rollout läuft. Frische Publikation noch nicht beobachtet — beide Fahrzeuge parken |
 
