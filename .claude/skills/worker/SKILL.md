@@ -26,7 +26,16 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   (`/home/thomas/Repos/GitHub/…`) und auch in `.github/workflows`. Einzelne, gerade Befehle
   laufen durch; `for`-Schleifen über Globs und lange `&&`-Ketten werden abgelehnt, auch
   wenn gar kein git darin vorkommt. Brauchst du eine Schleife, schreib sie in eine
-  Skriptdatei und ruf die auf.
+  Skriptdatei und ruf die auf. **Dasselbe eine Ebene höher:** Wird eine lange
+  `curl`-Abfrage abgelehnt, obwohl dieselbe Form vorher durchlief, leg den Rumpf als Datei
+  im Scratchpad ab und ruf `curl --data-binary @datei` auf. Es ist die Verschachtelung, die
+  anstößt, nicht der Inhalt. **Ein Token gehört trotzdem nie in eine Datei** — den holst du
+  jedes Mal frisch in die Variable.
+- **Nimm einen eigenen Port**, wenn du etwas startest (Web-App, Testserver): Zwei Sessions
+  auf demselben Port kollidieren, und deine eigene Vorgängerinstanz auch. Zum Aufräumen
+  `ss -lptn 'sport = :<port>'` und `kill <pid>` — **nicht `pkill -f`**: Das Muster steht
+  auch in deiner eigenen Kommandozeile, also greift es die eigene Shell mit und der Befehl
+  endet mit Exit 144.
 - **Ein Punkt, eine Session.** Was der Auftrag nicht nennt, gehört jemand anderem — auch
   wenn es auf dem Weg liegt und klein aussieht. Im Zweifel melden statt anfassen.
 - **Das Arbeitsdokument des Vorhabens fasst du nicht an.** Das führt die
