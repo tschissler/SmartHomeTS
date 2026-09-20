@@ -126,7 +126,7 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
     var topic = e.Topic;
     var time = DateTime.Now;
 
-    Console.WriteLine($"Received message from {topic} at {time}: {payload}");
+    Console.WriteLine($"Received {(e.Retained ? "retained " : "")}message from {topic} at {time}: {payload}");
 
     ChargingSetData? chargingSetData = null;
     try
@@ -155,11 +155,11 @@ async void MqttMessageReceived(object? sender, MqttMessageReceivedEventArgs e)
     {
         if (kebaDevice.ToLower() == "kebagarage")
         {
-            await kebaGarage.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent);
+            await kebaGarage.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent, e.Retained);
         }
         else if (kebaDevice.ToLower() == "kebaoutside")
         {
-            await kebaOutside.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent);
+            await kebaOutside.UpdateDeviceDesiredCurrent(chargingSetData.ChargingCurrent, e.Retained);
         }
         else
         {

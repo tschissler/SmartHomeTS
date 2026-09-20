@@ -101,8 +101,12 @@ Ein Fahrzeug ist ortslos: es bewegt sich und lädt manchmal auswärts. Kategorie
 - **Auch Befehle tragen einen `Zeitpunkt`, und der Empfänger muss ihn auswerten.** Ein
   retained Kommando wird beim Verbinden sofort zugestellt, unabhängig von seinem Alter.
   Wer stattdessen die Empfangszeit als Alter nimmt, hält ein beliebig altes Kommando für
-  frisch. Im Bestand setzt genau das die Notfallfreigabe der Wallbox außer Kraft — siehe
-  `Backlog-Laden.md`, Punkt 16.
+  frisch. Im Bestand setzte genau das die Notfallfreigabe der Wallbox außer Kraft — siehe
+  `Backlog-Laden.md`, Punkt 16. Der `KebaConnector` behilft sich bis zur Umstellung damit,
+  dass er das Retain-Flag der Zustellung auswertet: eine vom Broker wiedergegebene
+  Nachricht setzt den Sollwert, aber nicht dessen Alter. Das ist eine Notlösung, keine
+  Alternative zum `Zeitpunkt` — sie erkennt nur, dass die Nachricht nicht gerade gesendet
+  wurde, nicht wie alt sie ist.
 
 ## Migrationsstand
 
