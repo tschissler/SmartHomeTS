@@ -930,6 +930,48 @@ Punkt 11, solange der an der Kachel arbeitet.
 
 ---
 
+### 22. Farben von Haus und Wallboxen mit Grafana in Einklang bringen
+
+**Aufgekommen am 2026-09-20** als Rest aus Punkt 21. Dort wurden PV, Batterie und Netz auf
+die Grafana-Werte gezogen; zwei Größen blieben bewusst liegen, weil sie sich nicht allein
+auf der Ladeseite entscheiden lassen.
+
+**Der Befund stammt aus Punkt 21 und widerlegt eine Annahme aus meinem eigenen Auftrag:**
+Ich hatte behauptet, die Wallbox-Farben hätten in Grafana keine Entsprechung. Sie haben
+eine — `sankey/gen_sankey.py` führt `'Wallbox Garage': #9C27B0` und
+`'Wallbox Stellplatz': #E91E63`, und dieselben Werte stehen im Quellenmix-Dashboard aus
+Punkt 20 als Farbe der Abweichungskurve je Box.
+
+**Warum es zusammenhängt:**
+
+1. Grafana färbt Haus mit `#8E44AD` — Lila. Lila sind in der Weboberfläche aber die
+   Wallboxen (`#614680` Garage, `#be8ce5` Stellplatz). Eine der beiden Seiten muss weichen,
+   und welche, ist eine Entscheidung über beide Größen zugleich.
+2. `#614680` ist zusätzlich die Randfarbe des aktiven Zuordnungs-Chips in
+   `WallboxStatusVisualizer.razor.css`. Die Wallbox-Farbe zu ändern heißt, die Kacheln
+   anzufassen — deshalb durfte Punkt 21 es nicht.
+
+**Sichtbare Nebenfolge, solange nichts passiert:** `goldenrod` (Haus) und `#F39C12`
+(Netzeinspeisung) sind beide orange und stoßen im unteren Balken aneinander, sobald die
+Batterie voll ist. Punkt 21 hat 2 px Abstand zwischen die Balkensegmente gelegt, damit die
+Kante sichtbar bleibt — **eine Notlösung, keine Farbentscheidung**, und als solche im Code
+vermerkt.
+
+**Umfang**
+- [ ] Eine Farbe je Größe, für Web und Grafana gemeinsam entschieden: Haus, Wallbox
+      Garage, Wallbox Stellplatz
+- [ ] Web: die CSS-Variablen `--laden-farbe-*` in `app.css` nachziehen (sie liegen seit
+      Punkt 21 an genau einer Stelle), den Zuordnungs-Chip in
+      `WallboxStatusVisualizer.razor.css` mit
+- [ ] Grafana: Sankey-Generator und die betroffenen Dashboards im Repo
+      `forgejo.intern/thomas/Grafana`
+- [ ] Den 2-px-Notbehelf im Balken prüfen — wird er noch gebraucht, wenn die Farben stimmen?
+
+**Abhängig von** 21. Fasst Web **und** das Grafana-Repo an, also nicht parallel zu einem
+Punkt, der eines von beiden bearbeitet.
+
+---
+
 ### 14. Grafana-Dashboard „Laden"
 
 Löst `wallbox-charging-dashboard.json` ab; dessen Leistungskurven wandern als Verlaufsteil
