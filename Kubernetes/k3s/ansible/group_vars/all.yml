@@ -17,7 +17,7 @@ nameservers:
 ansible_become_timeout: 60
 
 # Pin k3s version for consistent installs.
-k3s_version: v1.34.11+k3s1
+k3s_version: v1.35.8+k3s1
 
 # Pin the Longhorn chart version, analog zu k3s_version.
 # Wird von plays/install-longhorn.yml gelesen; die Werte selbst stehen in
