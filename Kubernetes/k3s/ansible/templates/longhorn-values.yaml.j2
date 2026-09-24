@@ -38,3 +38,15 @@ persistence:
 # (ArgoCD, cluster-ca-issuer). Das Chart soll keinen eigenen Ingress anlegen.
 ingress:
   enabled: false
+
+# Ab Chart 1.12 rendert `restrictInternalTraffic: true` (neuer Default) sechs
+# NetworkPolicies, auch bei `enabled: false`. k3s setzt NetworkPolicies durch
+# (kein --disable-network-policy), und die Policy auf longhorn-manager laesst nur
+# Longhorn-eigene Pods zu -- der ServiceMonitor `monitoring/longhorn-manager`
+# (Port 9500) waere damit still abgeschnitten. Bewusst aus: das Upgrade soll ein
+# reines Upgrade bleiben, der Nutzen der Abschottung ist im LAN-only-Cluster
+# gering. Wer sie einschaltet, braucht eine Allow-Policy fuer `monitoring`.
+# SmartHomeDeployments #8
+networkPolicies:
+  enabled: false
+  restrictInternalTraffic: false

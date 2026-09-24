@@ -25,7 +25,7 @@ k3s_version: v1.36.4+k3s1
 # nicht ueber ArgoCD -- Begruendung in docs/gitops-grenze.md im Repo
 # SmartHomeDeployments. Upgrades sind dort immer manuell und nie ueberspringend
 # (1.10 -> 1.11 -> 1.12), siehe docs/update-strategie.md.
-longhorn_helm_version: "1.11.3"
+longhorn_helm_version: "1.12.1"
 
 # Ingress hostnames
 nextcloud_domain: nextcloud.intern
