@@ -21,6 +21,14 @@ defaultSettings:
   # starten koennen -- Kubernetes tut das von sich aus nicht.
   nodeDownPodDeletionPolicy: {{ longhorn_node_down_pod_deletion_policy }}
   taintToleration: "node-role.kubernetes.io/master:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
+  # Nach einem Chart-Upgrade laufen die Engines der Volumes auf der alten Version
+  # weiter, bis sie migriert werden. Longhorns Default `0` heisst: nie automatisch.
+  # `1` = eine Engine je Node gleichzeitig, nur bei healthy/detached Volumes. Die
+  # Live-Umschaltung wurde beim 1.11-Upgrade gemessen: 6 s je Volume, laengste
+  # Schreibpause 1 s, kein Rebuild, kein Pod-Restart. Ohne Automatik bleibt der
+  # Cluster gemischt, und uebersprungene Engine-Generationen koennen den naechsten
+  # Minor-Sprung verbauen. SmartHomeDeployments #7
+  concurrentAutomaticEngineUpgradePerNodeLimit: 1
 
 persistence:
   defaultClass: true
