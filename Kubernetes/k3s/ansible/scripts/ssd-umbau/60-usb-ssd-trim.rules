@@ -1,0 +1,7 @@
+# RTL9210 (USB-NVMe-Bridge) meldet provisioning_mode=full, beherrscht aber UNMAP
+# (blkdiscard über 1 TB nachgewiesen, Issue #35). Ohne diese Regel kein TRIM.
+# Am Blockgerät statt an scsi_disk: Der Kernel setzt den Modus bei jeder Prüfung der
+# Platte (Probe beim Boot, Neueinlesen der Partitionstabelle) zurück, und erst danach
+# kommt das add/change-Ereignis der Disk.
+ACTION=="add|change", SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="9210", \
+  RUN+="/bin/sh -c 'for f in /sys%p/device/scsi_disk/*/provisioning_mode; do echo unmap > $$f; done'"
