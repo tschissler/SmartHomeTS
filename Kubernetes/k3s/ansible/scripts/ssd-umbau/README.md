@@ -8,7 +8,7 @@ Keine Playbooks, sondern Skripte, die man Schritt für Schritt von Hand startet:
 passiert einmal pro Node, braucht zwischendurch Hände an der Hardware, und jeder Schritt
 soll geprüft sein, bevor der nächste läuft.
 
-Alle Skripte nehmen den **by-id-Pfad der SSD** als einziges Argument und brechen ab, wenn
+Die Skripte 1–4 nehmen den **by-id-Pfad der SSD** als einziges Argument und brechen ab, wenn
 er nicht auf eine USB-Platte zeigt. **Nie `/dev/sdX` verwenden:** Auf den Pi-Nodes liegen
 die Longhorn-iSCSI-Volumes als `sda`, `sdb`, … daneben — vor dem Umbau hieß die SSD auf
 node5 `sdd`, danach `sda`.
@@ -37,6 +37,7 @@ mit dem ersten SSD-Boot.
 | 6 | `sudo /tmp/ssd-umbau/4-wartungsfenster.sh <dev>` — fährt am Ende herunter | ja | Hand |
 | 7 | LED aus → Strom ab → **SD ziehen** → Strom an | ja | Hardware |
 | 8 | Prüfen (s. u.), dann `kubectl uncordon k3snodeN` | – | kubectl |
+| 9 | `sudo /tmp/ssd-umbau/5-runner-cache.sh`, dann `kubectl label node k3snodeN smarthome/runner-cache=ssd` — Runner-Cache (#45) | nein | Hand + kubectl |
 
 Fortschritt von Schritt 4: `journalctl -u ssd-clone -f`. Bei node5 dauerte das
 Wartungsfenster (5–8) rund 10 Minuten.
@@ -61,6 +62,20 @@ findmnt -no SOURCE /                                                     # SSD, 
 cat /sys/block/sda/device/scsi_disk/*/provisioning_mode                  # unmap
 cat /sys/class/hwmon/hwmon*/in0_lcrit_alarm                              # 0, 24–48 h beobachten
 ```
+
+### Runner-Cache einhängen (Schritt 9)
+
+Gehört zu SmartHomeDeployments **#45**, nicht zum eigentlichen Umbau, und kann jederzeit
+nach Schritt 8 laufen. Das Skript braucht kein Argument: Es findet die Partition über ihr
+Label `act-runner-cache` (von `2-vorbereiten.sh` angelegt) und prüft, dass sie eindeutig
+ist und auf derselben USB-SSD liegt wie `/`. Es trägt sie mit `nofail` in die fstab ein,
+hängt sie unter `/var/lib/act-runner-cache` ein und legt darin `docker/` an. Nur dieses
+Verzeichnis verwenden die arm64-Runner als `hostPath` (`type: Directory`): Fehlt der Mount,
+startet der Runner nicht, statt den Cache auf `/` zu schreiben.
+
+Erst **nach** dem Skript das Node-Label setzen, denn das Label lässt die Runner auf den Node.
+Beim ersten Node mit Label kommt dazu der einmalige Umstieg des StatefulSets
+(Ablauf im Issue).
 
 ## Fallen
 
