@@ -14,7 +14,13 @@
       "Bash(xargs -I{} sh -c 'strings {} 2>/dev/null | grep -i \"\"HttpOperation\"\"')",
       "Read(//home/thomas/.nuget/packages/**)",
       "Bash(dotnet build)",
-      "Bash(kubectl -n smarthome get rolebinding bmwconnector -o yaml)"
+      "Bash(kubectl -n smarthome get rolebinding bmwconnector -o yaml)",
+      "WebFetch(domain:grafana.com)",
+      "Bash(helm lint *)",
+      "WebSearch",
+      "Bash(dotnet test *)",
+      "Bash(kubectl -n mosquitto exec deploy/mosquitto -- timeout * mosquitto_sub *)",
+      "Bash(python3 *)"
     ]
   }
 }
