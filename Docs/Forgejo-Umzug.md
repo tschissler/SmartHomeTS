@@ -9,7 +9,9 @@ Deployments-Repos und gegen den laufenden Cluster, nur lesend.
 Fast-Forward auf `47e152e` (Nachzügler, Schritt 1a). Thomas hat **neu geklont** statt nur
 `origin` umzustellen (Abschnitt 6 „Arbeitsplatz", Abschnitt 12): Neuer Klon
 `~/Repos/Forgejo.intern/SmartHomeTS`, der alte unter `~/Repos/GitHub/SmartHomeTS` bleibt
-übergangsweise. Workflows und Registry sind noch unverändert.
+übergangsweise. Workflows und Registry sind noch unverändert. U01 ist entschieden
+(`forgejo-pull-secret` mitnehmen, keine zusätzliche Absicherung gegen einen
+Forgejo-Ausfall), beides in Abschnitt 12.
 
 Entschieden hat Thomas bisher:
 
@@ -421,7 +423,9 @@ Es spricht trotzdem einiges dafür:
 - Trotzdem liegt `forgejo-pull-secret` (`dockerconfigjson`) schon in den Namespaces
   `smarthome` und `argocd`, und `PVForecast/values.yaml` benutzt es. Es mitzunehmen kostet
   eine Zeile pro `values.yaml` und hält die Dienste lauffähig, falls die Sichtbarkeit von
-  `thomas` einmal auf privat geht. **Offen (Thomas):** mitnehmen oder weglassen.
+  `thomas` einmal auf privat geht. **Entschieden (Thomas, U01): mitnehmen.** Die Charts
+  aller neun Dienste reichen `.Values.imagePullSecrets` schon durch und stehen heute auf
+  `imagePullSecrets: []`; daraus wird `imagePullSecrets: [{name: forgejo-pull-secret}]`.
 
 ### Image Updater
 
@@ -437,8 +441,9 @@ Es spricht trotzdem einiges dafür:
   `pull-secret: pullsecret:argocd/forgejo-pull-secret`,
   `platforms: linux/arm64` (Muster A, F7). `allow-tags` bleibt.
 - **Umstellung je Dienst** in `<Dienst>/values.yaml`: `image.repository` und
-  `image.tag` auf den ersten Forgejo-Tag. **Der Tag muss existieren, bevor der Commit
-  landet**, sonst geht der Pod in `ImagePullBackOff`.
+  `image.tag` auf den ersten Forgejo-Tag, dazu
+  `imagePullSecrets: [{name: forgejo-pull-secret}]` (U01, siehe Pull-Secrets). **Der Tag
+  muss existieren, bevor der Commit landet**, sonst geht der Pod in `ImagePullBackOff`.
 - Falle aus `docs/update-strategie.md`: **Eine geänderte Root-`*.yaml` braucht einen
   Refresh von `00-bootstrap`**, sonst handelt der Updater weiter nach der alten
   Annotation. Er würde dann `tschissler/<image>`-Tags in eine `values.yaml` schreiben,
@@ -482,8 +487,9 @@ wird nur gebraucht, wenn Forgejo läuft.
   dieser Zeit, sofern er auf einem Node ohne Image landet.
 - Abhilfe, falls nötig: Die Dienste nach dem Umzug einmal auf jedem arm64-Node ziehen
   lassen (der Cache wärmt sich dann über die Zeit von allein), oder die kritischen
-  Dienste (ChargingController) zusätzlich weiter auf Docker Hub spiegeln. **Offen
-  (Thomas):** ob das Risiko die Mühe lohnt.
+  Dienste (ChargingController) zusätzlich weiter auf Docker Hub spiegeln. **Entschieden
+  (Thomas, U01): vorerst nein**, keine zusätzliche Spiegelung, auch nicht für den
+  ChargingController. Das Risiko oben wird bewusst getragen.
 
 ### Platz
 
@@ -876,7 +882,8 @@ a) SmartHomeTS: `git mv .github/workflows/vwconnector.yml .forgejo/workflows/` u
    Code-Änderung am Dienst.
    → Forgejo baut, pusht `1.1.N`. GitHub baut nichts.
 b) Deployments: `VWConnector.yaml` (`image-list`, `pull-secret`, `platforms`) und
-   `VWConnector/values.yaml` (`repository`, `tag: 1.1.N`) in einem Commit, danach
+   `VWConnector/values.yaml` (`repository`, `tag: 1.1.N`, `imagePullSecrets`) in einem
+   Commit, danach
    `00-bootstrap` synchronisieren.
    → ArgoCD rollt `1.1.N` aus.
 
@@ -991,11 +998,14 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
     Nachzügler, auf dem niemand committet (F5).
   - **Ab U11** wird **nur im neuen Klon** committet; der alte dient nur zum Lesen. Grund:
     Der `--mirror`-Spiegel überschreibt auf GitHub alles, was direkt dort gepusht wurde.
+- **`forgejo-pull-secret` mitnehmen** (U01, 2026-09-27): eine Zeile je `values.yaml`.
+  Begründung in Abschnitt 5, „Pull-Secrets".
+- **Keine zusätzliche Absicherung gegen einen Forgejo-Ausfall** (U01, 2026-09-27),
+  vorerst auch nicht für den ChargingController. Das Risiko steht in Abschnitt 5, „Was bei
+  einem Forgejo-Ausfall …".
 
 **Offen für Thomas:**
 
-3. `forgejo-pull-secret` in den `values.yaml` mitnehmen oder weglassen
-4. Kritische Dienste gegen Forgejo-Ausfall zusätzlich absichern oder nicht
 5. Ablage der Firmware: Generic Registry oder Release-Assets (hängt am Test zur
    anonymen Ladbarkeit)
 6. Erster Firmware-Gerätetyp und das Testgerät am Tisch
