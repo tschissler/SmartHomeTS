@@ -160,8 +160,8 @@ entferntem und eingeführtem Bezeichner, Topic und Wert übers ganze Repo. Dazu:
 
 - **Mitgeändertes, das der Auftrag nicht nennt** — umbenannt, verschoben, „aufgeräumt".
   Jede solche Stelle bewusst entscheiden, statt sie als Beifang durchzuwinken.
-- **Die geteilten Stellen aus der Kollisionstabelle**: `SharedContracts`, `Libs`,
-  `ESP32Firmwares/SharedLibs`, MQTT-Topics. Dort trifft sich, was fachlich unabhängig
+- **Die geteilten Stellen aus der Kollisionstabelle**: `SharedContracts`, `Libs`, die
+  ESP32-Bibliotheken (eigene Repos, per `lib_deps`), MQTT-Topics. Dort trifft sich, was fachlich unabhängig
   aussieht — und jeder Treffer dort zieht Rollouts in anderen Diensten nach sich.
 - **Geänderte Signatur, Rückgabe, Payload oder Vorbedingung** — alle Aufrufer und
   Abonnenten suchen, nicht die ersten zwei. Ein verschobener Aufruf ist ein geänderter.
@@ -189,7 +189,7 @@ Einschätzung ohne genannte Fundstelle ist eine Meinung — nenn, was dich zur S
 
 - **Jeder Merge nach `main` ist binnen ~2 min ein Deployment ins laufende System.** Nenn
   vor jedem Merge die Zahl der ausgelösten Rollouts, selbst nachgezählt an den
-  `paths:`-Blöcken, nicht aus einem Bericht übernommen.
+  `paths:`-Blöcken in beiden Workflow-Verzeichnissen, nicht aus einem Bericht übernommen.
 - **Thomas redet auch direkt mit den Sessions.** Was er ihnen gibt oder aufträgt, siehst
   du nicht. Leite daraus nie einen Zustand ab — sieh im Repo nach, statt aus dem
   Gedächtnis zu berichten.

@@ -40,8 +40,8 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   Rückfrage schweigt, und du wartest auf ihn, ohne es zu merken.
 - **Halt deine Shell-Befehle einfach.** Die Worktree-Isolation lehnt jeden Befehl ab, der
   ihr zu komplex wird, um zu belegen, dass er im Worktree bleibt — und sie schlägt schon
-  auf die Zeichenfolge `git` an, die in diesem Repo in **jedem** absoluten Pfad steckt
-  (`/home/thomas/Repos/GitHub/…`) und auch in `.github/workflows`. Einzelne, gerade Befehle
+  auf die Zeichenfolge `git` an — etwa in `.github/workflows` oder im Pfad des alten Klons
+  (`~/Repos/GitHub/…`). Einzelne, gerade Befehle
   laufen durch; Schleifen, lange `&&`-Ketten, Ausgabeumlenkung (`>`, `>>`), Variablen als
   Argument (`$VAR`), `git -C` und Pipes hinter `git` werden abgelehnt. Das gehört in eine
   Skriptdatei — **einen Testlauf schreibst du deshalb von vornherein als Skript**, statt
@@ -92,7 +92,8 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   ist die Freigabe-Grenze.
   **Eine Ausnahme, und sie ist an einen Nachweis gebunden:** Änderungen, die *nachweislich*
   keinen Workflow auslösen — Dokumentation, Skills —, darfst du selbst pushen. Der Nachweis
-  ist, dass du die `paths:`-Blöcke aller Workflows durchgesehen und keinen Treffer gefunden
+  ist, dass du die `paths:`-Blöcke aller Workflows in **beiden** Verzeichnissen
+  (`.github/workflows`, `.forgejo/workflows`) durchgesehen und keinen Treffer gefunden
   hast, und er gehört in den Bericht. Nicht „ich glaube, das löst nichts aus", sondern
   „ich habe nachgezählt, hier ist die Zählung". Bei allem anderen bleibt es beim Merge
   durch die Orchestrierung.
@@ -228,7 +229,8 @@ Darin:
   dass der Test das Verhalten prüft und nicht sich selbst. Verglichene Warnungs- oder
   Fehlerzahlen nur aus Läufen mit `--no-incremental`, auf beiden Ständen — ein
   inkrementeller Build schweigt über alles, was er nicht neu übersetzt hat
-- **wie viele Rollouts der Merge auslöst, selbst nachgezählt** an den `paths:`-Blöcken.
+- **wie viele Rollouts der Merge auslöst, selbst nachgezählt** an den `paths:`-Blöcken
+  beider Workflow-Verzeichnisse (Details in `Docs/Parallel-Arbeiten.md`, „Pfadfilter").
   Übernimm die Zahl nicht aus dem Auftrag, sie ändert sich mit jeder neuen
   `ProjectReference`. Zähl mit **einfachen Einzelbefehlen** — siehe oben, warum
 - **wo der Auftrag nicht gestimmt hat.** Das ist der wertvollste Teil

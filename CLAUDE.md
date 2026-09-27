@@ -21,7 +21,7 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 
 **Data storage**: InfluxDB 3 with primary table `energy_values` using tags (category, sub_category, device, location, measurement, sensor_type) and fields (value_kwh, value_cumulated_kwh).
 
-**Infrastructure**: k3s cluster setup and Ansible playbooks in `Kubernetes/k3s/ansible/`, 19 GitHub Actions workflows in `.github/workflows/`. The running services are deployed from a separate repository (`forgejo.intern/thomas/SmartHomeDeployments`), not from here; the superseded MicroK8s manifests sit in `Depricated/`.
+**Infrastructure**: k3s cluster setup and Ansible playbooks in `Kubernetes/k3s/ansible/`, 19 CI workflows, split between `.github/workflows/` and `.forgejo/workflows/` while the move to Forgejo runs (see CI/CD). The running services are deployed from a separate repository (`forgejo.intern/thomas/SmartHomeDeployments`), not from here; the superseded MicroK8s manifests sit in `Depricated/`.
 
 ## Build Commands
 
@@ -86,9 +86,21 @@ path filters.
 
 ## CI/CD
 
+**Transition GitHub → Forgejo in progress** (`Docs/Forgejo-Umzug.md`). `origin` is
+`forgejo.intern/thomas/SmartHomeTS`; GitHub only receives a push mirror — never push there
+directly, the next mirror run overwrites it. Workflows are moved service by service, so
+there are **two workflow directories**, and each workflow lives in exactly one:
+
+| Directory | Built by | Image target |
+|---|---|---|
+| `.github/workflows/` (not yet moved) | GitHub, via the mirror | Docker Hub `tschissler/<image>:1.0.<run>` |
+| `.forgejo/workflows/` (moved) | Forgejo Actions | `forgejo.intern/thomas/<image>:1.1.<run>` (firmware `0.1.<run>`) |
+
+Counting the rollouts of a merge means checking the `paths:` blocks in **both** directories.
+
 Every push to `main` triggers a build. **The workflows only build — they do not deploy.**
-1. **Build** (GitHub-hosted runner): Multi-arch Docker build (amd64+arm64), push to Docker Hub
-   as `tschissler/<image>:1.0.{github.run_number}` plus `latest`
+1. **Build**: Docker build, push with the tag scheme of its directory (table above;
+   GitHub builds amd64+arm64, Forgejo arm64 only)
 2. **Rollout** (no CI involvement): the ArgoCD Image Updater picks up the new tag within ~2 min,
    commits it into the deployments repo (`forgejo.intern/thomas/SmartHomeDeployments`, the
    service's `values.yaml`), and ArgoCD syncs it. A deploy is therefore visible as a
@@ -99,8 +111,6 @@ Never `kubectl set image` or `kubectl apply` against the cluster: every ArgoCD a
 `docs/update-strategie.md` of the deployments repo.
 
 ESP32 firmware CI uploads `.bin` to Azure Blob Storage, then publishes an MQTT message so devices auto-update via OTA.
-
-Docker image versions use format `1.0.{github.run_number}`.
 
 ## Documentation
 
@@ -152,7 +162,7 @@ Docker image versions use format `1.0.{github.run_number}`.
 
 - **MQTT is the integration backbone**: All services communicate via MQTT topics through Mosquitto broker
 - **Each .NET service has its own solution file** — there is no monolithic solution
-- **Secrets are managed via** GitHub Secrets (CI) and Kubernetes Secrets (runtime). `Secrets.cs` files are gitignored
+- **Secrets are managed via** GitHub or Forgejo Actions secrets (CI, per workflow directory) and Kubernetes Secrets (runtime). `Secrets.cs` files are gitignored
 - **.NET target frameworks vary**: .NET 10.0 (DataHub, Web, ChargingController), .NET 9.0 (MCPServer), .NET 8.0 (connectors)
 - **Shared .NET libraries** in `Libs/` (ShellyLib, MQTTControllerLib, HelpersLib, HeartbeatLib) and `SharedContracts/`
 - **`Depricated/` folder** contains legacy/replaced projects — avoid modifying these
