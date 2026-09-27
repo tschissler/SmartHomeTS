@@ -73,12 +73,14 @@ spec:
           value: "true"
         - name: vip_leaderelection
           value: "true"
+        # kube-vip defaults. With 5/3/1 the lease was lost under upgrade load; kube-vip then
+        # exits fatally without removing its VIPs, leaving the same VIP on several nodes.
         - name: vip_leaseduration
-          value: "5"
+          value: "15"
         - name: vip_renewdeadline
-          value: "3"
+          value: "10"
         - name: vip_retryperiod
-          value: "1"
+          value: "2"
         - name: cp_enable
           value: "true"
         - name: svc_enable

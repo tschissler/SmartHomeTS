@@ -42,25 +42,21 @@
       changed_when: false
       failed_when: false
 
-    - name: Check whether VIP is currently assigned on this node (best-effort)
+    # Asks every server, not just the ones in the current batch: with serial: 1 the first
+    # batch only contains one host, and a VIP held by another server looked like a conflict.
+    - name: Check which servers currently hold the VIP (best-effort)
       ansible.builtin.shell: "ip -4 -o addr show | grep -w '{{ kubevip_api_vip }}'"
-      register: vip_assigned_here
-      changed_when: false
-      failed_when: false
-      when: inventory_hostname in groups.get('k3s_servers', [])
-
-    - name: Initialize VIP holder list
-      ansible.builtin.set_fact:
-        kubevip_vip_assigned_hosts: []
+      delegate_to: "{{ item }}"
+      loop: "{{ groups.get('k3s_servers', []) }}"
+      register: vip_holder_checks
       run_once: true
       changed_when: false
+      failed_when: false
 
     - name: Build list of servers that currently hold the VIP
       ansible.builtin.set_fact:
-        kubevip_vip_assigned_hosts: "{{ kubevip_vip_assigned_hosts | default([]) + ([item] if ((hostvars[item].vip_assigned_here is defined) and (hostvars[item].vip_assigned_here.rc | default(1) == 0)) else []) }}"
+        kubevip_vip_assigned_hosts: "{{ vip_holder_checks.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
       run_once: true
-      loop: "{{ groups.get('k3s_servers', []) }}"
-      changed_when: false
 
     - name: Fail if VIP responds but is not assigned on any cluster server (likely conflict)
       ansible.builtin.assert:
