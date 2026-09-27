@@ -45,7 +45,9 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   laufen durch; Schleifen, lange `&&`-Ketten, Ausgabeumlenkung (`>`, `>>`), Variablen als
   Argument (`$VAR`), `git -C` und Pipes hinter `git` werden abgelehnt. Das gehört in eine
   Skriptdatei — **einen Testlauf schreibst du deshalb von vornherein als Skript**, statt
-  ihn dreimal abgelehnt zu bekommen. Mehrere Skripte hintereinander (`bash a.sh; bash b.sh`)
+  ihn dreimal abgelehnt zu bekommen. **Lesen in einem zweiten Repo** (`git show
+  origin/main:…` über mehrere Dateien des Deployments-Klons) braucht fast immer eine
+  Schleife — schreib es gleich als Skript. Mehrere Skripte hintereinander (`bash a.sh; bash b.sh`)
   ebenso in **ein** Skript.
   - **Setz kein `cd` davor** — du stehst schon im Worktree, und der Reflex, den Pfad noch
     einmal abzusichern, macht aus einem geraden Befehl einen verschachtelten. Brauchst du
