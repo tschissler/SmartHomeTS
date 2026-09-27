@@ -18,7 +18,7 @@ Entschieden hat Thomas bisher:
 | **F7** | Build-Muster A: Dienste nur für arm64, nativ auf den arm64-Runnern (Muster PV-Prognose), siehe Abschnitt 2 |
 | **F8** | Tag-Schema: Images `1.1.<run>`, Firmware `0.1.<run>`, siehe Abschnitt 4 |
 
-Die Schritte dieses Plans liegen als Issue-Entwürfe in `Docs/Forgejo-Umzug-Issues.md`.
+Die Schritte dieses Plans sind Issues in [thomas/SmartHomeTS](https://forgejo.intern/thomas/SmartHomeTS/issues), je Schritt eines; die Nummer `Uxx` steht im Issue-Titel. **Die Issues sind die Quelle für den Arbeitsstand**, dieses Dokument für Begründungen und Belege.
 
 Was noch offen ist, steht als **Offen (Thomas)** im Text und gesammelt am Ende.
 
@@ -238,7 +238,7 @@ lösen ein Problem, das heute niemand hat.
   `nodeSelector`. Ein kurzfristiges Ausweichen auf die amd64-Nodes bei einem Ausfall
   der Pis ist damit nicht möglich. Heute ginge es theoretisch, weil das Image existiert,
   praktisch verhindert es aber schon der `nodeSelector`.
-- Die Builds laufen auf den Pis langsamer (Messung beim Probelauf, U20).
+- Die Builds laufen auf den Pis langsamer (Messung beim Probelauf, [U20](https://forgejo.intern/thomas/SmartHomeTS/issues/12)).
 - Die Docker-Hub-Images bleiben multi-arch. Der Rückweg eines Dienstes auf Docker Hub
   (Revert im Deployments-Repo) hat also weiter beide Architekturen.
 
@@ -634,7 +634,7 @@ kommen.**
 Anmeldedaten mitschicken, beide Wege müssen also anonym ladbar sein.
 
 - **Anonym ladbar:** Release-Assets eines öffentlichen Repos sicher. Die Generic Registry
-  nur, wenn der Test (U05) es bestätigt. Die Doku sagt dort „authentication required".
+  nur, wenn der Test ([U05](https://forgejo.intern/thomas/SmartHomeTS/issues/5)) es bestätigt. Die Doku sagt dort „authentication required".
 - **URL-Form:** Beide enden auf `…_<version>.bin`, das Gerät und die Webseite lesen die
   Version also richtig. Release-Assets brauchen einen Tag je Firmware und Version
   (z. B. `fw/SMLSensor/0.1.123`). Bei zehn Gerätetypen wächst die Tag-Liste des
@@ -646,7 +646,7 @@ Anmeldedaten mitschicken, beide Wege müssen also anonym ladbar sein.
   Asset hochladen, also drei Aufrufe.
 
 Empfehlung bleibt **Generic Registry**, jetzt wegen Aufräumen und sauberer Tag-Liste statt
-wegen der Sichtbarkeit. **Release-Assets sind der geprüfte Ausweg**, falls U05 zeigt, dass
+wegen der Sichtbarkeit. **Release-Assets sind der geprüfte Ausweg**, falls [U05](https://forgejo.intern/thomas/SmartHomeTS/issues/5) zeigt, dass
 Generic-Pakete eine Anmeldung verlangen.
 
 **HTTP statt HTTPS im LAN?** Bewertet, nicht empfohlen. Es entfiele die ganze CA-Frage,
@@ -987,3 +987,54 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
     [Abschnitt 7](#was-sonst-am-github-repo-hängt-und-nicht-im-git-steht)
 12. Sichtbarkeit der Bibliotheks-Repos auf Forgejo: öffentlich (kein Token im CI) oder
     privat (Token im `insteadOf`)
+
+## 13. Issues
+
+Angelegt am 2026-09-27 in `thomas/SmartHomeTS`. Abhängigkeiten sind als Forgejo-Abhängigkeiten gesetzt.
+Die U-Nummern haben Lücken (U09, U13–U19 …), die Issue-Nummern nicht.
+
+| U | Issue | Phase | Titel |
+|---|---|---|---|
+| U01 | [#1](https://forgejo.intern/thomas/SmartHomeTS/issues/1) | Vorbereitung | Offene Entscheidungen vor dem ersten Dienst |
+| U02 | [#2](https://forgejo.intern/thomas/SmartHomeTS/issues/2) | Vorbereitung | `argocd-image-updater-config` ins Deployments-Repo holen |
+| U03 | [#3](https://forgejo.intern/thomas/SmartHomeTS/issues/3) | Vorbereitung | Pull von `forgejo.intern` auf allen Nodes nachweisen |
+| U04 | [#4](https://forgejo.intern/thomas/SmartHomeTS/issues/4) | Vorbereitung | Test: MQTT-Publish aus einem Forgejo-Job |
+| U05 | [#5](https://forgejo.intern/thomas/SmartHomeTS/issues/5) | Vorbereitung | Test: Generic-Paket anonym ladbar |
+| U06 | [#6](https://forgejo.intern/thomas/SmartHomeTS/issues/6) | Vorbereitung | Secrets in Forgejo anlegen |
+| U07 | [#7](https://forgejo.intern/thomas/SmartHomeTS/issues/7) | Vorbereitung | Fragen an Thomas zum GitHub-Repo |
+| U08 | [#8](https://forgejo.intern/thomas/SmartHomeTS/issues/8) | Vorbereitung | Soll-Liste aller ESP32-Geräte |
+| U10 | [#9](https://forgejo.intern/thomas/SmartHomeTS/issues/9) | Repo | Repo leer und öffentlich anlegen, `main` pushen (Nachzügler) |
+| U11 | [#10](https://forgejo.intern/thomas/SmartHomeTS/issues/10) | Repo | Umstellung: Forgejo wird `origin` |
+| U12 | [#11](https://forgejo.intern/thomas/SmartHomeTS/issues/11) | Repo | Doku und Skills auf zwei Workflow-Verzeichnisse umstellen |
+| U20 | [#12](https://forgejo.intern/thomas/SmartHomeTS/issues/12) | Dienste | VWConnector umziehen (Probelauf) |
+| U21 | [#13](https://forgejo.intern/thomas/SmartHomeTS/issues/13) | Dienste | EnphaseConnector umziehen |
+| U22 | [#14](https://forgejo.intern/thomas/SmartHomeTS/issues/14) | Dienste | ShellyConnector umziehen |
+| U23 | [#15](https://forgejo.intern/thomas/SmartHomeTS/issues/15) | Dienste | BMWConnector umziehen |
+| U24 | [#16](https://forgejo.intern/thomas/SmartHomeTS/issues/16) | Dienste | KebaConnector umziehen |
+| U25 | [#17](https://forgejo.intern/thomas/SmartHomeTS/issues/17) | Dienste | RulesEngine umziehen |
+| U26 | [#18](https://forgejo.intern/thomas/SmartHomeTS/issues/18) | Dienste | SmartHome.DataHub umziehen |
+| U27 | [#19](https://forgejo.intern/thomas/SmartHomeTS/issues/19) | Dienste | SmartHome.Web umziehen |
+| U28 | [#20](https://forgejo.intern/thomas/SmartHomeTS/issues/20) | Dienste | ChargingController umziehen |
+| U30 | [#21](https://forgejo.intern/thomas/SmartHomeTS/issues/21) | Firmware, OTA, Bibliotheken | `ESP32_OTAUpdate`: zweite CA und erster Tag (noch auf GitHub) |
+| U31 | [#22](https://forgejo.intern/thomas/SmartHomeTS/issues/22) | Firmware, OTA, Bibliotheken | Tote Bibliothekskopien entfernen |
+| U32 | [#23](https://forgejo.intern/thomas/SmartHomeTS/issues/23) | Firmware, OTA, Bibliotheken | Alle zehn Firmwares pinnen `ESP32_OTAUpdate#v1.0.0` (Rollout über Azure) |
+| U33 | [#24](https://forgejo.intern/thomas/SmartHomeTS/issues/24) | Firmware, OTA, Bibliotheken | Nachweis: jedes Gerät fährt die Fassung aus U32 |
+| U34 | [#25](https://forgejo.intern/thomas/SmartHomeTS/issues/25) | Firmware, OTA, Bibliotheken | Die acht ESP32-Bibliotheken nach Forgejo migrieren |
+| U35 | [#26](https://forgejo.intern/thomas/SmartHomeTS/issues/26) | Firmware, OTA, Bibliotheken | Vorlage für Firmware-Workflows auf Forgejo |
+| U36 | [#27](https://forgejo.intern/thomas/SmartHomeTS/issues/27) | Firmware, OTA, Bibliotheken | Erster Gerätetyp auf Forgejo (Probe) |
+| U37 | [#28](https://forgejo.intern/thomas/SmartHomeTS/issues/28) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: TemperatureDisplayFirmware.yml bzw. LEDStripeFirmware.yml (der, der nicht U36 war) |
+| U38 | [#29](https://forgejo.intern/thomas/SmartHomeTS/issues/29) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: KellerdeviceFirmware.yml |
+| U39 | [#30](https://forgejo.intern/thomas/SmartHomeTS/issues/30) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: TemperatureSensorFirmware.yml |
+| U40 | [#31](https://forgejo.intern/thomas/SmartHomeTS/issues/31) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: TemperatureSensor2Firmware.yml |
+| U41 | [#32](https://forgejo.intern/thomas/SmartHomeTS/issues/32) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: HeatMeterSensorFirmware.yml |
+| U42 | [#33](https://forgejo.intern/thomas/SmartHomeTS/issues/33) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: SMLSensorFirmware.yml |
+| U43 | [#34](https://forgejo.intern/thomas/SmartHomeTS/issues/34) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: HeatingFanControllerFirmware.yml |
+| U44 | [#35](https://forgejo.intern/thomas/SmartHomeTS/issues/35) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: RelaisBoardFirmware.yml |
+| U45 | [#36](https://forgejo.intern/thomas/SmartHomeTS/issues/36) | Firmware, OTA, Bibliotheken | Gerätetyp auf Forgejo: MixerControllerFirmware.yml |
+| U50 | [#37](https://forgejo.intern/thomas/SmartHomeTS/issues/37) | Aufräumen | GitHub Actions abschalten und Secrets löschen |
+| U51 | [#38](https://forgejo.intern/thomas/SmartHomeTS/issues/38) | Aufräumen | `github-runner` abbauen |
+| U52 | [#39](https://forgejo.intern/thomas/SmartHomeTS/issues/39) | Aufräumen | Docker Hub stilllegen |
+| U53 | [#40](https://forgejo.intern/thomas/SmartHomeTS/issues/40) | Aufräumen | Azure stilllegen |
+| U54 | [#41](https://forgejo.intern/thomas/SmartHomeTS/issues/41) | Aufräumen | Spiegeltakt nach GitHub festlegen |
+| U55 | [#42](https://forgejo.intern/thomas/SmartHomeTS/issues/42) | Aufräumen | Einrohrheizung und die GitHub-Kopien der Bibliotheken |
+| U56 | [#43](https://forgejo.intern/thomas/SmartHomeTS/issues/43) | Aufräumen | README und Verweise |
