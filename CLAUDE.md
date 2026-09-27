@@ -11,7 +11,7 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 **Data flow**: Physical devices → ESP32 firmware → MQTT (Mosquitto) → Connector services → InfluxDB 3 → Grafana/Blazor Web
 
 **Key layers**:
-- **ESP32 firmware** (C++/Arduino via PlatformIO): 16 sensor/controller projects in `ESP32Firmwares/` (10 with a CI workflow), sharing eight libraries kept in their own repos (`ESP32_WifiLib`, `ESP32_MQTTClientLib`, `ESP32_OTAUpdate`, …), pulled in via `lib_deps`
+- **ESP32 firmware** (C++/Arduino via PlatformIO): 15 sensor/controller projects in `ESP32Firmwares/` (10 with a CI workflow), sharing eight libraries kept in their own repos (`ESP32_WifiLib`, `ESP32_MQTTClientLib`, `ESP32_OTAUpdate`, …), pulled in via `lib_deps`
 - **Connector services**: Bridge external APIs to MQTT — `BMWConnector`, `EnphaseConnector`,
   `ShellyConnector`, `KebaConnector` (all .NET) and `VWConnector` (Python, the only one)
 - **Business logic services** (.NET): `ChargingController` (EV charging optimization), `Thermostat` (climate control), `SmartHome.DataHub` (central data processing)

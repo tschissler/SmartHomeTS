@@ -38,9 +38,6 @@
 			"path": "TemperatureSensor.Firmware"
 		},
 		{
-			"path": "WebRadio"
-		},
-		{
 			"path": "../.github/workflows"
 		},
 		{

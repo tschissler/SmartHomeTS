@@ -779,8 +779,11 @@ Alle acht sind öffentlich. **Ein weiterer Nutzer außerhalb dieses Repos:**
 GitHub. Das ist schon das Muster, das hier vorgeschlagen wird, samt Preis: „Update = SHA
 bumpen" steht dort im Kommentar.
 
-`DS18B20Monitor`, `TemperatureMiniDisplay`, `WebRadio`, `Template`, `TemperatureCalibrator`
-und `IR-Tester` benutzen keine der acht und haben keinen Workflow.
+`DS18B20Monitor`, `TemperatureMiniDisplay`, `Template`, `TemperatureCalibrator` und
+`IR-Tester` benutzen keine der acht und haben keinen Workflow. **`WebRadio` ist deprecated
+(F38) und liegt jetzt unter `Depricated/WebRadio`.** Es bindet zwar `AzureOTAUpdater.h`
+ein, zieht die Bibliothek aber nicht per `lib_deps` (Überrest der früheren
+`SharedLibs`). Die Soll-Liste für U33 (U08, Issue #8) zählt es nicht.
 
 ### Holen im CI
 
