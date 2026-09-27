@@ -525,7 +525,7 @@ Deployments-Repo und die anderen Forgejo-Repos.
 | Deployments: `GitHubRunner.yaml`, `github-runner/` | der Runner selbst, mit PAT (`github-runner-secret`) | abbauen, wenn die letzte Firmware umgezogen ist |
 | Deployments: `github-runner/runner-secret.yaml` | Secret-Manifest im Repo | Inhalt **nicht angesehen** (Secrets suche ich nicht). Prüfen, ob dort ein echter PAT steht; das Repo ist anonym lesbar |
 | Deployments: `SmartHomeDeployments.code-workspace`, `SmartHomeTS.code-workspace` | Pfade `../../../GitHub/tschissler/SmartHomeTS/…` (Windows-Arbeitsplatz) | anpassen, falls der Klon umzieht |
-| Deployments: `CLAUDE.md`, `docs/gitops-grenze.md`, `docs/update-strategie.md` | Pfad `~/Repos/GitHub/SmartHomeTS/Kubernetes/k3s/ansible/` | anpassen, falls der Klon umzieht |
+| Deployments: `CLAUDE.md`, `docs/gitops-grenze.md`, `docs/update-strategie.md` | Pfad `~/Repos/GitHub/SmartHomeTS/Kubernetes/k3s/ansible/` | Der Klon ist umgezogen (Abschnitt 12). Die drei Pfade werden im Deployments-Repo umgestellt, im Zuge von umzug-01 (Branch dort, Stand 2026-09-27 noch nicht gepusht) |
 | **Forgejo `thomas/Einrohrheizung`** | klont `github.com/tschissler/SmartHomeTS` im Firmware-Workflow; pinnt `ESP32_ESP32Helpers` und `ESP32_WifiLib` per SHA **auf GitHub** | Fremdes Repo, hängt an beiden GitHub-Quellen. Der Klon von SmartHomeTS ist tot (`SHARED_LIBS_PATH` zeigt auf `ESP32Firmwares/SharedLibs`, das es nicht mehr gibt), die zwei Bibliotheken aber nicht. Die GitHub-Kopien der Bibliotheken dürfen erst weg, wenn Einrohrheizung umgestellt ist |
 | `Kubernetes/k3s/ansible/plays/install-argocd.yml` | `raw.githubusercontent.com/argoproj/…` | fremd, bleibt |
 | Dependabot | **keins** (`.github/` enthält nur `workflows/` und `copilot-instructions.md`) | keine |
@@ -844,12 +844,18 @@ Nach F5 in zwei Teilen: erst läuft Forgejo als Nachzügler mit, dann kippt die 
 **1a — Forgejo als Nachzügler.**
 
 1. `thomas/SmartHomeTS` **leer und öffentlich** anlegen, **Actions im Repo abgeschaltet**.
-2. `main` pushen. Bis zur Umstellung bleibt GitHub `origin`, und Forgejo wird per
-   Fast-Forward nachgezogen (`git push forgejo main`). Niemand committet auf Forgejo.
+2. `main` pushen (erledigt: aus dem alten Klon per URL, `fa0a022..47e152e`). Bis zur
+   Umstellung bleibt GitHub die Quelle. Forgejo wird **nicht laufend nachgezogen**, es darf
+   hinterherhinken; niemand committet dort. Keiner der beiden Klone braucht ein
+   `forgejo`-Remote.
 
 **1b — Umstellung: Forgejo wird `origin`.**
 
-1. Auf GitHub einen letzten Stand abwarten, Forgejo per Fast-Forward nachziehen.
+1. Auf GitHub einen letzten Stand abwarten, dann Forgejo aus dem **neuen Klon** per
+   Fast-Forward nachziehen:
+   `git fetch https://github.com/tschissler/SmartHomeTS.git main`, danach
+   `git push origin FETCH_HEAD:main` (nur Fast-Forward, nie erzwungen). Nachweis:
+   `git ls-remote origin main` zeigt den erwarteten Commit.
 2. Commit **`.forgejo/workflows/.gitkeep`**. `ListWorkflows` nimmt das erste vorhandene
    Verzeichnis, „no matter whether it contains workflows or not". Ab dann ignoriert Forgejo
    die 19 Dateien in `.github/workflows/`. **Erst danach Actions im Repo einschalten.**
@@ -1033,7 +1039,7 @@ Die U-Nummern haben Lücken (U09, U13–U19 …), die Issue-Nummern nicht.
 | U | Issue | Phase | Titel |
 |---|---|---|---|
 | U01 | [#1](https://forgejo.intern/thomas/SmartHomeTS/issues/1) | Vorbereitung | Offene Entscheidungen vor dem ersten Dienst |
-| U02 | [#2](https://forgejo.intern/thomas/SmartHomeTS/issues/2) | Vorbereitung | `argocd-image-updater-config` ins Deployments-Repo holen |
+| U02 | [#2](https://forgejo.intern/thomas/SmartHomeTS/issues/2) | Vorbereitung | `argocd-image-updater-config` in die Ansible-Installation holen |
 | U03 | [#3](https://forgejo.intern/thomas/SmartHomeTS/issues/3) | Vorbereitung | Pull von `forgejo.intern` auf allen Nodes nachweisen |
 | U04 | [#4](https://forgejo.intern/thomas/SmartHomeTS/issues/4) | Vorbereitung | Test: MQTT-Publish aus einem Forgejo-Job |
 | U05 | [#5](https://forgejo.intern/thomas/SmartHomeTS/issues/5) | Vorbereitung | Test: Generic-Paket anonym ladbar |
