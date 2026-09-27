@@ -25,7 +25,9 @@ Thomas sagt auf Zuruf, was er angepasst haben will. Daraufhin:
    wiederherstellen oder zählt die Dauerursache. Kommt das erst in Runde zwei, war Runde
    eins für Wege gebaut, die es nicht gibt.
 2. **Nenn den Startbefehl**, mehr nicht: `claude -n <name>` (siehe „Sessions benennen").
-   Thomas startet die Session und ruft darin `/worker` auf.
+   Thomas startet die Session und ruft darin `/worker` auf. Ändert der Auftrag `CLAUDE.md`
+   oder einen Skill, sag das gleich dazu: Die Worker-Session braucht dafür Thomas' Ja in
+   ihrer eigenen Session, eine weitergereichte Zustimmung zählt dort nicht.
 3. **Schick den Auftrag per `SendMessage`**, sobald die Session läuft. Der volle Text geht
    an die Session, **nicht** in den Chat. Zeig Thomas stattdessen drei bis fünf Zeilen: was
    die Session tut, was sie ausdrücklich nicht anfasst, und welche Rollouts du erwartest —

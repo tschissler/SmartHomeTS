@@ -524,7 +524,7 @@ Deployments-Repo und die anderen Forgejo-Repos.
 | 10 Firmware-Workflows | `smarthomestorageprod.blob.core.windows.net` | siehe [Abschnitt 8](#8-ota-weg-der-firmware) |
 | Deployments: `GitHubRunner.yaml`, `github-runner/` | der Runner selbst, mit PAT (`github-runner-secret`) | abbauen, wenn die letzte Firmware umgezogen ist |
 | Deployments: `github-runner/runner-secret.yaml` | Secret-Manifest im Repo | Inhalt **nicht angesehen** (Secrets suche ich nicht). Prüfen, ob dort ein echter PAT steht; das Repo ist anonym lesbar |
-| Deployments: `SmartHomeDeployments.code-workspace`, `SmartHomeTS.code-workspace` | Pfade `../../../GitHub/tschissler/SmartHomeTS/…` (Windows-Arbeitsplatz) | anpassen, falls der Klon umzieht |
+| Deployments: `SmartHomeDeployments.code-workspace`, `SmartHomeTS.code-workspace` | Pfade `../../../GitHub/tschissler/SmartHomeTS/…` (Windows-Arbeitsplatz, auf diesem Rechner schon heute tot) | Entschieden (Thomas, F34): **löschen**. Das geschieht im Deployments-Repo im Zuge von umzug-01 (`e67abc8`, Stand 2026-09-27 noch nicht gepusht) |
 | Deployments: `CLAUDE.md`, `docs/gitops-grenze.md`, `docs/update-strategie.md` | Pfad `~/Repos/GitHub/SmartHomeTS/Kubernetes/k3s/ansible/` | Der Klon ist umgezogen (Abschnitt 12). Die drei Pfade werden im Deployments-Repo umgestellt, im Zuge von umzug-01 (Branch dort, Stand 2026-09-27 noch nicht gepusht) |
 | **Forgejo `thomas/Einrohrheizung`** | klont `github.com/tschissler/SmartHomeTS` im Firmware-Workflow; pinnt `ESP32_ESP32Helpers` und `ESP32_WifiLib` per SHA **auf GitHub** | Fremdes Repo, hängt an beiden GitHub-Quellen. Der Klon von SmartHomeTS ist tot (`SHARED_LIBS_PATH` zeigt auf `ESP32Firmwares/SharedLibs`, das es nicht mehr gibt), die zwei Bibliotheken aber nicht. Die GitHub-Kopien der Bibliotheken dürfen erst weg, wenn Einrohrheizung umgestellt ist |
 | `Kubernetes/k3s/ansible/plays/install-argocd.yml` | `raw.githubusercontent.com/argoproj/…` | fremd, bleibt |
@@ -562,19 +562,20 @@ nicht.
 
 ### Was sonst am GitHub-Repo hängt und nicht im Git steht
 
-Ohne Token nicht einsehbar (die API antwortet auf `actions/runners` mit 401). **Fragen an
-Thomas:**
+Ohne Token nicht einsehbar (die API antwortet auf `actions/runners` mit 401). Deshalb
+Fragen an Thomas (U07), beantwortet am 2026-09-27, soweit nicht als offen markiert:
 
-| Was | Frage |
-|---|---|
-| Secret-Werte | Liegen die Originale von `WIFI_PASSWORDS` und `METER_PINS` außerhalb von GitHub vor? |
-| Webhooks | Gibt es Webhooks am GitHub-Repo (Settings → Webhooks), etwa zu Docker Hub, Azure oder einem Chat? |
-| Branch-Schutz | Ist `main` auf GitHub geschützt? Ein Schutz gegen Force-Push lässt den Push-Spiegel scheitern |
-| Deploy-Keys | Gibt es Deploy-Keys (Settings → Deploy keys)? Wer benutzt sie? |
-| Actions-Variablen | Gibt es neben den Secrets auch `vars.*`? In den Workflows wird keine benutzt |
-| Registrierte Runner | Außer `smarthome-runner` weitere Self-hosted-Runner? |
-| GitHub-Apps / Integrationen | Copilot (`.github/copilot-instructions.md` liegt im Repo), sonst etwas? |
-| Umgebungen | Environments mit eigenen Secrets? In den Workflows steht kein `environment:` |
+| Was | Frage | Antwort |
+|---|---|---|
+| Secret-Werte | Liegen die Originale von `WIFI_PASSWORDS` und `METER_PINS` außerhalb von GitHub vor? | **Offen (Thomas)** |
+| Webhooks | Gibt es Webhooks am GitHub-Repo (Settings → Webhooks), etwa zu Docker Hub, Azure oder einem Chat? | keine |
+| Branch-Schutz | Ist `main` auf GitHub geschützt? Ein Schutz gegen Force-Push lässt den Push-Spiegel scheitern | keiner — der `--mirror`-Spiegel kann pushen |
+| Deploy-Keys | Gibt es Deploy-Keys (Settings → Deploy keys)? Wer benutzt sie? | keine |
+| Actions-Variablen | Gibt es neben den Secrets auch `vars.*`? In den Workflows wird keine benutzt | keine |
+| Registrierte Runner | Außer `smarthome-runner` weitere Self-hosted-Runner? | nur `smarthome-runner` |
+| GitHub-Apps / Integrationen | Copilot (`.github/copilot-instructions.md` liegt im Repo), sonst etwas? | nicht gefragt worden, offen |
+| Umgebungen | Environments mit eigenen Secrets? In den Workflows steht kein `environment:` | keine |
+| Runner-Secret im Deployments-Repo | Enthält `github-runner/runner-secret.yaml` einen echten PAT? (siehe Abschnitt 6) | **Offen (Thomas)** |
 
 **Externe Verweise auf die GitHub-URL**, soweit ohne Token sichtbar: der Workflow von
 `thomas/Einrohrheizung` (klont SmartHomeTS, zieht zwei Bibliotheken), `REPO_URL` des
@@ -982,10 +983,10 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
 
 | Behauptung | warum unsicher | Test |
 |---|---|---|
-| Ein Forgejo-Job kann nach `mosquitto.intern` publizieren | Netz und DNS aus der Konfiguration abgeleitet, nicht ausgeführt | Test-Lauf mit `mosquitto_pub -t test/forgejo-runner -m x` **ohne `-r`**, nicht auf `OTAUpdate/`, auf einem Test-Topic. Braucht Thomas' Freigabe, weil es den Produktivbroker berührt |
+| Ein Forgejo-Job kann nach `mosquitto.intern` publizieren | Netz und DNS aus der Konfiguration abgeleitet, nicht ausgeführt | Test-Lauf mit `mosquitto_pub -t test/forgejo-runner -m x` **ohne `-r`**, nicht auf `OTAUpdate/`, auf einem Test-Topic. Braucht Thomas' Freigabe, weil es den Produktivbroker berührt (erteilt, F26). **Läuft erst nach U11** als Test-Workflow auf einem Branch von SmartHomeTS, nicht in einem Wegwerf-Repo: Vor der `.gitkeep` würde das Einschalten der Actions alle 19 Workflows aus `.github/workflows` starten |
 | Pull von `forgejo.intern` auf `k3snode3`, `k3snode4` (und amd64) | nur 5 und 6 belegt; Node-Status auf 50 Images gekappt | `ansible prodservers -m command -a "curl -sS -o /dev/null -w '%{http_code}' https://forgejo.intern/v2/"`: erwartet 401 statt TLS-Fehler. Liest nur |
-| Generic-Pakete sind anonym ladbar | Doku sagt nein, Container-Pakete sind es | eine Datei in ein Wegwerf-Paket laden, anonym `curl -I`, Paket löschen. Schreibt in Forgejo, also Freigabe |
-| Zwei PEM-Blöcke in `server_certificate` funktionieren mit `HttpsOTA` | aus mbedTLS abgeleitet, nicht auf dem Gerät gesehen | ein Gerät am Tisch mit der O1-Fassung flashen, einmal von Azure, einmal von `forgejo.intern` laden lassen |
+| Generic-Pakete sind anonym ladbar | Doku sagt nein, Container-Pakete sind es | die U30-Test-`.bin` als Generic-Paket `ota-test` unter `thomas` laden, anonym `curl -I`, Paket löschen. Schreibt in Forgejo, Freigabe erteilt (F26) |
+| Zwei PEM-Blöcke in `server_certificate` funktionieren mit `HttpsOTA` | aus mbedTLS abgeleitet, nicht auf dem Gerät gesehen | ein nacktes ESP32 devkit-v4 am Notebook per USB mit einem eigenen Test-Sketch (O1-Fassung, ohne MQTT) flashen, einmal von Azure, einmal von `forgejo.intern` laden lassen (U30) |
 | `paths:` mit `!`-Negation (Smarthome.Web) wird von Forgejo wie von GitHub ausgewertet | nicht an dieser Instanz beobachtet | beim Umzug von Web: eine Änderung nur unter `SmartHome.Web/SmartHomeBlazorApp/` pushen, es darf kein Lauf entstehen |
 | Build-Dauer eines .NET-Dienstes auf dem arm64-Runner | nicht gemessen | ergibt sich aus dem Probelauf (Schritt 2) und aus Web (Schritt 3.3) |
 | `HeatmeterSensor.Firmware/lib/MQTTClientLib` wird nicht gebaut | für `OTAUpdater` belegt, für diese Kopie nicht | `pio run -v` und nachsehen, aus welchem Pfad `MQTTClientLib.cpp` übersetzt wird |
@@ -1004,30 +1005,37 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
   `~/Repos/GitHub/SmartHomeTS` (`origin` = GitHub) bleibt übergangsweise. Gründe: Der Pfad
   `…/GitHub/…` wäre nach dem Umzug irreführend, und Thomas will beide Klone eine Weile
   nebeneinander nutzen. Das kippt die Empfehlung aus Abschnitt 6; Memory und ignorierte
-  Dateien wurden deshalb von Hand kopiert. **Regel für die zwei Klone** (von Thomas noch
-  zu bestätigen):
+  Dateien wurden deshalb von Hand kopiert. **Regel für die zwei Klone** (von Thomas
+  bestätigt, F24):
   - **Bis U11** wird aus dem neuen Klon **nichts gepusht** — Forgejo ist bis dahin
     Nachzügler, auf dem niemand committet (F5).
-  - **Ab U11** wird **nur im neuen Klon** committet; der alte dient nur zum Lesen. Grund:
+  - **Ab U11** wird **nur im neuen Klon** committet; der alte dient nur zum Lesen, seine
+    Push-URL wird bei U11 gesperrt. Grund:
     Der `--mirror`-Spiegel überschreibt auf GitHub alles, was direkt dort gepusht wurde.
 - **`forgejo-pull-secret` mitnehmen** (U01, 2026-09-27): eine Zeile je `values.yaml`.
   Begründung in Abschnitt 5, „Pull-Secrets".
 - **Keine zusätzliche Absicherung gegen einen Forgejo-Ausfall** (U01, 2026-09-27),
   vorerst auch nicht für den ChargingController. Das Risiko steht in Abschnitt 5, „Was bei
   einem Forgejo-Ausfall …".
+- **Testgerät für U30** (2026-09-27): ein nacktes ESP32 devkit-v4 am Notebook, per USB
+  geflasht, mit eigenem Test-Sketch ohne MQTT (Abschnitt 11, „Zwei PEM-Blöcke").
+- **U04 und U05 ohne Wegwerf-Repo** (F26): U05 lädt ein Test-Paket `ota-test`, U04 läuft
+  nach U11 als Test-Workflow auf einem Branch von SmartHomeTS (Abschnitt 11).
 
 **Offen für Thomas:**
 
 5. Ablage der Firmware: Generic Registry oder Release-Assets (hängt am Test zur
    anonymen Ladbarkeit)
-6. Erster Firmware-Gerätetyp und das Testgerät am Tisch
+6. Erster Firmware-Gerätetyp für U36 (das Testgerät für U30 ist entschieden, siehe oben)
 7. Wer die Soll-Liste aller Geräte für den O3-Nachweis aufstellt
 8. Spiegel-Mechanik nach dem Übergang (Intervall, Knopf, manuell)
 9. Bibliotheks-Repos auf GitHub: spiegeln, archivieren oder löschen, und wann
    Einrohrheizung umgestellt wird
 10. README-Badges entfernen oder stehen lassen
-11. Die Fragen zu Webhooks, Branch-Schutz, Deploy-Keys und Secret-Originalen aus
-    [Abschnitt 7](#was-sonst-am-github-repo-hängt-und-nicht-im-git-steht)
+11. Aus [Abschnitt 7](#was-sonst-am-github-repo-hängt-und-nicht-im-git-steht) noch offen:
+    Originale von `WIFI_PASSWORDS`/`METER_PINS` (F32) und ob
+    `github-runner/runner-secret.yaml` einen echten PAT enthält (F33). Webhooks,
+    Branch-Schutz, Deploy-Keys, Runner, Variablen und Environments sind beantwortet
 12. Sichtbarkeit der Bibliotheks-Repos auf Forgejo: öffentlich (kein Token im CI) oder
     privat (Token im `insteadOf`)
 
