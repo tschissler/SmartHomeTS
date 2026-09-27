@@ -11,7 +11,7 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 **Data flow**: Physical devices → ESP32 firmware → MQTT (Mosquitto) → Connector services → InfluxDB 3 → Grafana/Blazor Web
 
 **Key layers**:
-- **ESP32 firmware** (C++/Arduino via PlatformIO): 18 sensor/controller projects in `ESP32Firmwares/`, sharing libraries from `ESP32Firmwares/SharedLibs/`
+- **ESP32 firmware** (C++/Arduino via PlatformIO): 16 sensor/controller projects in `ESP32Firmwares/` (10 with a CI workflow), sharing eight libraries kept in their own repos (`ESP32_WifiLib`, `ESP32_MQTTClientLib`, `ESP32_OTAUpdate`, …), pulled in via `lib_deps`
 - **Connector services**: Bridge external APIs to MQTT — `BMWConnector`, `EnphaseConnector`,
   `ShellyConnector`, `KebaConnector` (all .NET) and `VWConnector` (Python, the only one)
 - **Business logic services** (.NET): `ChargingController` (EV charging optimization), `Thermostat` (climate control), `SmartHome.DataHub` (central data processing)
@@ -21,7 +21,7 @@ SmartHomeTS is a production smart home platform running on a self-hosted Kuberne
 
 **Data storage**: InfluxDB 3 with primary table `energy_values` using tags (category, sub_category, device, location, measurement, sensor_type) and fields (value_kwh, value_cumulated_kwh).
 
-**Infrastructure**: k3s cluster setup and Ansible playbooks in `Kubernetes/k3s/`, further Ansible playbooks in `ansible/`, 19 GitHub Actions workflows in `.github/workflows/`. The running services are deployed from a separate repository (`forgejo.intern/thomas/SmartHomeDeployments`), not from here; the superseded MicroK8s manifests sit in `Depricated/`.
+**Infrastructure**: k3s cluster setup and Ansible playbooks in `Kubernetes/k3s/ansible/`, 19 GitHub Actions workflows in `.github/workflows/`. The running services are deployed from a separate repository (`forgejo.intern/thomas/SmartHomeDeployments`), not from here; the superseded MicroK8s manifests sit in `Depricated/`.
 
 ## Build Commands
 
@@ -137,6 +137,10 @@ Docker image versions use format `1.0.{github.run_number}`.
   collisions), why a missing path filter deploys nowhere without erroring, and four rules
   about measuring that were learned the expensive way. **Read before splitting work across
   sessions**
+- `Docs/Forgejo-Umzug.md` — move from GitHub to Forgejo: workflow inventory, Forgejo 15
+  compatibility, registry switch, OTA away from Azure, ESP32 libraries, order with rollback
+  paths. **The working state lives in the issues on `forgejo.intern/thomas/SmartHomeTS`**;
+  the document holds the reasons and evidence
 - `Docs/microK8s/Setup MicroK8s.md` — cluster setup
 - **Grafana dashboards no longer live here** — they moved to `forgejo.intern/thomas/Grafana`
   (dashboards, the API export script, the Sankey generator, the InfluxDB field reference).
