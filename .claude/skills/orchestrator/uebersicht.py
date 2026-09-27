@@ -193,17 +193,25 @@ def main():
     if "--einmal" in sys.argv:
         print(zeichnen(shutil.get_terminal_size((60, 20)).columns))
         return
-    sys.stdout.write("\033[?25l")
+    # Eigener Bildschirm (wie less/top): Ohne ihn blieben alte Zeichnungen und die
+    # Shell-Ausgabe davor im Bereich stehen, sobald herdr ihn verkleinert — die
+    # Übersicht sah dann eingefroren aus, obwohl sie unten weiterlief.
+    sys.stdout.write("\033[?1049h\033[?25l")
     try:
         while True:
-            bild = zeichnen(shutil.get_terminal_size((60, 20)).columns)
-            sys.stdout.write("\033[H\033[J" + bild)
+            groesse = shutil.get_terminal_size((60, 20))
+            zeilen = zeichnen(groesse.columns).split("\n")
+            # Nie länger als der Bereich: Sonst rollt die Kopfzeile mit der Uhrzeit
+            # hinaus, und man sieht nicht mehr, ob die Übersicht lebt.
+            if len(zeilen) > groesse.lines:
+                zeilen = zeilen[:groesse.lines - 1] + [f"{GRAU}…{AUS}"]
+            sys.stdout.write("\033[H\033[2J" + "\n".join(zeilen))
             sys.stdout.flush()
             time.sleep(2)
     except KeyboardInterrupt:
         pass
     finally:
-        sys.stdout.write("\033[?25h\n")
+        sys.stdout.write("\033[?25h\033[?1049l")
 
 
 if __name__ == "__main__":
