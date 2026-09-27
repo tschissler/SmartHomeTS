@@ -66,7 +66,9 @@ def herdr_zustaende():
     }
 
 
-def sessions():
+def sessions(bekannte=()):
+    """bekannte: Session-IDs, die die Orchestrierung führt (kann_zu) — sie zählen auch
+    dann mit, wenn ihr Worktree hier schon abgeräumt ist und ihr cwd woanders liegt."""
     herdr = herdr_zustaende()
     ergebnis = []
     try:
@@ -82,7 +84,9 @@ def sessions():
         # Eine Session, die in einem zweiten Repo arbeitet (etwa im Deployments-Repo), steht
         # mit ihrem cwd außerhalb — sie zählt trotzdem mit, wenn sie hier einen Worktree hat.
         eigener_worktree = os.path.isdir(os.path.join(REPO, ".claude", "worktrees", s.get("name") or "-"))
-        if s.get("kind") != "interactive" or not (s.get("cwd", "").startswith(REPO) or eigener_worktree):
+        dazugehoerig = (s.get("cwd", "").startswith(REPO) or eigener_worktree
+                        or s.get("sessionId") in bekannte)
+        if s.get("kind") != "interactive" or not dazugehoerig:
             continue
         if not lebt(s.get("pid", 0)):
             continue
@@ -99,7 +103,7 @@ def zeichnen(breite):
         kann_zu = {k["session_id"]: k for k in daten.get("kann_zu", [])}
     offen = [q for q in alle if q["status"] == "offen"]
     erledigt = sorted((q for q in alle if q["status"] != "offen"), key=lambda q: q["erledigt"])[-3:]
-    liste = sessions()
+    liste = sessions(bekannte=kann_zu.keys())
     namen = {s["name"] for s in liste}
     for s in liste:
         if s["session_id"] in kann_zu:
