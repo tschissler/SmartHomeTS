@@ -97,6 +97,22 @@
       delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
       changed_when: false
 
+    # registries.conf (forgejo.intern) per Merge-Patch, nicht per apply: Die ConfigMap
+    # gehoert dem Upstream-Manifest oben, dessen last-applied kein data kennt. Ein apply
+    # mit data wuerde beim naechsten Upstream-apply wieder entfernt.
+    # rstrip=False ist Pflicht: Sonst fehlt registries.conf der abschliessende
+    # Zeilenumbruch, und jeder Lauf aendert die ConfigMap.
+    - name: Configure Argo CD Image Updater registries
+      ansible.builtin.shell: |
+        /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} patch configmap argocd-image-updater-config \
+          --type merge --patch-file /dev/stdin
+      args:
+        stdin: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../files/argocd-image-updater-config.patch.yaml', rstrip=False) }}"
+      run_once: true
+      delegate_to: "{{ (groups.get('k3s_servers', []) | first) }}"
+      register: argocd_image_updater_config_patch
+      changed_when: "'(no change)' not in argocd_image_updater_config_patch.stdout"
+
     - name: Wait for Argo CD Image Updater deployment
       ansible.builtin.shell: |
         /usr/local/bin/k3s kubectl -n {{ argocd_namespace }} rollout status deployment/argocd-image-updater --timeout=300s

@@ -1,0 +1,13 @@
+# Merge-Patch fuer die ConfigMap argocd-image-updater-config (Namespace argocd).
+# Das Upstream-install.yaml des Image Updaters legt die ConfigMap leer an; dieser Patch
+# ergaenzt nur data.registries.conf. Angewendet von plays/install-argocd.yml per
+# `kubectl patch --type merge` (nicht apply): So bleibt die last-applied-Annotation des
+# Upstream-Manifests ohne data, und ein erneutes Upstream-apply entfernt den Eintrag nicht.
+# Inhalt 1:1 aus dem Cluster uebernommen (dort am 2026-05-10 von Hand gepatcht).
+data:
+  registries.conf: |
+    registries:
+    - name: forgejo-intern
+      api_url: https://forgejo.intern
+      prefix: forgejo.intern
+      insecure: true
