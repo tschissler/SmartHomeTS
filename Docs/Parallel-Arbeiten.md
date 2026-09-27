@@ -12,8 +12,10 @@ Einzelaufgaben ist der Aufwand nicht gerechtfertigt.
 **Eine Integrator-Session** führt das Arbeitsdokument, schreibt die Prompts, prüft
 Ergebnisse **unabhängig** nach und merged — aber nur auf ausdrückliche Freigabe.
 
-**Arbeits-Sessions** bearbeiten je einen Punkt in einem eigenen git worktree. Sie fassen
-das Arbeitsdokument **nicht** an; sonst wird es selbst zum Merge-Konflikt.
+**Arbeits-Sessions** bearbeiten je einen Punkt — in einem eigenen git worktree oder, wo
+die Integrator-Session es mit Grund so entscheidet, in der Arbeitskopie (Kriterien im Skill
+`orchestrator`). Sie fassen das Arbeitsdokument **nicht** an; sonst wird es selbst zum
+Merge-Konflikt.
 
 Sinnvoll sind zwei bis drei gleichzeitige Sessions. Mehr kostet mehr Koordination, als es
 einbringt.
@@ -85,8 +87,9 @@ nach dem Commit ist billiger als der Verlust.
 
 Der Prompt ist der Vertrag. Was nicht drinsteht, wird nicht geprüft.
 
-- **Nenn die Fallen, die du kennst** — mit Datei und Zeile. Eine Session, die eine Falle
-  selbst finden muss, findet sie vielleicht nicht.
+- **Nenn die Fallen, die du kennst** — mit Datei und Symbol, nicht mit Zeilennummer: Die
+  altert, sobald das erste Stück committet hat. Eine Session, die eine Falle selbst finden
+  muss, findet sie vielleicht nicht.
 - **Nenn die Grenzen**, besonders gegenüber produktiven Systemen: was gelesen, was nicht
   geschrieben werden darf, und was ausdrücklich einer anderen Session gehört.
 - **Nenn die Rollout-Folgen.** Eine Session, die weiß, dass ihr Merge neun Dienste neu
