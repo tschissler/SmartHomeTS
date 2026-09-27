@@ -79,7 +79,10 @@ def sessions():
                 s = json.load(f)
         except (OSError, ValueError):
             continue
-        if s.get("kind") != "interactive" or not s.get("cwd", "").startswith(REPO):
+        # Eine Session, die in einem zweiten Repo arbeitet (etwa im Deployments-Repo), steht
+        # mit ihrem cwd außerhalb — sie zählt trotzdem mit, wenn sie hier einen Worktree hat.
+        eigener_worktree = os.path.isdir(os.path.join(REPO, ".claude", "worktrees", s.get("name") or "-"))
+        if s.get("kind") != "interactive" or not (s.get("cwd", "").startswith(REPO) or eigener_worktree):
             continue
         if not lebt(s.get("pid", 0)):
             continue
