@@ -60,6 +60,14 @@ wirkt.
 früheren Bericht zu übernehmen. Sie ändert sich, sobald ein Dienst eine `ProjectReference`
 dazubekommt — genau das ist an einem Tag zweimal passiert.
 
+**Während des Forgejo-Umzugs gibt es zwei Workflow-Verzeichnisse:** `.github/workflows/`
+(baut GitHub, über den Push-Spiegel) und `.forgejo/workflows/` (baut Forgejo). Jeder
+Workflow liegt in genau einem, die Zählung muss **beide** durchsehen. Ein Workflow, den der
+zu zählende Commit per `git mv` verschiebt, zählt in dem Verzeichnis, in dem er **nach**
+dem Commit liegt — das System wertet die Workflows aus dem gepushten Stand aus. Weil die
+Workflows ihre eigene Datei in `paths:` führen, löst der Umzugs-Commit dort in der Regel
+selbst einen Lauf aus. Warum das so ist, steht in `Docs/Forgejo-Umzug.md`, Abschnitt 10.
+
 ## Vier Regeln zum Messen
 
 Alle vier sind an einem Tag teuer gelernt worden.

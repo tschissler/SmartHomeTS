@@ -5,6 +5,12 @@
 Firmware), gegen `origin/main` = `ba7edfb` des
 Deployments-Repos und gegen den laufenden Cluster, nur lesend.
 
+**Fortgeschrieben 2026-09-27:** `thomas/SmartHomeTS` liegt auf Forgejo, `main` per
+Fast-Forward auf `47e152e` (Nachzügler, Schritt 1a). Thomas hat **neu geklont** statt nur
+`origin` umzustellen (Abschnitt 6 „Arbeitsplatz", Abschnitt 12): Neuer Klon
+`~/Repos/Forgejo.intern/SmartHomeTS`, der alte unter `~/Repos/GitHub/SmartHomeTS` bleibt
+übergangsweise. Workflows und Registry sind noch unverändert.
+
 Entschieden hat Thomas bisher:
 
 | | Entscheidung |
@@ -514,8 +520,8 @@ Deployments-Repo und die anderen Forgejo-Repos.
 | Dependabot | **keins** (`.github/` enthält nur `workflows/` und `copilot-instructions.md`) | keine |
 | ArgoCD / Image Updater | **kein Bezug auf GitHub**; alle `repoURL` des Deployments-Repos zeigen schon auf Forgejo | keine |
 | GitHub-Repo selbst | öffentlich, 15 offene Issues, 0 offene PRs, 1 Fork, 16 Sterne | Issues bleiben auf GitHub (F5) |
-| **Arbeitsplatz** | Klon unter `~/Repos/GitHub/SmartHomeTS`. **Das Memory-Verzeichnis von Claude Code hängt am Pfad** (`~/.claude/projects/-home-thomas-Repos-GitHub-SmartHomeTS/`), ebenso `.claude/settings.local.json` und diese Skills | Empfehlung: **Verzeichnis nicht umbenennen, nur `origin` umstellen.** Ein Umzug des Verzeichnisses kappt Memory und Freigaben |
-| `CLAUDE.md`, `Docs/Parallel-Arbeiten.md`, Skill `worker` | beschreiben CI als GitHub, zählen `paths:` in `.github/workflows` | Während des Übergangs gelten **zwei** Verzeichnisse. Die Rollout-Zählung im `worker`-Bericht muss beide durchsehen |
+| **Arbeitsplatz** | Klon unter `~/Repos/GitHub/SmartHomeTS`. **Das Memory-Verzeichnis von Claude Code hängt am Pfad** (`~/.claude/projects/-home-thomas-Repos-GitHub-SmartHomeTS/`), ebenso `.claude/settings.local.json` und diese Skills | Ursprüngliche Empfehlung: Verzeichnis nicht umbenennen, nur `origin` umstellen. **Entschieden anders (Thomas, 2026-09-27): neu geklont** nach `~/Repos/Forgejo.intern/SmartHomeTS`, `origin` = Forgejo. Gründe: Der alte Pfad wäre irreführend, und beide Klone sollen übergangsweise nutzbar sein. Memory und die ignorierten Dateien (SMLSensor-`.env`, drei `settings.local.json` in Unterordnern) sind kopiert. Regel für die zwei Klone in [Abschnitt 12](#12-entscheidungen) |
+| `CLAUDE.md`, `Docs/Parallel-Arbeiten.md`, Skills `worker` und `orchestrator` | beschreiben CI als GitHub, zählen `paths:` in `.github/workflows` | Während des Übergangs gelten **zwei** Verzeichnisse. Die Rollout-Zählung muss beide durchsehen (U12) |
 
 ---
 
@@ -841,13 +847,17 @@ Nach F5 in zwei Teilen: erst läuft Forgejo als Nachzügler mit, dann kippt die 
 3. Push-Spiegel nach GitHub einrichten, „bei jedem Commit synchronisieren" an. Der
    Spiegel pusht mit `--mirror`, also erzwungen und mit Löschen. **Auf GitHub darf danach
    niemand mehr direkt pushen**, sonst überschreibt der nächste Spiegellauf den Commit.
-4. Arbeitsplatz: `git remote set-url origin` auf Forgejo, **das Verzeichnis bleibt, wo es
-   ist** (Memory, Freigaben). Das betrifft auch laufende Worktrees und die Sessions der
-   Orchestrierung.
+4. Arbeitsplatz: **Ab hier wird nur noch im neuen Klon** `~/Repos/Forgejo.intern/SmartHomeTS`
+   committet und gepusht; sein `origin` zeigt schon auf Forgejo. Der alte Klon
+   `~/Repos/GitHub/SmartHomeTS` dient nur noch zum Lesen — ein Push von dort nach GitHub
+   würde beim nächsten Spiegellauf überschrieben (Punkt 3). Laufende Worktrees und
+   Sessions der Orchestrierung im alten Klon vorher abschließen, nicht mitnehmen.
+   (Ursprünglich geplant war `git remote set-url origin` im alten Verzeichnis; siehe
+   Abschnitt 12, warum neu geklont wurde.)
 
 Löst aus: auf Forgejo nichts (`.gitkeep`). Auf GitHub kommt der `.gitkeep`-Commit über
 den Spiegel an. Er berührt keinen `paths:`-Filter, also baut GitHub nichts.
-Rückweg: Remote zurück auf GitHub, Spiegel löschen. Solange kein Workflow umgezogen ist,
+Rückweg: Spiegel löschen, wieder im alten Klon (`origin` = GitHub) arbeiten. Solange kein Workflow umgezogen ist,
 hat GitHub alle Commits und baut wie bisher.
 
 ### Schritt 2 — Probelauf mit einem Dienst: **VWConnector**
@@ -970,6 +980,17 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
 - **F7 Build-Muster:** A, nur arm64 nativ auf den Pi-Runnern. Begründung und Preis in
   Abschnitt 2.
 - **F8 Tag-Schema:** Images `1.1.<run>`, Firmware `0.1.<run>`. Begründung in Abschnitt 4.
+- **Arbeitsplatz: neu klonen statt `origin` umstellen** (2026-09-27). Neuer Klon
+  `~/Repos/Forgejo.intern/SmartHomeTS` mit `origin` = Forgejo; der alte
+  `~/Repos/GitHub/SmartHomeTS` (`origin` = GitHub) bleibt übergangsweise. Gründe: Der Pfad
+  `…/GitHub/…` wäre nach dem Umzug irreführend, und Thomas will beide Klone eine Weile
+  nebeneinander nutzen. Das kippt die Empfehlung aus Abschnitt 6; Memory und ignorierte
+  Dateien wurden deshalb von Hand kopiert. **Regel für die zwei Klone** (von Thomas noch
+  zu bestätigen):
+  - **Bis U11** wird aus dem neuen Klon **nichts gepusht** — Forgejo ist bis dahin
+    Nachzügler, auf dem niemand committet (F5).
+  - **Ab U11** wird **nur im neuen Klon** committet; der alte dient nur zum Lesen. Grund:
+    Der `--mirror`-Spiegel überschreibt auf GitHub alles, was direkt dort gepusht wurde.
 
 **Offen für Thomas:**
 
