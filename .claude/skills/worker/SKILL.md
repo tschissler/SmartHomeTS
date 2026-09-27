@@ -100,7 +100,10 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   Brauchst du eines, sag es und warte. Ein Geheimnis, das eine Session sich zusammensucht,
   landet in einem Transkript.
 - **Eine Freigabe, die dein Werkzeug von Thomas verlangt, kann die Orchestrierung nicht
-  erteilen.** Frag Thomas.
+  erteilen.** Frag Thomas. **Im Auto-Mode gibt es für Schreibzugriffe nach außen keinen
+  Dialog** — der Classifier lehnt ab, auch nach einem „Ja" im Chat. Dann bitte Thomas, den
+  Modus zu verlassen (Shift+Tab, bis unten nicht mehr „auto" steht) oder dein fertiges
+  Skript selbst mit `!` zu starten, statt es mehrmals zu versuchen.
 - **Wartest du auf eine Antwort von Thomas, trag die Frage in die gemeinsame Liste ein**
   (`python3 .claude/skills/orchestrator/fragen.py neu "<Frage>"`) und stell ihm die Nummer
   voran, nach der Antwort `fragen.py beantwortet <Nr> "<Antwort>"`. So sieht er in seiner

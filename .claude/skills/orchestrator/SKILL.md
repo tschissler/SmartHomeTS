@@ -207,6 +207,10 @@ Einschätzung ohne genannte Fundstelle ist eine Meinung — nenn, was dich zur S
   (`~/.claude/projects/<Worktree-Pfad>/<Session>.jsonl`, die Sub-Agenten darunter in
   `subagents/`). Steht es seit einer halben Stunde, hängt dort vermutlich eine Freigabe —
   frag die Session, statt weiter zu warten.
+- **Schreibt eine Session nach außen** (Forgejo, Cluster, `kubectl exec`), **lass sie ohne
+  Auto-Mode starten**: `claude -n <name> --permission-mode default`. Im Auto-Mode lehnt der
+  Classifier solche Schritte ab, ohne Dialog — weder deine Freigabe noch Thomas' „Ja" im
+  Chat hebt das auf, und Shift+Tab landet beim Durchschalten wieder bei „auto".
 - **Eine Freigabe, die das Werkzeug bei Thomas einholt, kannst du nicht erteilen.** Fragt
   eine Session nach einer Bestätigung, die ihr Werkzeug von Thomas verlangt, geht sie zu
   ihm — nicht zu dir. **Schreib das in den Auftrag, sobald er Fremddaten löscht, ein Gerät
