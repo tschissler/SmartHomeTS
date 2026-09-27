@@ -14,7 +14,7 @@ Entschieden hat Thomas bisher:
 | **F3** | Die Workflows ziehen schrittweise um, Dienst für Dienst |
 | OTA | Die Firmware-Updates kommen künftig nicht mehr aus Azure Blob Storage |
 | Bibliotheken | Die acht eigenen ESP32-Bibliotheken ziehen mit um |
-| **F5** | Nur Code mit Git-Historie und die Pipelines ziehen um; keine Issues, PRs, Meilensteine. `thomas/SmartHomeTS` wird **leer und privat** angelegt, **Actions im Repo abgeschaltet**, danach Push von `main`. Bis zur Umstellung committet niemand auf Forgejo, das Nachziehen ist jeweils ein Fast-Forward |
+| **F5** | Nur Code mit Git-Historie und die Pipelines ziehen um; keine Issues, PRs, Meilensteine. `thomas/SmartHomeTS` wird **leer und öffentlich** angelegt (korrigiert von „privat": die Instanz ist nur intern erreichbar), **Actions im Repo abgeschaltet**, danach Push von `main`. Bis zur Umstellung committet niemand auf Forgejo, das Nachziehen ist jeweils ein Fast-Forward |
 | **F7** | Build-Muster A: Dienste nur für arm64, nativ auf den arm64-Runnern (Muster PV-Prognose), siehe Abschnitt 2 |
 | **F8** | Tag-Schema: Images `1.1.<run>`, Firmware `0.1.<run>`, siehe Abschnitt 4 |
 
@@ -624,17 +624,30 @@ kommen.**
 |---|---|---|
 | URL-Form | `https://forgejo.intern/api/packages/thomas/generic/<Paket>/<Version>/<Name>_<Version>.bin` | `https://forgejo.intern/thomas/<Repo>/releases/download/<Tag>/<Name>_<Version>.bin` |
 | `…_<version>.bin` am Ende | ja | ja |
-| anonym ladbar | **unklar**: die Doku sagt „Downloads require … authentication", die Container-Pakete von `thomas` sind aber anonym lesbar. Pakete hängen am Benutzer, nicht am Repo, die Sichtbarkeit richtet sich also nach `thomas` (öffentlich). **Test nötig** | **nein**: das Repo wird privat (F5) |
+| anonym ladbar | **unklar**: die Doku sagt „Downloads require … authentication", die Container-Pakete von `thomas` sind aber anonym lesbar. Pakete hängen am Benutzer, nicht am Repo, die Sichtbarkeit richtet sich also nach `thomas` (öffentlich). **Test nötig** | ja: das Repo ist öffentlich (F5) |
 | Hochladen | ein `curl -X PUT` mit Token | Release anlegen, dann Asset hochladen; ein Tag pro Firmware-Version |
 | Überschreiben | 409, gleicher Name zweimal geht nicht | Asset löschen und neu |
 | Aufräumen | Bereinigungsregeln für Pakete (z. B. letzte 5 behalten) | von Hand oder per API |
 | TemperatureSensor2 | ein Paket pro Board, `---board---` im Paketnamen erlaubt (`-` ist zulässig) | Asset-Name mit Board |
 
-Empfehlung: **Generic Registry.** `HttpsOTA` kann keine Anmeldedaten mitschicken, und
-mit dem privaten Repo (F5) fallen Release-Assets als anonymer Weg weg. Zeigt der Test,
-dass auch Generic-Pakete eine Anmeldung verlangen, bleibt ein eigenes öffentliches Repo
-nur für Firmware-Releases oder eine Ablage außerhalb von Forgejo. Dann ist der Plan an
-dieser Stelle neu zu entscheiden.
+**Bewertung, neu nach der F5-Korrektur (Repo öffentlich).** `HttpsOTA` kann keine
+Anmeldedaten mitschicken, beide Wege müssen also anonym ladbar sein.
+
+- **Anonym ladbar:** Release-Assets eines öffentlichen Repos sicher. Die Generic Registry
+  nur, wenn der Test (U05) es bestätigt. Die Doku sagt dort „authentication required".
+- **URL-Form:** Beide enden auf `…_<version>.bin`, das Gerät und die Webseite lesen die
+  Version also richtig. Release-Assets brauchen einen Tag je Firmware und Version
+  (z. B. `fw/SMLSensor/0.1.123`). Bei zehn Gerätetypen wächst die Tag-Liste des
+  Hauptrepos schnell, und jeder Tag wird über den Push-Spiegel auch auf GitHub sichtbar.
+  Die Generic Registry braucht weder Tags noch Releases.
+- **Aufräumen:** Die Generic Registry hat Bereinigungsregeln (z. B. „letzte 5 behalten").
+  Release-Assets muss man per API oder von Hand löschen, samt Tags.
+- **Hochladen:** Generic ist ein `curl -X PUT`. Release heißt: Tag anlegen, Release anlegen,
+  Asset hochladen, also drei Aufrufe.
+
+Empfehlung bleibt **Generic Registry**, jetzt wegen Aufräumen und sauberer Tag-Liste statt
+wegen der Sichtbarkeit. **Release-Assets sind der geprüfte Ausweg**, falls U05 zeigt, dass
+Generic-Pakete eine Anmeldung verlangen.
 
 **HTTP statt HTTPS im LAN?** Bewertet, nicht empfohlen. Es entfiele die ganze CA-Frage,
 aber:
@@ -812,7 +825,7 @@ Nach F5 in zwei Teilen: erst läuft Forgejo als Nachzügler mit, dann kippt die 
 
 **1a — Forgejo als Nachzügler.**
 
-1. `thomas/SmartHomeTS` **leer und privat** anlegen, **Actions im Repo abgeschaltet**.
+1. `thomas/SmartHomeTS` **leer und öffentlich** anlegen, **Actions im Repo abgeschaltet**.
 2. `main` pushen. Bis zur Umstellung bleibt GitHub `origin`, und Forgejo wird per
    Fast-Forward nachgezogen (`git push forgejo main`). Niemand committet auf Forgejo.
 

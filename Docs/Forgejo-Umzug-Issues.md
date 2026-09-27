@@ -83,7 +83,9 @@ U07, U08 ─── U30 ── U31 ── U32 ── U33 ── U34 ── U35 �
 - **Löst aus:** ein Wegwerf-Paket, danach gelöscht
 - **Rückweg:** Paket löschen
 - **Nachweis:** `curl -I https://forgejo.intern/api/packages/thomas/generic/<test>/0.0.0/test_0.0.0.bin`
-  ohne Anmeldung liefert `200`. Bei `401`: Ablage neu entscheiden (§8).
+  ohne Anmeldung liefert `200`. Bei `401`: Release-Assets des öffentlichen Repos nehmen
+  (§8, Bewertung nach der F5-Korrektur). Das kostet einen Tag je Firmware und Version
+  und Aufräumen per API statt über Bereinigungsregeln.
 
 ### U06 — Secrets in Forgejo anlegen
 
@@ -125,9 +127,9 @@ U07, U08 ─── U30 ── U31 ── U32 ── U33 ── U34 ── U35 �
 
 ## Repo
 
-### U10 — Repo leer und privat anlegen, `main` pushen (Nachzügler)
+### U10 — Repo leer und öffentlich anlegen, `main` pushen (Nachzügler)
 
-- **Ziel:** `thomas/SmartHomeTS` auf Forgejo: leer, privat, **Actions im Repo
+- **Ziel:** `thomas/SmartHomeTS` auf Forgejo: leer, öffentlich, **Actions im Repo
   abgeschaltet**; danach `main` pushen (F5, §10 Schritt 1a). GitHub bleibt `origin`,
   Forgejo wird bis U11 nur per Fast-Forward nachgezogen.
 - **Abhängig von:** —
