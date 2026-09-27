@@ -15,6 +15,8 @@ Entschieden hat Thomas bisher:
 | OTA | Die Firmware-Updates kommen künftig nicht mehr aus Azure Blob Storage |
 | Bibliotheken | Die acht eigenen ESP32-Bibliotheken ziehen mit um |
 | **F5** | Nur Code mit Git-Historie und die Pipelines ziehen um; keine Issues, PRs, Meilensteine. `thomas/SmartHomeTS` wird **leer und privat** angelegt, **Actions im Repo abgeschaltet**, danach Push von `main`. Bis zur Umstellung committet niemand auf Forgejo, das Nachziehen ist jeweils ein Fast-Forward |
+| **F7** | Build-Muster A: Dienste nur für arm64, nativ auf den arm64-Runnern (Muster PV-Prognose), siehe Abschnitt 2 |
+| **F8** | Tag-Schema: Images `1.1.<run>`, Firmware `0.1.<run>`, siehe Abschnitt 4 |
 
 Die Schritte dieses Plans liegen als Issue-Entwürfe in `Docs/Forgejo-Umzug-Issues.md`.
 
@@ -212,20 +214,51 @@ Cluster-CA: Er hängt sie beim Start an `/etc/ssl/certs/ca-certificates.crt` an.
   auf dem Daemon entfällt die Frage: Die Runner haben persistente Docker-Volumes (60 Gi
   amd64, 20 Gi arm64), der Layer-Cache bleibt also über Läufe hinweg erhalten.
 
-### Empfehlung zum Build-Muster (Offen: Thomas)
+### Build-Muster: entschieden A (F7)
 
 **Alle neun Dienste laufen nur auf arm64.** Jede `values.yaml` setzt
 `nodeSelector: kubernetes.io/arch: arm64`, und alle Pods stehen auf `k3snode4` bis `6`.
-Das amd64-Image wird gebaut, aber nie gezogen.
+Das amd64-Image wird heute gebaut, aber nie gezogen.
 
 | Variante | Preis |
 |---|---|
-| **A: nur arm64, nativ auf den arm64-Runnern, `docker build`/`push`** (Muster PV-Prognose und RulesEngine) | kein amd64-Fallback mehr. Die Annotation `platforms` wird `linux/arm64`. Die arm64-Runner haben nur 1 CPU im dind-Limit, der Build ist dort langsamer als auf GitHub |
+| **A: nur arm64, nativ auf den arm64-Runnern, `docker build`/`push`** (Muster PV-Prognose und RulesEngine) — **gewählt** | kein amd64-Image mehr. Die Annotation `platforms` wird `linux/arm64`. Die arm64-Runner haben nur 1 CPU im dind-Limit, der Build ist dort langsamer als auf GitHub |
 | B: Multi-Arch per QEMU auf dem amd64-Runner, Buildx mit CA-Konfiguration | CA in den Builder, binfmt im Node-Kernel, ein Runner für alle Builds. Emuliertes `dotnet publish` ist langsam |
 | C: je Architektur nativ bauen, danach `docker buildx imagetools create` | zwei Jobs pro Dienst, Manifest zusammensetzen. Am meisten Arbeit |
 
-Empfehlung: **A**. Sie ist erprobt und umgeht alle drei TLS-/QEMU-Fragen. Der
-Verzicht auf amd64 ist eine Produktentscheidung, deshalb liegt sie bei Thomas.
+**Warum A:** Sie ist auf dieser Instanz erprobt (PV-Prognose, MailSync). Sie umgeht alle
+drei offenen Fragen aus dem Abschnitt davor: BuildKits Push-Client, binfmt im
+Node-Kernel und den `gha`-Cache. Und sie baut nur, was tatsächlich gezogen wird. B und C
+lösen ein Problem, das heute niemand hat.
+
+**Was A kostet:**
+- **Soll ein Dienst je auf `k3snode1/2` (amd64) laufen**, etwa weil die Pis ausfallen
+  oder ein Dienst mehr Leistung braucht, gibt es dafür kein Image. Dann muss zuerst der
+  Workflow auf B oder C umgebaut werden, dann `platforms` in der Annotation, dann der
+  `nodeSelector`. Ein kurzfristiges Ausweichen auf die amd64-Nodes bei einem Ausfall
+  der Pis ist damit nicht möglich. Heute ginge es theoretisch, weil das Image existiert,
+  praktisch verhindert es aber schon der `nodeSelector`.
+- Die Builds laufen auf den Pis langsamer (Messung beim Probelauf, U20).
+- Die Docker-Hub-Images bleiben multi-arch. Der Rückweg eines Dienstes auf Docker Hub
+  (Revert im Deployments-Repo) hat also weiter beide Architekturen.
+
+### Wird der amd64-Runner noch gebraucht?
+
+**Für die Images der Dienste nicht mehr.** Er bleibt aber nötig:
+
+- **Firmware-Builds** sind auf `ubuntu-latest` (amd64) geplant, siehe
+  [Abschnitt 8](#8-ota-weg-der-firmware). Ob PlatformIO mit den ESP32-Toolchains auch auf
+  arm64 baut, habe ich nicht geprüft. Die Einrohrheizung baut ihre Firmware ebenfalls auf
+  amd64.
+- **Andere Repos:** `Einrohrheizung` (alle 7 Workflows) und `Grafana` (2 Workflows)
+  laufen auf `ubuntu-latest`, also nur auf diesem Runner. `PV-Prognose` und `MailSync`
+  laufen auf `arm64`. Gelesen über die API, 2026-09-27.
+- **Test-Jobs der Dienste, optional:** `dotnet test` ist architekturunabhängig. Auf dem
+  amd64-Runner (2 CPU statt 1) läuft er schneller und belegt keinen der zwei
+  arm64-Plätze. Weil `build` mit `needs: test` ohnehin wartet, gewinnt man Zeit nur
+  durch die schnellere Maschine. Vorschlag: Test-Job auf `ubuntu-latest` im Container
+  `mcr.microsoft.com/dotnet/sdk:10.0`, Build-Job auf `arm64`. Nötig ist das nicht, der
+  Test kann auch im arm64-Job laufen.
 
 ---
 
@@ -322,9 +355,9 @@ entscheidet die lexikalische Sortierung. Die Nummer im Tag spielt für die Auswa
 Die Zahl der Tags ist viel kleiner als die höchste Nummer. Alte Tags werden also schon
 heute gelöscht, von wem, ist nicht erhoben.
 
-### Versionsschema
+### Versionsschema (entschieden, F8)
 
-**Images: `1.1.<run>` vorgeschlagen.** Für die Auswahl ist es gleichgültig (siehe oben).
+**Images: `1.1.<run>` (F8).** Für die Auswahl ist es gleichgültig (siehe oben).
 Es spricht trotzdem einiges dafür:
 
 - Es bleibt innerhalb von `allow-tags ^1\.[0-9]+\.[0-9]+$`. Die Grenze gegen einen Major
@@ -370,8 +403,8 @@ Es spricht trotzdem einiges dafür:
 - **Nicht nachgewiesen auf `k3snode3`, `k3snode4`** (arm64, dort laufen Dienste!) und auf
   den amd64-Nodes. Die Image-Liste im Node-Status ist auf 50 Einträge gekappt. Ihr
   Fehlen dort beweist also nichts. Test siehe [Unsichere Stellen](#unsichere-stellen).
-- **Multi-Arch-Manifeste:** Die Forgejo-Registry nimmt OCI-Indizes an. Bei Variante A
-  (nur arm64) stellt sich die Frage nicht.
+- **Multi-Arch-Manifeste:** Die Forgejo-Registry nimmt OCI-Indizes an. Mit Muster A
+  (nur arm64, F7) stellt sich die Frage nicht.
 
 ### Pull-Secrets
 
@@ -395,8 +428,8 @@ Es spricht trotzdem einiges dafür:
   benutzt.
 - **Umstellung je Dienst** in `<Dienst>.yaml` im Deployments-Repo:
   `image-list: <app>=forgejo.intern/thomas/<image>`,
-  `pull-secret: pullsecret:argocd/forgejo-pull-secret`, bei Variante A
-  `platforms: linux/arm64`. `allow-tags` bleibt.
+  `pull-secret: pullsecret:argocd/forgejo-pull-secret`,
+  `platforms: linux/arm64` (Muster A, F7). `allow-tags` bleibt.
 - **Umstellung je Dienst** in `<Dienst>/values.yaml`: `image.repository` und
   `image.tag` auf den ersten Forgejo-Tag. **Der Tag muss existieren, bevor der Commit
   landet**, sonst geht der Pod in `ImagePullBackOff`.
@@ -766,8 +799,8 @@ aus**, dieselbe Fehlerklasse wie ein fehlender Pfadfilter. Deshalb enthält Schr
 
 ### Schritt 0 — Vorbereitung (löst nichts aus)
 
-- Tag-Schema festlegen (`1.1.<run>`, Firmware `0.1.<run>`), Build-Muster (A/B/C aus
-  Abschnitt 2) entscheiden.
+- Tag-Schema (`1.1.<run>`, Firmware `0.1.<run>`, F8) und Build-Muster (A, F7) sind
+  entschieden. Offen sind noch die Punkte aus Abschnitt 12.
 - `REGISTRY_USERNAME`/`REGISTRY_TOKEN` als Benutzer-Secrets anlegen.
 - `argocd-image-updater-config` ins Deployments-Repo holen (heute nur im Cluster).
 - Pull von `forgejo.intern` auf `k3snode3` und `k3snode4` nachweisen.
@@ -846,8 +879,10 @@ Reihenfolge nach Risiko:
 1. **EnphaseConnector, ShellyConnector**: .NET ohne Test-Job, das Build-Muster wird ohne
    `setup-dotnet` erprobt. Energiedaten, also danach Grafana kurz ansehen.
 2. **BMWConnector, KebaConnector, RulesEngine, SmartHome.DataHub**: mit Test-Job, hier
-   wird der Ersatz für `setup-dotnet` erprobt (Job-Container `dotnet/sdk:10.0`). Keba
-   und RulesEngine gehören zur Lade-Kette, also nicht beide am selben Abend.
+   wird der Ersatz für `setup-dotnet` erprobt (Job-Container `dotnet/sdk:10.0`,
+   Test-Job auf `ubuntu-latest`, Build-Job auf `arm64`, siehe „Wird der amd64-Runner noch
+   gebraucht?" in Abschnitt 2). Keba und RulesEngine gehören zur Lade-Kette, also nicht
+   beide am selben Abend.
 3. **SmartHome.Web**: der größte Build, der erste echte Messpunkt für die Dauer auf dem
    arm64-Runner.
 4. **ChargingController** zuletzt.
@@ -915,11 +950,16 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
 | `github-runner/runner-secret.yaml` enthält keinen echten PAT | nicht angesehen | Thomas sieht nach. Wenn ja: PAT widerrufen, das Repo ist anonym lesbar |
 | `DEFAULT_ACTIONS_URL` steht nicht in der `app.ini` auf dem PVC | Values und Env geprüft, die Datei nicht; das Log zeigt aber `data.forgejo.org` | nicht nötig, das Log belegt das Verhalten |
 
-## 12. Offene Entscheidungen für Thomas
+## 12. Entscheidungen
 
-1. Build-Muster: nur arm64 nativ (A), Multi-Arch per QEMU (B) oder nativ + Manifest (C)
-2. Tag-Schema `1.1.<run>` für Images und `0.1.<run>` für Firmware (Firmware: Präfix ist
-   Pflicht, nur welcher, ist frei)
+**Entschieden:**
+
+- **F7 Build-Muster:** A, nur arm64 nativ auf den Pi-Runnern. Begründung und Preis in
+  Abschnitt 2.
+- **F8 Tag-Schema:** Images `1.1.<run>`, Firmware `0.1.<run>`. Begründung in Abschnitt 4.
+
+**Offen für Thomas:**
+
 3. `forgejo-pull-secret` in den `values.yaml` mitnehmen oder weglassen
 4. Kritische Dienste gegen Forgejo-Ausfall zusätzlich absichern oder nicht
 5. Ablage der Firmware: Generic Registry oder Release-Assets (hängt am Test zur

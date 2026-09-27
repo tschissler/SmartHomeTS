@@ -24,13 +24,13 @@ U07, U08 ─── U30 ── U31 ── U32 ── U33 ── U34 ── U35 �
 
 ## Vorbereitung
 
-### U01 — Entscheidungen zum Build- und Versionsschema einholen
+### U01 — Offene Entscheidungen vor dem ersten Dienst
 
-- **Ziel:** Thomas entscheidet die offenen Punkte aus §12, bevor der erste Workflow
-  umzieht: Build-Muster (nur arm64 nativ / QEMU / nativ + Manifest), Tag-Schema Images
-  (`1.1.<run>` vorgeschlagen), Präfix Firmware (`0.1.<run>` vorgeschlagen, ein neuer
-  Präfix ist Pflicht), `forgejo-pull-secret` in den `values.yaml` ja/nein, Absicherung
-  kritischer Dienste gegen Forgejo-Ausfall.
+- **Ziel:** Thomas entscheidet, was vor dem ersten Workflow-Umzug noch offen ist (§12):
+  `forgejo-pull-secret` in den `values.yaml` ja/nein; Absicherung kritischer Dienste
+  (ChargingController) gegen einen Forgejo-Ausfall ja/nein.
+  Schon entschieden und hier nur zur Orientierung: **F7** Build-Muster A (nur arm64,
+  nativ auf den Pi-Runnern), **F8** Tags `1.1.<run>` (Images) und `0.1.<run>` (Firmware).
 - **Abhängig von:** —
 - **Löst aus:** nichts
 - **Rückweg:** —
@@ -180,12 +180,13 @@ Jeder Dienst ist ein Issue mit denselben zwei Commits. Die Vorlage steht bei U20
   Regelung eingehen, er Python ohne Test-Job ist und einen Heartbeat mit Version hat.
 - **Abhängig von:** U01, U02, U03, U06, U11
 - **Commit a (SmartHomeTS), ohne Code-Änderung am Dienst:**
-  `git mv .github/workflows/vwconnector.yml .forgejo/workflows/`; nach dem gewählten
-  Build-Muster anpassen (Muster A: `runs-on: arm64`, `docker build --platform linux/arm64`,
-  `docker login forgejo.intern` mit `REGISTRY_*`, `docker push`), Tag nach U01.
+  `git mv .github/workflows/vwconnector.yml .forgejo/workflows/`; nach Muster A (F7)
+  anpassen: `runs-on: arm64`, `docker build --platform linux/arm64`,
+  `docker login forgejo.intern` mit `REGISTRY_*`, `docker push`; kein QEMU, kein Buildx.
+  Tag `1.1.${{ github.run_number }}` (F8).
 - **Commit b (Deployments), direkt danach:** `VWConnector.yaml`:
   `image-list: vwconnector=forgejo.intern/thomas/vwconnector`,
-  `pull-secret: pullsecret:argocd/forgejo-pull-secret`, `platforms` nach U01;
+  `pull-secret: pullsecret:argocd/forgejo-pull-secret`, `platforms: linux/arm64`;
   `VWConnector/values.yaml`: `repository`, `tag` auf den Tag aus a. **In einem Commit**,
   danach `00-bootstrap` synchronisieren (sonst schreibt der Updater weiter
   Docker-Hub-Tags).
@@ -220,7 +221,8 @@ Jeder Dienst ist ein Issue mit denselben zwei Commits. Die Vorlage steht bei U20
 
 - **Wie U20.** Abweichend: Test und Build in einem Job, `.slnx`; **Ersatz für
   `actions/setup-dotnet`** wird hier erprobt (gibt es auf `data.forgejo.org` nicht, §2),
-  vorgeschlagen Job-Container `mcr.microsoft.com/dotnet/sdk:10.0`. Pfade:
+  vorgeschlagen Job-Container `mcr.microsoft.com/dotnet/sdk:10.0`; Test-Job auf
+  `ubuntu-latest` (amd64, 2 CPU), Build-Job auf `arm64` mit `needs: test`. Pfade:
   `SharedContracts`, `Libs/HeartbeatLib`.
 - **Abhängig von:** U22
 - **Nachweis:** wie U20; zusätzlich ein absichtlich roter Test im Branch verhindert das
@@ -334,7 +336,7 @@ Azure und wird noch auf GitHub gebaut.
   (§9); PlatformIO-Build, `check_firmware_size.py`; Upload per
   `curl -X PUT … /api/packages/thomas/generic/<Paket>/<Version>/<Name>_<Version>.bin`;
   `mosquitto_pub -r` (Client im Job installieren oder eigenes CI-Image, Vorbild
-  `einrohr-pio-ci`); Version `0.1.<run>` (oder nach U01). Kein `az`, kein
+  `einrohr-pio-ci`); Version `0.1.<run>` (F8). Kein `az`, kein
   Azure-Schlüssel in Forgejo.
 - **Abhängig von:** U04, U05, U34
 - **Löst aus:** nichts (Vorlage, noch keinem Gerätetyp zugeordnet)
