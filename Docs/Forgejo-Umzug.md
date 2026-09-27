@@ -430,10 +430,15 @@ Es spricht trotzdem einiges dafür:
 ### Image Updater
 
 - **`registries.conf` kennt `forgejo.intern` schon**, mit `insecure: true` (keine
-  TLS-Prüfung). **Diese ConfigMap steht nicht in Git**: `argocd-image-updater-config`
-  trägt nur eine `last-applied-configuration`, ist also von Hand mit `kubectl apply`
-  entstanden. Bei einem Neuaufbau fehlt sie. Das gehört ins Deployments-Repo oder in die
-  Ansible-Installation.
+  TLS-Prüfung). **Dieser Inhalt steht nicht in Git.** Die ConfigMap
+  `argocd-image-updater-config` selbst kommt leer aus dem Upstream-`install.yaml`, das
+  `Kubernetes/k3s/ansible/plays/install-argocd.yml` anwendet (managedFields:
+  `kubectl-client-side-apply` 2026-01-05, ohne `data`). Nur `data.registries.conf` kam von
+  Hand per `kubectl patch` dazu (2026-05-10). Bei einem Neuaufbau fehlt also genau dieser
+  Eintrag. **Entschieden (U02):** Er kommt als Patch-Datei plus Patch-Task in
+  `install-argocd.yml` nach Ansible, nicht ins Deployments-Repo. Grund: `00-bootstrap` hat
+  `prune: true`, ein Revert dort würde die ConfigMap löschen, und neben dem Upstream-apply
+  gäbe es einen zweiten Besitzer.
 - Credentials: `pullsecret:argocd/forgejo-pull-secret` existiert und wird von `pv-forecast`
   benutzt.
 - **Umstellung je Dienst** in `<Dienst>.yaml` im Deployments-Repo:
@@ -827,7 +832,8 @@ aus**, dieselbe Fehlerklasse wie ein fehlender Pfadfilter. Deshalb enthält Schr
 - Tag-Schema (`1.1.<run>`, Firmware `0.1.<run>`, F8) und Build-Muster (A, F7) sind
   entschieden. Offen sind noch die Punkte aus Abschnitt 12.
 - `REGISTRY_USERNAME`/`REGISTRY_TOKEN` als Benutzer-Secrets anlegen.
-- `argocd-image-updater-config` ins Deployments-Repo holen (heute nur im Cluster).
+- `registries.conf` der `argocd-image-updater-config` in die Ansible-Installation holen
+  (Patch-Task in `install-argocd.yml`, U02; heute nur im Cluster, siehe Abschnitt 5).
 - Pull von `forgejo.intern` auf `k3snode3` und `k3snode4` nachweisen.
 - Soll-Liste aller ESP32-Geräte aufstellen (für O3).
 
