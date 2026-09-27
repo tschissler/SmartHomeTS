@@ -131,6 +131,12 @@ sonst gerade in der Arbeitskopie unterwegs ist.
 - **Im Zweifel Worktree.** Der teurere Fehler ist die verschränkte Arbeitskopie, nicht der
   überflüssige Aufbau.
 
+**Arbeitet eine Session in einem zweiten Repo** (etwa im Deployments-Repo), startet sie
+trotzdem in SmartHomeTS — sonst fehlt ihr `/worker`. Den zweiten Worktree legt sie von Hand
+an, außerhalb des fremden Klons, und **entfernt den Upstream**: `git worktree add -b X
+origin/main` setzt `origin/main` als Upstream, und ein blankes `git push` ist dort ein
+Deployment. Schreib Pfad, Basis und „kein Upstream" in den Auftrag.
+
 **Ohne Worktree gibt es keinen Zweig und damit keinen Merge**: Die Session committet lokal
 auf `main` — nur ihre eigenen Dateien —, und deine Freigabe-Grenze ist der Push. Alles, was
 unten über den Merge steht, gilt dort für den Push.
