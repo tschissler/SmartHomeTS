@@ -104,7 +104,10 @@ nicht, wenn du aus dem Sessionnamen erraten könntest, worum es geht.
   erteilen.** Frag Thomas. **Im Auto-Mode gibt es für Schreibzugriffe nach außen keinen
   Dialog** — der Classifier lehnt ab, auch nach einem „Ja" im Chat. Dann bitte Thomas, den
   Modus zu verlassen (Shift+Tab, bis unten nicht mehr „auto" steht) oder dein fertiges
-  Skript selbst mit `!` zu starten, statt es mehrmals zu versuchen.
+  Skript selbst mit `!` zu starten, statt es mehrmals zu versuchen. **Braucht das Skript
+  ein Token von Thomas**, fragt es verdeckt danach (`read -s`), und Thomas startet es in
+  einem **eigenen Terminal** — nicht mit `!`: Dort hat `read -s` kein Terminal und liest
+  ein leeres Token, und ein Token auf der Befehlszeile landet im Transkript.
 - **Wartest du auf eine Antwort von Thomas, trag die Frage in die gemeinsame Liste ein**
   (`python3 .claude/skills/orchestrator/fragen.py neu "<Frage>"`) und stell ihm die Nummer
   voran, nach der Antwort `fragen.py beantwortet <Nr> "<Antwort>"`. So sieht er in seiner

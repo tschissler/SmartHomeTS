@@ -642,7 +642,7 @@ kommen.**
 |---|---|---|
 | URL-Form | `https://forgejo.intern/api/packages/thomas/generic/<Paket>/<Version>/<Name>_<Version>.bin` | `https://forgejo.intern/thomas/<Repo>/releases/download/<Tag>/<Name>_<Version>.bin` |
 | `…_<version>.bin` am Ende | ja | ja |
-| anonym ladbar | **unklar**: die Doku sagt „Downloads require … authentication", die Container-Pakete von `thomas` sind aber anonym lesbar. Pakete hängen am Benutzer, nicht am Repo, die Sichtbarkeit richtet sich also nach `thomas` (öffentlich). **Test nötig** | ja: das Repo ist öffentlich (F5) |
+| anonym ladbar | **ja, geprüft U05** (siehe unten). Die Doku-Aussage „Downloads require … authentication" trifft auf dieser Instanz nicht zu | ja: das Repo ist öffentlich (F5) |
 | Hochladen | ein `curl -X PUT` mit Token | Release anlegen, dann Asset hochladen; ein Tag pro Firmware-Version |
 | Überschreiben | 409, gleicher Name zweimal geht nicht | Asset löschen und neu |
 | Aufräumen | Bereinigungsregeln für Pakete (z. B. letzte 5 behalten) | von Hand oder per API |
@@ -651,8 +651,9 @@ kommen.**
 **Bewertung, neu nach der F5-Korrektur (Repo öffentlich).** `HttpsOTA` kann keine
 Anmeldedaten mitschicken, beide Wege müssen also anonym ladbar sein.
 
-- **Anonym ladbar:** Release-Assets eines öffentlichen Repos sicher. Die Generic Registry
-  nur, wenn der Test ([U05](https://forgejo.intern/thomas/SmartHomeTS/issues/5)) es bestätigt. Die Doku sagt dort „authentication required".
+- **Anonym ladbar:** Release-Assets eines öffentlichen Repos sicher, die Generic Registry
+  ebenfalls, nachgewiesen in [U05](https://forgejo.intern/thomas/SmartHomeTS/issues/5)
+  (Ergebnis unten).
 - **URL-Form:** Beide enden auf `…_<version>.bin`, das Gerät und die Webseite lesen die
   Version also richtig. Release-Assets brauchen einen Tag je Firmware und Version
   (z. B. `fw/SMLSensor/0.1.123`). Bei zehn Gerätetypen wächst die Tag-Liste des
@@ -663,9 +664,24 @@ Anmeldedaten mitschicken, beide Wege müssen also anonym ladbar sein.
 - **Hochladen:** Generic ist ein `curl -X PUT`. Release heißt: Tag anlegen, Release anlegen,
   Asset hochladen, also drei Aufrufe.
 
-Empfehlung bleibt **Generic Registry**, jetzt wegen Aufräumen und sauberer Tag-Liste statt
-wegen der Sichtbarkeit. **Release-Assets sind der geprüfte Ausweg**, falls [U05](https://forgejo.intern/thomas/SmartHomeTS/issues/5) zeigt, dass
-Generic-Pakete eine Anmeldung verlangen.
+**Entschieden: Generic Registry** (nach U05), wegen Aufräumen und sauberer Tag-Liste.
+Release-Assets bleiben der Ausweg, falls sich an der Sichtbarkeit etwas ändert.
+
+**Ergebnis U05** (Test-Paket `ota-test`, umzug-02-proben, 2026-09-27):
+
+- **Anonym ladbar:** 200, keine Weiterleitung, `Content-Length` gesetzt. Ein nicht
+  vorhandener Pfad liefert 404, nicht 401.
+- **Die Sichtbarkeit hängt am Benutzer, nicht am Repo** (`repository: null`, Owner
+  `public`). **Auflage: `thomas` bleibt öffentlich**, sonst verlangt jeder OTA-Download
+  eine Anmeldung, die `HttpsOTA` nicht schicken kann.
+- **Kein 302**, weil kein S3-Store mit `SERVE_DIRECT` konfiguriert ist. Wird der
+  Paketspeicher je auf MinIO mit Direktauslieferung umgestellt, **muss U05 neu laufen**:
+  Dann leitet Forgejo auf eine andere Adresse mit anderem Zertifikat um.
+- **TLS-Kette:** Der Server liefert nur das Leaf (SAN `forgejo.intern`, Issuer „SmartHome
+  Cluster CA", 90 Tage Laufzeit). Das Gerät braucht die **CA als Root**, nicht das Leaf,
+  sonst scheitert es nach jeder Zertifikatserneuerung.
+- **Dieselbe Version zweimal hochladen ergibt 409.** Die CI braucht eine eindeutige
+  Version je Lauf, `run_number` leistet das.
 
 **HTTP statt HTTPS im LAN?** Bewertet, nicht empfohlen. Es entfiele die ganze CA-Frage,
 aber:
@@ -985,7 +1001,7 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
 |---|---|---|
 | Ein Forgejo-Job kann nach `mosquitto.intern` publizieren | Netz und DNS aus der Konfiguration abgeleitet, nicht ausgeführt | Test-Lauf mit `mosquitto_pub -t test/forgejo-runner -m x` **ohne `-r`**, nicht auf `OTAUpdate/`, auf einem Test-Topic. Braucht Thomas' Freigabe, weil es den Produktivbroker berührt (erteilt, F26). **Läuft erst nach U11** als Test-Workflow auf einem Branch von SmartHomeTS, nicht in einem Wegwerf-Repo: Vor der `.gitkeep` würde das Einschalten der Actions alle 19 Workflows aus `.github/workflows` starten |
 | Pull von `forgejo.intern` auf `k3snode3`, `k3snode4` (und amd64) | nur 5 und 6 belegt; Node-Status auf 50 Images gekappt | `ansible prodservers -m command -a "curl -sS -o /dev/null -w '%{http_code}' https://forgejo.intern/v2/"`: erwartet 401 statt TLS-Fehler. Liest nur |
-| Generic-Pakete sind anonym ladbar | Doku sagt nein, Container-Pakete sind es | die U30-Test-`.bin` als Generic-Paket `ota-test` unter `thomas` laden, anonym `curl -I`, Paket löschen. Schreibt in Forgejo, Freigabe erteilt (F26) |
+| Generic-Pakete sind anonym ladbar | **geklärt (U05): ja**, Ergebnis in Abschnitt 8 | die U30-Test-`.bin` als Generic-Paket `ota-test` unter `thomas` laden, anonym `curl -I`, Paket löschen. Schreibt in Forgejo, Freigabe erteilt (F26) |
 | Zwei PEM-Blöcke in `server_certificate` funktionieren mit `HttpsOTA` | aus mbedTLS abgeleitet, nicht auf dem Gerät gesehen | ein nacktes ESP32 devkit-v4 am Notebook per USB mit einem eigenen Test-Sketch (O1-Fassung, ohne MQTT) flashen, einmal von Azure, einmal von `forgejo.intern` laden lassen (U30) |
 | `paths:` mit `!`-Negation (Smarthome.Web) wird von Forgejo wie von GitHub ausgewertet | nicht an dieser Instanz beobachtet | beim Umzug von Web: eine Änderung nur unter `SmartHome.Web/SmartHomeBlazorApp/` pushen, es darf kein Lauf entstehen |
 | Build-Dauer eines .NET-Dienstes auf dem arm64-Runner | nicht gemessen | ergibt sich aus dem Probelauf (Schritt 2) und aus Web (Schritt 3.3) |
@@ -1021,11 +1037,11 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
   geflasht, mit eigenem Test-Sketch ohne MQTT (Abschnitt 11, „Zwei PEM-Blöcke").
 - **U04 und U05 ohne Wegwerf-Repo** (F26): U05 lädt ein Test-Paket `ota-test`, U04 läuft
   nach U11 als Test-Workflow auf einem Branch von SmartHomeTS (Abschnitt 11).
+- **Ablage der Firmware: Generic Registry** (nach U05). Auflage: Der Benutzer `thomas`
+  bleibt öffentlich. Ergebnis und Folgen in Abschnitt 8, „Ablageort in Forgejo".
 
 **Offen für Thomas:**
 
-5. Ablage der Firmware: Generic Registry oder Release-Assets (hängt am Test zur
-   anonymen Ladbarkeit)
 6. Erster Firmware-Gerätetyp für U36 (das Testgerät für U30 ist entschieden, siehe oben)
 7. Wer die Soll-Liste aller Geräte für den O3-Nachweis aufstellt
 8. Spiegel-Mechanik nach dem Übergang (Intervall, Knopf, manuell)
