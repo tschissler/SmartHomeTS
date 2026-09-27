@@ -703,7 +703,7 @@ Abschalten von Azure nur noch per Kabel erreichbar.
 |---|---|---|---|
 | O1 | `ESP32_OTAUpdate`: zweite CA an den PEM-String hängen, **Tag setzen** (noch auf GitHub, siehe [Abschnitt 9](#9-die-esp32-bibliotheken)) | nichts | Revert |
 | O2 | Alle zehn Firmwares pinnen `ESP32_OTAUpdate` auf diesen Tag. Sie bauen **noch auf GitHub** und laden **noch nach Azure** | 10 OTA-Rollouts über Azure, wie heute | Vorversion retained nachsenden |
-| O3 | **Nachweis, dass jedes Gerät die O2-Fassung fährt** (siehe unten). Erst danach weiter | nichts | — |
+| O3 | **Nachweis, dass jedes Gerät die O2-Fassung fährt** (siehe unten), außer den fünf Ausnahmen nach F40. Erst danach weiter | nichts | — |
 | O4 | Ein Gerätetyp als Probe: Workflow nach `.forgejo/workflows/`, Upload in die Generic-Registry, retained URL auf `forgejo.intern`. Ein Gerät dieses Typs liegt dabei am Tisch am Seriell-Monitor | 1 OTA-Rollout über Forgejo | alte Azure-URL retained nachsenden; das Gerät vertraut beiden CAs |
 | O5 | Die übrigen neun Gerätetypen, einzeln | je 1 OTA-Rollout | wie O4 |
 | O6 | Azure: Blobs löschen, Speicherkonto kündigen, Schlüssel und Secrets entfernen. **Erst nach einer Karenzzeit**, in der kein Rückweg mehr gebraucht wurde | nichts | keiner mehr |
@@ -719,8 +719,29 @@ Abschalten von Azure nur noch per Kabel erreichbar.
 - **Die Lücke:** Ein Gerät, das gerade aus ist oder keinen Heartbeat sendet, taucht dort
   nicht als „veraltet" auf, sondern gar nicht. Für O3 braucht es deshalb eine **Soll-Liste
   aller Geräte** (Typ, Ort, Name), gegen die abgehakt wird. Nicht nur „keins meldet sich
-  veraltet". Die Liste gibt es heute nicht als Dokument. **Offen (Thomas):** wer sie
-  aufstellt.
+  veraltet". Die Liste ist mit U08 aufgestellt und liegt in
+  [Issue #8](https://forgejo.intern/thomas/SmartHomeTS/issues/8) (nicht hier: sie wird
+  gepflegt, und das Repo wird öffentlich gespiegelt).
+
+**Ausnahmen vom O3-Nachweis (U33), entschieden F40.** Fünf Geräte sind schon heute nicht
+auf der angebotenen Fassung und werden nicht abgewartet: `Heatmeter_M1` (Typ HeatMeter,
+U41), Heizkörperlüfter Esszimmer M3 und Kinderzimmer M1 (HeatingFanController, U43),
+`Brutkasten` (TemperaturSensor, U39) und `Relaismodule_M1_OG` (Relaismodule,
+Brownout-Schleife, Issue #44). Jedes bekommt ein eigenes Reparatur-Issue für die Zeit
+nach dem Umzug.
+
+**Der Preis:** Diese Geräte fahren eine Firmware, die nur DigiCert vertraut. Sobald
+`OTAUpdate/<Typ>` ihres Typs auf `forgejo.intern` zeigt, bekommen sie **per OTA keine neue
+Fassung mehr**, sondern nur noch **per Kabel**. Bis O6 gäbe es theoretisch den Rückweg,
+die Azure-URL für den Typ noch einmal retained nachzusenden — das stuft aber alle anderen
+Geräte des Typs mit zurück, weil die Firmware nur auf Ungleichheit prüft. Praktisch gilt
+also: Kabel ab der Umstellung des Typs, spätestens ab O6 ausschließlich.
+
+**Solange ihr Typ noch auf Azure zeigt, heilen sie sich selbst:** Wird ein solches Gerät
+zwischen U32 und der Umstellung seines Typs eingeschaltet oder neu gestartet, holt es
+sich die Fassung mit beiden CAs von allein. Das betrifft den Brutkasten (nur offline,
+F39) und genauso Heatmeter und Heizkörperlüfter, denen laut Stand 2026-08-30 ein
+Stromreset fehlt. Für diese vier lohnt der Handgriff **vor** U39, U41 bzw. U43.
 
 ### Laufzeitabhängigkeit nach dem Wechsel
 
@@ -1039,11 +1060,15 @@ verloren, auch die eines Forks oder PRs, der dort gemergt würde.
   nach U11 als Test-Workflow auf einem Branch von SmartHomeTS (Abschnitt 11).
 - **Ablage der Firmware: Generic Registry** (nach U05). Auflage: Der Benutzer `thomas`
   bleibt öffentlich. Ergebnis und Folgen in Abschnitt 8, „Ablageort in Forgejo".
+- **Soll-Liste der Geräte** (U08): aufgestellt, liegt in Issue #8.
+- **Fünf Geräte aus dem O3-Nachweis ausgenommen** (F40): Heatmeter_M1, beide
+  Heizkörperlüfter, Brutkasten (nur offline, bleibt in der Liste, F39) und
+  Relaismodule_M1_OG. Je ein Reparatur-Issue nach dem Umzug; Preis und Selbstheilung in
+  Abschnitt 8, „Woran man den Firmware-Stand …".
 
 **Offen für Thomas:**
 
 6. Erster Firmware-Gerätetyp für U36 (das Testgerät für U30 ist entschieden, siehe oben)
-7. Wer die Soll-Liste aller Geräte für den O3-Nachweis aufstellt
 8. Spiegel-Mechanik nach dem Übergang (Intervall, Knopf, manuell)
 9. Bibliotheks-Repos auf GitHub: spiegeln, archivieren oder löschen, und wann
    Einrohrheizung umgestellt wird
