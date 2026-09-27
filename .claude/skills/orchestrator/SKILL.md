@@ -12,7 +12,7 @@ tragfähigen Auftrag ausmacht. Es ist an einem Tag mit zehn Sessions entstanden 
 bezahlt — arbeite danach, statt es neu zu erfinden.
 
 **Beim Start öffnest du die Übersicht:** `python3 .claude/skills/orchestrator/uebersicht.py --oeffnen`
-teilt in herdr einen Bereich neben dir ab (läuft sie schon, tut der Aufruf nichts).
+teilt in herdr einen Bereich unter dir ab (läuft sie schon, tut der Aufruf nichts).
 
 ## Wie die Zusammenarbeit läuft
 

@@ -3,7 +3,7 @@
 
   uebersicht.py            zeichnet sich alle zwei Sekunden neu (Strg+C beendet)
   uebersicht.py --einmal   einmal ausgeben
-  uebersicht.py --oeffnen  in herdr einen Bereich rechts abteilen und die Übersicht dort starten
+  uebersicht.py --oeffnen  in herdr einen Bereich unterhalb abteilen und die Übersicht dort starten
 
 Den Stand der Sessions liest sie aus herdr (erkennt auch Freigabe-Dialoge) und aus
 ~/.claude/sessions, die offenen Fragen aus der Liste von fragen.py, die schließbaren
@@ -172,7 +172,7 @@ def oeffnen():
     if os.environ.get("HERDR_ENV") != "1" or not shutil.which("herdr"):
         sys.exit(f"Nicht in herdr – von Hand starten: python3 {SKRIPT}")
     aus = subprocess.run(
-        ["herdr", "pane", "split", "--current", "--direction", "right", "--cwd", REPO, "--no-focus"],
+        ["herdr", "pane", "split", "--current", "--direction", "down", "--cwd", REPO, "--no-focus"],
         capture_output=True, text=True, timeout=5,
     ).stdout
     try:
